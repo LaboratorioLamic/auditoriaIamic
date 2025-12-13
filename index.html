@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard – Auditoria LAMIC</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --primary: #0b2545;
+    --primary-light: #133b5c;
+    --accent: #2563eb;
+    --bg: #f3f4f6;
+    --card-bg: #ffffff;
+    --text: #1f2937;
+    --text-light: #6b7280;
+    --border: #e5e7eb;
+    
+    /* Cores de Status */
+    --c-blue: #3b82f6;
+    --c-green: #22c55e;
+    --c-red: #ef4444;
+    --c-orange: #f97316;
+    --c-yellow: #eab308;
+    --c-purple: #a855f7;
+    --c-default: #6b7280;
+    
+    /* Indicadores de prazo */
+    --ind-green: #22c55e;
+    --ind-yellow: #eab308;
+    --ind-red: #ef4444;
+}
+
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;background:var(--bg);color:var(--text);overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:260px;background:var(--primary);color:#fff;padding:32px 0;flex-shrink:0;display:flex;flex-direction:column}
+.sidebar-logo{text-align:center;font-size:22px;font-weight:700;margin-bottom:40px;letter-spacing:-0.5px}
+.sidebar button{width:100%;background:none;border:none;color:#cfd8e3;padding:16px 28px;text-align:left;font-size:15px;cursor:pointer;display:flex;gap:14px;align-items:center;transition:0.2s}
+.sidebar button:hover{background:rgba(255,255,255,0.05);color:#fff}
+.sidebar button.active{background:rgba(255,255,255,0.15);color:#fff;font-weight:600;border-right:4px solid var(--accent)}
+
+.sidebar-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 8px 20px; }
+
+/* MAIN LAYOUT */
+.main-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* HEADER */
+.header{background:#fff;padding:20px 40px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;height:80px}
+.title-area h1{margin:0;font-size:24px;font-weight:700;color:var(--primary)}
+.title-area small{color:var(--text-light);font-size:14px}
+
+.btn-primary{
+    background:var(--primary-light);color:#fff;border:none;padding:12px 24px;border-radius:10px;
+    font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;
+    transition:transform 0.1s, background 0.2s;box-shadow:0 4px 12px rgba(11,37,69,0.15)
+}
+.btn-primary:hover{background:var(--primary);transform:translateY(-1px)}
+.btn-primary:active{transform:translateY(0)}
+
+/* CONTENT AREA */
+.content{flex:1;padding:30px 40px;overflow-y:auto;display:flex;flex-direction:column;gap:24px}
+
+/* FILTERS BAR */
+.filters-bar{
+    background:#fff;padding:20px;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,0.03);
+    display:flex;gap:16px;flex-wrap:wrap;align-items:center;border:1px solid var(--border)
+}
+.filter-group{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.filter-input{
+    padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;
+    color:var(--text);outline:none;background:#f9fafb;transition:0.2s;min-width:140px
+}
+.filter-input:focus{border-color:var(--primary-light);background:#fff;box-shadow:0 0 0 3px rgba(19,59,92,0.1)}
+
+/* Date Filter Wrappers */
+.date-controls { display: flex; gap: 8px; align-items: center; background: #f9fafb; padding: 4px; border: 1px solid var(--border); border-radius: 8px; }
+.date-controls select, .date-controls input { border: 1px solid transparent; background: transparent; font-size: 13px; color: var(--text); padding: 5px; border-radius: 4px; outline: none; }
+.date-controls select:hover, .date-controls input:hover { background: #e5e7eb; }
+.date-controls input[type="date"] { font-family: inherit; }
+
+.btn-clear{padding:8px 16px;background:transparent;border:1px solid var(--border);color:var(--text-light);border-radius:8px;cursor:pointer;font-size:13px}
+.btn-clear:hover{background:#f3f4f6;color:var(--text)}
+
+/* CARDS GRID (FIXED SIZE) */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 296px);
+    gap: 24px;
+    justify-content: start;
+    padding-bottom: 40px;
+}
+
+.card {
+    background: #fff;
+    width: 296px;
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 200px;
+}
+.card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+
+/* Indicador lateral (Prazo) */
+.card::before {
+    content: ''; position: absolute; left: 0; top: 16px; bottom: 16px; width: 4px; border-radius: 0 4px 4px 0;
+}
+.card.ind-green::before { background: var(--ind-green); }
+.card.ind-yellow::before { background: var(--ind-yellow); }
+.card.ind-red::before { background: var(--ind-red); }
+
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: -10px; padding-left: 10px; }
+.card-header h4 { margin: 0; font-size: 16px; font-weight: 600; color: var(--primary); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-actions { display: flex; gap: 8px; opacity: 0; transition: 0.2s; }
+.card:hover .card-actions { opacity: 1; }
+.card-actions i { font-size: 14px; color: var(--text-light); padding: 4px; border-radius: 4px; }
+.card-actions i:hover { background: #f3f4f6; color: var(--primary); }
+
+.card-body { padding-left: 10px; flex: 0.1; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-light); }
+.card-info-row { display: flex; align-items: center; gap: 8px; }
+.card-info-row i { width: 16px; text-align: center; color: #9ca3af; }
+
+/* Tag de Status com Cor */
+.tag { 
+    padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; 
+    text-transform: uppercase; letter-spacing: 0.5px; width: fit-content; 
+    color: #fff; /* Texto sempre branco */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* BACKUP VIEW */
+#backupContent { display: none; flex-direction: column; gap: 30px; align-items: center; justify-content: center; height: 100%; text-align: center; }
+.backup-card { background: #fff; padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); border: 1px solid var(--border); width: 100%; max-width: 500px; }
+.backup-actions { display: flex; gap: 20px; justify-content: center; margin-top: 24px; }
+.btn-large { padding: 16px 32px; font-size: 16px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border: none; font-weight: 600; transition: 0.2s; }
+.btn-export { background: var(--primary); color: #fff; }
+.btn-export:hover { background: var(--primary-light); transform: translateY(-2px); }
+.btn-import { background: #fff; color: var(--text); border: 2px solid var(--border); }
+.btn-import:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-2px); }
+
+/* MODAL FORM */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(2px);justify-content:center;align-items:center;z-index:1000}
+.modal-content{background:#fff;padding:32px;border-radius:24px;width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)}
+.modal-header{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.modal-header h3{margin:0;color:var(--primary);font-size:20px}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.full-width{grid-column:1 / -1}
+
+.field-group{display:flex;flex-direction:column;gap:6px}
+.field-group label{font-size:12px;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px}
+.field-group input, .field-group select, .field-group textarea{
+    padding:12px;border-radius:10px;border:1px solid var(--border);font-family:inherit;font-size:14px;
+    background:#fff;transition:0.2s;width:100%
+}
+.field-group input:focus, .field-group select:focus, .field-group textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(37,99,235,0.1)}
+
+.select-wrapper{display:flex;gap:8px}
+.select-wrapper button{padding:0 12px;background:var(--primary-light);color:#fff;border:none;border-radius:8px;cursor:pointer}
+
+/* Botão Anexo */
+.btn-add-anexo {
+    width: 100%; padding: 12px; border: 2px dashed #cbd5e1; background: #f8fafc; color: var(--text-light);
+    border-radius: 12px; font-weight: 500; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-add-anexo:hover { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+.anexo-item { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 8px; background: #f1f5f9; border-radius: 8px; font-size: 13px; }
+.anexo-item input { border: none; background: transparent; padding: 4px; font-size: 13px; width: 100%; }
+
+.modal-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:32px;padding-top:20px;border-top:1px solid var(--border)}
+.btn-cancel{background:#f3f4f6;color:var(--text);padding:12px 24px;border-radius:10px;border:none;font-weight:500;cursor:pointer}
+.btn-save{background:var(--ind-green);color:#fff;padding:12px 24px;border-radius:10px;border:none;font-weight:500;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.3)}
+
+/* VIEW MODAL */
+#viewContent { display: flex; flex-direction: column; gap: 24px; }
+.view-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+.view-status { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: #fff; }
+.view-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; background: #f9fafb; padding: 20px; border-radius: 16px; }
+.view-item label { display: block; font-size: 11px; text-transform: uppercase; color: #9ca3af; font-weight: 600; margin-bottom: 4px; }
+.view-item div { font-size: 15px; color: var(--primary); font-weight: 500; }
+.view-desc { background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border); line-height: 1.6; color: #4b5563; }
+.view-files h4 { font-size: 14px; margin: 0 0 12px; color: var(--primary); }
+.file-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #fff; border: 1px solid #bfdbfe; color: #1e40af; border-radius: 20px; font-size: 13px; text-decoration: none; font-weight: 500; transition:0.2s; cursor: pointer; }
+.file-chip:hover { background: #eff6ff; }
+
+/* List Manager */
+.list-manager table { width: 100%; border-collapse: collapse; }
+.list-manager td { padding: 12px 8px; border-bottom: 1px solid #f1f5f9; }
+.list-manager .remove { color: var(--ind-red); cursor: pointer; text-align: right; }
+.color-dot { width: 12px; height: 12px; border-radius: 4px; display: inline-block; margin-right: 8px; border: 1px solid rgba(0,0,0,0.1); }
+
+/* Color Picker in Manager */
+.color-picker { display: flex; gap: 10px; margin-top: 12px; justify-content: center; }
+.color-option { width: 24px; height: 24px; border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
+.color-option:hover { transform: scale(1.1); }
+.color-option.selected { border-color: var(--text); transform: scale(1.1); box-shadow: 0 0 0 2px rgba(0,0,0,0.1); }
+
+/* Styles for specific colors */
+.bg-blue { background-color: var(--c-blue); }
+.bg-green { background-color: var(--c-green); }
+.bg-red { background-color: var(--c-red); }
+.bg-orange { background-color: var(--c-orange); }
+.bg-yellow { background-color: var(--c-yellow); }
+.bg-purple { background-color: var(--c-purple); }
+.bg-default { background-color: var(--c-default); }
+
+/* --- LOGIN & SECURITY STYLES --- */
+#loginOverlay {
+    position: fixed; inset: 0; background: rgba(255,255,255,0.4); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+    display: flex; justify-content: center; align-items: center; z-index: 9999;
+}
+.login-box {
+    background: #fff; padding: 40px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    width: 100%; max-width: 400px; text-align: center; border: 1px solid var(--border);
+}
+.login-box h2 { margin-top: 0; color: var(--primary); margin-bottom: 10px; }
+.login-box p { color: var(--text-light); margin-bottom: 24px; font-size: 14px; }
+.login-input {
+    width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: 12px; font-size: 16px; margin-bottom: 16px;
+    text-align: center; transition: 0.2s; outline: none;
+}
+.login-input:focus { border-color: var(--accent); }
+.login-input.error { border-color: var(--c-red); color: var(--c-red); background: #fef2f2; }
+.btn-login {
+    width: 100%; padding: 14px; background: var(--primary); color: #fff; border: none; border-radius: 12px;
+    font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s;
+}
+.btn-login:hover { background: var(--primary-light); }
+.btn-login:disabled { background: var(--text-light); cursor: not-allowed; }
+
+/* Shake Animation */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+.shake { animation: shake 0.5s; }
+
+#timerDisplay { margin-top: 10px; color: var(--c-red); font-weight: 700; font-size: 14px; min-height: 20px;}
+#loadingText { margin-top: 15px; color: var(--accent); font-size: 13px; display: none; }
+</style>
+</head>
+<body>
+
+<div id="loginOverlay">
+    <div class="login-box" id="loginBox">
+        <i class="fa-solid fa-lock fa-3x" style="color:var(--primary); margin-bottom:16px;"></i>
+        <h2>Acesso Restrito</h2>
+        <p>Digite a senha mestra para acessar o dashboard.</p>
+        
+        <input type="password" id="passwordInput" class="login-input" placeholder="Senha" autofocus>
+        <button class="btn-login" id="btnLogin" onclick="checkLogin()">Entrar</button>
+        
+        <div id="timerDisplay"></div>
+        <div id="loadingText"><i class="fas fa-spinner fa-spin"></i> Conectando ao servidor...</div>
+    </div>
+</div>
+
+<aside class="sidebar">
+    <div class="sidebar-logo"><i class="fa-solid fa-layer-group"></i> Auditoria LAMIC</div>
+    
+    <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Auditoria</button>
+    <button id="tabAtividades"><i class="fa-solid fa-list-check"></i> Gestão de Atividades</button>
+        <button id="tabManutencao"><i class="fa-solid fa-wrench"></i> Manutenção</button>
+
+        <div class="sidebar-divider"></div>
+
+    <button id="tabBackup"><i class="fa-solid fa-database"></i> Backup</button>
+</aside>
+
+<div class="main-content">
+    <header class="header">
+        <div class="title-area">
+            <h1 id="pageTitle">Auditoria</h1>
+            <small id="pageSubtitle">Gerenciamento e agendamento</small>
+        </div>
+        <button class="btn-primary" id="addBtn">
+            <i class="fas fa-plus"></i> Novo Registro
+        </button>
+    </header>
+
+    <div class="content">
+        
+        <div id="backupContent">
+            <div class="backup-card">
+                <i class="fa-solid fa-cloud-arrow-down fa-3x" style="color:var(--primary); margin-bottom:16px;"></i>
+                <h2 style="margin:0 0 8px; color:var(--primary)">Central de Backup</h2>
+                <p style="color:var(--text-light); margin:0 0 24px 0">Gerencie seus dados via Nuvem (JSONBin) ou Arquivo Local.</p>
+                
+                <div class="backup-actions" style="flex-wrap: wrap;">
+                    <button class="btn-large btn-primary" onclick="saveAll(true)" style="background:var(--primary); color:#fff; border:none;">
+                        <i class="fas fa-sync"></i> Sincronizar Nuvem
+                    </button>
+        
+                    <button class="btn-large btn-export" onclick="exportLocalData()" style="background:var(--ind-green); color:#fff; border:none;">
+                        <i class="fas fa-download"></i> Baixar Dados
+                    </button>
+                    <button class="btn-large btn-import" onclick="document.getElementById('fileInput').click()" style="background:#fff; color:var(--text); border:2px solid var(--border);">
+                        <i class="fas fa-upload"></i> Importar Dados
+                    </button>
+
+                    <input type="file" id="fileInput" style="display:none" onchange="importLocalData(this)" accept=".json">
+                </div>
+                <p style="font-size:12px; color:#999; margin-top:20px">Nota: Ao restaurar um arquivo local, ele será automaticamente sincronizado com a nuvem.</p>
+            </div>
+        </div>
+
+        <div class="filters-bar" id="filtersBar">
+            <div style="font-weight:600; color:var(--primary); font-size:14px;"><i class="fa-solid fa-filter"></i> Filtros:</div>
+            
+            <div id="filtersAuditoria" class="filter-group">
+                <select id="fAuditCat" class="filter-input" onchange="renderCards()">
+                    <option value="">Categoria: Todas</option>
+                </select>
+                <select id="fAuditStatus" class="filter-input" onchange="renderCards()">
+                    <option value="">Status: Todos</option>
+                </select>
+                
+                <div class="date-controls">
+                    <select id="fAuditDateType" onchange="updateDateInputs('Audit')">
+                        <option value="all" selected>Período: Data</option>
+                        <option value="month">Mês</option>
+                        <option value="year">Ano</option>
+                        <option value="custom">Personalizado</option>
+                    </select>
+                    
+                    <div id="fAuditGroupMonth" style="display:none; gap:4px">
+                        <select id="fAuditMonth" onchange="renderCards()">
+                            <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
+                            <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
+                            <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
+                            <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
+                        </select>
+                        <select id="fAuditYearForMonth" onchange="renderCards()"></select>
+                    </div>
+
+                    <select id="fAuditYearOnly" style="display:none" onchange="renderCards()"></select>
+
+                    <div id="fAuditGroupCustom" style="display:none; align-items:center; gap:4px">
+                        <input type="date" id="fAuditDataIni" onchange="renderCards()">
+                        <span style="color:#ccc">a</span>
+                        <input type="date" id="fAuditDataFim" onchange="renderCards()">
+                    </div>
+                </div>
+            </div>
+
+            <div id="filtersAtividades" class="filter-group" style="display:none;">
+                <select id="fAtivCat" class="filter-input" onchange="renderCards()">
+                    <option value="">Categoria: Todas</option>
+                </select>
+                <select id="fAtivStatus" class="filter-input" onchange="renderCards()">
+                    <option value="">Status: Todos</option>
+                </select>
+                
+                <div class="date-controls">
+                    <select id="fAtivDateType" onchange="updateDateInputs('Ativ')">
+                        <option value="all" selected>Período: Data</option>
+                        <option value="month">Mês</option>
+                        <option value="year">Ano</option>
+                        <option value="custom">Personalizado</option>
+                    </select>
+                    
+                    <div id="fAtivGroupMonth" style="display:none; gap:4px">
+                        <select id="fAtivMonth" onchange="renderCards()">
+                            <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
+                            <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
+                            <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
+                            <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
+                        </select>
+                        <select id="fAtivYearForMonth" onchange="renderCards()"></select>
+                    </div>
+
+                    <select id="fAtivYearOnly" style="display:none" onchange="renderCards()"></select>
+
+                    <div id="fAtivGroupCustom" style="display:none; align-items:center; gap:4px">
+                        <input type="date" id="fAtivDataIni" onchange="renderCards()">
+                        <span style="color:#ccc">a</span>
+                        <input type="date" id="fAtivDataFim" onchange="renderCards()">
+                    </div>
+                </div>
+            </div>
+
+            <div id="filtersManutencao" class="filter-group" style="display:none;">
+                <select id="fMantCat" class="filter-input" onchange="onMantCategoryChange()">
+                    <option value="">Categoria: Todas</option>
+                </select>
+                <select id="fMantItem" class="filter-input" onchange="renderCards()">
+                    <option value="">Item: Todos</option>
+                </select>
+                <select id="fMantStatus" class="filter-input" onchange="renderCards()">
+                    <option value="">Status: Todos</option>
+                </select>
+                
+                <div class="date-controls">
+                    <select id="fMantDateType" onchange="updateDateInputs('Mant')">
+                        <option value="all" selected>Próxima: Data</option>
+                        <option value="month">Mês</option>
+                        <option value="year">Ano</option>
+                        <option value="custom">Personalizado</option>
+                    </select>
+
+                     <div id="fMantGroupMonth" style="display:none; gap:4px">
+                        <select id="fMantMonth" onchange="renderCards()">
+                            <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
+                            <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
+                            <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
+                            <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
+                        </select>
+                        <select id="fMantYearForMonth" onchange="renderCards()"></select>
+                    </div>
+
+                    <select id="fMantYearOnly" style="display:none" onchange="renderCards()"></select>
+
+                    <div id="fMantGroupCustom" style="display:none; align-items:center; gap:4px">
+                        <input type="date" id="fMantDataIni" onchange="renderCards()">
+                        <span style="color:#ccc">a</span>
+                        <input type="date" id="fMantDataFim" onchange="renderCards()">
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-clear" onclick="clearFilters()" title="Limpar filtros"><i class="fa-solid fa-rotate-left"></i></button>
+        </div>
+
+        <div class="cards-grid" id="cardsGrid">
+            </div>
+    </div>
+</div>
+
+<div class="modal" id="modalAuditoria">
+    <div class="modal-content">
+        <div class="modal-header"><h3>Nova Auditoria</h3></div>
+        <div class="form-grid">
+            <div class="field-group full-width">
+                <label>Título</label>
+                <input id="auditTitulo" placeholder="Ex: Auditoria Interna ISO 9001">
+            </div>
+            <div class="field-group full-width">
+                <label>Descrição</label>
+                <textarea id="auditDescricao" rows="2"></textarea>
+            </div>
+            <div class="field-group">
+                <label>Categoria</label>
+                <div class="select-wrapper">
+                    <select id="auditCategoria"></select>
+                    <button onclick="openListManager('categorias')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Status</label>
+                <div class="select-wrapper">
+                    <select id="auditStatus"></select>
+                    <button onclick="openListManager('status')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Data Publicação</label>
+                <input type="date" id="auditDataPublicacao">
+            </div>
+            <div class="field-group">
+                <label>Data Previsão</label>
+                <input type="date" id="auditDataPrevisao">
+            </div>
+            <div class="field-group">
+                <label>Alerta (Dias antes)</label>
+                <input type="number" id="auditFlagDias" value="7">
+            </div>
+            <div class="field-group full-width">
+                <label>Anexos</label>
+                <div id="auditAnexos"></div>
+                <button type="button" class="btn-add-anexo" onclick="addAnexo('audit')">
+                    <i class="fas fa-paperclip"></i> Adicionar Arquivo ou Link
+                </button>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('modalAuditoria')">Cancelar</button>
+            <button class="btn-save" onclick="saveAudit()">Salvar Registro</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalAtividades">
+    <div class="modal-content">
+        <div class="modal-header"><h3>Nova Atividade</h3></div>
+        <div class="form-grid">
+            <div class="field-group full-width">
+                <label>Título</label>
+                <input id="ativTitulo" placeholder="Ex: Treinamento de Segurança">
+            </div>
+            <div class="field-group full-width">
+                <label>Descrição</label>
+                <textarea id="ativDescricao" rows="2"></textarea>
+            </div>
+            <div class="field-group">
+                <label>Categoria</label>
+                <div class="select-wrapper">
+                    <select id="ativCategoria"></select>
+                    <button onclick="openListManager('categorias')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Status</label>
+                <div class="select-wrapper">
+                    <select id="ativStatus"></select>
+                    <button onclick="openListManager('status')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Data Início</label>
+                <input type="date" id="ativDataInicio">
+            </div>
+            <div class="field-group">
+                <label>Data Conclusão</label>
+                <input type="date" id="ativDataConclusao">
+            </div>
+            <div class="field-group">
+                <label>Alerta (Dias antes)</label>
+                <input type="number" id="ativFlagDias" value="3">
+            </div>
+            <div class="field-group full-width">
+                <label>Anexos</label>
+                <div id="ativAnexos"></div>
+                <button type="button" class="btn-add-anexo" onclick="addAnexo('ativ')">
+                    <i class="fas fa-paperclip"></i> Adicionar Arquivo ou Link
+                </button>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('modalAtividades')">Cancelar</button>
+            <button class="btn-save" onclick="saveAtividade()">Salvar Registro</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalManutencao">
+    <div class="modal-content">
+        <div class="modal-header"><h3>Nova Manutenção</h3></div>
+        <div class="form-grid">
+            <div class="field-group full-width">
+                <label>Título</label>
+                <input id="mantTitulo" placeholder="Ex: Troca de filtros">
+            </div>
+            <div class="field-group full-width">
+                <label>Descrição</label>
+                <textarea id="mantDescricao" rows="2"></textarea>
+            </div>
+            <div class="field-group">
+                <label>Categoria</label>
+                <div class="select-wrapper">
+                    <select id="mantCategoria"></select>
+                    <button onclick="openListManager('categorias')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Item / Equipamento</label>
+                <div class="select-wrapper">
+                    <select id="mantItem"></select>
+                    <button onclick="openListManager('itens')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Última Manutenção</label>
+                <input type="date" id="mantUltima" onchange="calculateNextDate()">
+            </div>
+            <div class="field-group">
+                <label>Periodicidade (Dias)</label>
+                <input type="number" id="mantIntervalo" value="30" onchange="calculateNextDate()">
+            </div>
+            <div class="field-group full-width" style="background:#f0f9ff; padding:10px; border-radius:8px; border:1px solid #bae6fd">
+                <label style="color:#0369a1">Próxima Manutenção (Calculada)</label>
+                <div id="mantProxima" style="font-size:16px; font-weight:700; color:#0c4a6e; margin-top:4px">--/--/----</div>
+            </div>
+            <div class="field-group">
+                <label>Status</label>
+                <div class="select-wrapper">
+                    <select id="mantStatus"></select>
+                    <button onclick="openListManager('status')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Alerta (Dias)</label>
+                <input type="number" id="mantFlagDias" value="7">
+            </div>
+            <div class="field-group full-width">
+                <label>Anexos</label>
+                <div id="mantAnexos"></div>
+                <button type="button" class="btn-add-anexo" onclick="addAnexo('mant')">
+                    <i class="fas fa-paperclip"></i> Adicionar Arquivo ou Link
+                </button>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('modalManutencao')">Cancelar</button>
+            <button class="btn-save" onclick="saveManutencao()">Salvar Registro</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="viewModal">
+    <div class="modal-content">
+        <div id="viewContent"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('viewModal')">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalListManager">
+    <div class="modal-content" style="width:400px">
+        <h3 id="listTitle" style="margin-bottom:16px">Gerenciar</h3>
+        
+        <div class="field-group">
+            <input id="newListItem" placeholder="Nome..." style="width:100%">
+        </div>
+        
+        <div id="colorPickerContainer" style="display:none; text-align:center; padding:10px 0;">
+            <label style="display:block; font-size:11px; margin-bottom:8px; color:#6b7280; font-weight:600">Selecione a Cor</label>
+            <div class="color-picker">
+                <div class="color-option bg-blue" onclick="selectColor('blue', this)"></div>
+                <div class="color-option bg-green" onclick="selectColor('green', this)"></div>
+                <div class="color-option bg-red" onclick="selectColor('red', this)"></div>
+                <div class="color-option bg-orange" onclick="selectColor('orange', this)"></div>
+                <div class="color-option bg-yellow" onclick="selectColor('yellow', this)"></div>
+                <div class="color-option bg-purple" onclick="selectColor('purple', this)"></div>
+                <div class="color-option bg-default selected" onclick="selectColor('default', this)"></div>
+            </div>
+        </div>
+
+        <button onclick="addToList()" class="btn-primary" style="width:100%; margin-top:12px; justify-content:center">Adicionar</button>
+
+        <div class="list-manager" style="margin-top:16px; max-height:300px; overflow-y:auto">
+            <table>
+                <tbody id="listBody"></tbody>
+            </table>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('modalListManager')">Concluir</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- CONFIGURAÇÃO JSONBIN E SEGURANÇA ---
+const API_KEY = '$2a$10$2elKW8TT6o.K3V176efqwu7kOfD1PnS3D/F0s4Tczc3MYmaU.N1bi';
+const DATA_BIN_ID = '693d73c4ae596e708f976cf4';
+const PASSWORD_BIN_ID = '68d7e57bd0ea881f408cf33b';
+
+let failedAttempts = 0;
+let lockoutTimer = null;
+
+// --- DADOS E ESTADO (Iniciam vazios) ---
+let audits = [];
+let activities = [];
+let maintenances = [];
+
+const defaultMasterLists = {
+    auditCategorias: ['Interna', 'Externa', 'Certificação', 'Fiscal'],
+    ativCategorias: ['Reunião', 'Treinamento', 'Projeto', 'Administrativo'],
+    mantCategorias: ['Preventiva', 'Corretiva', 'Preditiva', 'Melhoria'],
+    itens: ['Gerador Principal', 'Ar Condicionado Central', 'Frota Veicular', 'Servidor'],
+    auditStatus: [
+        { name: 'Planejado', color: 'blue' },
+        { name: 'Em Andamento', color: 'yellow' },
+        { name: 'Concluído', color: 'green' },
+        { name: 'Atrasado', color: 'red' }
+    ],
+    ativStatus: [
+        { name: 'A Fazer', color: 'default' },
+        { name: 'Em Progresso', color: 'blue' },
+        { name: 'Concluído', color: 'green' },
+        { name: 'Cancelado', color: 'red' }
+    ],
+    mantStatus: [
+        { name: 'Aguardando Peça', color: 'orange' },
+        { name: 'Agendado', color: 'blue' },
+        { name: 'Em Execução', color: 'yellow' },
+        { name: 'Finalizado', color: 'green' }
+    ]
+};
+
+let masterLists = JSON.parse(JSON.stringify(defaultMasterLists)); // Clone inicial
+
+let currentTab = 'auditoria';
+let editingAuditId = null;
+let editingAtivId = null;
+let editingMantId = null;
+let currentListKey = null; 
+let selectedColorTemp = 'default';
+
+// --- UTILITÁRIOS ---
+const today = () => new Date().toISOString().split('T')[0];
+const currentYear = new Date().getFullYear();
+const currentMonth = new Date().getMonth();
+const formatBR = dateStr => {
+    if (!dateStr) return 'ND';
+    const [y, m, d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
+};
+const daysDiff = dateStr => Math.ceil((new Date(dateStr) - new Date()) / (1000*60*60*24));
+
+const colorMap = {
+    'blue': 'var(--c-blue)',
+    'green': 'var(--c-green)',
+    'red': 'var(--c-red)',
+    'orange': 'var(--c-orange)',
+    'yellow': 'var(--c-yellow)',
+    'purple': 'var(--c-purple)',
+    'default': 'var(--c-default)'
+};
+
+// --- LÓGICA DE LOGIN ---
+document.getElementById('passwordInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') checkLogin();
+});
+
+async function checkLogin() {
+    const input = document.getElementById('passwordInput');
+    const btn = document.getElementById('btnLogin');
+    const loading = document.getElementById('loadingText');
+    const loginBox = document.getElementById('loginBox');
+    const timerDisplay = document.getElementById('timerDisplay');
+    
+    if(btn.disabled) return;
+
+    const userPass = input.value;
+    if(!userPass) return;
+
+    btn.disabled = true;
+    input.disabled = true;
+    loading.style.display = 'block';
+
+    try {
+        // Buscar Senha no Bin
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${PASSWORD_BIN_ID}/latest`, {
+            headers: { 'X-Master-Key': API_KEY }
+        });
+        
+        if(!res.ok) throw new Error('Erro ao verificar senha');
+        
+        const data = await res.json();
+        // Assume que o bin retorna { record: { password: "123" } } ou { record: "123" }
+        const remotePass = data.record.password || data.record;
+
+        if (String(userPass) === String(remotePass)) {
+            // Sucesso
+            loading.innerHTML = '<i class="fas fa-check"></i> Senha correta. Carregando dados...';
+            await loadCloudData();
+            document.getElementById('loginOverlay').style.display = 'none';
+        } else {
+            // Senha Errada
+            handleLoginError(input, btn, loginBox);
+        }
+
+    } catch (err) {
+        alert("Erro de conexão: " + err.message);
+        btn.disabled = false;
+        input.disabled = false;
+        input.focus();
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+function handleLoginError(input, btn, box) {
+    failedAttempts++;
+    input.classList.add('error');
+    box.classList.add('shake');
+    
+    setTimeout(() => {
+        box.classList.remove('shake');
+        input.classList.remove('error');
+    }, 500);
+
+    if (failedAttempts >= 5) {
+        let seconds = 10;
+        const timerDisplay = document.getElementById('timerDisplay');
+        timerDisplay.textContent = `Muitas tentativas. Aguarde ${seconds}s`;
+        
+        const interval = setInterval(() => {
+            seconds--;
+            timerDisplay.textContent = `Muitas tentativas. Aguarde ${seconds}s`;
+            if (seconds <= 0) {
+                clearInterval(interval);
+                timerDisplay.textContent = "";
+                failedAttempts = 0;
+                input.disabled = false;
+                btn.disabled = false;
+                input.value = "";
+                input.focus();
+            }
+        }, 1000);
+    } else {
+        input.disabled = false;
+        btn.disabled = false;
+        input.value = "";
+        input.focus();
+    }
+}
+
+// --- INTEGRAÇÃO JSONBIN (DATA) ---
+
+async function loadCloudData() {
+    try {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${DATA_BIN_ID}/latest`, {
+            headers: { 'X-Master-Key': API_KEY }
+        });
+        if(!res.ok) throw new Error('Erro ao baixar dados');
+        
+        const data = await res.json();
+        const record = data.record;
+
+        audits = record.audits || [];
+        activities = record.activities || [];
+        maintenances = record.maintenances || [];
+        
+        if (record.masterLists) {
+            masterLists = record.masterLists;
+        }
+
+        // Inicializa a UI após carregar
+        populateYearSelects();
+        populateSelects();
+        updateDateInputs('Audit');
+        updateDateInputs('Ativ');
+        updateDateInputs('Mant');
+        renderCards();
+
+    } catch (err) {
+        alert("Falha ao carregar dados do Cloud: " + err.message);
+        // Fallback para arrays vazios já inicializados
+    }
+}
+
+async function saveAll(showAlert = false) {
+    const payload = {
+        audits,
+        activities,
+        maintenances,
+        masterLists,
+        lastUpdate: new Date().toISOString()
+    };
+
+    try {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${DATA_BIN_ID}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Master-Key': API_KEY
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if(!res.ok) throw new Error('Erro na API');
+        if(showAlert) alert("Dados sincronizados com sucesso!");
+        
+    } catch (err) {
+        console.error("Erro ao salvar:", err);
+        if(showAlert) alert("Erro ao salvar dados: " + err.message);
+    }
+}
+
+// --- CONFIGURAÇÃO DE DATAS ---
+function populateYearSelects() {
+    const years = [];
+    for(let i = currentYear - 4; i <= currentYear + 1; i++) {
+        years.push(i);
+    }
+    const options = years.map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('');
+    
+    ['fAuditYearForMonth', 'fAuditYearOnly', 'fAtivYearForMonth', 'fAtivYearOnly', 'fMantYearForMonth', 'fMantYearOnly'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.innerHTML = options;
+    });
+
+    ['fAuditMonth', 'fAtivMonth', 'fMantMonth'].forEach(id => {
+        document.getElementById(id).value = currentMonth;
+    });
+}
+
+function updateDateInputs(prefix) {
+    const type = document.getElementById(`f${prefix}DateType`).value;
+    document.getElementById(`f${prefix}GroupMonth`).style.display = type === 'month' ? 'flex' : 'none';
+    document.getElementById(`f${prefix}YearOnly`).style.display = type === 'year' ? 'block' : 'none';
+    document.getElementById(`f${prefix}GroupCustom`).style.display = type === 'custom' ? 'flex' : 'none';
+    renderCards();
+}
+
+// --- RENDERIZAÇÃO DE CARDS E FILTROS ---
+function renderCards() {
+    if(currentTab === 'backup') return; 
+
+    const grid = document.getElementById('cardsGrid');
+    grid.innerHTML = '';
+    
+    let data = [];
+    let statusList = [];
+
+    if (currentTab === 'auditoria') {
+        statusList = masterLists.auditStatus || [];
+        const cat = document.getElementById('fAuditCat').value;
+        const stat = document.getElementById('fAuditStatus').value;
+        const dateType = document.getElementById('fAuditDateType').value;
+        
+        data = audits.filter(item => {
+            if (cat && item.categoria !== cat) return false;
+            if (stat && item.status !== stat) return false;
+            
+            if (dateType !== 'all') {
+                const itemDate = new Date(item.dataPrevisao);
+                if (dateType === 'month') {
+                    if (itemDate.getMonth() !== parseInt(document.getElementById('fAuditMonth').value) || 
+                        itemDate.getFullYear() !== parseInt(document.getElementById('fAuditYearForMonth').value)) return false;
+                } else if (dateType === 'year') {
+                    if (itemDate.getFullYear() !== parseInt(document.getElementById('fAuditYearOnly').value)) return false;
+                } else if (dateType === 'custom') {
+                    const ini = document.getElementById('fAuditDataIni').value;
+                    const fim = document.getElementById('fAuditDataFim').value;
+                    if (ini && item.dataPrevisao < ini) return false;
+                    if (fim && item.dataPrevisao > fim) return false;
+                }
+            }
+            return true;
+        });
+    } else if (currentTab === 'atividades') {
+        statusList = masterLists.ativStatus || [];
+        const cat = document.getElementById('fAtivCat').value;
+        const stat = document.getElementById('fAtivStatus').value;
+        const dateType = document.getElementById('fAtivDateType').value;
+
+        data = activities.filter(item => {
+            if (cat && item.categoria !== cat) return false;
+            if (stat && item.status !== stat) return false;
+
+            if (dateType !== 'all') {
+                const itemDate = new Date(item.dataConclusao);
+                if (dateType === 'month') {
+                    if (itemDate.getMonth() !== parseInt(document.getElementById('fAtivMonth').value) || 
+                        itemDate.getFullYear() !== parseInt(document.getElementById('fAtivYearForMonth').value)) return false;
+                } else if (dateType === 'year') {
+                    if (itemDate.getFullYear() !== parseInt(document.getElementById('fAtivYearOnly').value)) return false;
+                } else if (dateType === 'custom') {
+                    const ini = document.getElementById('fAtivDataIni').value;
+                    const fim = document.getElementById('fAtivDataFim').value;
+                    if (ini && item.dataConclusao < ini) return false;
+                    if (fim && item.dataConclusao > fim) return false;
+                }
+            }
+            return true;
+        });
+    } else {
+        statusList = masterLists.mantStatus || [];
+        const cat = document.getElementById('fMantCat').value;
+        const itemVal = document.getElementById('fMantItem').value;
+        const stat = document.getElementById('fMantStatus').value;
+        const dateType = document.getElementById('fMantDateType').value;
+
+        data = maintenances.filter(item => {
+            if (cat && item.categoria !== cat) return false;
+            if (itemVal && item.item !== itemVal) return false;
+            if (stat && item.status !== stat) return false;
+
+            if (dateType !== 'all') {
+                const itemDate = new Date(item.proxima);
+                if (dateType === 'month') {
+                    if (itemDate.getMonth() !== parseInt(document.getElementById('fMantMonth').value) || 
+                        itemDate.getFullYear() !== parseInt(document.getElementById('fMantYearForMonth').value)) return false;
+                } else if (dateType === 'year') {
+                    if (itemDate.getFullYear() !== parseInt(document.getElementById('fMantYearOnly').value)) return false;
+                } else if (dateType === 'custom') {
+                    const ini = document.getElementById('fMantDataIni').value;
+                    const fim = document.getElementById('fMantDataFim').value;
+                    if (ini && item.proxima < ini) return false;
+                    if (fim && item.proxima > fim) return false;
+                }
+            }
+            return true;
+        });
+    }
+
+    if(data.length === 0) {
+        grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#9ca3af"><i class="fas fa-search fa-2x"></i><p>Nenhum registro encontrado.</p></div>';
+        return;
+    }
+
+    data.forEach(item => {
+        const div = document.createElement('div');
+        const flagDays = item.flagDias || 7;
+        let targetDate;
+        
+        if (currentTab === 'auditoria') targetDate = item.dataPrevisao;
+        else if (currentTab === 'atividades') targetDate = item.dataConclusao;
+        else targetDate = item.proxima;
+
+        const d = daysDiff(targetDate);
+        
+        let indicatorClass = 'ind-green';
+        if (d < 0) indicatorClass = 'ind-red';
+        else if (d <= flagDays) indicatorClass = 'ind-yellow';
+
+        const statusObj = statusList.find(s => s.name === item.status) || { color: 'default' };
+        const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
+
+        div.className = `card ${indicatorClass}`;
+        div.onclick = () => openView(item.id, currentTab);
+
+        let specificContent = '';
+        if (currentTab === 'auditoria') {
+            specificContent = `
+                <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
+                <div class="card-info-row"><i class="far fa-calendar-plus"></i> <span>Pub: ${formatBR(item.dataPublicacao)}</span></div>
+                <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>
+            `;
+        } else if (currentTab === 'atividades') {
+            specificContent = `
+                <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
+                <div class="card-info-row"><i class="far fa-calendar-play"></i> <span>Início: ${formatBR(item.dataInicio)}</span></div>
+                <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Fim: <strong>${formatBR(item.dataConclusao)}</strong></span></div>
+            `;
+        } else {
+            specificContent = `
+                <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
+                <div class="card-info-row"><i class="fas fa-cube"></i> <span>${item.item || '-'}</span></div>
+                <div class="card-info-row"><i class="far fa-clock"></i> <span>Próx: <strong>${formatBR(item.proxima)}</strong></span></div>
+            `;
+        }
+
+        div.innerHTML = `
+            <div class="card-header">
+                <span class="tag" style="background-color:${statusColorVar}">${item.status || 'Novo'}</span>
+                <div class="card-actions" onclick="event.stopPropagation()">
+                    <i class="fas fa-pen" onclick="editItem(${item.id}, '${currentTab}')" title="Editar"></i>
+                    <i class="fas fa-trash" onclick="deleteItem(${item.id}, '${currentTab}')" title="Excluir"></i>
+                </div>
+            </div>
+            <div style="padding:0 10px; margin-bottom:12px;">
+                <h4 title="${item.titulo}">${item.titulo}</h4>
+            </div>
+            <div class="card-body">
+                ${specificContent}
+            </div>
+        `;
+        grid.appendChild(div);
+    });
+}
+
+function clearFilters() {
+    document.querySelectorAll('.filters-bar select').forEach(s => {
+        if(!s.id.includes('DateType') && !s.id.includes('Month') && !s.id.includes('Year')) s.value = "";
+    });
+    
+    document.getElementById('fAuditDateType').value = 'all';
+    document.getElementById('fAtivDateType').value = 'all';
+    document.getElementById('fMantDateType').value = 'all';
+    
+    document.querySelectorAll('.filters-bar input').forEach(i => i.value = "");
+    
+    updateDateInputs('Audit');
+    updateDateInputs('Ativ');
+    updateDateInputs('Mant');
+    
+    if(currentTab === 'manutencao') onMantCategoryChange();
+    else renderCards();
+}
+
+function onMantCategoryChange() {
+    const selectedCat = document.getElementById('fMantCat').value;
+    const itemSelect = document.getElementById('fMantItem');
+    const currentSelection = itemSelect.value;
+    itemSelect.innerHTML = '<option value="">Item: Todos</option>';
+    let availableItems = [];
+    if (selectedCat === "") {
+        availableItems = masterLists.itens || [];
+    } else {
+        const itemsInUse = maintenances.filter(m => m.categoria === selectedCat).map(m => m.item);
+        availableItems = [...new Set(itemsInUse)];
+    }
+    availableItems.sort().forEach(i => {
+        const opt = document.createElement('option');
+        opt.value = i; opt.textContent = i;
+        itemSelect.appendChild(opt);
+    });
+    if (availableItems.includes(currentSelection)) itemSelect.value = currentSelection;
+    renderCards();
+}
+
+function populateSelects() {
+    const auditCats = masterLists.auditCategorias || [];
+    const auditStats = masterLists.auditStatus || [];
+    const ativCats = masterLists.ativCategorias || [];
+    const ativStats = masterLists.ativStatus || [];
+    const mantCats = masterLists.mantCategorias || [];
+    const mantStats = masterLists.mantStatus || [];
+    const items = masterLists.itens || [];
+
+    const makeOpts = (list) => list.map(i => `<option>${i}</option>`).join('');
+    const makeStatusOpts = (list) => list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+    const makeFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i}">${i}</option>`).join('');
+    const makeStatusFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+
+    // Modais
+    document.getElementById('auditCategoria').innerHTML = makeOpts(auditCats);
+    document.getElementById('auditStatus').innerHTML = makeStatusOpts(auditStats);
+    
+    document.getElementById('ativCategoria').innerHTML = makeOpts(ativCats);
+    document.getElementById('ativStatus').innerHTML = makeStatusOpts(ativStats);
+
+    document.getElementById('mantCategoria').innerHTML = makeOpts(mantCats);
+    document.getElementById('mantItem').innerHTML = makeOpts(items);
+    document.getElementById('mantStatus').innerHTML = makeStatusOpts(mantStats);
+
+    // Filtros
+    document.getElementById('fAuditCat').innerHTML = makeFilterOpts(auditCats, "Categoria: Todas");
+    document.getElementById('fAuditStatus').innerHTML = makeStatusFilterOpts(auditStats, "Status: Todos");
+    
+    document.getElementById('fAtivCat').innerHTML = makeFilterOpts(ativCats, "Categoria: Todas");
+    document.getElementById('fAtivStatus').innerHTML = makeStatusFilterOpts(ativStats, "Status: Todos");
+
+    document.getElementById('fMantCat').innerHTML = makeFilterOpts(mantCats, "Categoria: Todas");
+    document.getElementById('fMantStatus').innerHTML = makeStatusFilterOpts(mantStats, "Status: Todos");
+    
+    onMantCategoryChange(); 
+}
+
+// --- TAB CONTROL ---
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+    
+    const tabId = 'tab' + tab.charAt(0).toUpperCase() + tab.slice(1);
+    const btn = document.getElementById(tabId);
+    if(btn) btn.classList.add('active');
+    
+    const titles = { 
+        auditoria: 'Auditoria', 
+        atividades: 'Gestão de Atividades', 
+        manutencao: 'Manutenção',
+        backup: 'Backup do Sistema'
+    };
+    const subtitles = { 
+        auditoria: 'Planejamento e execução de auditorias', 
+        atividades: 'Controle de tarefas, reuniões e projetos',
+        manutencao: 'Controle preventivo de equipamentos',
+        backup: 'Segurança dos dados'
+    };
+    
+    document.getElementById('pageTitle').textContent = titles[tab];
+    document.getElementById('pageSubtitle').textContent = subtitles[tab];
+    
+    const isBackup = tab === 'backup';
+    document.getElementById('filtersBar').style.display = isBackup ? 'none' : 'flex';
+    document.getElementById('cardsGrid').style.display = isBackup ? 'none' : 'grid';
+    document.getElementById('addBtn').style.display = isBackup ? 'none' : 'flex';
+    document.getElementById('backupContent').style.display = isBackup ? 'flex' : 'none';
+
+    document.getElementById('filtersAuditoria').style.display = tab === 'auditoria' ? 'flex' : 'none';
+    document.getElementById('filtersAtividades').style.display = tab === 'atividades' ? 'flex' : 'none';
+    document.getElementById('filtersManutencao').style.display = tab === 'manutencao' ? 'flex' : 'none';
+    
+    if(!isBackup) {
+        clearFilters();
+    }
+}
+
+document.getElementById('tabAuditoria').onclick = () => switchTab('auditoria');
+document.getElementById('tabAtividades').onclick = () => switchTab('atividades');
+document.getElementById('tabManutencao').onclick = () => switchTab('manutencao');
+document.getElementById('tabBackup').onclick = () => switchTab('backup');
+
+// --- MODAL & FORM LOGIC ---
+document.getElementById('addBtn').onclick = () => {
+    if (currentTab === 'auditoria') {
+        editingAuditId = null;
+        document.getElementById('auditTitulo').value = '';
+        document.getElementById('auditDescricao').value = '';
+        document.getElementById('auditDataPublicacao').value = today();
+        document.getElementById('auditDataPrevisao').value = today();
+        document.getElementById('auditAnexos').innerHTML = '';
+        document.getElementById('modalAuditoria').style.display = 'flex';
+    } else if (currentTab === 'atividades') {
+        editingAtivId = null;
+        document.getElementById('ativTitulo').value = '';
+        document.getElementById('ativDescricao').value = '';
+        document.getElementById('ativDataInicio').value = today();
+        document.getElementById('ativDataConclusao').value = today();
+        document.getElementById('ativAnexos').innerHTML = '';
+        document.getElementById('modalAtividades').style.display = 'flex';
+    } else {
+        editingMantId = null;
+        document.getElementById('mantTitulo').value = '';
+        document.getElementById('mantDescricao').value = '';
+        document.getElementById('mantUltima').value = today();
+        document.getElementById('mantIntervalo').value = 30;
+        document.getElementById('mantAnexos').innerHTML = '';
+        calculateNextDate();
+        document.getElementById('modalManutencao').style.display = 'flex';
+    }
+};
+
+function calculateNextDate() {
+    const ultima = document.getElementById('mantUltima').value;
+    const intervalo = parseInt(document.getElementById('mantIntervalo').value) || 0;
+    if (ultima) {
+        const next = new Date(ultima);
+        next.setDate(next.getDate() + intervalo);
+        const nextStr = next.toISOString().split('T')[0];
+        document.getElementById('mantProxima').textContent = formatBR(nextStr);
+    }
+}
+
+// SAVE FUNCTIONS
+function saveAudit() {
+    const item = {
+        id: editingAuditId || Date.now(),
+        titulo: document.getElementById('auditTitulo').value,
+        descricao: document.getElementById('auditDescricao').value,
+        categoria: document.getElementById('auditCategoria').value,
+        status: document.getElementById('auditStatus').value,
+        dataPublicacao: document.getElementById('auditDataPublicacao').value,
+        dataPrevisao: document.getElementById('auditDataPrevisao').value,
+        flagDias: +document.getElementById('auditFlagDias').value,
+        anexos: getAnexos('audit')
+    };
+    if (editingAuditId) audits = audits.map(a => a.id === editingAuditId ? item : a);
+    else audits.push(item);
+    saveAll(); closeModal('modalAuditoria'); renderCards();
+}
+
+function saveAtividade() {
+    const item = {
+        id: editingAtivId || Date.now(),
+        titulo: document.getElementById('ativTitulo').value,
+        descricao: document.getElementById('ativDescricao').value,
+        categoria: document.getElementById('ativCategoria').value,
+        status: document.getElementById('ativStatus').value,
+        dataInicio: document.getElementById('ativDataInicio').value,
+        dataConclusao: document.getElementById('ativDataConclusao').value,
+        flagDias: +document.getElementById('ativFlagDias').value,
+        anexos: getAnexos('ativ')
+    };
+    if (editingAtivId) activities = activities.map(a => a.id === editingAtivId ? item : a);
+    else activities.push(item);
+    saveAll(); closeModal('modalAtividades'); renderCards();
+}
+
+function saveManutencao() {
+    const ultima = document.getElementById('mantUltima').value;
+    const intervalo = parseInt(document.getElementById('mantIntervalo').value);
+    const nextDate = new Date(ultima);
+    nextDate.setDate(nextDate.getDate() + intervalo);
+    const item = {
+        id: editingMantId || Date.now(),
+        titulo: document.getElementById('mantTitulo').value,
+        descricao: document.getElementById('mantDescricao').value,
+        categoria: document.getElementById('mantCategoria').value,
+        item: document.getElementById('mantItem').value,
+        ultima,
+        intervalo,
+        proxima: nextDate.toISOString().split('T')[0],
+        status: document.getElementById('mantStatus').value,
+        flagDias: +document.getElementById('mantFlagDias').value,
+        anexos: getAnexos('mant')
+    };
+    if (editingMantId) maintenances = maintenances.map(m => m.id === editingMantId ? item : m);
+    else maintenances.push(item);
+    saveAll(); closeModal('modalManutencao'); renderCards();
+}
+
+function editItem(id, tab) {
+    if (tab === 'auditoria') {
+        const item = audits.find(a => a.id === id);
+        editingAuditId = id;
+        document.getElementById('auditTitulo').value = item.titulo;
+        document.getElementById('auditDescricao').value = item.descricao;
+        document.getElementById('auditCategoria').value = item.categoria;
+        document.getElementById('auditStatus').value = item.status;
+        document.getElementById('auditDataPublicacao').value = item.dataPublicacao;
+        document.getElementById('auditDataPrevisao').value = item.dataPrevisao;
+        document.getElementById('auditFlagDias').value = item.flagDias;
+        restoreAnexos('audit', item.anexos);
+        document.getElementById('modalAuditoria').style.display = 'flex';
+    } else if (tab === 'atividades') {
+        const item = activities.find(a => a.id === id);
+        editingAtivId = id;
+        document.getElementById('ativTitulo').value = item.titulo;
+        document.getElementById('ativDescricao').value = item.descricao;
+        document.getElementById('ativCategoria').value = item.categoria;
+        document.getElementById('ativStatus').value = item.status;
+        document.getElementById('ativDataInicio').value = item.dataInicio;
+        document.getElementById('ativDataConclusao').value = item.dataConclusao;
+        document.getElementById('ativFlagDias').value = item.flagDias;
+        restoreAnexos('ativ', item.anexos);
+        document.getElementById('modalAtividades').style.display = 'flex';
+    } else {
+        const item = maintenances.find(m => m.id === id);
+        editingMantId = id;
+        document.getElementById('mantTitulo').value = item.titulo;
+        document.getElementById('mantDescricao').value = item.descricao;
+        document.getElementById('mantCategoria').value = item.categoria;
+        document.getElementById('mantItem').value = item.item;
+        document.getElementById('mantUltima').value = item.ultima;
+        document.getElementById('mantIntervalo').value = item.intervalo;
+        document.getElementById('mantStatus').value = item.status;
+        document.getElementById('mantFlagDias').value = item.flagDias;
+        calculateNextDate();
+        restoreAnexos('mant', item.anexos);
+        document.getElementById('modalManutencao').style.display = 'flex';
+    }
+}
+
+function deleteItem(id, tab) {
+    if (!confirm('Deseja realmente excluir este registro?')) return;
+    if (tab === 'auditoria') audits = audits.filter(a => a.id !== id);
+    else if (tab === 'atividades') activities = activities.filter(a => a.id !== id);
+    else maintenances = maintenances.filter(m => m.id !== id);
+    saveAll();
+    renderCards();
+}
+
+// Anexos Logic
+function addAnexo(prefix) {
+    const container = document.getElementById(prefix + 'Anexos');
+    const div = document.createElement('div');
+    div.className = 'anexo-item';
+    div.innerHTML = `
+        <i class="fas fa-link"></i>
+        <input placeholder="Título do arquivo" class="anexo-title">
+        <input placeholder="Cole a URL aqui..." class="anexo-url">
+        <i class="fas fa-times" style="cursor:pointer; color:var(--ind-red)" onclick="this.parentElement.remove()"></i>
+    `;
+    container.appendChild(div);
+}
+function getAnexos(prefix) {
+    return [...document.querySelectorAll(`#${prefix}Anexos .anexo-item`)].map(row => ({
+        titulo: row.querySelector('.anexo-title').value,
+        url: row.querySelector('.anexo-url').value
+    })).filter(a => a.url);
+}
+function restoreAnexos(prefix, list) {
+    const container = document.getElementById(prefix + 'Anexos');
+    container.innerHTML = '';
+    (list || []).forEach(a => {
+        addAnexo(prefix);
+        const row = container.lastChild;
+        row.querySelector('.anexo-title').value = a.titulo;
+        row.querySelector('.anexo-url').value = a.url;
+    });
+}
+
+// View Modal
+function openView(id, tab) {
+    let item, statusList;
+    if (tab === 'auditoria') { item = audits.find(i => i.id === id); statusList = masterLists.auditStatus; }
+    else if (tab === 'atividades') { item = activities.find(i => i.id === id); statusList = masterLists.ativStatus; }
+    else { item = maintenances.find(i => i.id === id); statusList = masterLists.mantStatus; }
+
+    if (!item) return;
+
+    const statusObj = (statusList || []).find(s => s.name === item.status) || { color: 'default' };
+    const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
+
+    let detailsGrid = '';
+    if (tab === 'auditoria') {
+        detailsGrid = `
+            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
+            <div class="view-item"><label>Publicação</label><div>${formatBR(item.dataPublicacao)}</div></div>
+            <div class="view-item"><label>Previsão</label><div>${formatBR(item.dataPrevisao)}</div></div>
+            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+        `;
+    } else if (tab === 'atividades') {
+        detailsGrid = `
+            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
+            <div class="view-item"><label>Data Início</label><div>${formatBR(item.dataInicio)}</div></div>
+            <div class="view-item"><label>Data Conclusão</label><div>${formatBR(item.dataConclusao)}</div></div>
+            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+        `;
+    } else {
+        detailsGrid = `
+            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
+            <div class="view-item"><label>Equipamento</label><div>${item.item}</div></div>
+            <div class="view-item"><label>Última Manutenção</label><div>${formatBR(item.ultima)}</div></div>
+            <div class="view-item"><label>Próxima Manutenção</label><div>${formatBR(item.proxima)}</div></div>
+        `;
+    }
+
+    const anexosHtml = (item.anexos || []).map(a => 
+        `<a href="${a.url}" target="_blank" class="file-chip"><i class="fas fa-external-link-alt"></i> ${a.titulo || 'Anexo'}</a>`
+    ).join('');
+
+    const html = `
+        <div class="view-header">
+            <h2 style="margin:0; color:var(--primary)">${item.titulo}</h2>
+            <span class="view-status" style="background-color:${statusColorVar}">${item.status}</span>
+        </div>
+        <div class="view-grid">
+            ${detailsGrid}
+        </div>
+        <div>
+            <h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase">Descrição Detalhada</h4>
+            <div class="view-desc">${item.descricao || 'Sem descrição.'}</div>
+        </div>
+        ${anexosHtml ? `<div class="view-files"><h4>Anexos</h4>${anexosHtml}</div>` : ''}
+    `;
+    
+    document.getElementById('viewContent').innerHTML = html;
+    document.getElementById('viewModal').style.display = 'flex';
+}
+
+// List Manager & Color Selection
+function openListManager(genericKey) {
+    if (genericKey === 'categorias') {
+        if(currentTab === 'auditoria') currentListKey = 'auditCategorias';
+        else if(currentTab === 'atividades') currentListKey = 'ativCategorias';
+        else currentListKey = 'mantCategorias';
+    } else if (genericKey === 'status') {
+        if(currentTab === 'auditoria') currentListKey = 'auditStatus';
+        else if(currentTab === 'atividades') currentListKey = 'ativStatus';
+        else currentListKey = 'mantStatus';
+    } else {
+        currentListKey = genericKey; 
+    }
+
+    const tabName = currentTab.charAt(0).toUpperCase() + currentTab.slice(1);
+    document.getElementById('listTitle').textContent = `Gerenciar: ${tabName} - ${genericKey.toUpperCase()}`;
+    const body = document.getElementById('listBody');
+    body.innerHTML = '';
+
+    if(genericKey === 'status') {
+        document.getElementById('colorPickerContainer').style.display = 'block';
+        selectColor('default', document.querySelector('.bg-default')); 
+    } else {
+        document.getElementById('colorPickerContainer').style.display = 'none';
+    }
+
+    const list = masterLists[currentListKey] || [];
+    list.forEach(val => {
+        let displayHtml = '', itemVal = '';
+        if (typeof val === 'object') {
+            const colorVar = colorMap[val.color] || colorMap['default'];
+            displayHtml = `<span class="color-dot" style="background-color:${colorVar}"></span>${val.name}`;
+            itemVal = val.name; 
+        } else {
+            displayHtml = val;
+            itemVal = val;
+        }
+
+        body.innerHTML += `<tr>
+            <td>${displayHtml}</td>
+            <td class="remove" onclick="removeFromList('${currentListKey}','${itemVal}')"><i class="fas fa-trash"></i></td>
+        </tr>`;
+    });
+    
+    const input = document.getElementById('newListItem');
+    input.value = '';
+    input.onkeydown = (e) => { if(e.key === 'Enter') addToList(); };
+    
+    document.getElementById('modalListManager').style.display = 'flex';
+}
+
+function selectColor(color, el) {
+    selectedColorTemp = color;
+    document.querySelectorAll('.color-option').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+}
+
+function addToList() {
+    const val = document.getElementById('newListItem').value.trim();
+    if (!val) return;
+    const isStatus = currentListKey.toLowerCase().includes('status');
+    if (isStatus) {
+        if(masterLists[currentListKey].some(s => s.name === val)) return;
+        masterLists[currentListKey].push({ name: val, color: selectedColorTemp });
+    } else {
+        if(masterLists[currentListKey].includes(val)) return;
+        masterLists[currentListKey].push(val);
+    }
+    saveAll(); populateSelects();
+    
+    let genericTag = '';
+    if(currentListKey.includes('Categorias')) genericTag = 'categorias';
+    else if(currentListKey.includes('Status')) genericTag = 'status';
+    else genericTag = currentListKey;
+    openListManager(genericTag);
+}
+
+function removeFromList(key, val) {
+    if (key.toLowerCase().includes('status')) {
+        masterLists[key] = masterLists[key].filter(s => s.name !== val);
+    } else {
+        masterLists[key] = masterLists[key].filter(i => i !== val);
+    }
+    saveAll(); populateSelects();
+    
+    let genericTag = '';
+    if(key.includes('Categorias')) genericTag = 'categorias';
+    else if(key.includes('Status')) genericTag = 'status';
+    else genericTag = key;
+    openListManager(genericTag);
+}
+// --- FUNÇÕES DE BACKUP LOCAL (ARQUIVO) ---
+
+function exportLocalData() {
+    const data = {
+        audits,
+        activities,
+        maintenances,
+        masterLists,
+        exportDate: new Date().toISOString(),
+        source: "local_export"
+    };
+    
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "Auditoria_Lamic_" + today() + ".json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+}
+
+function importLocalData(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            
+            // Validação básica
+            if (data.audits && data.masterLists) {
+                if(confirm("ATENÇÃO: Isso substituirá os dados atuais e atualizará a nuvem. Deseja continuar?")) {
+                    
+                    // Atualiza variáveis em memória
+                    audits = data.audits || [];
+                    activities = data.activities || [];
+                    maintenances = data.maintenances || [];
+                    masterLists = data.masterLists || defaultMasterLists;
+
+                    // Salva na nuvem para persistir a importação
+                    await saveAll(false); 
+                    
+                    alert("Backup local restaurado e sincronizado com a nuvem com sucesso!");
+                    
+                    // Recarrega interface
+                    populateSelects();
+                    renderCards();
+                    input.value = ''; // Limpa o input para permitir re-upload do mesmo arquivo se necessário
+                }
+            } else {
+                alert("O arquivo selecionado não é um backup válido deste sistema.");
+            }
+        } catch (err) {
+            alert("Erro ao ler o arquivo: " + err.message);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+</script>
+</body>
+</html>
