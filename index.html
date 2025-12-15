@@ -68,8 +68,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 /* FILTERS BAR */
 .filters-bar{
     background:#fff;padding:20px;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,0.03);
-    display:flex;gap:16px;flex-wrap:wrap;align-items:center;border:1px solid var(--border)
+    display:flex;gap:16px;flex-wrap:wrap;align-items:center;border:1px solid var(--border);
+    justify-content: space-between; /* Ajustado para mover o botão para a direita */
 }
+.filter-controls { display: flex; flex-wrap: wrap; gap: 16px; }
 .filter-group{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .filter-input{
     padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;
@@ -271,10 +273,11 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     <div class="sidebar-logo"><i class="fa-solid fa-layer-group"></i> Auditoria LAMIC</div>
     
     <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Auditoria</button>
+    <button id="tabDocumentos"><i class="fa-solid fa-file-alt"></i> Documentos</button> 
     <button id="tabAtividades"><i class="fa-solid fa-list-check"></i> Gestão de Atividades</button>
-        <button id="tabManutencao"><i class="fa-solid fa-wrench"></i> Manutenção</button>
+    <button id="tabManutencao"><i class="fa-solid fa-wrench"></i> Manutenção</button>
 
-        <div class="sidebar-divider"></div>
+    <div class="sidebar-divider"></div>
 
     <button id="tabBackup"><i class="fa-solid fa-database"></i> Backup</button>
 </aside>
@@ -285,10 +288,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             <h1 id="pageTitle">Auditoria</h1>
             <small id="pageSubtitle">Gerenciamento e agendamento</small>
         </div>
-        <button class="btn-primary" id="addBtn">
-            <i class="fas fa-plus"></i> Novo Registro
-        </button>
-    </header>
+        </header>
 
     <div class="content">
         
@@ -299,17 +299,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <p style="color:var(--text-light); margin:0 0 24px 0">Gerencie seus dados via Nuvem (JSONBin) ou Arquivo Local.</p>
                 
                 <div class="backup-actions" style="flex-wrap: wrap;">
-                    <button class="btn-large btn-primary" onclick="saveAll(true)" style="background:var(--primary); color:#fff; border:none;">
-                        <i class="fas fa-sync"></i> Sincronizar Nuvem
-                    </button>
-        
-                    <button class="btn-large btn-export" onclick="exportLocalData()" style="background:var(--ind-green); color:#fff; border:none;">
+                    <button class="btn-large btn-export" onclick="exportLocalData()" style="background:var(--ind-green); color:#fff; border:none; flex:1;">
                         <i class="fas fa-download"></i> Baixar Dados
                     </button>
-                    <button class="btn-large btn-import" onclick="document.getElementById('fileInput').click()" style="background:#fff; color:var(--text); border:2px solid var(--border);">
+                    <button class="btn-large btn-import" onclick="document.getElementById('fileInput').click()" style="background:#fff; color:var(--text); border:2px solid var(--border); flex:1;">
                         <i class="fas fa-upload"></i> Importar Dados
                     </button>
-
                     <input type="file" id="fileInput" style="display:none" onchange="importLocalData(this)" accept=".json">
                 </div>
                 <p style="font-size:12px; color:#999; margin-top:20px">Nota: Ao restaurar um arquivo local, ele será automaticamente sincronizado com a nuvem.</p>
@@ -317,120 +312,182 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         </div>
 
         <div class="filters-bar" id="filtersBar">
-            <div style="font-weight:600; color:var(--primary); font-size:14px;"><i class="fa-solid fa-filter"></i> Filtros:</div>
+            <div class="filter-controls">
+                <div style="font-weight:600; color:var(--primary); font-size:14px;"><i class="fa-solid fa-filter"></i> Filtros:</div>
+                
+                <div id="filtersAuditoria" class="filter-group">
+                    <select id="fAuditSetor" class="filter-input" onchange="onFilterSetorChange('Audit')">
+                        <option value="">Setor: Todos</option>
+                    </select>
+                    <select id="fAuditCat" class="filter-input" onchange="onFilterCategoryChange('Audit')">
+                        <option value="">Categoria: Todas</option>
+                    </select>
+                    <select id="fAuditSub" class="filter-input" onchange="renderCards()">
+                        <option value="">Subcategoria: Todas</option>
+                    </select>
+                    <select id="fAuditStatus" class="filter-input" onchange="renderCards()">
+                        <option value="">Status: Todos</option>
+                    </select>
+                    
+                    <div class="date-controls">
+                        <select id="fAuditDateType" onchange="updateDateInputs('Audit')">
+                            <option value="all" selected>Período: Data</option>
+                            <option value="month">Mês</option>
+                            <option value="year">Ano</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+                        
+                        <div id="fAuditGroupMonth" style="display:none; gap:4px">
+                            <select id="fAuditMonth" onchange="renderCards()">
+                                <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
+                                <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
+                                <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
+                                <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
+                            </select>
+                            <select id="fAuditYearForMonth" onchange="renderCards()"></select>
+                        </div>
+
+                        <select id="fAuditYearOnly" style="display:none" onchange="renderCards()"></select>
+
+                        <div id="fAuditGroupCustom" style="display:none; align-items:center; gap:4px">
+                            <input type="date" id="fAuditDataIni" onchange="renderCards()">
+                            <span style="color:#ccc">a</span>
+                            <input type="date" id="fAuditDataFim" onchange="renderCards()">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="filtersAtividades" class="filter-group" style="display:none;">
+                    <select id="fAtivSetor" class="filter-input" onchange="onFilterSetorChange('Ativ')">
+                        <option value="">Setor: Todos</option>
+                    </select>
+                    <select id="fAtivCat" class="filter-input" onchange="onFilterCategoryChange('Ativ')">
+                        <option value="">Categoria: Todas</option>
+                    </select>
+                    <select id="fAtivSub" class="filter-input" onchange="renderCards()">
+                        <option value="">Subcategoria: Todas</option>
+                    </select>
+                    <select id="fAtivStatus" class="filter-input" onchange="renderCards()">
+                        <option value="">Status: Todos</option>
+                    </select>
+                    
+                    <div class="date-controls">
+                        <select id="fAtivDateType" onchange="updateDateInputs('Ativ')">
+                            <option value="all" selected>Período: Data</option>
+                            <option value="month">Mês</option>
+                            <option value="year">Ano</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+                        
+                        <div id="fAtivGroupMonth" style="display:none; gap:4px">
+                            <select id="fAtivMonth" onchange="renderCards()">
+                                <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
+                                <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
+                                <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
+                                <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
+                            </select>
+                            <select id="fAtivYearForMonth" onchange="renderCards()"></select>
+                        </div>
+
+                        <select id="fAtivYearOnly" style="display:none" onchange="renderCards()"></select>
+
+                        <div id="fAtivGroupCustom" style="display:none; align-items:center; gap:4px">
+                            <input type="date" id="fAtivDataIni" onchange="renderCards()">
+                            <span style="color:#ccc">a</span>
+                            <input type="date" id="fAtivDataFim" onchange="renderCards()">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="filtersManutencao" class="filter-group" style="display:none;">
+                    <select id="fMantSetor" class="filter-input" onchange="onFilterSetorChange('Mant')">
+                        <option value="">Setor: Todos</option>
+                    </select>
+                    <select id="fMantCat" class="filter-input" onchange="onFilterCategoryChange('Mant')">
+                        <option value="">Categoria: Todas</option>
+                    </select>
+                    <select id="fMantItem" class="filter-input" onchange="renderCards()">
+                        <option value="">Item: Todos</option>
+                    </select>
+                    <select id="fMantStatus" class="filter-input" onchange="renderCards()">
+                        <option value="">Status: Todos</option>
+                    </select>
+                    
+                    <div class="date-controls">
+                        <select id="fMantDateType" onchange="updateDateInputs('Mant')">
+                            <option value="all" selected>Próxima: Data</option>
+                            <option value="month">Mês</option>
+                            <option value="year">Ano</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+
+                        <div id="fMantGroupMonth" style="display:none; gap:4px">
+                            <select id="fMantMonth" onchange="renderCards()">
+                                <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
+                                <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
+                                <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
+                                <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
+                            </select>
+                            <select id="fMantYearForMonth" onchange="renderCards()"></select>
+                        </div>
+
+                        <select id="fMantYearOnly" style="display:none" onchange="renderCards()"></select>
+
+                        <div id="fMantGroupCustom" style="display:none; align-items:center; gap:4px">
+                            <input type="date" id="fMantDataIni" onchange="renderCards()">
+                            <span style="color:#ccc">a</span>
+                            <input type="date" id="fMantDataFim" onchange="renderCards()">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="filtersDocumentos" class="filter-group" style="display:none;"> 
+                    <select id="fDocSetor" class="filter-input" onchange="onFilterSetorChange('Doc')">
+                        <option value="">Setor: Todos</option>
+                    </select>
+                    <select id="fDocCat" class="filter-input" onchange="onFilterCategoryChange('Doc')">
+                        <option value="">Categoria: Todas</option>
+                    </select>
+                    <select id="fDocSub" class="filter-input" onchange="renderCards()">
+                        <option value="">Subcategoria: Todas</option>
+                    </select>
+                    <select id="fDocStatus" class="filter-input" onchange="renderCards()">
+                        <option value="">Status: Todos</option>
+                    </select>
+                    
+                    <div class="date-controls">
+                        <select id="fDocDateType" onchange="updateDateInputs('Doc')">
+                            <option value="all" selected>Data: Todas</option>
+                            <option value="month">Mês</option>
+                            <option value="year">Ano</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+
+                        <div id="fDocGroupMonth" style="display:none; gap:4px">
+                            <select id="fDocMonth" onchange="renderCards()">
+                                <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
+                                <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
+                                <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
+                                <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
+                            </select>
+                            <select id="fDocYearForMonth" onchange="renderCards()"></select>
+                        </div>
+
+                        <select id="fDocYearOnly" style="display:none" onchange="renderCards()"></select>
+
+                        <div id="fDocGroupCustom" style="display:none; align-items:center; gap:4px">
+                            <input type="date" id="fDocDataIni" onchange="renderCards()">
+                            <span style="color:#ccc">a</span>
+                            <input type="date" id="fDocDataFim" onchange="renderCards()">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-clear" onclick="clearFilters()" title="Limpar filtros"><i class="fa-solid fa-rotate-left"></i></button>
+            </div>
             
-            <div id="filtersAuditoria" class="filter-group">
-                <select id="fAuditCat" class="filter-input" onchange="renderCards()">
-                    <option value="">Categoria: Todas</option>
-                </select>
-                <select id="fAuditStatus" class="filter-input" onchange="renderCards()">
-                    <option value="">Status: Todos</option>
-                </select>
-                
-                <div class="date-controls">
-                    <select id="fAuditDateType" onchange="updateDateInputs('Audit')">
-                        <option value="all" selected>Período: Data</option>
-                        <option value="month">Mês</option>
-                        <option value="year">Ano</option>
-                        <option value="custom">Personalizado</option>
-                    </select>
-                    
-                    <div id="fAuditGroupMonth" style="display:none; gap:4px">
-                        <select id="fAuditMonth" onchange="renderCards()">
-                            <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
-                            <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
-                            <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
-                            <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
-                        </select>
-                        <select id="fAuditYearForMonth" onchange="renderCards()"></select>
-                    </div>
-
-                    <select id="fAuditYearOnly" style="display:none" onchange="renderCards()"></select>
-
-                    <div id="fAuditGroupCustom" style="display:none; align-items:center; gap:4px">
-                        <input type="date" id="fAuditDataIni" onchange="renderCards()">
-                        <span style="color:#ccc">a</span>
-                        <input type="date" id="fAuditDataFim" onchange="renderCards()">
-                    </div>
-                </div>
-            </div>
-
-            <div id="filtersAtividades" class="filter-group" style="display:none;">
-                <select id="fAtivCat" class="filter-input" onchange="renderCards()">
-                    <option value="">Categoria: Todas</option>
-                </select>
-                <select id="fAtivStatus" class="filter-input" onchange="renderCards()">
-                    <option value="">Status: Todos</option>
-                </select>
-                
-                <div class="date-controls">
-                    <select id="fAtivDateType" onchange="updateDateInputs('Ativ')">
-                        <option value="all" selected>Período: Data</option>
-                        <option value="month">Mês</option>
-                        <option value="year">Ano</option>
-                        <option value="custom">Personalizado</option>
-                    </select>
-                    
-                    <div id="fAtivGroupMonth" style="display:none; gap:4px">
-                        <select id="fAtivMonth" onchange="renderCards()">
-                            <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
-                            <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
-                            <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
-                            <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
-                        </select>
-                        <select id="fAtivYearForMonth" onchange="renderCards()"></select>
-                    </div>
-
-                    <select id="fAtivYearOnly" style="display:none" onchange="renderCards()"></select>
-
-                    <div id="fAtivGroupCustom" style="display:none; align-items:center; gap:4px">
-                        <input type="date" id="fAtivDataIni" onchange="renderCards()">
-                        <span style="color:#ccc">a</span>
-                        <input type="date" id="fAtivDataFim" onchange="renderCards()">
-                    </div>
-                </div>
-            </div>
-
-            <div id="filtersManutencao" class="filter-group" style="display:none;">
-                <select id="fMantCat" class="filter-input" onchange="onMantCategoryChange()">
-                    <option value="">Categoria: Todas</option>
-                </select>
-                <select id="fMantItem" class="filter-input" onchange="renderCards()">
-                    <option value="">Item: Todos</option>
-                </select>
-                <select id="fMantStatus" class="filter-input" onchange="renderCards()">
-                    <option value="">Status: Todos</option>
-                </select>
-                
-                <div class="date-controls">
-                    <select id="fMantDateType" onchange="updateDateInputs('Mant')">
-                        <option value="all" selected>Próxima: Data</option>
-                        <option value="month">Mês</option>
-                        <option value="year">Ano</option>
-                        <option value="custom">Personalizado</option>
-                    </select>
-
-                     <div id="fMantGroupMonth" style="display:none; gap:4px">
-                        <select id="fMantMonth" onchange="renderCards()">
-                            <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
-                            <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
-                            <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
-                            <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
-                        </select>
-                        <select id="fMantYearForMonth" onchange="renderCards()"></select>
-                    </div>
-
-                    <select id="fMantYearOnly" style="display:none" onchange="renderCards()"></select>
-
-                    <div id="fMantGroupCustom" style="display:none; align-items:center; gap:4px">
-                        <input type="date" id="fMantDataIni" onchange="renderCards()">
-                        <span style="color:#ccc">a</span>
-                        <input type="date" id="fMantDataFim" onchange="renderCards()">
-                    </div>
-                </div>
-            </div>
-
-            <button class="btn-clear" onclick="clearFilters()" title="Limpar filtros"><i class="fa-solid fa-rotate-left"></i></button>
+            <button class="btn-primary" id="addBtn"> <i class="fas fa-plus"></i> Novo Registro
+            </button>
         </div>
 
         <div class="cards-grid" id="cardsGrid">
@@ -451,10 +508,24 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <textarea id="auditDescricao" rows="2"></textarea>
             </div>
             <div class="field-group">
+                <label>Setor</label>
+                <div class="select-wrapper">
+                    <select id="auditSetor" onchange="onCategoryChange('audit')"></select>
+                    <button onclick="openListManager('setores')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
                 <label>Categoria</label>
                 <div class="select-wrapper">
-                    <select id="auditCategoria"></select>
+                    <select id="auditCategoria" onchange="onCategoryChange('audit')"></select>
                     <button onclick="openListManager('categorias')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Subcategoria</label>
+                <div class="select-wrapper">
+                    <select id="auditSub"></select>
+                    <button onclick="openListManager('subcategorias')"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
             <div class="field-group">
@@ -471,6 +542,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             <div class="field-group">
                 <label>Data Previsão</label>
                 <input type="date" id="auditDataPrevisao">
+            </div>
+            <div class="field-group">
+                <label>Responsável</label> <input id="auditResponsavel" placeholder="Nome do Responsável">
             </div>
             <div class="field-group">
                 <label>Alerta (Dias antes)</label>
@@ -504,10 +578,24 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <textarea id="ativDescricao" rows="2"></textarea>
             </div>
             <div class="field-group">
+                <label>Setor</label>
+                <div class="select-wrapper">
+                    <select id="ativSetor" onchange="onCategoryChange('ativ')"></select>
+                    <button onclick="openListManager('setores')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
                 <label>Categoria</label>
                 <div class="select-wrapper">
-                    <select id="ativCategoria"></select>
+                    <select id="ativCategoria" onchange="onCategoryChange('ativ')"></select>
                     <button onclick="openListManager('categorias')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Subcategoria</label>
+                <div class="select-wrapper">
+                    <select id="ativSub"></select>
+                    <button onclick="openListManager('subcategorias')"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
             <div class="field-group">
@@ -524,6 +612,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             <div class="field-group">
                 <label>Data Conclusão</label>
                 <input type="date" id="ativDataConclusao">
+            </div>
+            <div class="field-group">
+                <label>Responsável</label> <input id="ativResponsavel" placeholder="Nome do Responsável">
             </div>
             <div class="field-group">
                 <label>Alerta (Dias antes)</label>
@@ -557,9 +648,16 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <textarea id="mantDescricao" rows="2"></textarea>
             </div>
             <div class="field-group">
+                <label>Setor</label>
+                <div class="select-wrapper">
+                    <select id="mantSetor" onchange="onCategoryChange('mant')"></select>
+                    <button onclick="openListManager('setores')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
                 <label>Categoria</label>
                 <div class="select-wrapper">
-                    <select id="mantCategoria"></select>
+                    <select id="mantCategoria" onchange="onCategoryChange('mant')"></select>
                     <button onclick="openListManager('categorias')"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
@@ -572,11 +670,17 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             </div>
             <div class="field-group">
                 <label>Última Manutenção</label>
-                <input type="date" id="mantUltima" onchange="calculateNextDate()">
+                <input type="date" id="mantUltima" onchange="calculateNextDate('mant')">
             </div>
             <div class="field-group">
                 <label>Periodicidade (Dias)</label>
-                <input type="number" id="mantIntervalo" value="30" onchange="calculateNextDate()">
+                <input type="number" id="mantIntervalo" value="30" onchange="calculateNextDate('mant')">
+            </div>
+            <div class="field-group">
+                <label>Responsável Técnico</label> <input id="mantResponsavelTecnico" placeholder="Nome do Técnico">
+            </div>
+            <div class="field-group">
+                <label>Responsável pela Manutenção</label> <input id="mantResponsavelManutencao" placeholder="Nome do Gestor">
             </div>
             <div class="field-group full-width" style="background:#f0f9ff; padding:10px; border-radius:8px; border:1px solid #bae6fd">
                 <label style="color:#0369a1">Próxima Manutenção (Calculada)</label>
@@ -604,6 +708,84 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         <div class="modal-actions">
             <button class="btn-cancel" onclick="closeModal('modalManutencao')">Cancelar</button>
             <button class="btn-save" onclick="saveManutencao()">Salvar Registro</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalDocumentos"> <div class="modal-content">
+        <div class="modal-header"><h3>Novo Documento</h3></div>
+        <div class="form-grid">
+            <div class="field-group full-width">
+                <label>Título/Nome do Documento</label>
+                <input id="docTitulo" placeholder="Ex: Procedimento Operacional Padrão 01">
+            </div>
+            <div class="field-group full-width">
+                <label>Descrição/Resumo</label>
+                <textarea id="docDescricao" rows="2"></textarea>
+            </div>
+            <div class="field-group">
+                <label>Setor</label>
+                <div class="select-wrapper">
+                    <select id="docSetor" onchange="onCategoryChange('doc')"></select>
+                    <button onclick="openListManager('setores')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Categoria</label>
+                <div class="select-wrapper">
+                    <select id="docCategoria" onchange="onCategoryChange('doc')"></select>
+                    <button onclick="openListManager('categorias')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Subcategoria</label>
+                <div class="select-wrapper">
+                    <select id="docSub"></select>
+                    <button onclick="openListManager('subcategorias')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Status</label>
+                <div class="select-wrapper">
+                    <select id="docStatus"></select>
+                    <button onclick="openListManager('status')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Data de Criação</label>
+                <input type="date" id="docDataCriacao" onchange="calculateNextDate('doc')">
+            </div>
+            <div class="field-group">
+                <label>Periodicidade (Dias)</label>
+                <input type="number" id="docIntervalo" value="365" onchange="calculateNextDate('doc')">
+            </div>
+            <div class="field-group full-width" style="background:#f0f9ff; padding:10px; border-radius:8px; border:1px solid #bae6fd">
+                <label style="color:#0369a1">Próxima Revisão (Calculada)</label>
+                <div id="docProximaRevisao" style="font-size:16px; font-weight:700; color:#0c4a6e; margin-top:4px">--/--/----</div>
+            </div>
+            <div class="field-group">
+                <label>Responsável</label>
+                <input id="docResponsavel" placeholder="Responsável pela elaboração">
+            </div>
+            <div class="field-group">
+                <label>Revisor/Aprovador</label>
+                <input id="docRevisor" placeholder="Revisor ou Aprovador">
+            </div>
+            <div class="field-group">
+                <label>Alerta (Dias antes da revisão)</label>
+                <input type="number" id="docFlagDias" value="30">
+            </div>
+            <div class="field-group full-width">
+                <label>Anexos (Link para o documento)</label>
+                <div id="docAnexos"></div>
+                <button type="button" class="btn-add-anexo" onclick="addAnexo('doc')">
+                    <i class="fas fa-paperclip"></i> Adicionar Link
+                </button>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('modalDocumentos')">Cancelar</button>
+            <button class="btn-save" onclick="saveDocumento()">Salvar Registro</button>
         </div>
     </div>
 </div>
@@ -664,12 +846,23 @@ let lockoutTimer = null;
 let audits = [];
 let activities = [];
 let maintenances = [];
+let documents = []; 
 
 const defaultMasterLists = {
-    auditCategorias: ['Interna', 'Externa', 'Certificação', 'Fiscal'],
-    ativCategorias: ['Reunião', 'Treinamento', 'Projeto', 'Administrativo'],
-    mantCategorias: ['Preventiva', 'Corretiva', 'Preditiva', 'Melhoria'],
-    itens: ['Gerador Principal', 'Ar Condicionado Central', 'Frota Veicular', 'Servidor'],
+    // Listas Principais (Limpas)
+    setores: [], // NOVO: Setores (Aplicável a todas as abas)
+    auditCategorias: [],
+    ativCategorias: [],
+    mantCategorias: [],
+    docCategorias: [], 
+
+    // Listas de Subcategorias/Itens (Limpas)
+    auditSubcats: {},
+    ativSubcats: {},
+    mantItens: {},
+    docSubcats: {},
+
+    // Listas de Status (Limpas, mantendo apenas a estrutura)
     auditStatus: [
         { name: 'Planejado', color: 'blue' },
         { name: 'Em Andamento', color: 'yellow' },
@@ -687,6 +880,12 @@ const defaultMasterLists = {
         { name: 'Agendado', color: 'blue' },
         { name: 'Em Execução', color: 'yellow' },
         { name: 'Finalizado', color: 'green' }
+    ],
+    docStatus: [ 
+        { name: 'Rascunho', color: 'default' },
+        { name: 'Em Revisão', color: 'blue' },
+        { name: 'Publicado', color: 'green' },
+        { name: 'Obsoleto', color: 'red' }
     ]
 };
 
@@ -696,6 +895,7 @@ let currentTab = 'auditoria';
 let editingAuditId = null;
 let editingAtivId = null;
 let editingMantId = null;
+let editingDocId = null; 
 let currentListKey = null; 
 let selectedColorTemp = 'default';
 
@@ -824,9 +1024,16 @@ async function loadCloudData() {
         audits = record.audits || [];
         activities = record.activities || [];
         maintenances = record.maintenances || [];
+        documents = record.documents || []; 
         
         if (record.masterLists) {
-            masterLists = record.masterLists;
+            // Fusão de listas mestre para garantir que todos os tipos de subcategorias existam se o bin for mais antigo
+            masterLists = { ...defaultMasterLists, ...record.masterLists };
+            
+            // Corrige a compatibilidade de mantItens se o formato antigo for detectado (se o item for um array e não um objeto)
+            if (Array.isArray(masterLists.mantItens)) {
+                masterLists.mantItens = defaultMasterLists.mantItens; 
+            }
         }
 
         // Inicializa a UI após carregar
@@ -835,6 +1042,7 @@ async function loadCloudData() {
         updateDateInputs('Audit');
         updateDateInputs('Ativ');
         updateDateInputs('Mant');
+        updateDateInputs('Doc'); 
         renderCards();
 
     } catch (err) {
@@ -848,6 +1056,7 @@ async function saveAll(showAlert = false) {
         audits,
         activities,
         maintenances,
+        documents, 
         masterLists,
         lastUpdate: new Date().toISOString()
     };
@@ -879,12 +1088,12 @@ function populateYearSelects() {
     }
     const options = years.map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('');
     
-    ['fAuditYearForMonth', 'fAuditYearOnly', 'fAtivYearForMonth', 'fAtivYearOnly', 'fMantYearForMonth', 'fMantYearOnly'].forEach(id => {
+    ['fAuditYearForMonth', 'fAuditYearOnly', 'fAtivYearForMonth', 'fAtivYearOnly', 'fMantYearForMonth', 'fMantYearOnly', 'fDocYearForMonth', 'fDocYearOnly'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.innerHTML = options;
     });
 
-    ['fAuditMonth', 'fAtivMonth', 'fMantMonth'].forEach(id => {
+    ['fAuditMonth', 'fAtivMonth', 'fMantMonth', 'fDocMonth'].forEach(id => {
         document.getElementById(id).value = currentMonth;
     });
 }
@@ -906,19 +1115,32 @@ function renderCards() {
     
     let data = [];
     let statusList = [];
+    let dateField = '';
+    let filterCatId = '';
+    let filterSubcatId = '';
 
     if (currentTab === 'auditoria') {
         statusList = masterLists.auditStatus || [];
-        const cat = document.getElementById('fAuditCat').value;
+        dateField = 'dataPrevisao';
+        filterSetorId = 'fAuditSetor'; // NOVO
+        filterCatId = 'fAuditCat';
+        filterSubcatId = 'fAuditSub';
+        
+        const setor = document.getElementById(filterSetorId).value; // NOVO
+        const cat = document.getElementById(filterCatId).value;
+        const sub = document.getElementById(filterSubcatId).value;
         const stat = document.getElementById('fAuditStatus').value;
         const dateType = document.getElementById('fAuditDateType').value;
         
         data = audits.filter(item => {
+            if (setor && item.setor !== setor) return false; // NOVO FILTRO
             if (cat && item.categoria !== cat) return false;
+            if (sub && item.subcategoria !== sub) return false;
             if (stat && item.status !== stat) return false;
             
             if (dateType !== 'all') {
-                const itemDate = new Date(item.dataPrevisao);
+                const itemDate = new Date(item[dateField]);
+                // Lógica de filtro de data... (não alterada, apenas movida para manter o código limpo)
                 if (dateType === 'month') {
                     if (itemDate.getMonth() !== parseInt(document.getElementById('fAuditMonth').value) || 
                         itemDate.getFullYear() !== parseInt(document.getElementById('fAuditYearForMonth').value)) return false;
@@ -927,24 +1149,34 @@ function renderCards() {
                 } else if (dateType === 'custom') {
                     const ini = document.getElementById('fAuditDataIni').value;
                     const fim = document.getElementById('fAuditDataFim').value;
-                    if (ini && item.dataPrevisao < ini) return false;
-                    if (fim && item.dataPrevisao > fim) return false;
+                    if (ini && item[dateField] < ini) return false;
+                    if (fim && item[dateField] > fim) return false;
                 }
             }
             return true;
         });
+        
     } else if (currentTab === 'atividades') {
         statusList = masterLists.ativStatus || [];
-        const cat = document.getElementById('fAtivCat').value;
+        dateField = 'dataConclusao';
+        filterSetorId = 'fAtivSetor'; // NOVO
+        filterCatId = 'fAtivCat';
+        filterSubcatId = 'fAtivSub';
+
+        const setor = document.getElementById(filterSetorId).value; // NOVO
+        const cat = document.getElementById(filterCatId).value;
+        const sub = document.getElementById(filterSubcatId).value;
         const stat = document.getElementById('fAtivStatus').value;
         const dateType = document.getElementById('fAtivDateType').value;
 
         data = activities.filter(item => {
+            if (setor && item.setor !== setor) return false; // NOVO FILTRO
             if (cat && item.categoria !== cat) return false;
+            if (sub && item.subcategoria !== sub) return false;
             if (stat && item.status !== stat) return false;
 
             if (dateType !== 'all') {
-                const itemDate = new Date(item.dataConclusao);
+                const itemDate = new Date(item[dateField]);
                 if (dateType === 'month') {
                     if (itemDate.getMonth() !== parseInt(document.getElementById('fAtivMonth').value) || 
                         itemDate.getFullYear() !== parseInt(document.getElementById('fAtivYearForMonth').value)) return false;
@@ -953,26 +1185,34 @@ function renderCards() {
                 } else if (dateType === 'custom') {
                     const ini = document.getElementById('fAtivDataIni').value;
                     const fim = document.getElementById('fAtivDataFim').value;
-                    if (ini && item.dataConclusao < ini) return false;
-                    if (fim && item.dataConclusao > fim) return false;
+                    if (ini && item[dateField] < ini) return false;
+                    if (fim && item[dateField] > fim) return false;
                 }
             }
             return true;
         });
-    } else {
+
+    } else if (currentTab === 'manutencao') {
         statusList = masterLists.mantStatus || [];
-        const cat = document.getElementById('fMantCat').value;
-        const itemVal = document.getElementById('fMantItem').value;
+        dateField = 'proxima';
+        filterSetorId = 'fMantSetor'; // NOVO
+        filterCatId = 'fMantCat';
+        filterSubcatId = 'fMantItem'; // Item de manutenção age como a subcategoria
+
+        const setor = document.getElementById(filterSetorId).value; // NOVO
+        const cat = document.getElementById(filterCatId).value;
+        const itemVal = document.getElementById(filterSubcatId).value;
         const stat = document.getElementById('fMantStatus').value;
         const dateType = document.getElementById('fMantDateType').value;
 
         data = maintenances.filter(item => {
+            if (setor && item.setor !== setor) return false; // NOVO FILTRO
             if (cat && item.categoria !== cat) return false;
             if (itemVal && item.item !== itemVal) return false;
             if (stat && item.status !== stat) return false;
 
             if (dateType !== 'all') {
-                const itemDate = new Date(item.proxima);
+                const itemDate = new Date(item[dateField]);
                 if (dateType === 'month') {
                     if (itemDate.getMonth() !== parseInt(document.getElementById('fMantMonth').value) || 
                         itemDate.getFullYear() !== parseInt(document.getElementById('fMantYearForMonth').value)) return false;
@@ -981,11 +1221,57 @@ function renderCards() {
                 } else if (dateType === 'custom') {
                     const ini = document.getElementById('fMantDataIni').value;
                     const fim = document.getElementById('fMantDataFim').value;
-                    if (ini && item.proxima < ini) return false;
-                    if (fim && item.proxima > fim) return false;
+                    if (ini && item[dateField] < ini) return false;
+                    if (fim && item[dateField] > fim) return false;
                 }
             }
             return true;
+        });
+    } else if (currentTab === 'documentos') { 
+        statusList = masterLists.docStatus || [];
+        dateField = 'dataProximaRevisao'; // NOVO CAMPO
+        filterSetorId = 'fDocSetor'; // NOVO
+        filterCatId = 'fDocCat';
+        filterSubcatId = 'fDocSub';
+
+        const setor = document.getElementById(filterSetorId).value; // NOVO
+        const cat = document.getElementById(filterCatId).value;
+        const sub = document.getElementById(filterSubcatId).value;
+        const stat = document.getElementById('fDocStatus').value;
+        const dateType = document.getElementById('fDocDateType').value;
+
+        data = documents.filter(item => {
+            if (setor && item.setor !== setor) return false; // NOVO FILTRO
+            if (cat && item.categoria !== cat) return false;
+            if (sub && item.subcategoria !== sub) return false;
+            if (stat && item.status !== stat) return false;
+
+            if (dateType !== 'all') {
+                const itemDate = new Date(item[dateField]);
+                if (dateType === 'month') {
+                    if (itemDate.getMonth() !== parseInt(document.getElementById('fDocMonth').value) || 
+                        itemDate.getFullYear() !== parseInt(document.getElementById('fDocYearForMonth').value)) return false;
+                } else if (dateType === 'year') {
+                    if (itemDate.getFullYear() !== parseInt(document.getElementById('fDocYearOnly').value)) return false;
+                } else if (dateType === 'custom') {
+                    const ini = document.getElementById('fDocDataIni').value;
+                    const fim = document.getElementById('fDocDataFim').value;
+                    if (ini && item[dateField] < ini) return false;
+                    if (fim && item[dateField] > fim) return false;
+                }
+            }
+            return true;
+        });
+    }
+
+
+    // ORDENAÇÃO (SOLICITAÇÃO)
+    if (dateField) {
+        data.sort((a, b) => {
+            const dateA = new Date(a[dateField]);
+            const dateB = new Date(b[dateField]);
+            // Ordena do mais antigo para o mais novo (menor para o maior)
+            return dateA - dateB;
         });
     }
 
@@ -1001,7 +1287,8 @@ function renderCards() {
         
         if (currentTab === 'auditoria') targetDate = item.dataPrevisao;
         else if (currentTab === 'atividades') targetDate = item.dataConclusao;
-        else targetDate = item.proxima;
+        else if (currentTab === 'manutencao') targetDate = item.proxima;
+        else targetDate = item.dataProximaRevisao; // Documentos (NOVO CAMPO)
 
         const d = daysDiff(targetDate);
         
@@ -1016,23 +1303,32 @@ function renderCards() {
         div.onclick = () => openView(item.id, currentTab);
 
         let specificContent = '';
+        const subcatOrItemValue = currentTab === 'manutencao' ? item.item : item.subcategoria;
+        const subcategoryDisplay = subcatOrItemValue ? ` (${subcatOrItemValue})` : '';
+
         if (currentTab === 'auditoria') {
             specificContent = `
-                <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
-                <div class="card-info-row"><i class="far fa-calendar-plus"></i> <span>Pub: ${formatBR(item.dataPublicacao)}</span></div>
+                <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
+                <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
                 <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>
             `;
         } else if (currentTab === 'atividades') {
             specificContent = `
-                <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
-                <div class="card-info-row"><i class="far fa-calendar-play"></i> <span>Início: ${formatBR(item.dataInicio)}</span></div>
+                <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
+                <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
                 <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Fim: <strong>${formatBR(item.dataConclusao)}</strong></span></div>
             `;
-        } else {
+        } else if (currentTab === 'manutencao') {
             specificContent = `
+                <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                 <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
-                <div class="card-info-row"><i class="fas fa-cube"></i> <span>${item.item || '-'}</span></div>
                 <div class="card-info-row"><i class="far fa-clock"></i> <span>Próx: <strong>${formatBR(item.proxima)}</strong></span></div>
+            `;
+        } else { // Documentos
+            specificContent = `
+                <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
+                <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
+                <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Rev: <strong>${formatBR(item.dataProximaRevisao)}</strong></span></div>
             `;
         }
 
@@ -1063,64 +1359,77 @@ function clearFilters() {
     document.getElementById('fAuditDateType').value = 'all';
     document.getElementById('fAtivDateType').value = 'all';
     document.getElementById('fMantDateType').value = 'all';
+    document.getElementById('fDocDateType').value = 'all'; 
     
     document.querySelectorAll('.filters-bar input').forEach(i => i.value = "");
     
     updateDateInputs('Audit');
     updateDateInputs('Ativ');
     updateDateInputs('Mant');
+    updateDateInputs('Doc'); 
     
-    if(currentTab === 'manutencao') onMantCategoryChange();
-    else renderCards();
+    // Recarrega os filtros em cascata após limpar
+    onFilterSetorChange('Audit');
+    onFilterSetorChange('Ativ');
+    onFilterSetorChange('Mant');
+    onFilterSetorChange('Doc');
 }
 
-function onMantCategoryChange() {
-    const selectedCat = document.getElementById('fMantCat').value;
-    const itemSelect = document.getElementById('fMantItem');
-    const currentSelection = itemSelect.value;
-    itemSelect.innerHTML = '<option value="">Item: Todos</option>';
-    let availableItems = [];
-    if (selectedCat === "") {
-        availableItems = masterLists.itens || [];
-    } else {
-        const itemsInUse = maintenances.filter(m => m.categoria === selectedCat).map(m => m.item);
-        availableItems = [...new Set(itemsInUse)];
-    }
-    availableItems.sort().forEach(i => {
-        const opt = document.createElement('option');
-        opt.value = i; opt.textContent = i;
-        itemSelect.appendChild(opt);
-    });
-    if (availableItems.includes(currentSelection)) itemSelect.value = currentSelection;
-    renderCards();
-}
 
 function populateSelects() {
+    // Listas de Setores, Categorias e Status
+    const setores = masterLists.setores || []; // NOVO
     const auditCats = masterLists.auditCategorias || [];
     const auditStats = masterLists.auditStatus || [];
     const ativCats = masterLists.ativCategorias || [];
     const ativStats = masterLists.ativStatus || [];
     const mantCats = masterLists.mantCategorias || [];
     const mantStats = masterLists.mantStatus || [];
-    const items = masterLists.itens || [];
+    const docCats = masterLists.docCategorias || [];
+    const docStats = masterLists.docStatus || [];
 
+    // Funções auxiliares para gerar <option>
     const makeOpts = (list) => list.map(i => `<option>${i}</option>`).join('');
     const makeStatusOpts = (list) => list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
     const makeFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i}">${i}</option>`).join('');
     const makeStatusFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
 
-    // Modais
+    // --- MODAIS ---
+    // Setores
+    document.getElementById('auditSetor').innerHTML = makeOpts(setores); // NOVO
+    document.getElementById('ativSetor').innerHTML = makeOpts(setores); // NOVO
+    document.getElementById('mantSetor').innerHTML = makeOpts(setores); // NOVO
+    document.getElementById('docSetor').innerHTML = makeOpts(setores); // NOVO
+
+    // Auditoria
     document.getElementById('auditCategoria').innerHTML = makeOpts(auditCats);
     document.getElementById('auditStatus').innerHTML = makeStatusOpts(auditStats);
-    
+    // Atividades
     document.getElementById('ativCategoria').innerHTML = makeOpts(ativCats);
     document.getElementById('ativStatus').innerHTML = makeStatusOpts(ativStats);
-
+    // Manutenção
     document.getElementById('mantCategoria').innerHTML = makeOpts(mantCats);
-    document.getElementById('mantItem').innerHTML = makeOpts(items);
     document.getElementById('mantStatus').innerHTML = makeStatusOpts(mantStats);
+    // Documentos
+    document.getElementById('docCategoria').innerHTML = makeOpts(docCats);
+    document.getElementById('docStatus').innerHTML = makeStatusOpts(docStats); 
+    
+    // Dispara a atualização das Subcategorias/Itens nos Modais
+    // NOTE: Agora a Categoria e Subcategoria só são atualizadas se a Categoria for selecionada.
+    // O Setor NÃO interfere na Categoria.
+    onCategoryChange('audit');
+    onCategoryChange('ativ');
+    onCategoryChange('mant');
+    onCategoryChange('doc');
 
-    // Filtros
+    // --- FILTROS ---
+    // Setores nos Filtros
+    document.getElementById('fAuditSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); // NOVO
+    document.getElementById('fAtivSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); // NOVO
+    document.getElementById('fMantSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); // NOVO
+    document.getElementById('fDocSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); // NOVO
+
+    // Categorias e Status nos Filtros
     document.getElementById('fAuditCat').innerHTML = makeFilterOpts(auditCats, "Categoria: Todas");
     document.getElementById('fAuditStatus').innerHTML = makeStatusFilterOpts(auditStats, "Status: Todos");
     
@@ -1130,7 +1439,137 @@ function populateSelects() {
     document.getElementById('fMantCat').innerHTML = makeFilterOpts(mantCats, "Categoria: Todas");
     document.getElementById('fMantStatus').innerHTML = makeStatusFilterOpts(mantStats, "Status: Todos");
     
-    onMantCategoryChange(); 
+    document.getElementById('fDocCat').innerHTML = makeFilterOpts(docCats, "Categoria: Todas"); 
+    document.getElementById('fDocStatus').innerHTML = makeStatusFilterOpts(docStats, "Status: Todos"); 
+    
+    // Dispara a atualização dos filtros em cascata (Categoria -> Subcategoria/Item)
+    onFilterCategoryChange('Audit');
+    onFilterCategoryChange('Ativ');
+    onFilterCategoryChange('Mant');
+    onFilterCategoryChange('Doc');
+}
+
+// Funções auxiliares para obter prefixos de ID corretos
+function getTabPrefix(tab) {
+    if (tab === 'auditoria') return 'audit';
+    if (tab === 'atividades') return 'ativ';
+    if (tab === 'manutencao') return 'mant';
+    if (tab === 'documentos') return 'doc';
+    return '';
+}
+
+// Funções de atualização em cascata para MODAIS (Setor não interfere, mantido apenas para CategoryChange)
+function onCategoryChange(prefix) {
+    const catSelect = document.getElementById(`${prefix}Categoria`);
+    let subcatSelect;
+    let listKey;
+    
+    if (prefix === 'mant') {
+        subcatSelect = document.getElementById(`${prefix}Item`);
+        listKey = 'mantItens';
+    } else {
+        subcatSelect = document.getElementById(`${prefix}Sub`);
+        listKey = `${prefix}Subcats`;
+    }
+    
+    if (!subcatSelect) return; 
+
+    const selectedCat = catSelect.value;
+    const currentSubcat = subcatSelect.value; 
+    
+    // Se não houver categoria selecionada, limpa a subcategoria
+    if (!selectedCat) {
+        subcatSelect.innerHTML = `<option value="">${prefix === 'mant' ? 'Nenhum Item' : 'Nenhuma Subcategoria'}</option>`;
+        return;
+    }
+
+    const subcats = masterLists[listKey][selectedCat] || [];
+    
+    subcatSelect.innerHTML = subcats.map(i => `<option value="${i}">${i}</option>`).join('') || 
+                             `<option value="">${prefix === 'mant' ? 'Nenhum Item' : 'Nenhuma Subcategoria'}</option>`;
+
+    // Tenta manter a seleção após a atualização
+    if (subcats.includes(currentSubcat)) subcatSelect.value = currentSubcat;
+}
+
+// NOVO: Filtro de Setor (Setor NÃO afeta a Categoria no cadastro/filtro)
+function onFilterSetorChange(prefix) {
+    // Para Setor, basta renderizar os cards, pois ele é um filtro simples.
+    // Se no futuro precisar de cascata Setor -> Categoria, a lógica deve ser implementada aqui.
+    renderCards();
+}
+
+// Funções de atualização em cascata para FILTROS
+function onFilterCategoryChange(prefix) {
+    const catSelect = document.getElementById(`f${prefix}Cat`);
+    let subcatSelect;
+    let listKey;
+    let label;
+    
+    if (prefix === 'Mant') {
+        subcatSelect = document.getElementById(`f${prefix}Item`);
+        listKey = 'mantItens';
+        label = 'Item: Todos';
+    } else {
+        subcatSelect = document.getElementById(`f${prefix}Sub`);
+        listKey = `${prefix.toLowerCase()}Subcats`;
+        label = 'Subcategoria: Todas';
+    }
+    
+    if (!subcatSelect) return; 
+
+    const selectedCat = catSelect.value;
+    const currentSubcat = subcatSelect.value;
+    
+    let subcats = [];
+
+    if (selectedCat === "") {
+        // Se a Categoria for "Todas", mostra todas as subcategorias em uso naquela aba
+        let allSubcats = [];
+        if (prefix === 'Audit') allSubcats = audits.map(i => i.subcategoria).filter(Boolean);
+        else if (prefix === 'Ativ') allSubcats = activities.map(i => i.subcategoria).filter(Boolean);
+        else if (prefix === 'Mant') allSubcats = maintenances.map(i => i.item).filter(Boolean);
+        else if (prefix === 'Doc') allSubcats = documents.map(i => i.subcategoria).filter(Boolean);
+        
+        subcats = [...new Set(allSubcats)].sort();
+
+    } else {
+        // Se uma Categoria for selecionada, mostra as subcategorias mestras para aquela categoria
+        subcats = masterLists[listKey][selectedCat] || [];
+    }
+    
+    subcatSelect.innerHTML = `<option value="">${label}</option>` + subcats.map(i => `<option value="${i}">${i}</option>`).join('');
+
+    // Tenta manter a seleção após a atualização
+    if (subcats.includes(currentSubcat)) subcatSelect.value = currentSubcat;
+
+    renderCards(); // Dispara renderização após filtro ser atualizado
+}
+
+// Função de cálculo para Manutenção e Documentos (Periodicidade)
+function calculateNextDate(prefix = 'mant') {
+    let ultima, intervaloId, proximaDisplayId, intervalValue;
+
+    if (prefix === 'mant') {
+        ultima = document.getElementById('mantUltima').value;
+        intervaloId = 'mantIntervalo';
+        proximaDisplayId = 'mantProxima';
+        intervalValue = parseInt(document.getElementById(intervaloId).value) || 0;
+    } else if (prefix === 'doc') {
+        ultima = document.getElementById('docDataCriacao').value; // Usando Data Criação como base
+        intervaloId = 'docIntervalo';
+        proximaDisplayId = 'docProximaRevisao';
+        intervalValue = parseInt(document.getElementById(intervaloId).value) || 0;
+    } else {
+        return;
+    }
+    
+    if (ultima) {
+        const next = new Date(ultima);
+        next.setDate(next.getDate() + intervalValue);
+        const nextStr = next.toISOString().split('T')[0];
+        document.getElementById(proximaDisplayId).textContent = formatBR(nextStr);
+    }
 }
 
 // --- TAB CONTROL ---
@@ -1146,12 +1585,14 @@ function switchTab(tab) {
         auditoria: 'Auditoria', 
         atividades: 'Gestão de Atividades', 
         manutencao: 'Manutenção',
+        documentos: 'Documentos', 
         backup: 'Backup do Sistema'
     };
     const subtitles = { 
         auditoria: 'Planejamento e execução de auditorias', 
         atividades: 'Controle de tarefas, reuniões e projetos',
         manutencao: 'Controle preventivo de equipamentos',
+        documentos: 'Gerenciamento e controle de revisões', 
         backup: 'Segurança dos dados'
     };
     
@@ -1167,6 +1608,7 @@ function switchTab(tab) {
     document.getElementById('filtersAuditoria').style.display = tab === 'auditoria' ? 'flex' : 'none';
     document.getElementById('filtersAtividades').style.display = tab === 'atividades' ? 'flex' : 'none';
     document.getElementById('filtersManutencao').style.display = tab === 'manutencao' ? 'flex' : 'none';
+    document.getElementById('filtersDocumentos').style.display = tab === 'documentos' ? 'flex' : 'none'; 
     
     if(!isBackup) {
         clearFilters();
@@ -1176,17 +1618,29 @@ function switchTab(tab) {
 document.getElementById('tabAuditoria').onclick = () => switchTab('auditoria');
 document.getElementById('tabAtividades').onclick = () => switchTab('atividades');
 document.getElementById('tabManutencao').onclick = () => switchTab('manutencao');
+document.getElementById('tabDocumentos').onclick = () => switchTab('documentos'); 
 document.getElementById('tabBackup').onclick = () => switchTab('backup');
 
 // --- MODAL & FORM LOGIC ---
 document.getElementById('addBtn').onclick = () => {
+    // Seleciona o primeiro setor/categoria disponível se a lista não estiver vazia
+    const defaultSetor = masterLists.setores[0] || ''; 
+    const defaultAuditCat = masterLists.auditCategorias[0] || ''; 
+    const defaultAtivCat = masterLists.ativCategorias[0] || ''; 
+    const defaultMantCat = masterLists.mantCategorias[0] || ''; 
+    const defaultDocCat = masterLists.docCategorias[0] || ''; 
+
     if (currentTab === 'auditoria') {
         editingAuditId = null;
         document.getElementById('auditTitulo').value = '';
         document.getElementById('auditDescricao').value = '';
         document.getElementById('auditDataPublicacao').value = today();
         document.getElementById('auditDataPrevisao').value = today();
+        document.getElementById('auditResponsavel').value = ''; 
         document.getElementById('auditAnexos').innerHTML = '';
+        document.getElementById('auditSetor').value = defaultSetor; // NOVO
+        document.getElementById('auditCategoria').value = defaultAuditCat;
+        onCategoryChange('audit');
         document.getElementById('modalAuditoria').style.display = 'flex';
     } else if (currentTab === 'atividades') {
         editingAtivId = null;
@@ -1194,30 +1648,44 @@ document.getElementById('addBtn').onclick = () => {
         document.getElementById('ativDescricao').value = '';
         document.getElementById('ativDataInicio').value = today();
         document.getElementById('ativDataConclusao').value = today();
+        document.getElementById('ativResponsavel').value = ''; 
         document.getElementById('ativAnexos').innerHTML = '';
+        document.getElementById('ativSetor').value = defaultSetor; // NOVO
+        document.getElementById('ativCategoria').value = defaultAtivCat;
+        onCategoryChange('ativ');
         document.getElementById('modalAtividades').style.display = 'flex';
-    } else {
+    } else if (currentTab === 'manutencao') {
         editingMantId = null;
         document.getElementById('mantTitulo').value = '';
         document.getElementById('mantDescricao').value = '';
         document.getElementById('mantUltima').value = today();
         document.getElementById('mantIntervalo').value = 30;
+        document.getElementById('mantResponsavelTecnico').value = ''; 
+        document.getElementById('mantResponsavelManutencao').value = ''; 
         document.getElementById('mantAnexos').innerHTML = '';
-        calculateNextDate();
+        document.getElementById('mantSetor').value = defaultSetor; // NOVO
+        document.getElementById('mantCategoria').value = defaultMantCat;
+        onCategoryChange('mant');
+        calculateNextDate('mant');
         document.getElementById('modalManutencao').style.display = 'flex';
+    } else if (currentTab === 'documentos') { 
+        editingDocId = null;
+        document.getElementById('docTitulo').value = '';
+        document.getElementById('docDescricao').value = '';
+        document.getElementById('docDataCriacao').value = today();
+        document.getElementById('docIntervalo').value = 365; // Valor padrão de 1 ano
+        document.getElementById('docResponsavel').value = '';
+        document.getElementById('docRevisor').value = '';
+        document.getElementById('docFlagDias').value = 30;
+        document.getElementById('docAnexos').innerHTML = '';
+        document.getElementById('docSetor').value = defaultSetor; // NOVO
+        document.getElementById('docCategoria').value = defaultDocCat;
+        onCategoryChange('doc');
+        calculateNextDate('doc');
+        document.getElementById('modalDocumentos').style.display = 'flex';
     }
 };
 
-function calculateNextDate() {
-    const ultima = document.getElementById('mantUltima').value;
-    const intervalo = parseInt(document.getElementById('mantIntervalo').value) || 0;
-    if (ultima) {
-        const next = new Date(ultima);
-        next.setDate(next.getDate() + intervalo);
-        const nextStr = next.toISOString().split('T')[0];
-        document.getElementById('mantProxima').textContent = formatBR(nextStr);
-    }
-}
 
 // SAVE FUNCTIONS
 function saveAudit() {
@@ -1225,10 +1693,13 @@ function saveAudit() {
         id: editingAuditId || Date.now(),
         titulo: document.getElementById('auditTitulo').value,
         descricao: document.getElementById('auditDescricao').value,
+        setor: document.getElementById('auditSetor').value, // NOVO CAMPO
         categoria: document.getElementById('auditCategoria').value,
+        subcategoria: document.getElementById('auditSub').value, 
         status: document.getElementById('auditStatus').value,
         dataPublicacao: document.getElementById('auditDataPublicacao').value,
         dataPrevisao: document.getElementById('auditDataPrevisao').value,
+        responsavel: document.getElementById('auditResponsavel').value, 
         flagDias: +document.getElementById('auditFlagDias').value,
         anexos: getAnexos('audit')
     };
@@ -1242,10 +1713,13 @@ function saveAtividade() {
         id: editingAtivId || Date.now(),
         titulo: document.getElementById('ativTitulo').value,
         descricao: document.getElementById('ativDescricao').value,
+        setor: document.getElementById('ativSetor').value, // NOVO CAMPO
         categoria: document.getElementById('ativCategoria').value,
+        subcategoria: document.getElementById('ativSub').value, 
         status: document.getElementById('ativStatus').value,
         dataInicio: document.getElementById('ativDataInicio').value,
         dataConclusao: document.getElementById('ativDataConclusao').value,
+        responsavel: document.getElementById('ativResponsavel').value, 
         flagDias: +document.getElementById('ativFlagDias').value,
         anexos: getAnexos('ativ')
     };
@@ -1263,11 +1737,14 @@ function saveManutencao() {
         id: editingMantId || Date.now(),
         titulo: document.getElementById('mantTitulo').value,
         descricao: document.getElementById('mantDescricao').value,
+        setor: document.getElementById('mantSetor').value, // NOVO CAMPO
         categoria: document.getElementById('mantCategoria').value,
-        item: document.getElementById('mantItem').value,
+        item: document.getElementById('mantItem').value, 
         ultima,
         intervalo,
         proxima: nextDate.toISOString().split('T')[0],
+        responsavelTecnico: document.getElementById('mantResponsavelTecnico').value, 
+        responsavelManutencao: document.getElementById('mantResponsavelManutencao').value, 
         status: document.getElementById('mantStatus').value,
         flagDias: +document.getElementById('mantFlagDias').value,
         anexos: getAnexos('mant')
@@ -1277,16 +1754,47 @@ function saveManutencao() {
     saveAll(); closeModal('modalManutencao'); renderCards();
 }
 
+function saveDocumento() { 
+    const dataCriacao = document.getElementById('docDataCriacao').value;
+    const docIntervalo = parseInt(document.getElementById('docIntervalo').value);
+    const nextRevisao = new Date(dataCriacao);
+    nextRevisao.setDate(nextRevisao.getDate() + docIntervalo);
+    
+    const item = {
+        id: editingDocId || Date.now(),
+        titulo: document.getElementById('docTitulo').value,
+        descricao: document.getElementById('docDescricao').value,
+        setor: document.getElementById('docSetor').value, // NOVO CAMPO
+        categoria: document.getElementById('docCategoria').value,
+        subcategoria: document.getElementById('docSub').value, 
+        status: document.getElementById('docStatus').value,
+        dataCriacao,
+        docIntervalo, 
+        dataProximaRevisao: nextRevisao.toISOString().split('T')[0], 
+        responsavel: document.getElementById('docResponsavel').value,
+        revisor: document.getElementById('docRevisor').value,
+        flagDias: +document.getElementById('docFlagDias').value,
+        anexos: getAnexos('doc')
+    };
+    if (editingDocId) documents = documents.map(d => d.id === editingDocId ? item : d);
+    else documents.push(item);
+    saveAll(); closeModal('modalDocumentos'); renderCards();
+}
+
 function editItem(id, tab) {
     if (tab === 'auditoria') {
         const item = audits.find(a => a.id === id);
         editingAuditId = id;
         document.getElementById('auditTitulo').value = item.titulo;
         document.getElementById('auditDescricao').value = item.descricao;
+        document.getElementById('auditSetor').value = item.setor || ''; // NOVO
         document.getElementById('auditCategoria').value = item.categoria;
+        onCategoryChange('audit'); 
+        document.getElementById('auditSub').value = item.subcategoria || ''; 
         document.getElementById('auditStatus').value = item.status;
         document.getElementById('auditDataPublicacao').value = item.dataPublicacao;
         document.getElementById('auditDataPrevisao').value = item.dataPrevisao;
+        document.getElementById('auditResponsavel').value = item.responsavel || ''; 
         document.getElementById('auditFlagDias').value = item.flagDias;
         restoreAnexos('audit', item.anexos);
         document.getElementById('modalAuditoria').style.display = 'flex';
@@ -1295,27 +1803,53 @@ function editItem(id, tab) {
         editingAtivId = id;
         document.getElementById('ativTitulo').value = item.titulo;
         document.getElementById('ativDescricao').value = item.descricao;
+        document.getElementById('ativSetor').value = item.setor || ''; // NOVO
         document.getElementById('ativCategoria').value = item.categoria;
+        onCategoryChange('ativ'); 
+        document.getElementById('ativSub').value = item.subcategoria || ''; 
         document.getElementById('ativStatus').value = item.status;
         document.getElementById('ativDataInicio').value = item.dataInicio;
         document.getElementById('ativDataConclusao').value = item.dataConclusao;
+        document.getElementById('ativResponsavel').value = item.responsavel || ''; 
         document.getElementById('ativFlagDias').value = item.flagDias;
         restoreAnexos('ativ', item.anexos);
         document.getElementById('modalAtividades').style.display = 'flex';
-    } else {
+    } else if (tab === 'manutencao') {
         const item = maintenances.find(m => m.id === id);
         editingMantId = id;
         document.getElementById('mantTitulo').value = item.titulo;
         document.getElementById('mantDescricao').value = item.descricao;
+        document.getElementById('mantSetor').value = item.setor || ''; // NOVO
         document.getElementById('mantCategoria').value = item.categoria;
+        onCategoryChange('mant'); 
         document.getElementById('mantItem').value = item.item;
         document.getElementById('mantUltima').value = item.ultima;
         document.getElementById('mantIntervalo').value = item.intervalo;
+        document.getElementById('mantResponsavelTecnico').value = item.responsavelTecnico || ''; 
+        document.getElementById('mantResponsavelManutencao').value = item.responsavelManutencao || ''; 
         document.getElementById('mantStatus').value = item.status;
         document.getElementById('mantFlagDias').value = item.flagDias;
-        calculateNextDate();
+        calculateNextDate('mant');
         restoreAnexos('mant', item.anexos);
         document.getElementById('modalManutencao').style.display = 'flex';
+    } else if (tab === 'documentos') { 
+        const item = documents.find(d => d.id === id);
+        editingDocId = id;
+        document.getElementById('docTitulo').value = item.titulo;
+        document.getElementById('docDescricao').value = item.descricao;
+        document.getElementById('docSetor').value = item.setor || ''; // NOVO
+        document.getElementById('docCategoria').value = item.categoria;
+        onCategoryChange('doc'); 
+        document.getElementById('docSub').value = item.subcategoria || ''; 
+        document.getElementById('docStatus').value = item.status;
+        document.getElementById('docDataCriacao').value = item.dataCriacao;
+        document.getElementById('docIntervalo').value = item.docIntervalo; 
+        document.getElementById('docResponsavel').value = item.responsavel || '';
+        document.getElementById('docRevisor').value = item.revisor || '';
+        document.getElementById('docFlagDias').value = item.flagDias;
+        calculateNextDate('doc');
+        restoreAnexos('doc', item.anexos);
+        document.getElementById('modalDocumentos').style.display = 'flex';
     }
 }
 
@@ -1323,7 +1857,8 @@ function deleteItem(id, tab) {
     if (!confirm('Deseja realmente excluir este registro?')) return;
     if (tab === 'auditoria') audits = audits.filter(a => a.id !== id);
     else if (tab === 'atividades') activities = activities.filter(a => a.id !== id);
-    else maintenances = maintenances.filter(m => m.id !== id);
+    else if (tab === 'manutencao') maintenances = maintenances.filter(m => m.id !== id);
+    else if (tab === 'documentos') documents = documents.filter(d => d.id !== id); 
     saveAll();
     renderCards();
 }
@@ -1363,34 +1898,63 @@ function openView(id, tab) {
     let item, statusList;
     if (tab === 'auditoria') { item = audits.find(i => i.id === id); statusList = masterLists.auditStatus; }
     else if (tab === 'atividades') { item = activities.find(i => i.id === id); statusList = masterLists.ativStatus; }
-    else { item = maintenances.find(i => i.id === id); statusList = masterLists.mantStatus; }
+    else if (tab === 'manutencao') { item = maintenances.find(i => i.id === id); statusList = masterLists.mantStatus; }
+    else if (tab === 'documentos') { item = documents.find(i => i.id === id); statusList = masterLists.docStatus; } 
 
     if (!item) return;
 
     const statusObj = (statusList || []).find(s => s.name === item.status) || { color: 'default' };
     const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
+    
+    // Adiciona Subcategoria/Item (Manutenção) na exibição
+    const subcatOrItemLabel = tab === 'manutencao' ? 'Equipamento' : 'Subcategoria';
+    const subcatOrItemValue = tab === 'manutencao' ? item.item : item.subcategoria;
+
 
     let detailsGrid = '';
     if (tab === 'auditoria') {
         detailsGrid = `
+            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
             <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
+            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
+            <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
             <div class="view-item"><label>Publicação</label><div>${formatBR(item.dataPublicacao)}</div></div>
             <div class="view-item"><label>Previsão</label><div>${formatBR(item.dataPrevisao)}</div></div>
             <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
         `;
     } else if (tab === 'atividades') {
         detailsGrid = `
+            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
             <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
+            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
+            <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
             <div class="view-item"><label>Data Início</label><div>${formatBR(item.dataInicio)}</div></div>
             <div class="view-item"><label>Data Conclusão</label><div>${formatBR(item.dataConclusao)}</div></div>
             <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
         `;
-    } else {
+    } else if (tab === 'manutencao') {
         detailsGrid = `
+            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
             <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
             <div class="view-item"><label>Equipamento</label><div>${item.item}</div></div>
+            <div class="view-item"><label>Periodicidade</label><div>${item.intervalo} dias</div></div>
             <div class="view-item"><label>Última Manutenção</label><div>${formatBR(item.ultima)}</div></div>
             <div class="view-item"><label>Próxima Manutenção</label><div>${formatBR(item.proxima)}</div></div>
+            <div class="view-item"><label>Responsável Técnico</label><div>${item.responsavelTecnico || 'ND'}</div></div>
+            <div class="view-item"><label>Responsável pela Manutenção</label><div>${item.responsavelManutencao || 'ND'}</div></div>
+            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+        `;
+    } else if (tab === 'documentos') { 
+        detailsGrid = `
+            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
+            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
+            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
+            <div class="view-item"><label>Periodicidade</label><div>${item.docIntervalo} dias</div></div>
+            <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
+            <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
+            <div class="view-item"><label>Data Criação</label><div>${formatBR(item.dataCriacao)}</div></div>
+            <div class="view-item"><label>Próx. Revisão</label><div>${formatBR(item.dataProximaRevisao)}</div></div>
+            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
         `;
     }
 
@@ -1419,32 +1983,77 @@ function openView(id, tab) {
 
 // List Manager & Color Selection
 function openListManager(genericKey) {
-    if (genericKey === 'categorias') {
+    let isStatus = false;
+    let listName;
+    
+    if (genericKey === 'setores') { // NOVO PONTO DE ENTRADA
+        currentListKey = 'setores';
+        listName = 'SETORES';
+    } else if (genericKey === 'categorias') {
         if(currentTab === 'auditoria') currentListKey = 'auditCategorias';
         else if(currentTab === 'atividades') currentListKey = 'ativCategorias';
-        else currentListKey = 'mantCategorias';
+        else if(currentTab === 'manutencao') currentListKey = 'mantCategorias';
+        else currentListKey = 'docCategorias'; 
+        listName = 'CATEGORIA';
+    } else if (genericKey === 'subcategorias' || genericKey === 'itens') { 
+        
+        const prefix = getTabPrefix(currentTab); 
+        const catSelect = document.getElementById(`${prefix}Categoria`);
+        
+        if (!catSelect) { 
+             alert(`Elemento de Categoria (${prefix}Categoria) não encontrado. Verifique se você abriu o modal correspondente à aba ativa.`); 
+             return; 
+        }
+
+        const cat = catSelect.value;
+        
+        if (!cat) { alert("Selecione uma Categoria antes de gerenciar Subcategorias/Itens."); return; }
+        
+        let subcatMapKey;
+        if(currentTab === 'auditoria') subcatMapKey = 'auditSubcats';
+        else if(currentTab === 'atividades') subcatMapKey = 'ativSubcats';
+        else if(currentTab === 'manutencao') subcatMapKey = 'mantItens';
+        else subcatMapKey = 'docSubcats';
+        
+        currentListKey = `${subcatMapKey}_${cat}`; // Chave temporária para o mapa
+        listName = `SUBCATEGORIAS / ITENS DE: ${cat}`;
+        
     } else if (genericKey === 'status') {
         if(currentTab === 'auditoria') currentListKey = 'auditStatus';
         else if(currentTab === 'atividades') currentListKey = 'ativStatus';
-        else currentListKey = 'mantStatus';
+        else if(currentTab === 'manutencao') currentListKey = 'mantStatus';
+        else currentListKey = 'docStatus';
+        isStatus = true;
+        listName = 'STATUS';
     } else {
         currentListKey = genericKey; 
+        listName = genericKey.toUpperCase();
     }
-
-    const tabName = currentTab.charAt(0).toUpperCase() + currentTab.slice(1);
-    document.getElementById('listTitle').textContent = `Gerenciar: ${tabName} - ${genericKey.toUpperCase()}`;
+    
+    document.getElementById('listTitle').textContent = `Gerenciar: ${listName}`;
     const body = document.getElementById('listBody');
     body.innerHTML = '';
 
-    if(genericKey === 'status') {
+    if(isStatus) {
         document.getElementById('colorPickerContainer').style.display = 'block';
         selectColor('default', document.querySelector('.bg-default')); 
     } else {
         document.getElementById('colorPickerContainer').style.display = 'none';
     }
 
-    const list = masterLists[currentListKey] || [];
-    list.forEach(val => {
+    let listToRender;
+    let baseKey = currentListKey.split('_')[0]; // Para subcategorias
+
+    if (currentListKey.includes('_')) { // Gerenciando Subcategorias/Itens
+        const cat = currentListKey.split('_')[1];
+        // Tenta buscar a lista dentro do mapa de objetos, inicializando se necessário
+        masterLists[baseKey] = masterLists[baseKey] || {}; 
+        listToRender = masterLists[baseKey][cat] || [];
+    } else {
+        listToRender = masterLists[currentListKey] || [];
+    }
+    
+    listToRender.forEach(val => {
         let displayHtml = '', itemVal = '';
         if (typeof val === 'object') {
             const colorVar = colorMap[val.color] || colorMap['default'];
@@ -1477,35 +2086,65 @@ function selectColor(color, el) {
 function addToList() {
     const val = document.getElementById('newListItem').value.trim();
     if (!val) return;
+    
     const isStatus = currentListKey.toLowerCase().includes('status');
-    if (isStatus) {
-        if(masterLists[currentListKey].some(s => s.name === val)) return;
-        masterLists[currentListKey].push({ name: val, color: selectedColorTemp });
+    const isSubcat = currentListKey.includes('_'); 
+    
+    let list;
+    if (isSubcat) {
+        const [baseKey, cat] = currentListKey.split('_');
+        masterLists[baseKey][cat] = masterLists[baseKey][cat] || []; // Inicializa se for nulo
+        list = masterLists[baseKey][cat];
     } else {
-        if(masterLists[currentListKey].includes(val)) return;
-        masterLists[currentListKey].push(val);
+        list = masterLists[currentListKey];
     }
+
+    if (isStatus) {
+        if(list.some(s => s.name === val)) return;
+        list.push({ name: val, color: selectedColorTemp });
+    } else {
+        if(list.includes(val)) return;
+        list.push(val);
+    }
+
+    // Ordenação
+    list.sort((a,b) => (typeof a === 'object' ? a.name : a).localeCompare(typeof b === 'object' ? b.name : b));
+    
     saveAll(); populateSelects();
     
-    let genericTag = '';
-    if(currentListKey.includes('Categorias')) genericTag = 'categorias';
-    else if(currentListKey.includes('Status')) genericTag = 'status';
-    else genericTag = currentListKey;
+    let genericTag;
+    if(isSubcat) genericTag = 'subcategorias';
+    else if(isStatus) genericTag = 'status';
+    else if(currentListKey === 'setores') genericTag = 'setores'; // NOVO
+    else genericTag = 'categorias';
+    
     openListManager(genericTag);
 }
 
 function removeFromList(key, val) {
-    if (key.toLowerCase().includes('status')) {
-        masterLists[key] = masterLists[key].filter(s => s.name !== val);
+    const isStatus = key.toLowerCase().includes('status');
+    const isSubcat = key.includes('_');
+    
+    let list;
+    if (isSubcat) {
+        const [baseKey, cat] = key.split('_');
+        list = masterLists[baseKey][cat];
+        if (isStatus) list = list.filter(s => s.name !== val);
+        else list = list.filter(i => i !== val);
+        masterLists[baseKey][cat] = list; // Atualiza o mapa
     } else {
-        masterLists[key] = masterLists[key].filter(i => i !== val);
+        list = masterLists[key];
+        if (isStatus) masterLists[key] = list.filter(s => s.name !== val);
+        else masterLists[key] = list.filter(i => i !== val);
     }
+
     saveAll(); populateSelects();
     
-    let genericTag = '';
-    if(key.includes('Categorias')) genericTag = 'categorias';
-    else if(key.includes('Status')) genericTag = 'status';
-    else genericTag = key;
+    let genericTag;
+    if(isSubcat) genericTag = 'subcategorias';
+    else if(isStatus) genericTag = 'status';
+    else if(key === 'setores') genericTag = 'setores'; // NOVO
+    else genericTag = 'categorias';
     openListManager(genericTag);
 }
 // --- FUNÇÕES DE BACKUP LOCAL (ARQUIVO) ---
@@ -1515,6 +2154,7 @@ function exportLocalData() {
         audits,
         activities,
         maintenances,
+        documents, 
         masterLists,
         exportDate: new Date().toISOString(),
         source: "local_export"
@@ -1546,7 +2186,14 @@ function importLocalData(input) {
                     audits = data.audits || [];
                     activities = data.activities || [];
                     maintenances = data.maintenances || [];
-                    masterLists = data.masterLists || defaultMasterLists;
+                    documents = data.documents || []; 
+                    
+                    // Tratamento de compatibilidade para masterLists
+                    masterLists = { ...defaultMasterLists, ...data.masterLists };
+                    if (Array.isArray(masterLists.mantItens)) {
+                        masterLists.mantItens = defaultMasterLists.mantItens; 
+                    }
+
 
                     // Salva na nuvem para persistir a importação
                     await saveAll(false); 
@@ -1569,6 +2216,14 @@ function importLocalData(input) {
 }
 
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+// Inicialização (garante que os selects sejam preenchidos ao carregar a página)
+document.addEventListener('DOMContentLoaded', () => {
+    // A inicialização principal dos dados é feita em checkLogin, após autenticação.
+    // Mas as chamadas abaixo garantem que as estruturas de data/dropdowns existam, mesmo que vazias inicialmente.
+    populateYearSelects();
+    populateSelects();
+});
 
 </script>
 </body>
