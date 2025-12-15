@@ -460,6 +460,61 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     background: var(--bg);
     color: var(--text-light);
 }
+.btn-toggle-menu {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 8px;
+    margin-right: 15px;
+    display: none; /* Inicia oculto, será exibido no Mobile */
+}
+
+/* Modificações globais para a transição */
+.sidebar, .main-content {
+    transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
+}
+
+/* 1. LAYOUT MOBILE (Telas <= 1024px) */
+@media (max-width: 1024px) {
+    /* Exibe o botão Hambúrguer */
+    .btn-toggle-menu {
+        display: block;
+    }
+
+    /* Oculta a barra lateral, move para fora da tela e torna o layout principal full-width */
+    .sidebar {
+        position: fixed;
+        height: 100vh;
+        z-index: 1001;
+        transform: translateX(-260px); /* Move para fora da tela */
+    }
+    
+    /* Quando a sidebar está visível (aberta) */
+    body.sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+    
+    /* O conteúdo principal ocupa 100% da largura do viewport */
+    .main-content {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    /* Ajuste no padding do header e content para telas pequenas */
+    .header {
+        padding: 15px 20px;
+        height: 70px;
+    }
+    .content {
+        padding: 20px 20px;
+    }
+    .dashboard-charts {
+        grid-template-columns: 1fr; /* Força uma única coluna */
+        gap: 20px;
+    }
+}
 </style>
 </head>
 <body>
@@ -495,6 +550,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
 <div class="main-content">
     <header class="header">
+        <button id="menuToggle" class="btn-toggle-menu" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
         <div class="title-area">
             <h1 id="pageTitle">Dashboard</h1>
             <small id="pageSubtitle">Visão geral e indicadores de desempenho</small>
@@ -2305,50 +2363,89 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     document.getElementById('tabDocumentos').onclick = () => switchTab('documentos'); 
     document.getElementById('tabBackup').onclick = () => switchTab('backup');
     
-    // --- MODAL & FORM LOGIC ---
-    function resetModal(prefix) {
-        document.getElementById(`${prefix}Titulo`).value = '';
-        document.getElementById(`${prefix}Descricao`).value = '';
-        document.getElementById(`${prefix}Responsavel`).value = '';
-        document.getElementById(`${prefix}Anexos`).innerHTML = '';
-        document.getElementById(`${prefix}FlagDias`).value = (prefix === 'audit' ? 7 : (prefix === 'ativ' ? 3 : (prefix === 'doc' ? 30 : 7))); 
+// --- MODAL & FORM LOGIC (CORRIGIDA) ---
 
-        if(prefix === 'audit') {
-            document.getElementById('auditDataPublicacao').value = today();
-            document.getElementById('auditDataPrevisao').value = today();
-        } else if (prefix === 'ativ') {
-            document.getElementById('ativDataInicio').value = today();
-            document.getElementById('ativDataConclusao').value = today();
-        } else if (prefix === 'mant') {
-            document.getElementById('mantUltima').value = today();
-            document.getElementById('mantIntervalo').value = 30;
-            document.getElementById('mantResponsavelTecnico').value = '';
-            document.getElementById('mantResponsavelManutencao').value = '';
-            calculateNextDate('mant');
-        } else if (prefix === 'doc') {
-            document.getElementById('docDataCriacao').value = today();
-            document.getElementById('docIntervalo').value = 365;
-            document.getElementById('docRevisor').value = '';
-            calculateNextDate('doc');
-        }
+function resetModal(prefix) {
+    // 1. Resetar campos comuns
+    document.getElementById(`${prefix}Titulo`).value = '';
+    document.getElementById(`${prefix}Descricao`).value = '';
+    document.getElementById(`${prefix}Anexos`).innerHTML = '';
 
-        const defaultSetor = masterLists.setores[0] || '';
-        document.getElementById(`${prefix}Setor`).value = defaultSetor;
-
-        let defaultCat = '';
-        if (prefix === 'audit') defaultCat = masterLists.auditCategorias[0] || '';
-        else if (prefix === 'ativ') defaultCat = masterLists.ativCategorias[0] || '';
-        else if (prefix === 'mant') defaultCat = masterLists.mantCategorias[0] || '';
-        else if (prefix === 'doc') defaultCat = masterLists.docCategorias[0] || '';
-
-        document.getElementById(`${prefix}Categoria`).value = defaultCat;
-        onCategoryChange(prefix); // Atualiza subcategorias/itens
-        
-        if (document.getElementById(`${prefix}Status`).options.length > 0) {
-            document.getElementById(`${prefix}Status`).selectedIndex = 0;
-        }
-    }
+    // Lida com Responsáveis
+    const respEl = document.getElementById(`${prefix}Responsavel`);
+    if (respEl) respEl.value = '';
     
+    // Define o Setor
+    const defaultSetor = masterLists.setores[0] || '';
+    document.getElementById(`${prefix}Setor`).value = defaultSetor;
+    
+    // Define o Status (seleciona o primeiro, se houver)
+    if (document.getElementById(`${prefix}Status`).options.length > 0) {
+        document.getElementById(`${prefix}Status`).selectedIndex = 0;
+    }
+
+    // 2. Resetar campos específicos e cálculos
+
+    if (prefix === 'audit') {
+        document.getElementById('auditDataPublicacao').value = today();
+        document.getElementById('auditDataPrevisao').value = today();
+        document.getElementById('auditFlagDias').value = 7;
+        const defaultAuditCat = masterLists.auditCategorias[0] || '';
+        document.getElementById('auditCategoria').value = defaultAuditCat;
+    } else if (prefix === 'ativ') {
+        document.getElementById('ativDataInicio').value = today();
+        document.getElementById('ativDataConclusao').value = today();
+        document.getElementById('ativFlagDias').value = 3;
+        const defaultAtivCat = masterLists.ativCategorias[0] || '';
+        document.getElementById('ativCategoria').value = defaultAtivCat;
+    } else if (prefix === 'mant') {
+        document.getElementById('mantUltima').value = today();
+        document.getElementById('mantIntervalo').value = 30;
+        document.getElementById('mantResponsavelTecnico').value = '';
+        document.getElementById('mantResponsavelManutencao').value = '';
+        document.getElementById('mantFlagDias').value = 7;
+        const defaultMantCat = masterLists.mantCategorias[0] || '';
+        document.getElementById('mantCategoria').value = defaultMantCat;
+        calculateNextDate('mant');
+    } else if (prefix === 'doc') {
+        document.getElementById('docDataCriacao').value = today();
+        document.getElementById('docIntervalo').value = 365;
+        document.getElementById('docRevisor').value = '';
+        document.getElementById('docFlagDias').value = 30;
+        const defaultDocCat = masterLists.docCategorias[0] || '';
+        document.getElementById('docCategoria').value = defaultDocCat;
+        calculateNextDate('doc');
+    }
+
+    // 3. Chamar onCategoryChange após definir a categoria (se a categoria existir)
+    const catEl = document.getElementById(`${prefix}Categoria`);
+    if (catEl) onCategoryChange(prefix);
+}
+
+
+document.getElementById('addBtn').onclick = () => {
+    // Limpa o item original para garantir que um novo item não registre "mudanças"
+    originalItem = null;
+
+    if (currentTab === 'auditoria') {
+        editingAuditId = null;
+        resetModal('audit');
+        document.getElementById('modalAuditoria').style.display = 'flex';
+    } else if (currentTab === 'atividades') {
+        editingAtivId = null;
+        resetModal('ativ');
+        document.getElementById('modalAtividades').style.display = 'flex';
+    } else if (currentTab === 'manutencao') {
+        editingMantId = null;
+        resetModal('mant');
+        document.getElementById('modalManutencao').style.display = 'flex';
+    } else if (currentTab === 'documentos') { 
+        editingDocId = null;
+        resetModal('doc');
+        document.getElementById('modalDocumentos').style.display = 'flex';
+    }
+};
+
     document.getElementById('addBtn').onclick = () => {
         originalItem = null;
     
@@ -3076,6 +3173,19 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         populateSelects();
     });
     
+    function toggleSidebar() {
+        document.body.classList.toggle('sidebar-open');
+    }
+    
+    // Opcional: Fechar o menu ao clicar em um item no Mobile
+    document.querySelectorAll('.sidebar button').forEach(button => {
+        button.addEventListener('click', () => {
+            if (window.innerWidth <= 1024) {
+                document.body.classList.remove('sidebar-open');
+            }
+        });
+    });
+
     document.onkeydown = function(event) {
         if (
             event.keyCode === 123 ||  // F12
