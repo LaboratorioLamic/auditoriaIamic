@@ -1039,6 +1039,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                             <input id="cfgPassword" type="password" placeholder="Senha">
                         </div>
                         <div class="field-group">
+                            <label>Permite editar cards?</label>
+                            <select id="cfgCanEdit">
+                                <option value="true">Sim</option>
+                                <option value="false">Não (Somente leitura)</option>
+                            </select>
+                        </div>
+                        <div class="field-group">
                             <label>Permite excluir cards?</label>
                             <select id="cfgCanDelete">
                                 <option value="false">Não</option>
@@ -1079,6 +1086,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                                 <th>Nome</th>
                                 <th>Login</th>
                                 <th>Abas</th>
+                                <th>Editar</th>
                                 <th>Status</th>
                                 <th>Excluir cards</th>
                                 <th style="text-align:right;">Ações</th>
@@ -1607,16 +1615,21 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // Aceita tanto array direto quanto objeto { users: [] }
         let rawUsers = Array.isArray(record) ? record : (record.users || []);
         if (!Array.isArray(rawUsers)) rawUsers = [];
-        // Normaliza campos (Name/User -> name/user, ativo/active -> active)
+        // Normaliza campos (Name/User -> name/user, ativo/active -> active, permissões)
         users = rawUsers.map(u => {
             const name = u.name || u.Name || '';
             const user = u.user || u.User || '';
             const active = (u.active !== undefined ? u.active : (u.ativo !== undefined ? u.ativo : true));
+            const canDeleteCards = !!u.canDeleteCards;
+            // Por padrão, usuários podem editar cards, a menos que explicitamente marcado como somente leitura
+            const canEditCards = (u.canEditCards !== undefined ? !!u.canEditCards : true);
             return {
                 ...u,
                 name,
                 user,
-                active: active !== false // qualquer coisa diferente de false é considerado ativo
+                active: active !== false, // qualquer coisa diferente de false é considerado ativo
+                canDeleteCards,
+                canEditCards
             };
         });
     }
@@ -1652,6 +1665,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         if (!currentuser) return false;
         if (userIsAdmin()) return true;
         return currentuser.canDeleteCards === true;
+    }
+
+    function userCanEditCards() {
+        if (!currentuser) return false;
+        if (userIsAdmin()) return true;
+        return currentuser.canEditCards === true;
     }
 
     function userAllowedTabs() {
@@ -2354,6 +2373,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             return;
         }
     
+        const canEdit = userCanEditCards();
+
         data.forEach(item => {
             const div = document.createElement('div');
             const flagDays = item.flagDias || 7;
@@ -2410,11 +2431,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 `;
             }
     
+            const editIconHtml = canEdit
+                ? `<i class="fas fa-pen" onclick="editItem(${item.id}, '${currentTab}')" title="Editar"></i>`
+                : '';
+
             div.innerHTML = `
                 <div class="card-header">
                     <span class="tag" style="background-color:${statusColorVar}">${item.status || 'Novo'}</span>
                     <div class="card-actions" onclick="event.stopPropagation()">
-                        <i class="fas fa-pen" onclick="editItem(${item.id}, '${currentTab}')" title="Editar"></i>
+                        ${editIconHtml}
                         <i class="fas fa-trash" onclick="deleteItem(${item.id}, '${currentTab}')" title="Excluir"></i>
                     </div>
                 </div>
@@ -3036,6 +3061,10 @@ document.getElementById('addBtn').onclick = () => {
         saveAll(); closeModal('modalDocumentos'); renderCards();
     }
     function editItem(id, tab) {
+        if (!userCanEditCards()) {
+            alert('Você não tem permissão para editar cards. Seu acesso está configurado como somente leitura.');
+            return;
+        }
         let item;
         if (tab === 'auditoria') {
             item = audits.find(a => a.id === id);
@@ -3117,7 +3146,7 @@ document.getElementById('addBtn').onclick = () => {
             return;
         }
         if (!userCanDeleteCards()) {
-            alert('Apenas o usuário "admin" ou usuários com permissão em Configurações podem excluir cards.');
+            alert('Você não tem permissão para fazer isso');
             return;
         }
         const texto = prompt('Para confirmar a exclusão, digite EXCLUIR no campo abaixo:');
@@ -3585,6 +3614,7 @@ document.getElementById('addBtn').onclick = () => {
         document.getElementById('cfgname').value = '';
         document.getElementById('cfguser').value = '';
         document.getElementById('cfgPassword').value = '';
+        document.getElementById('cfgCanEdit').value = 'true';
         document.getElementById('cfgCanDelete').value = 'false';
         document.getElementById('cfgStatus').value = 'true';
         document.querySelectorAll('.cfg-tab').forEach(chk => {
@@ -3604,6 +3634,7 @@ document.getElementById('addBtn').onclick = () => {
                 const u = wrapper.u;
                 const idx = wrapper.idx;
                 const tabs = Array.isArray(u.tabs) && u.tabs.length > 0 ? u.tabs.join(', ') : 'Dashboard, Auditoria';
+                const editLabel = u.canEditCards === false ? 'Somente leitura' : 'Editar';
                 const statusLabel = u.active === false ? 'Inativo' : 'Ativo';
                 const canDel = u.canDeleteCards ? 'Sim' : 'Não';
                 tbody.innerHTML += `
@@ -3611,6 +3642,7 @@ document.getElementById('addBtn').onclick = () => {
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${u.name || '-'}</td>
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${u.user || '-'}</td>
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${tabs}</td>
+                        <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${editLabel}</td>
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${statusLabel}</td>
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:center;">${canDel}</td>
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:right;">
@@ -3626,6 +3658,7 @@ document.getElementById('addBtn').onclick = () => {
         const name = document.getElementById('cfgname').value.trim();
         const user = document.getElementById('cfguser').value.trim();
         const password = document.getElementById('cfgPassword').value;
+        const canEdit = document.getElementById('cfgCanEdit').value === 'true';
         const canDelete = document.getElementById('cfgCanDelete').value === 'true';
         const isActive = document.getElementById('cfgStatus').value !== 'false';
         const tabs = Array.from(document.querySelectorAll('.cfg-tab'))
@@ -3653,6 +3686,7 @@ document.getElementById('addBtn').onclick = () => {
                 user: user,
                 password: password,
                 tabs,
+                canEditCards: canEdit,
                 canDeleteCards: canDelete,
                 active: isActive
             });
@@ -3662,6 +3696,7 @@ document.getElementById('addBtn').onclick = () => {
             u.user = user;
             if (password) u.password = password;
             u.tabs = tabs;
+            u.canEditCards = canEdit;
             u.canDeleteCards = canDelete;
             u.active = isActive;
         }
@@ -3687,6 +3722,7 @@ document.getElementById('addBtn').onclick = () => {
         document.getElementById('cfgname').value = u.name || '';
         document.getElementById('cfguser').value = u.user || '';
         document.getElementById('cfgPassword').value = '';
+        document.getElementById('cfgCanEdit').value = (u.canEditCards === false ? 'false' : 'true');
         document.getElementById('cfgCanDelete').value = u.canDeleteCards ? 'true' : 'false';
         document.getElementById('cfgStatus').value = (u.active === false ? 'false' : 'true');
         const tabs = Array.isArray(u.tabs) && u.tabs.length > 0 ? u.tabs : ['dashboard', 'auditoria'];
