@@ -43,8 +43,36 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 .sidebar button{width:100%;background:none;border:none;color:#cfd8e3;padding:16px 28px;text-align:left;font-size:15px;cursor:pointer;display:flex;gap:14px;align-items:center;transition:0.2s}
 .sidebar button:hover{background:rgba(255,255,255,0.05);color:#fff}
 .sidebar button.active{background:rgba(255,255,255,0.15);color:#fff;font-weight:600;border-right:4px solid var(--accent)}
-
 .sidebar-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 8px 20px; }
+.sidebar-user{
+    margin-top:auto;
+    padding:16px 16px;
+    border-top:1px solid rgba(255,255,255,0.1);
+    font-size:13px;
+    color:#e5e7eb;
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+.sidebar-user i{color:#9ca3af}
+.sidebar-user span#currentuserLabel{
+    flex:1 1 auto;
+    max-width:calc(100% - 40px); /* reserva espaço fixo para o botão */
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.sidebar-user button#btnLogout{
+    margin-left:8px;
+    background:transparent;
+    border:none;
+    color:#e5e7eb;
+    cursor:pointer;
+    padding:4px;
+    border-radius:6px;
+    flex:0 0 24px; /* largura fixa aproximada para evitar sobreposição */
+}
+.sidebar-user button#btnLogout:hover{background:rgba(255,255,255,0.08);}
 
 /* MAIN LAYOUT */
 .main-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
@@ -362,6 +390,109 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 .bg-purple { background-color: var(--c-purple); }
 .bg-default { background-color: var(--c-default); }
 
+/* CONFIGURAÇÕES - LAYOUT ELEGANTE */
+.config-container {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.config-header h2 {
+    margin: 0;
+    color: #0b2545;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.config-header p {
+    margin: 4px 0 0;
+    color: var(--text-light);
+    font-size: 14px;
+}
+.config-card {
+    background: #f9fafb;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 16px 20px;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+}
+.config-card h3 {
+    margin: 0 0 12px;
+    font-size: 16px;
+    color: var(--primary);
+}
+.config-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+}
+.config-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 13px;
+}
+.config-tabs label {
+    background: #eef2ff;
+    border-radius: 999px;
+    padding: 4px 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #c7d2fe;
+}
+.config-tabs input[type="checkbox"] {
+    accent-color: var(--accent);
+}
+.config-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+}
+.config-table-wrapper {
+    margin-top: 8px;
+    max-height: 320px;
+    overflow: auto;
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+}
+.config-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.config-table thead {
+    background: #f3f4f6;
+}
+.config-table th,
+.config-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+}
+.config-table th:nth-child(4),
+.config-table td:nth-child(4) {
+    text-align: center;
+}
+.config-note {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 6px;
+}
+@media (max-width: 768px) {
+    .config-container {
+        padding: 0 4px;
+    }
+    .config-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* --- LOGIN & SECURITY STYLES --- */
 #loginOverlay {
     position: fixed; inset: 0; background: rgba(255,255,255,0.4); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
@@ -523,9 +654,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     <div class="login-box" id="loginBox">
         <i class="fa-solid fa-lock fa-3x" style="color:var(--primary); margin-bottom:16px;"></i>
         <h2>Acesso Restrito</h2>
-        <p>Digite a senha mestra para acessar o dashboard.</p>
+        <p>Digite seu usuário e senha para acessar o sistema.</p>
         
-        <input type="password" id="passwordInput" class="login-input" placeholder="Senha" autofocus>
+        <input type="text" id="userInput" class="login-input" placeholder="Usuário" autofocus>
+        <input type="password" id="passwordInput" class="login-input" placeholder="Senha">
         <button class="btn-login" id="btnLogin" onclick="checkLogin()">Entrar</button>
         
         <div id="timerDisplay"></div>
@@ -545,7 +677,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     <button id="tabManutencao"><i class="fa-solid fa-wrench"></i> Manutenção</button>
     <div class="sidebar-divider"></div>
     <button id="tabBackup"><i class="fa-solid fa-database"></i> Backup</button>
+    <button id="tabConfiguracoes" style="display:none;"><i class="fa-solid fa-gear"></i> Configurações</button>
     <div class="sidebar-divider"></div>
+    <div id="currentuserBox" class="sidebar-user" style="display:none;">
+        <i class="fa-solid fa-user-circle"></i>
+        <span id="currentuserLabel"></span>
+        <button id="btnLogout" title="Sair" style="margin-left:auto; background:transparent; border:none; color:#e5e7eb; cursor:pointer; padding:4px; border-radius:6px;">
+            <i class="fa-solid fa-power-off"></i>
+        </button>
+    </div>
 </aside>
 
 <div class="main-content">
@@ -872,6 +1012,86 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
         <div class="cards-grid" id="cardsGrid" style="display:none;">
             </div>
+
+        <!-- ABA CONFIGURAÇÕES (apenas para admin) -->
+        <div id="configContent" style="display:none;">
+            <div class="config-container">
+                <div class="config-header">
+                    <div>
+                        <h2><i class="fa-solid fa-gear"></i> Configurações de Usuários</h2>
+                        <p>Cadastre usuários, defina quais abas cada um pode acessar e se podem excluir cards.</p>
+                    </div>
+                </div>
+
+                <div class="config-card">
+                    <h3>Usuário</h3>
+                    <div class="config-grid-2">
+                        <div class="field-group">
+                            <label>Nome</label>
+                            <input id="cfgname" placeholder="Nome que aparecerá na interface">
+                        </div>
+                        <div class="field-group">
+                            <label>Login (user)</label>
+                            <input id="cfguser" placeholder="Ex: joao.silva">
+                        </div>
+                        <div class="field-group">
+                            <label>Senha</label>
+                            <input id="cfgPassword" type="password" placeholder="Senha">
+                        </div>
+                        <div class="field-group">
+                            <label>Permite excluir cards?</label>
+                            <select id="cfgCanDelete">
+                                <option value="false">Não</option>
+                                <option value="true">Sim</option>
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label>Status do login</label>
+                            <select id="cfgStatus">
+                                <option value="true">Ativo</option>
+                                <option value="false">Inativo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="field-group full-width" style="margin-top:8px;">
+                        <label>Acesso às abas</label>
+                        <div class="config-tabs">
+                            <label><input type="checkbox" class="cfg-tab" value="dashboard" checked> Dashboard</label>
+                            <label><input type="checkbox" class="cfg-tab" value="auditoria" checked> Auditoria</label>
+                            <label><input type="checkbox" class="cfg-tab" value="documentos"> Documentos</label>
+                            <label><input type="checkbox" class="cfg-tab" value="atividades"> Atividades</label>
+                            <label><input type="checkbox" class="cfg-tab" value="manutencao"> Manutenção</label>
+                            <label><input type="checkbox" class="cfg-tab" value="backup"> Backup</label>
+                        </div>
+                    </div>
+
+                    <div class="config-actions">
+                        <button class="btn-cancel" onclick="resetConfigForm()">Limpar</button>
+                        <button class="btn-save" onclick="saveuserConfig()">Salvar Usuário</button>
+                    </div>
+                </div>
+
+                <div class="config-table-wrapper">
+                    <table class="config-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Login</th>
+                                <th>Abas</th>
+                                <th>Status</th>
+                                <th>Excluir cards</th>
+                                <th style="text-align:right;">Ações</th>
+                            </tr>
+                        </thead>
+                         <tbody id="cfgusersTable"></tbody>
+                    </table>
+                </div>
+                <p class="config-note">
+                    Observação: o usuário <strong>admin</strong> é sempre administrador, tem acesso a todas as abas e não aparece na lista para edição ou exclusão.
+                </p>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1217,7 +1437,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     // --- CONFIGURAÇÃO JSONBIN E SEGURANÇA ---
     const API_KEY = '$2a$10$2elKW8TT6o.K3V176efqwu7kOfD1PnS3D/F0s4Tczc3MYmaU.N1bi';
     const DATA_BIN_ID = '693d73c4ae596e708f976cf4';
-    const PASSWORD_BIN_ID = '68d7e57bd0ea881f408cf33b';
+    // Bin de usuários: cada registro no formato { "name": "", "user": "", "password": "", ... }
+    const userS_BIN_ID = '694049e5d0ea881f402b66b9';
     
     let failedAttempts = 0;
     let lockoutTimer = null;
@@ -1226,7 +1447,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     let audits = [];
     let activities = [];
     let maintenances = [];
-    let documents = []; 
+    let documents = [];
+    let users = [];            // usuários carregados do bin de usuários
+    let currentuser = null;    // usuário atualmente logado
     
     // NOVO: Armazena o item original no momento da abertura do modal de edição
     let originalItem = null; 
@@ -1289,7 +1512,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     };
 
     // NOVO: Dicionário para mapear chaves de objeto para nomes de exibição
-    const fieldNames = {
+    const fieldnames = {
         // Auditoria
         auditTitulo: 'Título', auditDescricao: 'Descrição', auditSetor: 'Setor', auditCategoria: 'Categoria',
         auditSub: 'Subcategoria', auditStatus: 'Status', auditDataPublicacao: 'Data Publicação',
@@ -1334,15 +1557,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             let originalValue = String(original[key] || '').trim();
             let currentValue = String(current[key] || '').trim();
 
-            // Tenta obter o nome de exibição do dicionário fieldNames
-            const displayNameKey = `${prefix}${key.charAt(0).toUpperCase() + key.slice(1)}`;
-            const displayName = fieldNames[displayNameKey] || key;
+            // Tenta obter o nome de exibição do dicionário fieldnames
+            const displaynameKey = `${prefix}${key.charAt(0).toUpperCase() + key.slice(1)}`;
+            const displayname = fieldnames[displaynameKey] || key;
             
             // Tratamento especial para números (periodicidade e alerta)
             if (key === 'intervalo' || key === 'docIntervalo' || key === 'flagDias') {
                  // Converte para Number antes de comparar
                  if (Number(original[key]) !== Number(current[key])) {
-                    changes.push(`${displayName}: <strong>${originalValue || '0'}</strong> &rarr; <strong>${currentValue || '0'}</strong>`);
+                    changes.push(`${displayname}: <strong>${originalValue || '0'}</strong> &rarr; <strong>${currentValue || '0'}</strong>`);
                 }
                 continue;
             }
@@ -1353,7 +1576,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
             // Comparação de string para todos os outros campos
             if (originalValue !== currentValue) {
-                changes.push(`${displayName}: <strong>${originalValue || 'vazio'}</strong> &rarr; <strong>${currentValue || 'vazio'}</strong>`);
+                changes.push(`${displayname}: <strong>${originalValue || 'vazio'}</strong> &rarr; <strong>${currentValue || 'vazio'}</strong>`);
             }
         }
 
@@ -1366,50 +1589,185 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         
         return changes;
     }
-    // --- LÓGICA DE LOGIN ---
+    // --- LÓGICA DE LOGIN (USUÁRIO + SENHA VIA BIN DE USUÁRIOS) ---
     document.getElementById('passwordInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') checkLogin();
     });
-    
+    document.getElementById('userInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') checkLogin();
+    });
+
+    async function loadusers() {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${userS_BIN_ID}/latest`, {
+            headers: { 'X-Master-Key': API_KEY }
+        });
+        if (!res.ok) throw new Error('Erro ao carregar usuários');
+        const data = await res.json();
+        const record = data.record;
+        // Aceita tanto array direto quanto objeto { users: [] }
+        let rawUsers = Array.isArray(record) ? record : (record.users || []);
+        if (!Array.isArray(rawUsers)) rawUsers = [];
+        // Normaliza campos (Name/User -> name/user, ativo/active -> active)
+        users = rawUsers.map(u => {
+            const name = u.name || u.Name || '';
+            const user = u.user || u.User || '';
+            const active = (u.active !== undefined ? u.active : (u.ativo !== undefined ? u.ativo : true));
+            return {
+                ...u,
+                name,
+                user,
+                active: active !== false // qualquer coisa diferente de false é considerado ativo
+            };
+        });
+    }
+
+    async function saveusers() {
+        const payload = Array.isArray(users) ? users : [];
+        await fetch(`https://api.jsonbin.io/v3/b/${userS_BIN_ID}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Master-Key': API_KEY
+            },
+            body: JSON.stringify(payload)
+        });
+    }
+
+    function updateCurrentuserUI() {
+        const box = document.getElementById('currentuserBox');
+        const label = document.getElementById('currentuserLabel');
+        if (currentuser) {
+            label.textContent = currentuser.name || currentuser.user || '-';
+            box.style.display = 'flex';
+        } else {
+            box.style.display = 'none';
+        }
+    }
+
+    function userIsAdmin() {
+        return currentuser && (currentuser.user === 'admin' || currentuser.isAdmin === true);
+    }
+
+    function userCanDeleteCards() {
+        if (!currentuser) return false;
+        if (userIsAdmin()) return true;
+        return currentuser.canDeleteCards === true;
+    }
+
+    function userAllowedTabs() {
+        if (!currentuser) return null;
+        // Se não houver configuração de abas, por segurança libera apenas Dashboard e Auditoria
+        if (!Array.isArray(currentuser.tabs) || currentuser.tabs.length === 0) {
+            return ['dashboard', 'auditoria'];
+        }
+        return currentuser.tabs;
+    }
+
+    function applyuserPermissionsToTabs() {
+        const allowed = userAllowedTabs();
+        const tabMap = {
+            dashboard: 'tabDashboard',
+            auditoria: 'tabAuditoria',
+            documentos: 'tabDocumentos',
+            atividades: 'tabAtividades',
+            manutencao: 'tabManutencao',
+            backup: 'tabBackup',
+            configuracoes: 'tabConfiguracoes'
+        };
+        Object.entries(tabMap).forEach(([key, btnId]) => {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            if (key === 'configuracoes') {
+                // Aba Configurações só aparece para admin
+                btn.style.display = userIsAdmin() ? 'block' : 'none';
+            } else if (!allowed || allowed.includes(key)) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            } else {
+                btn.disabled = true;
+                btn.style.opacity = '0.4';
+            }
+        });
+    }
+
+    function logout() {
+        // Limpa usuário atual e volta para tela de login
+        currentuser = null;
+        updateCurrentuserUI();
+        // Reseta aba para dashboard padrão sem dados sensíveis
+        currentTab = 'dashboard';
+        switchTab('dashboard');
+        // Limpa campos de login
+        const userInput = document.getElementById('userInput');
+        const passInput = document.getElementById('passwordInput');
+        const loginBtn = document.getElementById('btnLogin');
+        const loading = document.getElementById('loadingText');
+        const timerDisplay = document.getElementById('timerDisplay');
+        if (userInput) userInput.value = '';
+        if (passInput) passInput.value = '';
+        if (userInput) {
+            userInput.disabled = false;
+            userInput.focus();
+        }
+        if (passInput) passInput.disabled = false;
+        if (loginBtn) loginBtn.disabled = false;
+        if (loading) loading.style.display = 'none';
+        if (timerDisplay) timerDisplay.textContent = '';
+        failedAttempts = 0;
+        // Mostra novamente o overlay de login
+        const overlay = document.getElementById('loginOverlay');
+        if (overlay) overlay.style.display = 'flex';
+    }
+
     async function checkLogin() {
-        const input = document.getElementById('passwordInput');
+        const userInput = document.getElementById('userInput');
+        const passInput = document.getElementById('passwordInput');
         const btn = document.getElementById('btnLogin');
         const loading = document.getElementById('loadingText');
         const loginBox = document.getElementById('loginBox');
-        const timerDisplay = document.getElementById('timerDisplay');
-        
-        if(btn.disabled) return;
-    
-        const userPass = input.value;
-        if(!userPass) return;
-    
+
+        if (btn.disabled) return;
+
+        const login = (userInput.value || '').trim();
+        const senha = passInput.value;
+        if (!login || !senha) return;
+
         btn.disabled = true;
-        input.disabled = true;
+        userInput.disabled = true;
+        passInput.disabled = true;
         loading.style.display = 'block';
-    
+
         try {
-            const res = await fetch(`https://api.jsonbin.io/v3/b/${PASSWORD_BIN_ID}/latest`, {
-                headers: { 'X-Master-Key': API_KEY }
-            });
-            
-            if(!res.ok) throw new Error('Erro ao verificar senha');
-            
-            const data = await res.json();
-            const remotePass = data.record.password || data.record;
-    
-            if (String(userPass) === String(remotePass)) {
-                loading.innerHTML = '<i class="fas fa-check"></i> Senha correta. Carregando dados...';
-                await loadCloudData();
-                document.getElementById('loginOverlay').style.display = 'none';
+            await loadusers();
+            const found = users.find(u => String(u.user).trim().toLowerCase() === login.toLowerCase() && String(u.password) === String(senha));
+            if (found) {
+                if (found.active === false) {
+                    alert('Usuário inativo. Entre em contato com o administrador para reativar o acesso.');
+                    handleLoginError(passInput, btn, loginBox);
+                    userInput.disabled = false;
+                    passInput.disabled = false;
+                    userInput.focus();
+                } else {
+                    currentuser = found;
+                    updateCurrentuserUI();
+                    applyuserPermissionsToTabs();
+                    loading.innerHTML = '<i class="fas fa-check"></i> Login realizado. Carregando dados...';
+                    await loadCloudData();
+                    document.getElementById('loginOverlay').style.display = 'none';
+                    // Atualiza tabela de usuários para garantir que todos pré-cadastrados apareçam na aba Configurações
+                    renderusersConfigTable();
+                }
             } else {
-                handleLoginError(input, btn, loginBox);
+                handleLoginError(passInput, btn, loginBox);
+                userInput.disabled = false;
+                userInput.focus();
             }
-    
         } catch (err) {
             alert("Erro de conexão: " + err.message);
             btn.disabled = false;
-            input.disabled = false;
-            input.focus();
+            userInput.disabled = false;
+            passInput.disabled = false;
+            userInput.focus();
         } finally {
             loading.style.display = 'none';
         }
@@ -1542,10 +1900,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     // --- LÓGICA DO DASHBOARD (CORRIGIDA) ---
     
     // NOVO: Função para obter o statusType dinamicamente
-    function getStatusType(statusName) {
+    function getStatusType(statusname) {
         const finalizadoKeywords = ['concluído', 'finalizado', 'publicado'];
         const inativoKeywords = ['cancelado', 'obsoleto'];
-        const nameLower = statusName.toLowerCase();
+        const nameLower = statusname.toLowerCase();
         
         if (finalizadoKeywords.includes(nameLower)) return 'finalizado';
         if (inativoKeywords.includes(nameLower)) return 'inativo';
@@ -1555,14 +1913,14 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
     
     // NOVO: Função para obter a cor de um status específico (agora a cor é pega da lista mestra dinâmica)
-    function getStatusColor(statusName, category) {
+    function getStatusColor(statusname, category) {
         let list;
         if (category === 'audit') list = masterLists.auditStatus;
         else if (category === 'ativ') list = masterLists.ativStatus;
         else if (category === 'mant') list = masterLists.mantStatus;
         else if (category === 'doc') list = masterLists.docStatus;
         
-        const statusObj = (list || []).find(s => s.name === statusName);
+        const statusObj = (list || []).find(s => s.name === statusname);
         return statusObj ? statusObj.color : 'default';
     }
     
@@ -2015,6 +2373,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const statusObj = statusList.find(s => s.name === item.status) || { color: 'default' };
             const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
     
+            // layout interativo original dos cards
             div.className = `card ${indicatorClass}`;
             div.onclick = () => {
                 currentHistoryPage = 1; // Reseta a página ao abrir a visualização
@@ -2120,13 +2479,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const setores = masterLists.setores || []; 
         
         // NOVO: Coleta TODOS os status de TODAS as listas mestras de status dinamicamente
-        let allStatusNames = [];
+        let allStatusnames = [];
         ['auditStatus', 'ativStatus', 'mantStatus', 'docStatus'].forEach(key => {
             masterLists[key].forEach(s => {
-                if (s.name) allStatusNames.push(s.name);
+                if (s.name) allStatusnames.push(s.name);
             });
         });
-        const unifiedStatusNames = [...new Set(allStatusNames)].sort();
+        const unifiedStatusnames = [...new Set(allStatusnames)].sort();
     
         // Funções auxiliares para gerar <option>
         const makeOpts = (list) => list.map(i => `<option>${i}</option>`).join('');
@@ -2136,7 +2495,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         
         // --- FILTROS DASHBOARD ---
         document.getElementById('fDashSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos");
-        document.getElementById('fDashStatus').innerHTML = makeFilterOpts(unifiedStatusNames, "Status: Todos");
+        document.getElementById('fDashStatus').innerHTML = makeFilterOpts(unifiedStatusnames, "Status: Todos");
     
     
         // --- MODAIS ---
@@ -2335,14 +2694,23 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         
         const isBackup = tab === 'backup';
         const isDashboard = tab === 'dashboard';
+        const isConfig = tab === 'configuracoes';
     
-        document.getElementById('filtersBar').style.display = (isBackup || isDashboard) ? 'none' : 'flex';
+        document.getElementById('filtersBar').style.display = (isBackup || isDashboard || isConfig) ? 'none' : 'flex';
         document.getElementById('filtersBarDashboard').style.display = isDashboard ? 'flex' : 'none';
-        document.getElementById('cardsGrid').style.display = (isBackup || isDashboard) ? 'none' : 'grid';
-        document.getElementById('addBtn').style.display = (isBackup || isDashboard) ? 'none' : 'flex';
+        document.getElementById('cardsGrid').style.display = (isBackup || isDashboard || isConfig) ? 'none' : 'grid';
+        document.getElementById('addBtn').style.display = (isBackup || isDashboard || isConfig) ? 'none' : 'flex';
         
         document.getElementById('backupContent').style.display = isBackup ? 'flex' : 'none';
-        document.getElementById('dashboardContent').style.display = isDashboard ? 'flex' : 'none'; 
+        document.getElementById('dashboardContent').style.display = isDashboard ? 'flex' : 'none';
+        const cfgEl = document.getElementById('configContent');
+        if (cfgEl) {
+            cfgEl.style.display = isConfig ? 'block' : 'none';
+            if (isConfig) {
+                // Garante que todos usuários pré-cadastrados carregados do JsonBin apareçam na listagem
+                renderusersConfigTable();
+            }
+        }
     
         document.getElementById('filtersAuditoria').style.display = tab === 'auditoria' ? 'flex' : 'none';
         document.getElementById('filtersAtividades').style.display = tab === 'atividades' ? 'flex' : 'none';
@@ -2362,6 +2730,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     document.getElementById('tabManutencao').onclick = () => switchTab('manutencao');
     document.getElementById('tabDocumentos').onclick = () => switchTab('documentos'); 
     document.getElementById('tabBackup').onclick = () => switchTab('backup');
+    document.getElementById('tabConfiguracoes').onclick = () => {
+        if (!userIsAdmin()) {
+            alert('Aba Configurações disponível apenas para o usuário "admin".');
+            return;
+        }
+        switchTab('configuracoes');
+    };
     
 // --- MODAL & FORM LOGIC (CORRIGIDA) ---
 
@@ -2491,7 +2866,7 @@ document.getElementById('addBtn').onclick = () => {
         };
 
         if (isNew) {
-            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro' });
+            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema' });
             audits.push(newItem);
         } else {
             const changes = calculateChanges(originalItem, newItem);
@@ -2499,6 +2874,7 @@ document.getElementById('addBtn').onclick = () => {
                 newItem.historico.push({ 
                     timestamp: new Date().toISOString(), 
                     acao: 'Edição de Dados', 
+                    usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
                     detalhes: changes 
                 });
             } else {
@@ -2534,7 +2910,7 @@ document.getElementById('addBtn').onclick = () => {
         };
         
         if (isNew) {
-            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro' });
+            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema' });
             activities.push(newItem);
         } else {
             const changes = calculateChanges(originalItem, newItem);
@@ -2542,6 +2918,7 @@ document.getElementById('addBtn').onclick = () => {
                 newItem.historico.push({ 
                     timestamp: new Date().toISOString(), 
                     acao: 'Edição de Dados', 
+                    usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
                     detalhes: changes 
                 });
             } else {
@@ -2585,7 +2962,7 @@ document.getElementById('addBtn').onclick = () => {
         };
 
         if (isNew) {
-            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro' });
+            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema' });
             maintenances.push(newItem);
         } else {
             const changes = calculateChanges(originalItem, newItem);
@@ -2593,6 +2970,7 @@ document.getElementById('addBtn').onclick = () => {
                 newItem.historico.push({ 
                     timestamp: new Date().toISOString(), 
                     acao: 'Edição de Dados', 
+                    usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
                     detalhes: changes 
                 });
             } else {
@@ -2636,7 +3014,7 @@ document.getElementById('addBtn').onclick = () => {
         };
 
         if (isNew) {
-            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro' });
+            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema' });
             documents.push(newItem);
         } else {
             const changes = calculateChanges(originalItem, newItem);
@@ -2644,6 +3022,7 @@ document.getElementById('addBtn').onclick = () => {
                 newItem.historico.push({ 
                     timestamp: new Date().toISOString(), 
                     acao: 'Edição de Dados', 
+                    usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
                     detalhes: changes 
                 });
             } else {
@@ -2733,7 +3112,19 @@ document.getElementById('addBtn').onclick = () => {
     }
 
     function deleteItem(id, tab) {
-        if (!confirm('Deseja realmente excluir este registro?')) return;
+        if (!currentuser) {
+            alert('Você precisa estar logado para excluir registros.');
+            return;
+        }
+        if (!userCanDeleteCards()) {
+            alert('Apenas o usuário "admin" ou usuários com permissão em Configurações podem excluir cards.');
+            return;
+        }
+        const texto = prompt('Para confirmar a exclusão, digite EXCLUIR no campo abaixo:');
+        if (!texto || texto.trim().toUpperCase() !== 'EXCLUIR') {
+            alert('Exclusão cancelada. Você não digitou "EXCLUIR" corretamente.');
+            return;
+        }
         if (tab === 'auditoria') audits = audits.filter(a => a.id !== id);
         else if (tab === 'atividades') activities = activities.filter(a => a.id !== id);
         else if (tab === 'manutencao') maintenances = maintenances.filter(m => m.id !== id);
@@ -2799,7 +3190,7 @@ document.getElementById('addBtn').onclick = () => {
         const subcatOrItemLabel = tab === 'manutencao' ? 'Equipamento' : 'Subcategoria';
         const subcatOrItemValue = tab === 'manutencao' ? item.item : item.subcategoria;
         
-        // Determina o prefixo para usar no fieldNames
+        // Determina o prefixo para usar no fieldnames
         const prefix = getTabPrefix(tab);
     
         let detailsGrid = '';
@@ -2882,9 +3273,10 @@ document.getElementById('addBtn').onclick = () => {
                  details = '<small style="margin-left:10px; color: var(--ind-yellow);">Detalhes não registrados nesta versão.</small>';
             }
             
+            const usuario = h.usuario ? ` - ${h.usuario}` : '';
             return `
                 <div class="history-item">
-                    <strong>${h.acao}</strong>
+                    <strong>${h.acao}${usuario}</strong>
                     <small>${dateStr} às ${timeStr}</small>
                     ${details}
                 </div>
@@ -2934,17 +3326,17 @@ document.getElementById('addBtn').onclick = () => {
     // List Manager & Color Selection
     function openListManager(genericKey) {
         let isStatus = false;
-        let listName;
+        let listname;
         
         if (genericKey === 'setores') { 
             currentListKey = 'setores';
-            listName = 'SETORES';
+            listname = 'SETORES';
         } else if (genericKey === 'categorias') {
             if(currentTab === 'auditoria') currentListKey = 'auditCategorias';
             else if(currentTab === 'atividades') currentListKey = 'ativCategorias';
             else if(currentTab === 'manutencao') currentListKey = 'mantCategorias';
             else currentListKey = 'docCategorias'; 
-            listName = 'CATEGORIA';
+            listname = 'CATEGORIA';
         } else if (genericKey === 'subcategorias' || genericKey === 'itens') { 
             
             const prefix = getTabPrefix(currentTab); 
@@ -2966,7 +3358,7 @@ document.getElementById('addBtn').onclick = () => {
             else subcatMapKey = 'docSubcats';
             
             currentListKey = `${subcatMapKey}_${cat}`; 
-            listName = `SUBCATEGORIAS / ITENS DE: ${cat}`;
+            listname = `SUBCATEGORIAS / ITENS DE: ${cat}`;
             
         } else if (genericKey === 'status') {
             if(currentTab === 'auditoria') currentListKey = 'auditStatus';
@@ -2974,13 +3366,13 @@ document.getElementById('addBtn').onclick = () => {
             else if(currentTab === 'manutencao') currentListKey = 'mantStatus';
             else currentListKey = 'docStatus';
             isStatus = true;
-            listName = 'STATUS';
+            listname = 'STATUS';
         } else {
             currentListKey = genericKey; 
-            listName = genericKey.toUpperCase();
+            listname = genericKey.toUpperCase();
         }
         
-        document.getElementById('listTitle').textContent = `Gerenciar: ${listName}`;
+        document.getElementById('listTitle').textContent = `Gerenciar: ${listname}`;
         const body = document.getElementById('listBody');
         body.innerHTML = '';
     
@@ -3185,6 +3577,147 @@ document.getElementById('addBtn').onclick = () => {
             }
         });
     });
+
+    // --- CONFIGURAÇÕES: GESTÃO DE USUÁRIOS ---
+    let editinguserIndex = null; // índice em users (exceto admin) para edição
+
+    function resetConfigForm() {
+        document.getElementById('cfgname').value = '';
+        document.getElementById('cfguser').value = '';
+        document.getElementById('cfgPassword').value = '';
+        document.getElementById('cfgCanDelete').value = 'false';
+        document.getElementById('cfgStatus').value = 'true';
+        document.querySelectorAll('.cfg-tab').forEach(chk => {
+            chk.checked = (chk.value === 'dashboard' || chk.value === 'auditoria');
+        });
+        editinguserIndex = null;
+    }
+
+    function renderusersConfigTable() {
+        const tbody = document.getElementById('cfgusersTable');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        users
+            .map((u, idx) => ({ u, idx }))
+            .filter(wrapper => String(wrapper.u.user).trim().toLowerCase() !== 'admin') // admin não aparece
+            .forEach(wrapper => {
+                const u = wrapper.u;
+                const idx = wrapper.idx;
+                const tabs = Array.isArray(u.tabs) && u.tabs.length > 0 ? u.tabs.join(', ') : 'Dashboard, Auditoria';
+                const statusLabel = u.active === false ? 'Inativo' : 'Ativo';
+                const canDel = u.canDeleteCards ? 'Sim' : 'Não';
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${u.name || '-'}</td>
+                        <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${u.user || '-'}</td>
+                        <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${tabs}</td>
+                        <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${statusLabel}</td>
+                        <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:center;">${canDel}</td>
+                        <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:right;">
+                            <button class="btn-clear" style="padding:4px 8px; font-size:12px;" onclick="edituserConfig(${idx})"><i class="fas fa-pen"></i></button>
+                            <button class="btn-clear" style="padding:4px 8px; font-size:12px; color:var(--ind-red);" onclick="deleteuserConfig(${idx})"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+    }
+
+    async function saveuserConfig() {
+        const name = document.getElementById('cfgname').value.trim();
+        const user = document.getElementById('cfguser').value.trim();
+        const password = document.getElementById('cfgPassword').value;
+        const canDelete = document.getElementById('cfgCanDelete').value === 'true';
+        const isActive = document.getElementById('cfgStatus').value !== 'false';
+        const tabs = Array.from(document.querySelectorAll('.cfg-tab'))
+            .filter(chk => chk.checked)
+            .map(chk => chk.value);
+
+        if (!name || !user || (!password && editinguserIndex === null)) {
+            alert('Preencha ao menos Nome, Login e Senha (para novos usuários).');
+            return;
+        }
+        if (user.toLowerCase() === 'admin') {
+            alert('O usuário "admin" é reservado e não pode ser criado/alterado por aqui.');
+            return;
+        }
+
+        // Evita logins duplicados em novos usuários
+        if (editinguserIndex === null && users.some(u => String(u.user).trim().toLowerCase() === user.toLowerCase())) {
+            alert('Já existe um usuário com esse login.');
+            return;
+        }
+
+        if (editinguserIndex === null) {
+            users.push({
+                name: name,
+                user: user,
+                password: password,
+                tabs,
+                canDeleteCards: canDelete,
+                active: isActive
+            });
+        } else {
+            const u = users[editinguserIndex];
+            u.name = name;
+            u.user = user;
+            if (password) u.password = password;
+            u.tabs = tabs;
+            u.canDeleteCards = canDelete;
+            u.active = isActive;
+        }
+
+        try {
+            await saveusers();
+            renderusersConfigTable();
+            if (currentuser && currentuser.user && currentuser.user.toLowerCase() === user.toLowerCase()) {
+                currentuser = users[editinguserIndex === null ? users.length - 1 : editinguserIndex];
+                updateCurrentuserUI();
+                applyuserPermissionsToTabs();
+            }
+            resetConfigForm();
+            alert('Usuário salvo com sucesso.');
+        } catch (e) {
+            alert('Erro ao salvar usuários: ' + e.message);
+        }
+    }
+
+    function edituserConfig(idx) {
+        const u = users[idx];
+        editinguserIndex = idx;
+        document.getElementById('cfgname').value = u.name || '';
+        document.getElementById('cfguser').value = u.user || '';
+        document.getElementById('cfgPassword').value = '';
+        document.getElementById('cfgCanDelete').value = u.canDeleteCards ? 'true' : 'false';
+        document.getElementById('cfgStatus').value = (u.active === false ? 'false' : 'true');
+        const tabs = Array.isArray(u.tabs) && u.tabs.length > 0 ? u.tabs : ['dashboard', 'auditoria'];
+        document.querySelectorAll('.cfg-tab').forEach(chk => {
+            chk.checked = tabs.includes(chk.value);
+        });
+    }
+
+    async function deleteuserConfig(idx) {
+        const u = users[idx];
+        if (!confirm(`Deseja realmente excluir o usuário "${u.name || u.user}"?`)) return;
+        users.splice(idx, 1);
+        try {
+            await saveusers();
+            renderusersConfigTable();
+            alert('Usuário excluído com sucesso.');
+        } catch (e) {
+            alert('Erro ao excluir usuário: ' + e.message);
+        }
+    }
+
+    // Botão de logout ao lado do nome do usuário
+    const logoutBtn = document.getElementById('btnLogout');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm('Deseja realmente sair do sistema?')) {
+                logout();
+            }
+        });
+    }
 
     document.onkeydown = function(event) {
         if (
