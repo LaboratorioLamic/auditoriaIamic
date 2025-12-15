@@ -228,16 +228,27 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     padding: 0;
     margin: 0;
 }
+
+/* Novo estilo para listas com barras (G1, G2, G3) */
 .chart-list li {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column; /* Coloca a barra abaixo do texto */
     padding: 10px 0;
     border-bottom: 1px dashed var(--border);
+    position: relative; /* Para posicionar a barra de fundo */
 }
 .chart-list li:last-child {
     border-bottom: none;
 }
+.chart-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    z-index: 10; /* Mantém o texto acima da barra */
+    position: relative;
+}
+
 .chart-list .status-info {
     display: flex;
     align-items: center;
@@ -256,6 +267,23 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 .chart-list .deadline-info {
     font-size: 15px;
     font-weight: 700;
+}
+
+/* Estilo para a barra de gráfico */
+.chart-bar {
+    height: 12px;
+    background: #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    margin-top: 5px;
+    z-index: 5;
+}
+.chart-bar-fill {
+    height: 100%;
+    background-color: var(--accent); /* Cor padrão, será sobrescrita */
+    border-radius: 6px;
+    transition: width 0.5s ease-out;
 }
 
 /* BACKUP VIEW */
@@ -368,6 +396,70 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
 #timerDisplay { margin-top: 10px; color: var(--c-red); font-weight: 700; font-size: 14px; min-height: 20px;}
 #loadingText { margin-top: 15px; color: var(--accent); font-size: 13px; display: none; }
+
+/* Adicionado: Estilos de Histórico no View Modal */
+.view-history {
+    background: #fff; 
+    padding: 16px; 
+    border-radius: 12px; 
+    border: 1px solid var(--border);
+    margin-top: 20px;
+}
+.view-history h4 { 
+    font-size: 14px; 
+    margin: 0 0 12px; 
+    color: var(--primary); 
+    border-bottom: 1px dashed var(--border);
+    padding-bottom: 8px;
+}
+.history-item {
+    padding: 8px 0;
+    border-bottom: 1px dotted #e5e7eb;
+    font-size: 13px;
+    color: var(--text);
+}
+.history-item:last-child {
+    border-bottom: none;
+}
+.history-item strong {
+    color: var(--primary);
+    font-weight: 600;
+    margin-right: 5px;
+}
+.history-item small {
+    display: block;
+    color: var(--text-light);
+    margin-top: 2px;
+}
+
+/* Paginação do Histórico */
+.history-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    font-size: 13px;
+    color: var(--text-light);
+}
+.history-pagination button {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: 0.2s;
+}
+.history-pagination button:hover {
+    background: #e5e7eb;
+    color: var(--primary);
+}
+.history-pagination button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    background: var(--bg);
+    color: var(--text-light);
+}
 </style>
 </head>
 <body>
@@ -1076,6 +1168,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     let maintenances = [];
     let documents = []; 
     
+    // NOVO: Armazena o item original no momento da abertura do modal de edição
+    let originalItem = null; 
+
     // --- CORREÇÃO: ZERANDO ESTRUTURAS PRÉ-CADASTRADAS DE STATUS ---
     const defaultMasterLists = {
         // Listas Principais (Limpas)
@@ -1110,6 +1205,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     let editingDocId = null; 
     let currentListKey = null; 
     let selectedColorTemp = 'default';
+    let currentHistoryPage = 1; // NOVO: Para controle da paginação do histórico
     
     // --- UTILITÁRIOS ---
     const today = () => new Date().toISOString().split('T')[0];
@@ -1131,7 +1227,85 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         'purple': 'var(--c-purple)',
         'default': 'var(--c-default)'
     };
-    
+
+    // NOVO: Dicionário para mapear chaves de objeto para nomes de exibição
+    const fieldNames = {
+        // Auditoria
+        auditTitulo: 'Título', auditDescricao: 'Descrição', auditSetor: 'Setor', auditCategoria: 'Categoria',
+        auditSub: 'Subcategoria', auditStatus: 'Status', auditDataPublicacao: 'Data Publicação',
+        auditDataPrevisao: 'Data Previsão', auditResponsavel: 'Responsável', auditFlagDias: 'Alerta (Dias)',
+        
+        // Atividades
+        ativTitulo: 'Título', ativDescricao: 'Descrição', ativSetor: 'Setor', ativCategoria: 'Categoria',
+        ativSub: 'Subcategoria', ativStatus: 'Status', ativDataInicio: 'Data Início',
+        ativDataConclusao: 'Data Conclusão', ativResponsavel: 'Responsável', ativFlagDias: 'Alerta (Dias)',
+        
+        // Manutenção
+        mantTitulo: 'Título', mantDescricao: 'Descrição', mantSetor: 'Setor', mantCategoria: 'Categoria',
+        mantItem: 'Item/Equipamento', mantUltima: 'Última Manutenção', mantIntervalo: 'Periodicidade (Dias)',
+        mantResponsavelTecnico: 'Responsável Técnico', mantResponsavelManutencao: 'Responsável Manutenção',
+        mantStatus: 'Status', mantFlagDias: 'Alerta (Dias)', mantProxima: 'Próxima Manutenção',
+        
+        // Documentos
+        docTitulo: 'Título', docDescricao: 'Descrição', docSetor: 'Setor', docCategoria: 'Categoria',
+        docSub: 'Subcategoria', docStatus: 'Status', docDataCriacao: 'Data Criação',
+        docIntervalo: 'Periodicidade (Dias)', docResponsavel: 'Responsável', docRevisor: 'Revisor',
+        docFlagDias: 'Alerta (Dias)', docProximaRevisao: 'Próxima Revisão',
+
+        // Anexos (Não é uma propriedade direta, mas ajuda a exibir a mudança)
+        anexos: 'Anexos'
+    };
+
+    // NOVO: Função para calcular e formatar as mudanças
+    function calculateChanges(original, current) {
+        const changes = [];
+        
+        // Determina o prefixo do item (audit, ativ, mant, doc)
+        const prefix = current.type;
+        
+        // Propriedades que são derivadas (e não devem ser comparadas)
+        const derivedKeys = ['id', 'historico', 'type', 'proxima', 'dataProximaRevisao'];
+        
+        for (const key in original) {
+            // Ignora propriedades derivadas e metadata interna
+            if (derivedKeys.includes(key)) continue; 
+            if (key === 'anexos') continue; // Anexos são tratados separadamente
+
+            let originalValue = String(original[key] || '').trim();
+            let currentValue = String(current[key] || '').trim();
+
+            // Tenta obter o nome de exibição do dicionário fieldNames
+            const displayNameKey = `${prefix}${key.charAt(0).toUpperCase() + key.slice(1)}`;
+            const displayName = fieldNames[displayNameKey] || key;
+            
+            // Tratamento especial para números (periodicidade e alerta)
+            if (key === 'intervalo' || key === 'docIntervalo' || key === 'flagDias') {
+                 // Converte para Number antes de comparar
+                 if (Number(original[key]) !== Number(current[key])) {
+                    changes.push(`${displayName}: <strong>${originalValue || '0'}</strong> &rarr; <strong>${currentValue || '0'}</strong>`);
+                }
+                continue;
+            }
+            
+            // Tratamento para datas (somente para exibição no histórico)
+            if (key.includes('data') && originalValue) originalValue = formatBR(originalValue);
+            if (key.includes('data') && currentValue) currentValue = formatBR(currentValue);
+
+            // Comparação de string para todos os outros campos
+            if (originalValue !== currentValue) {
+                changes.push(`${displayName}: <strong>${originalValue || 'vazio'}</strong> &rarr; <strong>${currentValue || 'vazio'}</strong>`);
+            }
+        }
+
+        // Verifica mudanças nos anexos (simplificado)
+        const originalAnexosCount = (original.anexos || []).length;
+        const currentAnexosCount = (current.anexos || []).length;
+        if (originalAnexosCount !== currentAnexosCount) {
+             changes.push(`Anexos: Número de anexos alterado (de ${originalAnexosCount} para ${currentAnexosCount})`);
+        }
+        
+        return changes;
+    }
     // --- LÓGICA DE LOGIN ---
     document.getElementById('passwordInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') checkLogin();
@@ -1241,6 +1415,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     masterLists.mantItens = defaultMasterLists.mantItens; 
                 }
             }
+            
+            // Garante que o histórico exista
+            audits.forEach(a => a.historico = a.historico || []);
+            activities.forEach(a => a.historico = a.historico || []);
+            maintenances.forEach(m => m.historico = m.historico || []);
+            documents.forEach(d => d.historico = d.historico || []);
     
             populateYearSelects();
             populateSelects();
@@ -1258,6 +1438,17 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
     
     async function saveAll(showAlert = false) {
+        
+        // NOVO: Truncagem do histórico para no máximo 25 itens (5 páginas * 5 itens)
+        const maxHistoryItems = 25;
+        [audits, activities, maintenances, documents].forEach(arr => {
+            arr.forEach(item => {
+                if (item.historico && item.historico.length > maxHistoryItems) {
+                    item.historico.splice(0, item.historico.length - maxHistoryItems);
+                }
+            });
+        });
+
         const payload = {
             audits,
             activities,
@@ -1402,11 +1593,11 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
         // G3: Alerta de Prazos
         const prazoCounts = {
-            atrasados: { count: 0, color: 'var(--ind-red)' },
-            criticos: { count: 0, color: 'var(--ind-yellow)' },
-            curtoPrazo: { count: 0, color: 'var(--c-orange)' },
-            medioPrazo: { count: 0, color: 'var(--c-blue)' },
-            longoPrazo: { count: 0, color: 'var(--ind-green)' }
+            atrasados: { count: 0, color: 'var(--ind-red)', percent: 0 },
+            criticos: { count: 0, color: 'var(--ind-yellow)', percent: 0 },
+            curtoPrazo: { count: 0, color: 'var(--c-orange)', percent: 0 },
+            medioPrazo: { count: 0, color: 'var(--c-blue)', percent: 0 },
+            longoPrazo: { count: 0, color: 'var(--ind-green)', percent: 0 }
         };
     
         activeItems.forEach(item => {
@@ -1416,6 +1607,11 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             else if (d <= 30) prazoCounts.curtoPrazo.count++;
             else if (d <= 90) prazoCounts.medioPrazo.count++;
             else prazoCounts.longoPrazo.count++;
+        });
+        
+        // Calcula porcentagens para G3 (baseado apenas nos itens ativos)
+        Object.keys(prazoCounts).forEach(key => {
+            prazoCounts[key].percent = activeCount > 0 ? (prazoCounts[key].count / activeCount) * 100 : 0;
         });
     
         return { totalCount, activeCount, completedCount, overdueCount, statusCounts, setorCounts, prazoCounts };
@@ -1439,24 +1635,30 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
         sortedStatus.forEach(([statusKey, data]) => {
             const count = data.count;
-            const percentage = activeCount > 0 ? ((count / activeCount) * 100).toFixed(1) : 0;
+            const percentage = activeCount > 0 ? ((count / activeCount) * 100) : 0;
+            const percentageFixed = percentage.toFixed(1);
             const colorVar = colorMap[data.color] || colorMap['default'];
             
             listStatusConsolidado.innerHTML += `
                 <li>
-                    <span class="status-info">
-                        <span class="color-dot" style="background-color:${colorVar}"></span>
-                        ${statusKey}
-                    </span>
-                    <div>
-                        <span class="value">${count}</span>
-                        <span class="percent">(${percentage}%)</span>
+                    <div class="chart-list-header">
+                        <span class="status-info">
+                            <span class="color-dot" style="background-color:${colorVar}"></span>
+                            ${statusKey}
+                        </span>
+                        <div>
+                            <span class="value">${count}</span>
+                            <span class="percent">(${percentageFixed}%)</span>
+                        </div>
+                    </div>
+                    <div class="chart-bar">
+                        <div class="chart-bar-fill" style="width:${percentage}%; background-color:${colorVar}"></div>
                     </div>
                 </li>
             `;
         });
         if (listStatusConsolidado.innerHTML === '') {
-            listStatusConsolidado.innerHTML = '<li style="text-align:center; padding:20px;">Nenhum item ativo encontrado com os filtros atuais.</li>';
+            listStatusConsolidado.innerHTML = '<li style="text-align:center; padding:20px; flex-direction:row; justify-content:center; border-bottom:none;">Nenhum item ativo encontrado com os filtros atuais.</li>';
         }
     
         // --- G2: Distribuição por Setor ---
@@ -1466,49 +1668,67 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const sortedSetores = Object.entries(setorCounts).sort(([, a], [, b]) => b - a);
     
         sortedSetores.forEach(([setor, count]) => {
-            const percentage = activeCount > 0 ? ((count / activeCount) * 100).toFixed(1) : 0;
+            const percentage = activeCount > 0 ? ((count / activeCount) * 100) : 0;
+            const percentageFixed = percentage.toFixed(1);
+            const colorVar = colorMap['default'];
+            
             listDistribuicaoSetor.innerHTML += `
                 <li>
-                    <span class="status-info"><i class="fas fa-building" style="margin-right:8px; color:${colorMap['default']}"></i>${setor}</span>
-                    <div>
-                        <span class="value">${count}</span>
-                        <span class="percent">(${percentage}%)</span>
+                    <div class="chart-list-header">
+                        <span class="status-info"><i class="fas fa-building" style="margin-right:8px; color:${colorVar}"></i>${setor}</span>
+                        <div>
+                            <span class="value">${count}</span>
+                            <span class="percent">(${percentageFixed}%)</span>
+                        </div>
+                    </div>
+                    <div class="chart-bar">
+                        <div class="chart-bar-fill" style="width:${percentage}%; background-color:var(--accent)"></div>
                     </div>
                 </li>
             `;
         });
         if (listDistribuicaoSetor.innerHTML === '') {
-            listDistribuicaoSetor.innerHTML = '<li style="text-align:center; padding:20px;">Nenhum item ativo encontrado com os filtros atuais.</li>';
+            listDistribuicaoSetor.innerHTML = '<li style="text-align:center; padding:20px; flex-direction:row; justify-content:center; border-bottom:none;">Nenhum item ativo encontrado com os filtros atuais.</li>';
         }
     
     
         // --- G3: Alerta de Prazos ---
         const listAlertaPrazos = document.getElementById('chartAlertaPrazos');
-        listAlertaPrazos.innerHTML = `
-            <li>
-                <span class="status-info"><i class="fas fa-exclamation-circle" style="margin-right:8px; color:${prazoCounts.atrasados.color}"></i> Atrasados (Vencidos)</span>
-                <span class="deadline-info" style="color:${prazoCounts.atrasados.color}">${prazoCounts.atrasados.count}</span>
-            </li>
-            <li>
-                <span class="status-info"><i class="fas fa-exclamation-triangle" style="margin-right:8px; color:${prazoCounts.criticos.color}"></i> Críticos (0 a 7 dias)</span>
-                <span class="deadline-info" style="color:${prazoCounts.criticos.color}">${prazoCounts.criticos.count}</span>
-            </li>
-            <li>
-                <span class="status-info"><i class="fas fa-hourglass-start" style="margin-right:8px; color:${prazoCounts.curtoPrazo.color}"></i> Curto Prazo (8 a 30 dias)</span>
-                <span class="deadline-info" style="color:${prazoCounts.curtoPrazo.color}">${prazoCounts.curtoPrazo.count}</span>
-            </li>
-            <li>
-                <span class="status-info"><i class="fas fa-clock" style="margin-right:8px; color:${prazoCounts.medioPrazo.color}"></i> Médio Prazo (31 a 90 dias)</span>
-                <span class="deadline-info" style="color:${prazoCounts.medioPrazo.color}">${prazoCounts.medioPrazo.count}</span>
-            </li>
-            <li>
-                <span class="status-info"><i class="fas fa-check-circle" style="margin-right:8px; color:${prazoCounts.longoPrazo.color}"></i> Longo Prazo (> 90 dias)</span>
-                <span class="deadline-info" style="color:${prazoCounts.longoPrazo.color}">${prazoCounts.longoPrazo.count}</span>
-            </li>
-        `;
+        
+        const prazoData = [
+            { label: 'Atrasados (Vencidos)', key: 'atrasados', icon: 'fas fa-exclamation-circle' },
+            { label: 'Críticos (0 a 7 dias)', key: 'criticos', icon: 'fas fa-exclamation-triangle' },
+            { label: 'Curto Prazo (8 a 30 dias)', key: 'curtoPrazo', icon: 'fas fa-hourglass-start' },
+            { label: 'Médio Prazo (31 a 90 dias)', key: 'medioPrazo', icon: 'fas fa-clock' },
+            { label: 'Longo Prazo (> 90 dias)', key: 'longoPrazo', icon: 'fas fa-check-circle' }
+        ];
+
+        listAlertaPrazos.innerHTML = prazoData.map(item => {
+            const data = prazoCounts[item.key];
+            const count = data.count;
+            const percentage = data.percent;
+            const percentageFixed = percentage.toFixed(1);
+            const color = data.color;
+            const barColor = item.key === 'atrasados' ? 'var(--ind-red)' : (item.key === 'criticos' ? 'var(--ind-yellow)' : 'var(--c-blue)');
+
+            return `
+                <li>
+                    <div class="chart-list-header">
+                        <span class="status-info"><i class="${item.icon}" style="margin-right:8px; color:${color}"></i> ${item.label}</span>
+                        <div>
+                            <span class="deadline-info" style="color:${color}">${count}</span>
+                            <span class="percent">(${percentageFixed}%)</span>
+                        </div>
+                    </div>
+                    <div class="chart-bar">
+                        <div class="chart-bar-fill" style="width:${percentage}%; background-color:${barColor}"></div>
+                    </div>
+                </li>
+            `;
+        }).join('');
     
         if (activeCount === 0) {
-            listAlertaPrazos.innerHTML = '<li style="text-align:center; padding:20px;">Nenhum item ativo para análise de prazos com os filtros atuais.</li>';
+            listAlertaPrazos.innerHTML = '<li style="text-align:center; padding:20px; flex-direction:row; justify-content:center; border-bottom:none;">Nenhum item ativo para análise de prazos com os filtros atuais.</li>';
         }
     }
     
@@ -1736,7 +1956,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
     
             div.className = `card ${indicatorClass}`;
-            div.onclick = () => openView(item.id, currentTab);
+            div.onclick = () => {
+                currentHistoryPage = 1; // Reseta a página ao abrir a visualização
+                openView(item.id, currentTab);
+            };
     
             let specificContent = '';
             const subcatOrItemValue = currentTab === 'manutencao' ? item.item : item.subcategoria;
@@ -2081,65 +2304,67 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     document.getElementById('tabBackup').onclick = () => switchTab('backup');
     
     // --- MODAL & FORM LOGIC ---
+    function resetModal(prefix) {
+        document.getElementById(`${prefix}Titulo`).value = '';
+        document.getElementById(`${prefix}Descricao`).value = '';
+        document.getElementById(`${prefix}Responsavel`).value = '';
+        document.getElementById(`${prefix}Anexos`).innerHTML = '';
+        document.getElementById(`${prefix}FlagDias`).value = (prefix === 'audit' ? 7 : (prefix === 'ativ' ? 3 : (prefix === 'doc' ? 30 : 7))); 
+
+        if(prefix === 'audit') {
+            document.getElementById('auditDataPublicacao').value = today();
+            document.getElementById('auditDataPrevisao').value = today();
+        } else if (prefix === 'ativ') {
+            document.getElementById('ativDataInicio').value = today();
+            document.getElementById('ativDataConclusao').value = today();
+        } else if (prefix === 'mant') {
+            document.getElementById('mantUltima').value = today();
+            document.getElementById('mantIntervalo').value = 30;
+            document.getElementById('mantResponsavelTecnico').value = '';
+            document.getElementById('mantResponsavelManutencao').value = '';
+            calculateNextDate('mant');
+        } else if (prefix === 'doc') {
+            document.getElementById('docDataCriacao').value = today();
+            document.getElementById('docIntervalo').value = 365;
+            document.getElementById('docRevisor').value = '';
+            calculateNextDate('doc');
+        }
+
+        const defaultSetor = masterLists.setores[0] || '';
+        document.getElementById(`${prefix}Setor`).value = defaultSetor;
+
+        let defaultCat = '';
+        if (prefix === 'audit') defaultCat = masterLists.auditCategorias[0] || '';
+        else if (prefix === 'ativ') defaultCat = masterLists.ativCategorias[0] || '';
+        else if (prefix === 'mant') defaultCat = masterLists.mantCategorias[0] || '';
+        else if (prefix === 'doc') defaultCat = masterLists.docCategorias[0] || '';
+
+        document.getElementById(`${prefix}Categoria`).value = defaultCat;
+        onCategoryChange(prefix); // Atualiza subcategorias/itens
+        
+        if (document.getElementById(`${prefix}Status`).options.length > 0) {
+            document.getElementById(`${prefix}Status`).selectedIndex = 0;
+        }
+    }
+    
     document.getElementById('addBtn').onclick = () => {
-        const defaultSetor = masterLists.setores[0] || ''; 
-        const defaultAuditCat = masterLists.auditCategorias[0] || ''; 
-        const defaultAtivCat = masterLists.ativCategorias[0] || ''; 
-        const defaultMantCat = masterLists.mantCategorias[0] || ''; 
-        const defaultDocCat = masterLists.docCategorias[0] || ''; 
+        originalItem = null;
     
         if (currentTab === 'auditoria') {
             editingAuditId = null;
-            document.getElementById('auditTitulo').value = '';
-            document.getElementById('auditDescricao').value = '';
-            document.getElementById('auditDataPublicacao').value = today();
-            document.getElementById('auditDataPrevisao').value = today();
-            document.getElementById('auditResponsavel').value = ''; 
-            document.getElementById('auditAnexos').innerHTML = '';
-            document.getElementById('auditSetor').value = defaultSetor; 
-            document.getElementById('auditCategoria').value = defaultAuditCat;
-            onCategoryChange('audit');
+            resetModal('audit');
             document.getElementById('modalAuditoria').style.display = 'flex';
         } else if (currentTab === 'atividades') {
             editingAtivId = null;
-            document.getElementById('ativTitulo').value = '';
-            document.getElementById('ativDescricao').value = '';
-            document.getElementById('ativDataInicio').value = today();
-            document.getElementById('ativDataConclusao').value = today();
-            document.getElementById('ativResponsavel').value = ''; 
-            document.getElementById('ativAnexos').innerHTML = '';
-            document.getElementById('ativSetor').value = defaultSetor; 
-            document.getElementById('ativCategoria').value = defaultAtivCat;
-            onCategoryChange('ativ');
+            resetModal('ativ');
             document.getElementById('modalAtividades').style.display = 'flex';
         } else if (currentTab === 'manutencao') {
             editingMantId = null;
-            document.getElementById('mantTitulo').value = '';
-            document.getElementById('mantDescricao').value = '';
-            document.getElementById('mantUltima').value = today();
-            document.getElementById('mantIntervalo').value = 30;
-            document.getElementById('mantResponsavelTecnico').value = ''; 
-            document.getElementById('mantResponsavelManutencao').value = ''; 
-            document.getElementById('mantAnexos').innerHTML = '';
-            document.getElementById('mantSetor').value = defaultSetor; 
-            document.getElementById('mantCategoria').value = defaultMantCat;
-            onCategoryChange('mant');
-            calculateNextDate('mant');
+            resetModal('mant');
             document.getElementById('modalManutencao').style.display = 'flex';
         } else if (currentTab === 'documentos') { 
             editingDocId = null;
-            document.getElementById('docTitulo').value = '';
-            document.getElementById('docDescricao').value = '';
-            document.getElementById('docDataCriacao').value = today();
-            document.getElementById('docIntervalo').value = 365; 
-            document.getElementById('docResponsavel').value = '';
-            document.getElementById('docRevisor').value = '';
-            document.getElementById('docFlagDias').value = 30;
-            document.getElementById('docAnexos').innerHTML = '';
-            document.getElementById('docSetor').value = defaultSetor; 
-            document.getElementById('docCategoria').value = defaultDocCat;
-            onCategoryChange('doc');
-            calculateNextDate('doc');
+            resetModal('doc');
             document.getElementById('modalDocumentos').style.display = 'flex';
         }
     };
@@ -2147,8 +2372,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
     // SAVE FUNCTIONS
     function saveAudit() {
-        const item = {
-            id: editingAuditId || Date.now(),
+        const isNew = !editingAuditId;
+        // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
+        let item = isNew ? { id: Date.now(), historico: [], type: 'audit' } : audits.find(a => a.id === editingAuditId);
+
+        const newItem = {
+            ...item,
             titulo: document.getElementById('auditTitulo').value,
             descricao: document.getElementById('auditDescricao').value,
             setor: document.getElementById('auditSetor').value, 
@@ -2158,17 +2387,40 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             dataPublicacao: document.getElementById('auditDataPublicacao').value,
             dataPrevisao: document.getElementById('auditDataPrevisao').value,
             responsavel: document.getElementById('auditResponsavel').value, 
-            flagDias: +document.getElementById('auditFlagDias').value,
+            flagDias: +document.getElementById('auditFlagDias').value, // Lê o valor como número
             anexos: getAnexos('audit')
         };
-        if (editingAuditId) audits = audits.map(a => a.id === editingAuditId ? item : a);
-        else audits.push(item);
+
+        if (isNew) {
+            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro' });
+            audits.push(newItem);
+        } else {
+            const changes = calculateChanges(originalItem, newItem);
+            if (changes.length > 0) {
+                newItem.historico.push({ 
+                    timestamp: new Date().toISOString(), 
+                    acao: 'Edição de Dados', 
+                    detalhes: changes 
+                });
+            } else {
+                // Se não houve alteração, mantém o item original na lista (evita perda de dados)
+                audits = audits.map(a => a.id === editingAuditId ? item : a);
+                closeModal('modalAuditoria');
+                return;
+            }
+            audits = audits.map(a => a.id === editingAuditId ? newItem : a);
+        }
+
         saveAll(); closeModal('modalAuditoria'); renderCards();
     }
     
     function saveAtividade() {
-        const item = {
-            id: editingAtivId || Date.now(),
+        const isNew = !editingAtivId;
+        // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
+        let item = isNew ? { id: Date.now(), historico: [], type: 'ativ' } : activities.find(a => a.id === editingAtivId);
+
+        const newItem = {
+            ...item,
             titulo: document.getElementById('ativTitulo').value,
             descricao: document.getElementById('ativDescricao').value,
             setor: document.getElementById('ativSetor').value, 
@@ -2178,48 +2430,97 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             dataInicio: document.getElementById('ativDataInicio').value,
             dataConclusao: document.getElementById('ativDataConclusao').value,
             responsavel: document.getElementById('ativResponsavel').value, 
-            flagDias: +document.getElementById('ativFlagDias').value,
+            flagDias: +document.getElementById('ativFlagDias').value, // Lê o valor como número
             anexos: getAnexos('ativ')
         };
-        if (editingAtivId) activities = activities.map(a => a.id === editingAtivId ? item : a);
-        else activities.push(item);
+        
+        if (isNew) {
+            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro' });
+            activities.push(newItem);
+        } else {
+            const changes = calculateChanges(originalItem, newItem);
+            if (changes.length > 0) {
+                newItem.historico.push({ 
+                    timestamp: new Date().toISOString(), 
+                    acao: 'Edição de Dados', 
+                    detalhes: changes 
+                });
+            } else {
+                activities = activities.map(a => a.id === editingAtivId ? item : a);
+                closeModal('modalAtividades');
+                return;
+            }
+            activities = activities.map(a => a.id === editingAtivId ? newItem : a);
+        }
+
         saveAll(); closeModal('modalAtividades'); renderCards();
     }
     
     function saveManutencao() {
         const ultima = document.getElementById('mantUltima').value;
-        const intervalo = parseInt(document.getElementById('mantIntervalo').value);
+        const intervalo = parseInt(document.getElementById('mantIntervalo').value) || 0; // Garante que seja um número
+        
+        // Recálculo da próxima data com o NOVO intervalo
         const nextDate = new Date(ultima);
         nextDate.setDate(nextDate.getDate() + intervalo);
-        const item = {
-            id: editingMantId || Date.now(),
+        
+        const isNew = !editingMantId;
+        // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
+        let item = isNew ? { id: Date.now(), historico: [], type: 'mant' } : maintenances.find(m => m.id === editingMantId);
+
+        const newItem = {
+            ...item,
             titulo: document.getElementById('mantTitulo').value,
             descricao: document.getElementById('mantDescricao').value,
             setor: document.getElementById('mantSetor').value, 
             categoria: document.getElementById('mantCategoria').value,
             item: document.getElementById('mantItem').value, 
             ultima,
-            intervalo,
-            proxima: nextDate.toISOString().split('T')[0],
+            intervalo, // Salva o novo intervalo
+            proxima: nextDate.toISOString().split('T')[0], // Salva a nova data calculada
             responsavelTecnico: document.getElementById('mantResponsavelTecnico').value, 
             responsavelManutencao: document.getElementById('mantResponsavelManutencao').value, 
             status: document.getElementById('mantStatus').value,
-            flagDias: +document.getElementById('mantFlagDias').value,
+            flagDias: +document.getElementById('mantFlagDias').value, // Lê o valor como número
             anexos: getAnexos('mant')
         };
-        if (editingMantId) maintenances = maintenances.map(m => m.id === editingMantId ? item : m);
-        else maintenances.push(item);
+
+        if (isNew) {
+            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro' });
+            maintenances.push(newItem);
+        } else {
+            const changes = calculateChanges(originalItem, newItem);
+            if (changes.length > 0) {
+                newItem.historico.push({ 
+                    timestamp: new Date().toISOString(), 
+                    acao: 'Edição de Dados', 
+                    detalhes: changes 
+                });
+            } else {
+                maintenances = maintenances.map(m => m.id === editingMantId ? item : m);
+                closeModal('modalManutencao');
+                return;
+            }
+            maintenances = maintenances.map(m => m.id === editingMantId ? newItem : m);
+        }
+
         saveAll(); closeModal('modalManutencao'); renderCards();
     }
     
     function saveDocumento() { 
         const dataCriacao = document.getElementById('docDataCriacao').value;
-        const docIntervalo = parseInt(document.getElementById('docIntervalo').value);
+        const docIntervalo = parseInt(document.getElementById('docIntervalo').value) || 0; // Garante que seja um número
+        
+        // Recálculo da próxima revisão com o NOVO intervalo
         const nextRevisao = new Date(dataCriacao);
         nextRevisao.setDate(nextRevisao.getDate() + docIntervalo);
         
-        const item = {
-            id: editingDocId || Date.now(),
+        const isNew = !editingDocId;
+        // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
+        let item = isNew ? { id: Date.now(), historico: [], type: 'doc' } : documents.find(d => d.id === editingDocId);
+
+        const newItem = {
+            ...item,
             titulo: document.getElementById('docTitulo').value,
             descricao: document.getElementById('docDescricao').value,
             setor: document.getElementById('docSetor').value, 
@@ -2227,21 +2528,39 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             subcategoria: document.getElementById('docSub').value, 
             status: document.getElementById('docStatus').value,
             dataCriacao,
-            docIntervalo, 
-            dataProximaRevisao: nextRevisao.toISOString().split('T')[0], 
+            docIntervalo, // Salva o novo intervalo
+            dataProximaRevisao: nextRevisao.toISOString().split('T')[0], // Salva a nova data calculada
             responsavel: document.getElementById('docResponsavel').value,
             revisor: document.getElementById('docRevisor').value,
-            flagDias: +document.getElementById('docFlagDias').value,
+            flagDias: +document.getElementById('docFlagDias').value, // Lê o valor como número
             anexos: getAnexos('doc')
         };
-        if (editingDocId) documents = documents.map(d => d.id === editingDocId ? item : d);
-        else documents.push(item);
+
+        if (isNew) {
+            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro' });
+            documents.push(newItem);
+        } else {
+            const changes = calculateChanges(originalItem, newItem);
+            if (changes.length > 0) {
+                newItem.historico.push({ 
+                    timestamp: new Date().toISOString(), 
+                    acao: 'Edição de Dados', 
+                    detalhes: changes 
+                });
+            } else {
+                documents = documents.map(d => d.id === editingDocId ? item : d);
+                closeModal('modalDocumentos');
+                return;
+            }
+            documents = documents.map(d => d.id === editingDocId ? newItem : d);
+        }
+
         saveAll(); closeModal('modalDocumentos'); renderCards();
     }
-    
     function editItem(id, tab) {
+        let item;
         if (tab === 'auditoria') {
-            const item = audits.find(a => a.id === id);
+            item = audits.find(a => a.id === id);
             editingAuditId = id;
             document.getElementById('auditTitulo').value = item.titulo;
             document.getElementById('auditDescricao').value = item.descricao;
@@ -2253,11 +2572,11 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             document.getElementById('auditDataPublicacao').value = item.dataPublicacao;
             document.getElementById('auditDataPrevisao').value = item.dataPrevisao;
             document.getElementById('auditResponsavel').value = item.responsavel || ''; 
-            document.getElementById('auditFlagDias').value = item.flagDias;
+            document.getElementById('auditFlagDias').value = item.flagDias; // Corrigido
             restoreAnexos('audit', item.anexos);
             document.getElementById('modalAuditoria').style.display = 'flex';
         } else if (tab === 'atividades') {
-            const item = activities.find(a => a.id === id);
+            item = activities.find(a => a.id === id);
             editingAtivId = id;
             document.getElementById('ativTitulo').value = item.titulo;
             document.getElementById('ativDescricao').value = item.descricao;
@@ -2269,11 +2588,11 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             document.getElementById('ativDataInicio').value = item.dataInicio;
             document.getElementById('ativDataConclusao').value = item.dataConclusao;
             document.getElementById('ativResponsavel').value = item.responsavel || ''; 
-            document.getElementById('ativFlagDias').value = item.flagDias;
+            document.getElementById('ativFlagDias').value = item.flagDias; // Corrigido
             restoreAnexos('ativ', item.anexos);
             document.getElementById('modalAtividades').style.display = 'flex';
         } else if (tab === 'manutencao') {
-            const item = maintenances.find(m => m.id === id);
+            item = maintenances.find(m => m.id === id);
             editingMantId = id;
             document.getElementById('mantTitulo').value = item.titulo;
             document.getElementById('mantDescricao').value = item.descricao;
@@ -2282,16 +2601,16 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             onCategoryChange('mant'); 
             document.getElementById('mantItem').value = item.item;
             document.getElementById('mantUltima').value = item.ultima;
-            document.getElementById('mantIntervalo').value = item.intervalo;
+            document.getElementById('mantIntervalo').value = item.intervalo; // Corrigido
             document.getElementById('mantResponsavelTecnico').value = item.responsavelTecnico || ''; 
             document.getElementById('mantResponsavelManutencao').value = item.responsavelManutencao || ''; 
             document.getElementById('mantStatus').value = item.status;
-            document.getElementById('mantFlagDias').value = item.flagDias;
+            document.getElementById('mantFlagDias').value = item.flagDias; // Corrigido
             calculateNextDate('mant');
             restoreAnexos('mant', item.anexos);
             document.getElementById('modalManutencao').style.display = 'flex';
         } else if (tab === 'documentos') { 
-            const item = documents.find(d => d.id === id);
+            item = documents.find(d => d.id === id);
             editingDocId = id;
             document.getElementById('docTitulo').value = item.titulo;
             document.getElementById('docDescricao').value = item.descricao;
@@ -2301,16 +2620,19 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             document.getElementById('docSub').value = item.subcategoria || ''; 
             document.getElementById('docStatus').value = item.status;
             document.getElementById('docDataCriacao').value = item.dataCriacao;
-            document.getElementById('docIntervalo').value = item.docIntervalo; 
+            document.getElementById('docIntervalo').value = item.docIntervalo; // Corrigido
             document.getElementById('docResponsavel').value = item.responsavel || '';
             document.getElementById('docRevisor').value = item.revisor || '';
-            document.getElementById('docFlagDias').value = item.flagDias;
+            document.getElementById('docFlagDias').value = item.flagDias; // Corrigido
             calculateNextDate('doc');
             restoreAnexos('doc', item.anexos);
             document.getElementById('modalDocumentos').style.display = 'flex';
         }
+
+        // Armazena o item original no estado atual para calcular as diferenças ao salvar
+        originalItem = JSON.parse(JSON.stringify(item));
     }
-    
+
     function deleteItem(id, tab) {
         if (!confirm('Deseja realmente excluir este registro?')) return;
         if (tab === 'auditoria') audits = audits.filter(a => a.id !== id);
@@ -2351,8 +2673,18 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         });
     }
     
-    // View Modal
+    // View Modal e Histórico com Paginação
     function openView(id, tab) {
+        currentHistoryPage = 1; // Garante que a primeira página seja carregada
+        renderViewContent(id, tab);
+    }
+    
+    function changeHistoryPage(id, tab, direction) {
+        currentHistoryPage += direction;
+        renderViewContent(id, tab);
+    }
+
+    function renderViewContent(id, tab) {
         let item, statusList;
         if (tab === 'auditoria') { item = audits.find(i => i.id === id); statusList = masterLists.auditStatus; }
         else if (tab === 'atividades') { item = activities.find(i => i.id === id); statusList = masterLists.ativStatus; }
@@ -2367,7 +2699,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // Adiciona Subcategoria/Item (Manutenção) na exibição
         const subcatOrItemLabel = tab === 'manutencao' ? 'Equipamento' : 'Subcategoria';
         const subcatOrItemValue = tab === 'manutencao' ? item.item : item.subcategoria;
-    
+        
+        // Determina o prefixo para usar no fieldNames
+        const prefix = getTabPrefix(tab);
     
         let detailsGrid = '';
         if (tab === 'auditoria') {
@@ -2419,7 +2753,65 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const anexosHtml = (item.anexos || []).map(a => 
             `<a href="${a.url}" target="_blank" class="file-chip"><i class="fas fa-external-link-alt"></i> ${a.titulo || 'Anexo'}</a>`
         ).join('');
-    
+
+        // LÓGICA DE PAGINAÇÃO DO HISTÓRICO
+        const allHistory = (item.historico || []).slice().reverse(); // Copia e inverte para o mais recente primeiro
+        const itemsPerPage = 5;
+        const totalItems = allHistory.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        
+        // Limita a 5 páginas
+        const maxPages = 5;
+        const finalPages = Math.min(totalPages, maxPages);
+        
+        // Garante que a página atual seja válida
+        currentHistoryPage = Math.min(Math.max(1, currentHistoryPage), finalPages);
+        
+        const start = (currentHistoryPage - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        const paginatedHistory = allHistory.slice(start, end);
+
+        const historyHtml = paginatedHistory.map(h => {
+            const date = new Date(h.timestamp);
+            const dateStr = date.toLocaleDateString('pt-BR');
+            const timeStr = date.toLocaleTimeString('pt-BR');
+            
+            let details = '';
+            if (h.detalhes && h.detalhes.length > 0) {
+                details = h.detalhes.map(d => `<small style="margin-left:10px;">${d}</small>`).join('');
+            } else if (h.acao.includes('Edição') || h.acao.includes('Atualização')) {
+                 details = '<small style="margin-left:10px; color: var(--ind-yellow);">Detalhes não registrados nesta versão.</small>';
+            }
+            
+            return `
+                <div class="history-item">
+                    <strong>${h.acao}</strong>
+                    <small>${dateStr} às ${timeStr}</small>
+                    ${details}
+                </div>
+            `;
+        }).join('');
+        
+        const paginationHtml = finalPages > 1 ? `
+            <div class="history-pagination">
+                <button ${currentHistoryPage === 1 ? 'disabled' : ''} onclick="changeHistoryPage(${id}, '${tab}', -1)">
+                    <i class="fas fa-chevron-left"></i> Anterior
+                </button>
+                <span>Página ${currentHistoryPage} de ${finalPages}</span>
+                <button ${currentHistoryPage === finalPages ? 'disabled' : ''} onclick="changeHistoryPage(${id}, '${tab}', 1)">
+                    Próxima <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        ` : '';
+
+        const historySection = `
+            <div class="view-history">
+                <h4><i class="fas fa-history"></i> Histórico de Edições (${totalItems} itens)</h4>
+                ${historyHtml || '<div style="color:var(--text-light); font-size:13px;">Nenhuma alteração registrada.</div>'}
+                ${paginationHtml}
+            </div>
+        `;
+
         const html = `
             <div class="view-header">
                 <h2 style="margin:0; color:var(--primary)">${item.titulo}</h2>
@@ -2433,6 +2825,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <div class="view-desc">${item.descricao || 'Sem descrição.'}</div>
             </div>
             ${anexosHtml ? `<div class="view-files"><h4>Anexos</h4>${anexosHtml}</div>` : ''}
+            ${historySection}
         `;
         
         document.getElementById('viewContent').innerHTML = html;
@@ -2648,7 +3041,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         if (Array.isArray(masterLists.mantItens)) {
                             masterLists.mantItens = defaultMasterLists.mantItens; 
                         }
-    
+                        
+                        // Garante que os itens importados tenham o campo historico (vazio se não vier)
+                        audits.forEach(a => a.historico = a.historico || []);
+                        activities.forEach(a => a.historico = a.historico || []);
+                        maintenances.forEach(m => m.historico = m.historico || []);
+                        documents.forEach(d => d.historico = d.historico || []);
     
                         await saveAll(false); 
                         
