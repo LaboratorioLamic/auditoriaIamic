@@ -2225,6 +2225,24 @@ document.addEventListener('DOMContentLoaded', () => {
     populateSelects();
 });
 
+document.onkeydown = function(event) {
+    if (
+        event.keyCode === 123 ||  // F12
+        ctrlShiftKey(event, 'I') ||  // Ctrl + Shift + I
+        ctrlShiftKey(event, 'J') ||  // Ctrl + Shift + J
+        ctrlShiftKey(event, 'C') ||  // Ctrl + Shift + C
+        (event.ctrlKey && event.keyCode === 'U'.charCodeAt(0)) ||  // Ctrl + U
+        (event.ctrlKey && event.keyCode === 'S'.charCodeAt(0))  // Ctrl + S
+    ) {
+        event.preventDefault();
+        return false;
+    }
+};
+        document.addEventListener('contextmenu', function(evento) {
+                // Previne o comportamento padrão (abre o menu)
+                evento.preventDefault();
+            });
+
 </script>
 </body>
 </html>
