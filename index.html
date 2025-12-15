@@ -141,6 +141,123 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+/* --- NOVO DASHBOARD STYLES --- */
+#dashboardContent { 
+    display: none; 
+    flex-direction: column; 
+    gap: 30px; 
+    padding-bottom: 40px; 
+}
+.summary-cards { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+    gap: 20px; 
+}
+.summary-card {
+    background: var(--card-bg);
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.summary-card .icon-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.summary-card .icon-header i {
+    font-size: 24px;
+    color: var(--accent);
+    padding: 10px;
+    border-radius: 8px;
+    background: #eff6ff;
+}
+.summary-card p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-light);
+    font-weight: 500;
+}
+.summary-card h2 {
+    margin: 4px 0 0;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.dashboard-charts {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* Dois gráficos maiores e um menor */
+    gap: 30px;
+}
+
+.chart-card {
+    background: var(--card-bg);
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border);
+    min-height: 400px;
+}
+.chart-card h3 {
+    margin: 0 0 16px;
+    color: var(--primary);
+    font-size: 18px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+}
+
+.chart-content {
+    /* Flex para conter a lista de dados e o gráfico real (se implementado) */
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 40px); /* Ajusta para o h3 */
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+    color: var(--text-light);
+}
+
+.chart-list {
+    width: 100%;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.chart-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--border);
+}
+.chart-list li:last-child {
+    border-bottom: none;
+}
+.chart-list .status-info {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: var(--text);
+}
+.chart-list .value {
+    font-weight: 700;
+    color: var(--primary);
+}
+.chart-list .percent {
+    font-weight: 500;
+    color: var(--text-light);
+    margin-left: 8px;
+}
+.chart-list .deadline-info {
+    font-size: 15px;
+    font-weight: 700;
+}
+
 /* BACKUP VIEW */
 #backupContent { display: none; flex-direction: column; gap: 30px; align-items: center; justify-content: center; height: 100%; text-align: center; }
 .backup-card { background: #fff; padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); border: 1px solid var(--border); width: 100%; max-width: 500px; }
@@ -272,7 +389,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 <aside class="sidebar">
     <div class="sidebar-logo"><i class="fa-solid fa-layer-group"></i> Auditoria LAMIC</div>
     
-    <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Auditoria</button>
+    <button id="tabDashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</button> <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Auditoria</button>
     <button id="tabDocumentos"><i class="fa-solid fa-file-alt"></i> Documentos</button> 
     <button id="tabAtividades"><i class="fa-solid fa-list-check"></i> Gestão de Atividades</button>
     <button id="tabManutencao"><i class="fa-solid fa-wrench"></i> Manutenção</button>
@@ -285,14 +402,125 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 <div class="main-content">
     <header class="header">
         <div class="title-area">
-            <h1 id="pageTitle">Auditoria</h1>
-            <small id="pageSubtitle">Gerenciamento e agendamento</small>
+            <h1 id="pageTitle">Dashboard</h1>
+            <small id="pageSubtitle">Visão geral e indicadores de desempenho</small>
         </div>
         </header>
 
     <div class="content">
         
-        <div id="backupContent">
+        <div class="filters-bar" id="filtersBarDashboard" style="display:flex;">
+            <div class="filter-controls">
+                <div style="font-weight:600; color:var(--primary); font-size:14px;"><i class="fa-solid fa-filter"></i> Filtros:</div>
+                
+                <div id="filtersDashboard" class="filter-group">
+                    <select id="fDashArea" class="filter-input" onchange="onFilterDashboardChange()">
+                        <option value="">Área: Todas</option>
+                        <option value="audit">Auditoria</option>
+                        <option value="ativ">Gestão de Atividades</option>
+                        <option value="mant">Manutenção</option>
+                        <option value="doc">Documentos</option>
+                    </select>
+                    <select id="fDashSetor" class="filter-input" onchange="onFilterDashboardChange()">
+                        <option value="">Setor: Todos</option>
+                    </select>
+                    <select id="fDashStatus" class="filter-input" onchange="onFilterDashboardChange()">
+                        <option value="">Status: Todos</option>
+                    </select>
+                    
+                    <div class="date-controls">
+                        <select id="fDashDateType" onchange="updateDateInputs('Dash')">
+                            <option value="all" selected>Período: Todas</option>
+                            <option value="month">Mês</option>
+                            <option value="year">Ano</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+                        
+                        <div id="fDashGroupMonth" style="display:none; gap:4px">
+                            <select id="fDashMonth" onchange="onFilterDashboardChange()">
+                                <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
+                                <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
+                                <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
+                                <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
+                            </select>
+                            <select id="fDashYearForMonth" onchange="onFilterDashboardChange()"></select>
+                        </div>
+
+                        <select id="fDashYearOnly" style="display:none" onchange="onFilterDashboardChange()"></select>
+
+                        <div id="fDashGroupCustom" style="display:none; align-items:center; gap:4px">
+                            <input type="date" id="fDashDataIni" onchange="onFilterDashboardChange()">
+                            <span style="color:#ccc">a</span>
+                            <input type="date" id="fDashDataFim" onchange="onFilterDashboardChange()">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-clear" onclick="clearDashboardFilters()" title="Limpar filtros"><i class="fa-solid fa-rotate-left"></i></button>
+            </div>
+            </div>
+
+        <div id="dashboardContent" style="display:flex;">
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <div class="icon-header">
+                        <i class="fas fa-chart-pie" style="color:var(--c-blue); background:#eff6ff"></i>
+                        <p>Total de Registros</p>
+                    </div>
+                    <h2 id="summaryTotalCount">0</h2>
+                </div>
+                <div class="summary-card">
+                    <div class="icon-header">
+                        <i class="fas fa-calendar-check" style="color:var(--ind-green); background:#f0fdf4"></i>
+                        <p>Total Concluído</p>
+                    </div>
+                    <h2 id="summaryCompletedCount">0</h2>
+                </div>
+                <div class="summary-card">
+                    <div class="icon-header">
+                        <i class="fas fa-hourglass-half" style="color:var(--c-yellow); background:#fffbeb"></i>
+                        <p>Total Ativo</p>
+                    </div>
+                    <h2 id="summaryActiveCount">0</h2>
+                </div>
+                <div class="summary-card">
+                    <div class="icon-header">
+                        <i class="fas fa-exclamation-triangle" style="color:var(--ind-red); background:#fef2f2"></i>
+                        <p>Total Atrasado</p>
+                    </div>
+                    <h2 id="summaryOverdueCount">0</h2>
+                </div>
+            </div>
+
+            <div class="dashboard-charts">
+                <div class="chart-card">
+                    <h3><i class="fas fa-thumbtack"></i> Status Consolidado de Itens Ativos</h3>
+                    <div class="chart-content">
+                        <ul class="chart-list" id="chartStatusConsolidado">
+                            </ul>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-industry"></i> Distribuição por Setor</h3>
+                    <div class="chart-content">
+                        <ul class="chart-list" id="chartDistribuicaoSetor">
+                            </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-charts" style="grid-template-columns: 1fr;">
+                <div class="chart-card">
+                    <h3><i class="fas fa-clock"></i> Alerta de Prazos (Itens Ativos)</h3>
+                    <div class="chart-content">
+                        <ul class="chart-list" id="chartAlertaPrazos">
+                            </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="backupContent" style="display:none;">
             <div class="backup-card">
                 <i class="fa-solid fa-cloud-arrow-down fa-3x" style="color:var(--primary); margin-bottom:16px;"></i>
                 <h2 style="margin:0 0 8px; color:var(--primary)">Central de Backup</h2>
@@ -311,11 +539,11 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             </div>
         </div>
 
-        <div class="filters-bar" id="filtersBar">
+        <div class="filters-bar" id="filtersBar" style="display:none;">
             <div class="filter-controls">
                 <div style="font-weight:600; color:var(--primary); font-size:14px;"><i class="fa-solid fa-filter"></i> Filtros:</div>
                 
-                <div id="filtersAuditoria" class="filter-group">
+                <div id="filtersAuditoria" class="filter-group" style="display:flex;">
                     <select id="fAuditSetor" class="filter-input" onchange="onFilterSetorChange('Audit')">
                         <option value="">Setor: Todos</option>
                     </select>
@@ -490,7 +718,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             </button>
         </div>
 
-        <div class="cards-grid" id="cardsGrid">
+        <div class="cards-grid" id="cardsGrid" style="display:none;">
             </div>
     </div>
 </div>
@@ -834,1415 +1062,1637 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 </div>
 
 <script>
-// --- CONFIGURAÇÃO JSONBIN E SEGURANÇA ---
-const API_KEY = '$2a$10$2elKW8TT6o.K3V176efqwu7kOfD1PnS3D/F0s4Tczc3MYmaU.N1bi';
-const DATA_BIN_ID = '693d73c4ae596e708f976cf4';
-const PASSWORD_BIN_ID = '68d7e57bd0ea881f408cf33b';
-
-let failedAttempts = 0;
-let lockoutTimer = null;
-
-// --- DADOS E ESTADO (Iniciam vazios) ---
-let audits = [];
-let activities = [];
-let maintenances = [];
-let documents = []; 
-
-const defaultMasterLists = {
-    // Listas Principais (Limpas)
-    setores: [], // NOVO: Setores (Aplicável a todas as abas)
-    auditCategorias: [],
-    ativCategorias: [],
-    mantCategorias: [],
-    docCategorias: [], 
-
-    // Listas de Subcategorias/Itens (Limpas)
-    auditSubcats: {},
-    ativSubcats: {},
-    mantItens: {},
-    docSubcats: {},
-
-    // Listas de Status (Limpas, mantendo apenas a estrutura)
-    auditStatus: [
-        { name: 'Planejado', color: 'blue' },
-        { name: 'Em Andamento', color: 'yellow' },
-        { name: 'Concluído', color: 'green' },
-        { name: 'Atrasado', color: 'red' }
-    ],
-    ativStatus: [
-        { name: 'A Fazer', color: 'default' },
-        { name: 'Em Progresso', color: 'blue' },
-        { name: 'Concluído', color: 'green' },
-        { name: 'Cancelado', color: 'red' }
-    ],
-    mantStatus: [
-        { name: 'Aguardando Peça', color: 'orange' },
-        { name: 'Agendado', color: 'blue' },
-        { name: 'Em Execução', color: 'yellow' },
-        { name: 'Finalizado', color: 'green' }
-    ],
-    docStatus: [ 
-        { name: 'Rascunho', color: 'default' },
-        { name: 'Em Revisão', color: 'blue' },
-        { name: 'Publicado', color: 'green' },
-        { name: 'Obsoleto', color: 'red' }
-    ]
-};
-
-let masterLists = JSON.parse(JSON.stringify(defaultMasterLists)); // Clone inicial
-
-let currentTab = 'auditoria';
-let editingAuditId = null;
-let editingAtivId = null;
-let editingMantId = null;
-let editingDocId = null; 
-let currentListKey = null; 
-let selectedColorTemp = 'default';
-
-// --- UTILITÁRIOS ---
-const today = () => new Date().toISOString().split('T')[0];
-const currentYear = new Date().getFullYear();
-const currentMonth = new Date().getMonth();
-const formatBR = dateStr => {
-    if (!dateStr) return 'ND';
-    const [y, m, d] = dateStr.split('-');
-    return `${d}/${m}/${y}`;
-};
-const daysDiff = dateStr => Math.ceil((new Date(dateStr) - new Date()) / (1000*60*60*24));
-
-const colorMap = {
-    'blue': 'var(--c-blue)',
-    'green': 'var(--c-green)',
-    'red': 'var(--c-red)',
-    'orange': 'var(--c-orange)',
-    'yellow': 'var(--c-yellow)',
-    'purple': 'var(--c-purple)',
-    'default': 'var(--c-default)'
-};
-
-// --- LÓGICA DE LOGIN ---
-document.getElementById('passwordInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') checkLogin();
-});
-
-async function checkLogin() {
-    const input = document.getElementById('passwordInput');
-    const btn = document.getElementById('btnLogin');
-    const loading = document.getElementById('loadingText');
-    const loginBox = document.getElementById('loginBox');
-    const timerDisplay = document.getElementById('timerDisplay');
+    // --- CONFIGURAÇÃO JSONBIN E SEGURANÇA ---
+    const API_KEY = '$2a$10$2elKW8TT6o.K3V176efqwu7kOfD1PnS3D/F0s4Tczc3MYmaU.N1bi';
+    const DATA_BIN_ID = '693d73c4ae596e708f976cf4';
+    const PASSWORD_BIN_ID = '68d7e57bd0ea881f408cf33b';
     
-    if(btn.disabled) return;
-
-    const userPass = input.value;
-    if(!userPass) return;
-
-    btn.disabled = true;
-    input.disabled = true;
-    loading.style.display = 'block';
-
-    try {
-        // Buscar Senha no Bin
-        const res = await fetch(`https://api.jsonbin.io/v3/b/${PASSWORD_BIN_ID}/latest`, {
-            headers: { 'X-Master-Key': API_KEY }
-        });
-        
-        if(!res.ok) throw new Error('Erro ao verificar senha');
-        
-        const data = await res.json();
-        // Assume que o bin retorna { record: { password: "123" } } ou { record: "123" }
-        const remotePass = data.record.password || data.record;
-
-        if (String(userPass) === String(remotePass)) {
-            // Sucesso
-            loading.innerHTML = '<i class="fas fa-check"></i> Senha correta. Carregando dados...';
-            await loadCloudData();
-            document.getElementById('loginOverlay').style.display = 'none';
-        } else {
-            // Senha Errada
-            handleLoginError(input, btn, loginBox);
-        }
-
-    } catch (err) {
-        alert("Erro de conexão: " + err.message);
-        btn.disabled = false;
-        input.disabled = false;
-        input.focus();
-    } finally {
-        loading.style.display = 'none';
-    }
-}
-
-function handleLoginError(input, btn, box) {
-    failedAttempts++;
-    input.classList.add('error');
-    box.classList.add('shake');
+    let failedAttempts = 0;
+    let lockoutTimer = null;
     
-    setTimeout(() => {
-        box.classList.remove('shake');
-        input.classList.remove('error');
-    }, 500);
-
-    if (failedAttempts >= 5) {
-        let seconds = 10;
+    // --- DADOS E ESTADO (Iniciam vazios) ---
+    let audits = [];
+    let activities = [];
+    let maintenances = [];
+    let documents = []; 
+    
+    // --- CORREÇÃO: ZERANDO ESTRUTURAS PRÉ-CADASTRADAS DE STATUS ---
+    const defaultMasterLists = {
+        // Listas Principais (Limpas)
+        setores: [], 
+        auditCategorias: [],
+        ativCategorias: [],
+        mantCategorias: [],
+        docCategorias: [], 
+    
+        // Listas de Subcategorias/Itens (Limpas)
+        auditSubcats: {},
+        ativSubcats: {},
+        mantItens: {},
+        docSubcats: {},
+    
+        // Listas de Status: ZERADAS (Serão preenchidas via interface/API)
+        // Se estiverem vazias, o usuário deve criá-las via modal.
+        auditStatus: [], 
+        ativStatus: [], 
+        mantStatus: [], 
+        docStatus: [], 
+    
+        // O unifiedStatusMap também será removido ou gerado dinamicamente para usar apenas os nomes das listas acima.
+    };
+    
+    let masterLists = JSON.parse(JSON.stringify(defaultMasterLists)); // Clone inicial
+    
+    let currentTab = 'dashboard'; 
+    let editingAuditId = null;
+    let editingAtivId = null;
+    let editingMantId = null;
+    let editingDocId = null; 
+    let currentListKey = null; 
+    let selectedColorTemp = 'default';
+    
+    // --- UTILITÁRIOS ---
+    const today = () => new Date().toISOString().split('T')[0];
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    const formatBR = dateStr => {
+        if (!dateStr) return 'ND';
+        const [y, m, d] = dateStr.split('-');
+        return `${d}/${m}/${y}`;
+    };
+    const daysDiff = dateStr => Math.ceil((new Date(dateStr) - new Date()) / (1000*60*60*24));
+    
+    const colorMap = {
+        'blue': 'var(--c-blue)',
+        'green': 'var(--c-green)',
+        'red': 'var(--c-red)',
+        'orange': 'var(--c-orange)',
+        'yellow': 'var(--c-yellow)',
+        'purple': 'var(--c-purple)',
+        'default': 'var(--c-default)'
+    };
+    
+    // --- LÓGICA DE LOGIN ---
+    document.getElementById('passwordInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') checkLogin();
+    });
+    
+    async function checkLogin() {
+        const input = document.getElementById('passwordInput');
+        const btn = document.getElementById('btnLogin');
+        const loading = document.getElementById('loadingText');
+        const loginBox = document.getElementById('loginBox');
         const timerDisplay = document.getElementById('timerDisplay');
-        timerDisplay.textContent = `Muitas tentativas. Aguarde ${seconds}s`;
         
-        const interval = setInterval(() => {
-            seconds--;
-            timerDisplay.textContent = `Muitas tentativas. Aguarde ${seconds}s`;
-            if (seconds <= 0) {
-                clearInterval(interval);
-                timerDisplay.textContent = "";
-                failedAttempts = 0;
-                input.disabled = false;
-                btn.disabled = false;
-                input.value = "";
-                input.focus();
-            }
-        }, 1000);
-    } else {
-        input.disabled = false;
-        btn.disabled = false;
-        input.value = "";
-        input.focus();
-    }
-}
-
-// --- INTEGRAÇÃO JSONBIN (DATA) ---
-
-async function loadCloudData() {
-    try {
-        const res = await fetch(`https://api.jsonbin.io/v3/b/${DATA_BIN_ID}/latest`, {
-            headers: { 'X-Master-Key': API_KEY }
-        });
-        if(!res.ok) throw new Error('Erro ao baixar dados');
-        
-        const data = await res.json();
-        const record = data.record;
-
-        audits = record.audits || [];
-        activities = record.activities || [];
-        maintenances = record.maintenances || [];
-        documents = record.documents || []; 
-        
-        if (record.masterLists) {
-            // Fusão de listas mestre para garantir que todos os tipos de subcategorias existam se o bin for mais antigo
-            masterLists = { ...defaultMasterLists, ...record.masterLists };
+        if(btn.disabled) return;
+    
+        const userPass = input.value;
+        if(!userPass) return;
+    
+        btn.disabled = true;
+        input.disabled = true;
+        loading.style.display = 'block';
+    
+        try {
+            const res = await fetch(`https://api.jsonbin.io/v3/b/${PASSWORD_BIN_ID}/latest`, {
+                headers: { 'X-Master-Key': API_KEY }
+            });
             
-            // Corrige a compatibilidade de mantItens se o formato antigo for detectado (se o item for um array e não um objeto)
-            if (Array.isArray(masterLists.mantItens)) {
-                masterLists.mantItens = defaultMasterLists.mantItens; 
+            if(!res.ok) throw new Error('Erro ao verificar senha');
+            
+            const data = await res.json();
+            const remotePass = data.record.password || data.record;
+    
+            if (String(userPass) === String(remotePass)) {
+                loading.innerHTML = '<i class="fas fa-check"></i> Senha correta. Carregando dados...';
+                await loadCloudData();
+                document.getElementById('loginOverlay').style.display = 'none';
+            } else {
+                handleLoginError(input, btn, loginBox);
             }
+    
+        } catch (err) {
+            alert("Erro de conexão: " + err.message);
+            btn.disabled = false;
+            input.disabled = false;
+            input.focus();
+        } finally {
+            loading.style.display = 'none';
         }
-
-        // Inicializa a UI após carregar
-        populateYearSelects();
-        populateSelects();
+    }
+    
+    function handleLoginError(input, btn, box) {
+        failedAttempts++;
+        input.classList.add('error');
+        box.classList.add('shake');
+        
+        setTimeout(() => {
+            box.classList.remove('shake');
+            input.classList.remove('error');
+        }, 500);
+    
+        if (failedAttempts >= 5) {
+            let seconds = 10;
+            const timerDisplay = document.getElementById('timerDisplay');
+            timerDisplay.textContent = `Muitas tentativas. Aguarde ${seconds}s`;
+            
+            const interval = setInterval(() => {
+                seconds--;
+                timerDisplay.textContent = `Muitas tentativas. Aguarde ${seconds}s`;
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    timerDisplay.textContent = "";
+                    failedAttempts = 0;
+                    input.disabled = false;
+                    btn.disabled = false;
+                    input.value = "";
+                    input.focus();
+                }
+            }, 1000);
+        } else {
+            input.disabled = false;
+            btn.disabled = false;
+            input.value = "";
+            input.focus();
+        }
+    }
+    
+    // --- INTEGRAÇÃO JSONBIN (DATA) ---
+    
+    async function loadCloudData() {
+        try {
+            const res = await fetch(`https://api.jsonbin.io/v3/b/${DATA_BIN_ID}/latest`, {
+                headers: { 'X-Master-Key': API_KEY }
+            });
+            if(!res.ok) throw new Error('Erro ao baixar dados');
+            
+            const data = await res.json();
+            const record = data.record;
+    
+            audits = record.audits || [];
+            activities = record.activities || [];
+            maintenances = record.maintenances || [];
+            documents = record.documents || []; 
+            
+            if (record.masterLists) {
+                masterLists = { ...defaultMasterLists, ...record.masterLists };
+                
+                if (Array.isArray(masterLists.mantItens)) {
+                    masterLists.mantItens = defaultMasterLists.mantItens; 
+                }
+            }
+    
+            populateYearSelects();
+            populateSelects();
+            updateDateInputs('Audit');
+            updateDateInputs('Ativ');
+            updateDateInputs('Mant');
+            updateDateInputs('Doc'); 
+            updateDateInputs('Dash'); 
+            
+            switchTab('dashboard'); 
+    
+        } catch (err) {
+            alert("Falha ao carregar dados do Cloud: " + err.message);
+        }
+    }
+    
+    async function saveAll(showAlert = false) {
+        const payload = {
+            audits,
+            activities,
+            maintenances,
+            documents, 
+            masterLists,
+            lastUpdate: new Date().toISOString()
+        };
+    
+        try {
+            const res = await fetch(`https://api.jsonbin.io/v3/b/${DATA_BIN_ID}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Master-Key': API_KEY
+                },
+                body: JSON.stringify(payload)
+            });
+    
+            if(!res.ok) throw new Error('Erro na API');
+            if(showAlert) alert("Dados sincronizados com sucesso!");
+            
+            if(currentTab === 'dashboard') renderDashboard();
+            
+        } catch (err) {
+            console.error("Erro ao salvar:", err);
+            if(showAlert) alert("Erro ao salvar dados: " + err.message);
+        }
+    }
+    
+    // --- LÓGICA DO DASHBOARD (CORRIGIDA) ---
+    
+    // NOVO: Função para obter o statusType dinamicamente
+    function getStatusType(statusName) {
+        const finalizadoKeywords = ['concluído', 'finalizado', 'publicado'];
+        const inativoKeywords = ['cancelado', 'obsoleto'];
+        const nameLower = statusName.toLowerCase();
+        
+        if (finalizadoKeywords.includes(nameLower)) return 'finalizado';
+        if (inativoKeywords.includes(nameLower)) return 'inativo';
+        
+        // Qualquer outro status é considerado ativo para fins de G1 e G3
+        return 'ativo';
+    }
+    
+    // NOVO: Função para obter a cor de um status específico (agora a cor é pega da lista mestra dinâmica)
+    function getStatusColor(statusName, category) {
+        let list;
+        if (category === 'audit') list = masterLists.auditStatus;
+        else if (category === 'ativ') list = masterLists.ativStatus;
+        else if (category === 'mant') list = masterLists.mantStatus;
+        else if (category === 'doc') list = masterLists.docStatus;
+        
+        const statusObj = (list || []).find(s => s.name === statusName);
+        return statusObj ? statusObj.color : 'default';
+    }
+    
+    
+    function calculateDashboardData() {
+        
+        // --- OBTENÇÃO DOS VALORES DE FILTRO ---
+        const fArea = document.getElementById('fDashArea').value; 
+        const fSetor = document.getElementById('fDashSetor').value;
+        const fStatus = document.getElementById('fDashStatus').value;
+        const fDateType = document.getElementById('fDashDateType').value;
+        const fMonth = parseInt(document.getElementById('fDashMonth').value);
+        const fYear = parseInt(document.getElementById('fDashYearForMonth').value || document.getElementById('fDashYearOnly').value);
+        const fDataIni = document.getElementById('fDashDataIni').value;
+        const fDataFim = document.getElementById('fDashDataFim').value;
+    
+    
+        // Constrói uma lista completa de todos os itens com metadados unificados
+        const rawItems = [].concat(
+            audits.map(a => ({ ...a, type: 'audit', statusType: getStatusType(a.status), dateField: a.dataPublicacao, deadlineField: a.dataPrevisao, color: getStatusColor(a.status, 'audit') })),
+            activities.map(a => ({ ...a, type: 'ativ', statusType: getStatusType(a.status), dateField: a.dataInicio, deadlineField: a.dataConclusao, color: getStatusColor(a.status, 'ativ') })),
+            maintenances.map(m => ({ ...m, type: 'mant', statusType: getStatusType(m.status), dateField: m.ultima, deadlineField: m.proxima, color: getStatusColor(m.status, 'mant') })),
+            documents.map(d => ({ ...d, type: 'doc', statusType: getStatusType(d.status), dateField: d.dataCriacao, deadlineField: d.dataProximaRevisao, color: getStatusColor(d.status, 'doc') }))
+        );
+        
+        // --- FILTRAGEM ---
+        let filteredItems = rawItems.filter(item => {
+            
+            // 1. Filtro por Área/Aba
+            if (fArea && item.type !== fArea) return false;
+    
+            // 2. Filtro por Setor
+            const itemSetor = item.setor || 'Setor Não Definido';
+            if (fSetor && itemSetor !== fSetor) return false;
+    
+            // 3. Filtro por Status Consolidado
+            if (fStatus && item.status !== fStatus) return false;
+    
+            // 4. Filtro por Período de Publicação/Criação (dateField)
+            if (fDateType !== 'all') {
+                const date = item.dateField;
+                if (!date) return false;
+                
+                const itemDate = new Date(date);
+    
+                if (fDateType === 'month') {
+                    if (itemDate.getMonth() !== fMonth || itemDate.getFullYear() !== fYear) return false;
+                } else if (fDateType === 'year') {
+                    if (itemDate.getFullYear() !== fYear) return false;
+                } else if (fDateType === 'custom') {
+                    if (fDataIni && date < fDataIni) return false;
+                    if (fDataFim && date > fDataFim) return false;
+                }
+            }
+            return true;
+        });
+    
+        // --- CÁLCULOS E AGRUPAMENTOS ---
+        const totalCount = filteredItems.length;
+        
+        const activeItems = filteredItems.filter(item => item.statusType === 'ativo');
+        const activeCount = activeItems.length;
+    
+        const completedCount = filteredItems.filter(item => item.statusType === 'finalizado').length;
+        
+        const overdueCount = activeItems.filter(item => {
+            const d = daysDiff(item.deadlineField);
+            return d < 0;
+        }).length;
+    
+        // G1: Status Consolidado
+        const statusCounts = {};
+        activeItems.forEach(item => {
+            const key = `${item.status} (${item.type.toUpperCase()})`;
+            statusCounts[key] = {
+                count: (statusCounts[key]?.count || 0) + 1,
+                color: item.color,
+                type: item.type.toUpperCase()
+            };
+        });
+    
+        // G2: Distribuição por Setor
+        const setorCounts = {};
+        activeItems.forEach(item => {
+            const setor = item.setor || 'Setor Não Definido';
+            setorCounts[setor] = (setorCounts[setor] || 0) + 1;
+        });
+    
+        // G3: Alerta de Prazos
+        const prazoCounts = {
+            atrasados: { count: 0, color: 'var(--ind-red)' },
+            criticos: { count: 0, color: 'var(--ind-yellow)' },
+            curtoPrazo: { count: 0, color: 'var(--c-orange)' },
+            medioPrazo: { count: 0, color: 'var(--c-blue)' },
+            longoPrazo: { count: 0, color: 'var(--ind-green)' }
+        };
+    
+        activeItems.forEach(item => {
+            const d = daysDiff(item.deadlineField);
+            if (d < 0) prazoCounts.atrasados.count++;
+            else if (d <= 7) prazoCounts.criticos.count++;
+            else if (d <= 30) prazoCounts.curtoPrazo.count++;
+            else if (d <= 90) prazoCounts.medioPrazo.count++;
+            else prazoCounts.longoPrazo.count++;
+        });
+    
+        return { totalCount, activeCount, completedCount, overdueCount, statusCounts, setorCounts, prazoCounts };
+    }
+    
+    function renderDashboard() {
+        const { totalCount, activeCount, completedCount, overdueCount, statusCounts, setorCounts, prazoCounts } = calculateDashboardData();
+        
+        // --- Cartões de Resumo ---
+        document.getElementById('summaryTotalCount').textContent = totalCount;
+        document.getElementById('summaryActiveCount').textContent = activeCount;
+        document.getElementById('summaryCompletedCount').textContent = completedCount;
+        document.getElementById('summaryOverdueCount').textContent = overdueCount;
+    
+        // --- G1: Status Consolidado ---
+        const listStatusConsolidado = document.getElementById('chartStatusConsolidado');
+        listStatusConsolidado.innerHTML = '';
+        
+        // Ordena os status ativos por contagem
+        const sortedStatus = Object.entries(statusCounts).sort(([, a], [, b]) => b.count - a.count);
+    
+        sortedStatus.forEach(([statusKey, data]) => {
+            const count = data.count;
+            const percentage = activeCount > 0 ? ((count / activeCount) * 100).toFixed(1) : 0;
+            const colorVar = colorMap[data.color] || colorMap['default'];
+            
+            listStatusConsolidado.innerHTML += `
+                <li>
+                    <span class="status-info">
+                        <span class="color-dot" style="background-color:${colorVar}"></span>
+                        ${statusKey}
+                    </span>
+                    <div>
+                        <span class="value">${count}</span>
+                        <span class="percent">(${percentage}%)</span>
+                    </div>
+                </li>
+            `;
+        });
+        if (listStatusConsolidado.innerHTML === '') {
+            listStatusConsolidado.innerHTML = '<li style="text-align:center; padding:20px;">Nenhum item ativo encontrado com os filtros atuais.</li>';
+        }
+    
+        // --- G2: Distribuição por Setor ---
+        const listDistribuicaoSetor = document.getElementById('chartDistribuicaoSetor');
+        listDistribuicaoSetor.innerHTML = '';
+        
+        const sortedSetores = Object.entries(setorCounts).sort(([, a], [, b]) => b - a);
+    
+        sortedSetores.forEach(([setor, count]) => {
+            const percentage = activeCount > 0 ? ((count / activeCount) * 100).toFixed(1) : 0;
+            listDistribuicaoSetor.innerHTML += `
+                <li>
+                    <span class="status-info"><i class="fas fa-building" style="margin-right:8px; color:${colorMap['default']}"></i>${setor}</span>
+                    <div>
+                        <span class="value">${count}</span>
+                        <span class="percent">(${percentage}%)</span>
+                    </div>
+                </li>
+            `;
+        });
+        if (listDistribuicaoSetor.innerHTML === '') {
+            listDistribuicaoSetor.innerHTML = '<li style="text-align:center; padding:20px;">Nenhum item ativo encontrado com os filtros atuais.</li>';
+        }
+    
+    
+        // --- G3: Alerta de Prazos ---
+        const listAlertaPrazos = document.getElementById('chartAlertaPrazos');
+        listAlertaPrazos.innerHTML = `
+            <li>
+                <span class="status-info"><i class="fas fa-exclamation-circle" style="margin-right:8px; color:${prazoCounts.atrasados.color}"></i> Atrasados (Vencidos)</span>
+                <span class="deadline-info" style="color:${prazoCounts.atrasados.color}">${prazoCounts.atrasados.count}</span>
+            </li>
+            <li>
+                <span class="status-info"><i class="fas fa-exclamation-triangle" style="margin-right:8px; color:${prazoCounts.criticos.color}"></i> Críticos (0 a 7 dias)</span>
+                <span class="deadline-info" style="color:${prazoCounts.criticos.color}">${prazoCounts.criticos.count}</span>
+            </li>
+            <li>
+                <span class="status-info"><i class="fas fa-hourglass-start" style="margin-right:8px; color:${prazoCounts.curtoPrazo.color}"></i> Curto Prazo (8 a 30 dias)</span>
+                <span class="deadline-info" style="color:${prazoCounts.curtoPrazo.color}">${prazoCounts.curtoPrazo.count}</span>
+            </li>
+            <li>
+                <span class="status-info"><i class="fas fa-clock" style="margin-right:8px; color:${prazoCounts.medioPrazo.color}"></i> Médio Prazo (31 a 90 dias)</span>
+                <span class="deadline-info" style="color:${prazoCounts.medioPrazo.color}">${prazoCounts.medioPrazo.count}</span>
+            </li>
+            <li>
+                <span class="status-info"><i class="fas fa-check-circle" style="margin-right:8px; color:${prazoCounts.longoPrazo.color}"></i> Longo Prazo (> 90 dias)</span>
+                <span class="deadline-info" style="color:${prazoCounts.longoPrazo.color}">${prazoCounts.longoPrazo.count}</span>
+            </li>
+        `;
+    
+        if (activeCount === 0) {
+            listAlertaPrazos.innerHTML = '<li style="text-align:center; padding:20px;">Nenhum item ativo para análise de prazos com os filtros atuais.</li>';
+        }
+    }
+    
+    
+    // --- CONFIGURAÇÃO DE DATAS ---
+    function populateYearSelects() {
+        const years = [];
+        for(let i = currentYear - 4; i <= currentYear + 1; i++) {
+            years.push(i);
+        }
+        const options = years.map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('');
+        
+        ['fAuditYearForMonth', 'fAuditYearOnly', 'fAtivYearForMonth', 'fAtivYearOnly', 'fMantYearForMonth', 'fMantYearOnly', 'fDocYearForMonth', 'fDocYearOnly', 'fDashYearForMonth', 'fDashYearOnly'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.innerHTML = options;
+        });
+    
+        ['fAuditMonth', 'fAtivMonth', 'fMantMonth', 'fDocMonth', 'fDashMonth'].forEach(id => {
+            document.getElementById(id).value = currentMonth;
+        });
+    }
+    
+    function updateDateInputs(prefix) {
+        const type = document.getElementById(`f${prefix}DateType`).value;
+        document.getElementById(`f${prefix}GroupMonth`).style.display = type === 'month' ? 'flex' : 'none';
+        document.getElementById(`f${prefix}YearOnly`).style.display = type === 'year' ? 'block' : 'none';
+        document.getElementById(`f${prefix}GroupCustom`).style.display = type === 'custom' ? 'flex' : 'none';
+        
+        if (prefix === 'Dash') {
+            renderDashboard();
+        } else {
+            renderCards();
+        }
+    }
+    
+    // --- RENDERIZAÇÃO DE CARDS E FILTROS ---
+    function renderCards() {
+        if(currentTab === 'backup' || currentTab === 'dashboard') return; 
+    
+        const grid = document.getElementById('cardsGrid');
+        grid.innerHTML = '';
+        
+        let data = [];
+        let statusList = [];
+        let dateField = '';
+        let filterCatId = '';
+        let filterSubcatId = '';
+    
+        if (currentTab === 'auditoria') {
+            statusList = masterLists.auditStatus || [];
+            dateField = 'dataPrevisao';
+            filterSetorId = 'fAuditSetor'; 
+            filterCatId = 'fAuditCat';
+            filterSubcatId = 'fAuditSub';
+            
+            const setor = document.getElementById(filterSetorId).value; 
+            const cat = document.getElementById(filterCatId).value;
+            const sub = document.getElementById(filterSubcatId).value;
+            const stat = document.getElementById('fAuditStatus').value;
+            const dateType = document.getElementById('fAuditDateType').value;
+            
+            data = audits.filter(item => {
+                if (setor && item.setor !== setor) return false; 
+                if (cat && item.categoria !== cat) return false;
+                if (sub && item.subcategoria !== sub) return false;
+                if (stat && item.status !== stat) return false;
+                
+                if (dateType !== 'all') {
+                    const itemDate = new Date(item[dateField]);
+                    if (dateType === 'month') {
+                        if (itemDate.getMonth() !== parseInt(document.getElementById('fAuditMonth').value) || 
+                            itemDate.getFullYear() !== parseInt(document.getElementById('fAuditYearForMonth').value)) return false;
+                    } else if (dateType === 'year') {
+                        if (itemDate.getFullYear() !== parseInt(document.getElementById('fAuditYearOnly').value)) return false;
+                    } else if (dateType === 'custom') {
+                        const ini = document.getElementById('fAuditDataIni').value;
+                        const fim = document.getElementById('fAuditDataFim').value;
+                        if (ini && item[dateField] < ini) return false;
+                        if (fim && item[dateField] > fim) return false;
+                    }
+                }
+                return true;
+            });
+            
+        } else if (currentTab === 'atividades') {
+            statusList = masterLists.ativStatus || [];
+            dateField = 'dataConclusao';
+            filterSetorId = 'fAtivSetor'; 
+            filterCatId = 'fAtivCat';
+            filterSubcatId = 'fAtivSub';
+    
+            const setor = document.getElementById(filterSetorId).value; 
+            const cat = document.getElementById(filterCatId).value;
+            const sub = document.getElementById(filterSubcatId).value;
+            const stat = document.getElementById('fAtivStatus').value;
+            const dateType = document.getElementById('fAtivDateType').value;
+    
+            data = activities.filter(item => {
+                if (setor && item.setor !== setor) return false; 
+                if (cat && item.categoria !== cat) return false;
+                if (sub && item.subcategoria !== sub) return false;
+                if (stat && item.status !== stat) return false;
+    
+                if (dateType !== 'all') {
+                    const itemDate = new Date(item[dateField]);
+                    if (dateType === 'month') {
+                        if (itemDate.getMonth() !== parseInt(document.getElementById('fAtivMonth').value) || 
+                            itemDate.getFullYear() !== parseInt(document.getElementById('fAtivYearForMonth').value)) return false;
+                    } else if (dateType === 'year') {
+                        if (itemDate.getFullYear() !== parseInt(document.getElementById('fAtivYearOnly').value)) return false;
+                    } else if (dateType === 'custom') {
+                        const ini = document.getElementById('fAtivDataIni').value;
+                        const fim = document.getElementById('fAtivDataFim').value;
+                        if (ini && item[dateField] < ini) return false;
+                        if (fim && item[dateField] > fim) return false;
+                    }
+                }
+                return true;
+            });
+    
+        } else if (currentTab === 'manutencao') {
+            statusList = masterLists.mantStatus || [];
+            dateField = 'proxima';
+            filterSetorId = 'fMantSetor'; 
+            filterCatId = 'fMantCat';
+            filterSubcatId = 'fMantItem'; 
+    
+            const setor = document.getElementById(filterSetorId).value; 
+            const cat = document.getElementById(filterCatId).value;
+            const itemVal = document.getElementById(filterSubcatId).value;
+            const stat = document.getElementById('fMantStatus').value;
+            const dateType = document.getElementById('fMantDateType').value;
+    
+            data = maintenances.filter(item => {
+                if (setor && item.setor !== setor) return false; 
+                if (cat && item.categoria !== cat) return false;
+                if (itemVal && item.item !== itemVal) return false;
+                if (stat && item.status !== stat) return false;
+    
+                if (dateType !== 'all') {
+                    const itemDate = new Date(item[dateField]);
+                    if (dateType === 'month') {
+                        if (itemDate.getMonth() !== parseInt(document.getElementById('fMantMonth').value) || 
+                            itemDate.getFullYear() !== parseInt(document.getElementById('fMantYearForMonth').value)) return false;
+                    } else if (dateType === 'year') {
+                        if (itemDate.getFullYear() !== parseInt(document.getElementById('fMantYearOnly').value)) return false;
+                    } else if (dateType === 'custom') {
+                        const ini = document.getElementById('fMantDataIni').value;
+                        const fim = document.getElementById('fMantDataFim').value;
+                        if (ini && item[dateField] < ini) return false;
+                        if (fim && item[dateField] > fim) return false;
+                    }
+                }
+                return true;
+            });
+        } else if (currentTab === 'documentos') { 
+            statusList = masterLists.docStatus || [];
+            dateField = 'dataProximaRevisao'; 
+            filterSetorId = 'fDocSetor'; 
+            filterCatId = 'fDocCat';
+            filterSubcatId = 'fDocSub';
+    
+            const setor = document.getElementById(filterSetorId).value; 
+            const cat = document.getElementById(filterCatId).value;
+            const sub = document.getElementById(filterSubcatId).value;
+            const stat = document.getElementById('fDocStatus').value;
+            const dateType = document.getElementById('fDocDateType').value;
+    
+            data = documents.filter(item => {
+                if (setor && item.setor !== setor) return false; 
+                if (cat && item.categoria !== cat) return false;
+                if (sub && item.subcategoria !== sub) return false;
+                if (stat && item.status !== stat) return false;
+    
+                if (dateType !== 'all') {
+                    const itemDate = new Date(item[dateField]);
+                    if (dateType === 'month') {
+                        if (itemDate.getMonth() !== parseInt(document.getElementById('fDocMonth').value) || 
+                            itemDate.getFullYear() !== parseInt(document.getElementById('fDocYearForMonth').value)) return false;
+                    } else if (dateType === 'year') {
+                        if (itemDate.getFullYear() !== parseInt(document.getElementById('fDocYearOnly').value)) return false;
+                    } else if (dateType === 'custom') {
+                        const ini = document.getElementById('fDocDataIni').value;
+                        const fim = document.getElementById('fDocDataFim').value;
+                        if (ini && item[dateField] < ini) return false;
+                        if (fim && item[dateField] > fim) return false;
+                    }
+                }
+                return true;
+            });
+        }
+    
+    
+        // ORDENAÇÃO
+        if (dateField) {
+            data.sort((a, b) => {
+                const dateA = new Date(a[dateField]);
+                const dateB = new Date(b[dateField]);
+                return dateA - dateB;
+            });
+        }
+    
+        if(data.length === 0) {
+            grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#9ca3af"><i class="fas fa-search fa-2x"></i><p>Nenhum registro encontrado.</p></div>';
+            return;
+        }
+    
+        data.forEach(item => {
+            const div = document.createElement('div');
+            const flagDays = item.flagDias || 7;
+            let targetDate;
+            
+            if (currentTab === 'auditoria') targetDate = item.dataPrevisao;
+            else if (currentTab === 'atividades') targetDate = item.dataConclusao;
+            else if (currentTab === 'manutencao') targetDate = item.proxima;
+            else targetDate = item.dataProximaRevisao; 
+    
+            const d = daysDiff(targetDate);
+            
+            let indicatorClass = 'ind-green';
+            if (d < 0) indicatorClass = 'ind-red';
+            else if (d <= flagDays) indicatorClass = 'ind-yellow';
+    
+            const statusObj = statusList.find(s => s.name === item.status) || { color: 'default' };
+            const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
+    
+            div.className = `card ${indicatorClass}`;
+            div.onclick = () => openView(item.id, currentTab);
+    
+            let specificContent = '';
+            const subcatOrItemValue = currentTab === 'manutencao' ? item.item : item.subcategoria;
+            const subcategoryDisplay = subcatOrItemValue ? ` (${subcatOrItemValue})` : '';
+    
+            if (currentTab === 'auditoria') {
+                specificContent = `
+                    <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
+                    <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
+                    <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>
+                `;
+            } else if (currentTab === 'atividades') {
+                specificContent = `
+                    <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
+                    <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
+                    <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Fim: <strong>${formatBR(item.dataConclusao)}</strong></span></div>
+                `;
+            } else if (currentTab === 'manutencao') {
+                specificContent = `
+                    <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
+                    <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
+                    <div class="card-info-row"><i class="far fa-clock"></i> <span>Próx: <strong>${formatBR(item.proxima)}</strong></span></div>
+                `;
+            } else { // Documentos
+                specificContent = `
+                    <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
+                    <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
+                    <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Rev: <strong>${formatBR(item.dataProximaRevisao)}</strong></span></div>
+                `;
+            }
+    
+            div.innerHTML = `
+                <div class="card-header">
+                    <span class="tag" style="background-color:${statusColorVar}">${item.status || 'Novo'}</span>
+                    <div class="card-actions" onclick="event.stopPropagation()">
+                        <i class="fas fa-pen" onclick="editItem(${item.id}, '${currentTab}')" title="Editar"></i>
+                        <i class="fas fa-trash" onclick="deleteItem(${item.id}, '${currentTab}')" title="Excluir"></i>
+                    </div>
+                </div>
+                <div style="padding:0 10px; margin-bottom:12px;">
+                    <h4 title="${item.titulo}">${item.titulo}</h4>
+                </div>
+                <div class="card-body">
+                    ${specificContent}
+                </div>
+            `;
+            grid.appendChild(div);
+        });
+    }
+    
+    // Filtro do Dashboard
+    function onFilterDashboardChange() {
+        if (document.getElementById('fDashDateType').value !== 'all') {
+            updateDateInputs('Dash');
+        }
+        renderDashboard();
+    }
+    
+    // Limpa filtros do Dashboard
+    function clearDashboardFilters() {
+        document.getElementById('fDashArea').value = "";
+        document.getElementById('fDashSetor').value = "";
+        document.getElementById('fDashStatus').value = "";
+        
+        document.getElementById('fDashDateType').value = 'all';
+        document.getElementById('fDashDataIni').value = "";
+        document.getElementById('fDashDataFim').value = "";
+        
+        updateDateInputs('Dash');
+    }
+    
+    
+    function clearFilters() {
+        document.querySelectorAll('.filters-bar select').forEach(s => {
+            if(!s.id.includes('DateType') && !s.id.includes('Month') && !s.id.includes('Year')) s.value = "";
+        });
+        
+        document.getElementById('fAuditDateType').value = 'all';
+        document.getElementById('fAtivDateType').value = 'all';
+        document.getElementById('fMantDateType').value = 'all';
+        document.getElementById('fDocDateType').value = 'all'; 
+        
+        document.querySelectorAll('.filters-bar input').forEach(i => i.value = "");
+        
         updateDateInputs('Audit');
         updateDateInputs('Ativ');
         updateDateInputs('Mant');
         updateDateInputs('Doc'); 
-        renderCards();
-
-    } catch (err) {
-        alert("Falha ao carregar dados do Cloud: " + err.message);
-        // Fallback para arrays vazios já inicializados
-    }
-}
-
-async function saveAll(showAlert = false) {
-    const payload = {
-        audits,
-        activities,
-        maintenances,
-        documents, 
-        masterLists,
-        lastUpdate: new Date().toISOString()
-    };
-
-    try {
-        const res = await fetch(`https://api.jsonbin.io/v3/b/${DATA_BIN_ID}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Master-Key': API_KEY
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if(!res.ok) throw new Error('Erro na API');
-        if(showAlert) alert("Dados sincronizados com sucesso!");
         
-    } catch (err) {
-        console.error("Erro ao salvar:", err);
-        if(showAlert) alert("Erro ao salvar dados: " + err.message);
+        onFilterSetorChange('Audit');
+        onFilterSetorChange('Ativ');
+        onFilterSetorChange('Mant');
+        onFilterSetorChange('Doc');
     }
-}
-
-// --- CONFIGURAÇÃO DE DATAS ---
-function populateYearSelects() {
-    const years = [];
-    for(let i = currentYear - 4; i <= currentYear + 1; i++) {
-        years.push(i);
-    }
-    const options = years.map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('');
     
-    ['fAuditYearForMonth', 'fAuditYearOnly', 'fAtivYearForMonth', 'fAtivYearOnly', 'fMantYearForMonth', 'fMantYearOnly', 'fDocYearForMonth', 'fDocYearOnly'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.innerHTML = options;
-    });
-
-    ['fAuditMonth', 'fAtivMonth', 'fMantMonth', 'fDocMonth'].forEach(id => {
-        document.getElementById(id).value = currentMonth;
-    });
-}
-
-function updateDateInputs(prefix) {
-    const type = document.getElementById(`f${prefix}DateType`).value;
-    document.getElementById(`f${prefix}GroupMonth`).style.display = type === 'month' ? 'flex' : 'none';
-    document.getElementById(`f${prefix}YearOnly`).style.display = type === 'year' ? 'block' : 'none';
-    document.getElementById(`f${prefix}GroupCustom`).style.display = type === 'custom' ? 'flex' : 'none';
-    renderCards();
-}
-
-// --- RENDERIZAÇÃO DE CARDS E FILTROS ---
-function renderCards() {
-    if(currentTab === 'backup') return; 
-
-    const grid = document.getElementById('cardsGrid');
-    grid.innerHTML = '';
     
-    let data = [];
-    let statusList = [];
-    let dateField = '';
-    let filterCatId = '';
-    let filterSubcatId = '';
-
-    if (currentTab === 'auditoria') {
-        statusList = masterLists.auditStatus || [];
-        dateField = 'dataPrevisao';
-        filterSetorId = 'fAuditSetor'; // NOVO
-        filterCatId = 'fAuditCat';
-        filterSubcatId = 'fAuditSub';
+    function populateSelects() {
+        const setores = masterLists.setores || []; 
         
-        const setor = document.getElementById(filterSetorId).value; // NOVO
-        const cat = document.getElementById(filterCatId).value;
-        const sub = document.getElementById(filterSubcatId).value;
-        const stat = document.getElementById('fAuditStatus').value;
-        const dateType = document.getElementById('fAuditDateType').value;
-        
-        data = audits.filter(item => {
-            if (setor && item.setor !== setor) return false; // NOVO FILTRO
-            if (cat && item.categoria !== cat) return false;
-            if (sub && item.subcategoria !== sub) return false;
-            if (stat && item.status !== stat) return false;
-            
-            if (dateType !== 'all') {
-                const itemDate = new Date(item[dateField]);
-                // Lógica de filtro de data... (não alterada, apenas movida para manter o código limpo)
-                if (dateType === 'month') {
-                    if (itemDate.getMonth() !== parseInt(document.getElementById('fAuditMonth').value) || 
-                        itemDate.getFullYear() !== parseInt(document.getElementById('fAuditYearForMonth').value)) return false;
-                } else if (dateType === 'year') {
-                    if (itemDate.getFullYear() !== parseInt(document.getElementById('fAuditYearOnly').value)) return false;
-                } else if (dateType === 'custom') {
-                    const ini = document.getElementById('fAuditDataIni').value;
-                    const fim = document.getElementById('fAuditDataFim').value;
-                    if (ini && item[dateField] < ini) return false;
-                    if (fim && item[dateField] > fim) return false;
-                }
-            }
-            return true;
-        });
-        
-    } else if (currentTab === 'atividades') {
-        statusList = masterLists.ativStatus || [];
-        dateField = 'dataConclusao';
-        filterSetorId = 'fAtivSetor'; // NOVO
-        filterCatId = 'fAtivCat';
-        filterSubcatId = 'fAtivSub';
-
-        const setor = document.getElementById(filterSetorId).value; // NOVO
-        const cat = document.getElementById(filterCatId).value;
-        const sub = document.getElementById(filterSubcatId).value;
-        const stat = document.getElementById('fAtivStatus').value;
-        const dateType = document.getElementById('fAtivDateType').value;
-
-        data = activities.filter(item => {
-            if (setor && item.setor !== setor) return false; // NOVO FILTRO
-            if (cat && item.categoria !== cat) return false;
-            if (sub && item.subcategoria !== sub) return false;
-            if (stat && item.status !== stat) return false;
-
-            if (dateType !== 'all') {
-                const itemDate = new Date(item[dateField]);
-                if (dateType === 'month') {
-                    if (itemDate.getMonth() !== parseInt(document.getElementById('fAtivMonth').value) || 
-                        itemDate.getFullYear() !== parseInt(document.getElementById('fAtivYearForMonth').value)) return false;
-                } else if (dateType === 'year') {
-                    if (itemDate.getFullYear() !== parseInt(document.getElementById('fAtivYearOnly').value)) return false;
-                } else if (dateType === 'custom') {
-                    const ini = document.getElementById('fAtivDataIni').value;
-                    const fim = document.getElementById('fAtivDataFim').value;
-                    if (ini && item[dateField] < ini) return false;
-                    if (fim && item[dateField] > fim) return false;
-                }
-            }
-            return true;
-        });
-
-    } else if (currentTab === 'manutencao') {
-        statusList = masterLists.mantStatus || [];
-        dateField = 'proxima';
-        filterSetorId = 'fMantSetor'; // NOVO
-        filterCatId = 'fMantCat';
-        filterSubcatId = 'fMantItem'; // Item de manutenção age como a subcategoria
-
-        const setor = document.getElementById(filterSetorId).value; // NOVO
-        const cat = document.getElementById(filterCatId).value;
-        const itemVal = document.getElementById(filterSubcatId).value;
-        const stat = document.getElementById('fMantStatus').value;
-        const dateType = document.getElementById('fMantDateType').value;
-
-        data = maintenances.filter(item => {
-            if (setor && item.setor !== setor) return false; // NOVO FILTRO
-            if (cat && item.categoria !== cat) return false;
-            if (itemVal && item.item !== itemVal) return false;
-            if (stat && item.status !== stat) return false;
-
-            if (dateType !== 'all') {
-                const itemDate = new Date(item[dateField]);
-                if (dateType === 'month') {
-                    if (itemDate.getMonth() !== parseInt(document.getElementById('fMantMonth').value) || 
-                        itemDate.getFullYear() !== parseInt(document.getElementById('fMantYearForMonth').value)) return false;
-                } else if (dateType === 'year') {
-                    if (itemDate.getFullYear() !== parseInt(document.getElementById('fMantYearOnly').value)) return false;
-                } else if (dateType === 'custom') {
-                    const ini = document.getElementById('fMantDataIni').value;
-                    const fim = document.getElementById('fMantDataFim').value;
-                    if (ini && item[dateField] < ini) return false;
-                    if (fim && item[dateField] > fim) return false;
-                }
-            }
-            return true;
-        });
-    } else if (currentTab === 'documentos') { 
-        statusList = masterLists.docStatus || [];
-        dateField = 'dataProximaRevisao'; // NOVO CAMPO
-        filterSetorId = 'fDocSetor'; // NOVO
-        filterCatId = 'fDocCat';
-        filterSubcatId = 'fDocSub';
-
-        const setor = document.getElementById(filterSetorId).value; // NOVO
-        const cat = document.getElementById(filterCatId).value;
-        const sub = document.getElementById(filterSubcatId).value;
-        const stat = document.getElementById('fDocStatus').value;
-        const dateType = document.getElementById('fDocDateType').value;
-
-        data = documents.filter(item => {
-            if (setor && item.setor !== setor) return false; // NOVO FILTRO
-            if (cat && item.categoria !== cat) return false;
-            if (sub && item.subcategoria !== sub) return false;
-            if (stat && item.status !== stat) return false;
-
-            if (dateType !== 'all') {
-                const itemDate = new Date(item[dateField]);
-                if (dateType === 'month') {
-                    if (itemDate.getMonth() !== parseInt(document.getElementById('fDocMonth').value) || 
-                        itemDate.getFullYear() !== parseInt(document.getElementById('fDocYearForMonth').value)) return false;
-                } else if (dateType === 'year') {
-                    if (itemDate.getFullYear() !== parseInt(document.getElementById('fDocYearOnly').value)) return false;
-                } else if (dateType === 'custom') {
-                    const ini = document.getElementById('fDocDataIni').value;
-                    const fim = document.getElementById('fDocDataFim').value;
-                    if (ini && item[dateField] < ini) return false;
-                    if (fim && item[dateField] > fim) return false;
-                }
-            }
-            return true;
-        });
-    }
-
-
-    // ORDENAÇÃO (SOLICITAÇÃO)
-    if (dateField) {
-        data.sort((a, b) => {
-            const dateA = new Date(a[dateField]);
-            const dateB = new Date(b[dateField]);
-            // Ordena do mais antigo para o mais novo (menor para o maior)
-            return dateA - dateB;
-        });
-    }
-
-    if(data.length === 0) {
-        grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#9ca3af"><i class="fas fa-search fa-2x"></i><p>Nenhum registro encontrado.</p></div>';
-        return;
-    }
-
-    data.forEach(item => {
-        const div = document.createElement('div');
-        const flagDays = item.flagDias || 7;
-        let targetDate;
-        
-        if (currentTab === 'auditoria') targetDate = item.dataPrevisao;
-        else if (currentTab === 'atividades') targetDate = item.dataConclusao;
-        else if (currentTab === 'manutencao') targetDate = item.proxima;
-        else targetDate = item.dataProximaRevisao; // Documentos (NOVO CAMPO)
-
-        const d = daysDiff(targetDate);
-        
-        let indicatorClass = 'ind-green';
-        if (d < 0) indicatorClass = 'ind-red';
-        else if (d <= flagDays) indicatorClass = 'ind-yellow';
-
-        const statusObj = statusList.find(s => s.name === item.status) || { color: 'default' };
-        const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
-
-        div.className = `card ${indicatorClass}`;
-        div.onclick = () => openView(item.id, currentTab);
-
-        let specificContent = '';
-        const subcatOrItemValue = currentTab === 'manutencao' ? item.item : item.subcategoria;
-        const subcategoryDisplay = subcatOrItemValue ? ` (${subcatOrItemValue})` : '';
-
-        if (currentTab === 'auditoria') {
-            specificContent = `
-                <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
-                <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
-                <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>
-            `;
-        } else if (currentTab === 'atividades') {
-            specificContent = `
-                <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
-                <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
-                <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Fim: <strong>${formatBR(item.dataConclusao)}</strong></span></div>
-            `;
-        } else if (currentTab === 'manutencao') {
-            specificContent = `
-                <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
-                <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
-                <div class="card-info-row"><i class="far fa-clock"></i> <span>Próx: <strong>${formatBR(item.proxima)}</strong></span></div>
-            `;
-        } else { // Documentos
-            specificContent = `
-                <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
-                <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
-                <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Rev: <strong>${formatBR(item.dataProximaRevisao)}</strong></span></div>
-            `;
-        }
-
-        div.innerHTML = `
-            <div class="card-header">
-                <span class="tag" style="background-color:${statusColorVar}">${item.status || 'Novo'}</span>
-                <div class="card-actions" onclick="event.stopPropagation()">
-                    <i class="fas fa-pen" onclick="editItem(${item.id}, '${currentTab}')" title="Editar"></i>
-                    <i class="fas fa-trash" onclick="deleteItem(${item.id}, '${currentTab}')" title="Excluir"></i>
-                </div>
-            </div>
-            <div style="padding:0 10px; margin-bottom:12px;">
-                <h4 title="${item.titulo}">${item.titulo}</h4>
-            </div>
-            <div class="card-body">
-                ${specificContent}
-            </div>
-        `;
-        grid.appendChild(div);
-    });
-}
-
-function clearFilters() {
-    document.querySelectorAll('.filters-bar select').forEach(s => {
-        if(!s.id.includes('DateType') && !s.id.includes('Month') && !s.id.includes('Year')) s.value = "";
-    });
-    
-    document.getElementById('fAuditDateType').value = 'all';
-    document.getElementById('fAtivDateType').value = 'all';
-    document.getElementById('fMantDateType').value = 'all';
-    document.getElementById('fDocDateType').value = 'all'; 
-    
-    document.querySelectorAll('.filters-bar input').forEach(i => i.value = "");
-    
-    updateDateInputs('Audit');
-    updateDateInputs('Ativ');
-    updateDateInputs('Mant');
-    updateDateInputs('Doc'); 
-    
-    // Recarrega os filtros em cascata após limpar
-    onFilterSetorChange('Audit');
-    onFilterSetorChange('Ativ');
-    onFilterSetorChange('Mant');
-    onFilterSetorChange('Doc');
-}
-
-
-function populateSelects() {
-    // Listas de Setores, Categorias e Status
-    const setores = masterLists.setores || []; // NOVO
-    const auditCats = masterLists.auditCategorias || [];
-    const auditStats = masterLists.auditStatus || [];
-    const ativCats = masterLists.ativCategorias || [];
-    const ativStats = masterLists.ativStatus || [];
-    const mantCats = masterLists.mantCategorias || [];
-    const mantStats = masterLists.mantStatus || [];
-    const docCats = masterLists.docCategorias || [];
-    const docStats = masterLists.docStatus || [];
-
-    // Funções auxiliares para gerar <option>
-    const makeOpts = (list) => list.map(i => `<option>${i}</option>`).join('');
-    const makeStatusOpts = (list) => list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
-    const makeFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i}">${i}</option>`).join('');
-    const makeStatusFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
-
-    // --- MODAIS ---
-    // Setores
-    document.getElementById('auditSetor').innerHTML = makeOpts(setores); // NOVO
-    document.getElementById('ativSetor').innerHTML = makeOpts(setores); // NOVO
-    document.getElementById('mantSetor').innerHTML = makeOpts(setores); // NOVO
-    document.getElementById('docSetor').innerHTML = makeOpts(setores); // NOVO
-
-    // Auditoria
-    document.getElementById('auditCategoria').innerHTML = makeOpts(auditCats);
-    document.getElementById('auditStatus').innerHTML = makeStatusOpts(auditStats);
-    // Atividades
-    document.getElementById('ativCategoria').innerHTML = makeOpts(ativCats);
-    document.getElementById('ativStatus').innerHTML = makeStatusOpts(ativStats);
-    // Manutenção
-    document.getElementById('mantCategoria').innerHTML = makeOpts(mantCats);
-    document.getElementById('mantStatus').innerHTML = makeStatusOpts(mantStats);
-    // Documentos
-    document.getElementById('docCategoria').innerHTML = makeOpts(docCats);
-    document.getElementById('docStatus').innerHTML = makeStatusOpts(docStats); 
-    
-    // Dispara a atualização das Subcategorias/Itens nos Modais
-    // NOTE: Agora a Categoria e Subcategoria só são atualizadas se a Categoria for selecionada.
-    // O Setor NÃO interfere na Categoria.
-    onCategoryChange('audit');
-    onCategoryChange('ativ');
-    onCategoryChange('mant');
-    onCategoryChange('doc');
-
-    // --- FILTROS ---
-    // Setores nos Filtros
-    document.getElementById('fAuditSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); // NOVO
-    document.getElementById('fAtivSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); // NOVO
-    document.getElementById('fMantSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); // NOVO
-    document.getElementById('fDocSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); // NOVO
-
-    // Categorias e Status nos Filtros
-    document.getElementById('fAuditCat').innerHTML = makeFilterOpts(auditCats, "Categoria: Todas");
-    document.getElementById('fAuditStatus').innerHTML = makeStatusFilterOpts(auditStats, "Status: Todos");
-    
-    document.getElementById('fAtivCat').innerHTML = makeFilterOpts(ativCats, "Categoria: Todas");
-    document.getElementById('fAtivStatus').innerHTML = makeStatusFilterOpts(ativStats, "Status: Todos");
-
-    document.getElementById('fMantCat').innerHTML = makeFilterOpts(mantCats, "Categoria: Todas");
-    document.getElementById('fMantStatus').innerHTML = makeStatusFilterOpts(mantStats, "Status: Todos");
-    
-    document.getElementById('fDocCat').innerHTML = makeFilterOpts(docCats, "Categoria: Todas"); 
-    document.getElementById('fDocStatus').innerHTML = makeStatusFilterOpts(docStats, "Status: Todos"); 
-    
-    // Dispara a atualização dos filtros em cascata (Categoria -> Subcategoria/Item)
-    onFilterCategoryChange('Audit');
-    onFilterCategoryChange('Ativ');
-    onFilterCategoryChange('Mant');
-    onFilterCategoryChange('Doc');
-}
-
-// Funções auxiliares para obter prefixos de ID corretos
-function getTabPrefix(tab) {
-    if (tab === 'auditoria') return 'audit';
-    if (tab === 'atividades') return 'ativ';
-    if (tab === 'manutencao') return 'mant';
-    if (tab === 'documentos') return 'doc';
-    return '';
-}
-
-// Funções de atualização em cascata para MODAIS (Setor não interfere, mantido apenas para CategoryChange)
-function onCategoryChange(prefix) {
-    const catSelect = document.getElementById(`${prefix}Categoria`);
-    let subcatSelect;
-    let listKey;
-    
-    if (prefix === 'mant') {
-        subcatSelect = document.getElementById(`${prefix}Item`);
-        listKey = 'mantItens';
-    } else {
-        subcatSelect = document.getElementById(`${prefix}Sub`);
-        listKey = `${prefix}Subcats`;
-    }
-    
-    if (!subcatSelect) return; 
-
-    const selectedCat = catSelect.value;
-    const currentSubcat = subcatSelect.value; 
-    
-    // Se não houver categoria selecionada, limpa a subcategoria
-    if (!selectedCat) {
-        subcatSelect.innerHTML = `<option value="">${prefix === 'mant' ? 'Nenhum Item' : 'Nenhuma Subcategoria'}</option>`;
-        return;
-    }
-
-    const subcats = masterLists[listKey][selectedCat] || [];
-    
-    subcatSelect.innerHTML = subcats.map(i => `<option value="${i}">${i}</option>`).join('') || 
-                             `<option value="">${prefix === 'mant' ? 'Nenhum Item' : 'Nenhuma Subcategoria'}</option>`;
-
-    // Tenta manter a seleção após a atualização
-    if (subcats.includes(currentSubcat)) subcatSelect.value = currentSubcat;
-}
-
-// NOVO: Filtro de Setor (Setor NÃO afeta a Categoria no cadastro/filtro)
-function onFilterSetorChange(prefix) {
-    // Para Setor, basta renderizar os cards, pois ele é um filtro simples.
-    // Se no futuro precisar de cascata Setor -> Categoria, a lógica deve ser implementada aqui.
-    renderCards();
-}
-
-// Funções de atualização em cascata para FILTROS
-function onFilterCategoryChange(prefix) {
-    const catSelect = document.getElementById(`f${prefix}Cat`);
-    let subcatSelect;
-    let listKey;
-    let label;
-    
-    if (prefix === 'Mant') {
-        subcatSelect = document.getElementById(`f${prefix}Item`);
-        listKey = 'mantItens';
-        label = 'Item: Todos';
-    } else {
-        subcatSelect = document.getElementById(`f${prefix}Sub`);
-        listKey = `${prefix.toLowerCase()}Subcats`;
-        label = 'Subcategoria: Todas';
-    }
-    
-    if (!subcatSelect) return; 
-
-    const selectedCat = catSelect.value;
-    const currentSubcat = subcatSelect.value;
-    
-    let subcats = [];
-
-    if (selectedCat === "") {
-        // Se a Categoria for "Todas", mostra todas as subcategorias em uso naquela aba
-        let allSubcats = [];
-        if (prefix === 'Audit') allSubcats = audits.map(i => i.subcategoria).filter(Boolean);
-        else if (prefix === 'Ativ') allSubcats = activities.map(i => i.subcategoria).filter(Boolean);
-        else if (prefix === 'Mant') allSubcats = maintenances.map(i => i.item).filter(Boolean);
-        else if (prefix === 'Doc') allSubcats = documents.map(i => i.subcategoria).filter(Boolean);
-        
-        subcats = [...new Set(allSubcats)].sort();
-
-    } else {
-        // Se uma Categoria for selecionada, mostra as subcategorias mestras para aquela categoria
-        subcats = masterLists[listKey][selectedCat] || [];
-    }
-    
-    subcatSelect.innerHTML = `<option value="">${label}</option>` + subcats.map(i => `<option value="${i}">${i}</option>`).join('');
-
-    // Tenta manter a seleção após a atualização
-    if (subcats.includes(currentSubcat)) subcatSelect.value = currentSubcat;
-
-    renderCards(); // Dispara renderização após filtro ser atualizado
-}
-
-// Função de cálculo para Manutenção e Documentos (Periodicidade)
-function calculateNextDate(prefix = 'mant') {
-    let ultima, intervaloId, proximaDisplayId, intervalValue;
-
-    if (prefix === 'mant') {
-        ultima = document.getElementById('mantUltima').value;
-        intervaloId = 'mantIntervalo';
-        proximaDisplayId = 'mantProxima';
-        intervalValue = parseInt(document.getElementById(intervaloId).value) || 0;
-    } else if (prefix === 'doc') {
-        ultima = document.getElementById('docDataCriacao').value; // Usando Data Criação como base
-        intervaloId = 'docIntervalo';
-        proximaDisplayId = 'docProximaRevisao';
-        intervalValue = parseInt(document.getElementById(intervaloId).value) || 0;
-    } else {
-        return;
-    }
-    
-    if (ultima) {
-        const next = new Date(ultima);
-        next.setDate(next.getDate() + intervalValue);
-        const nextStr = next.toISOString().split('T')[0];
-        document.getElementById(proximaDisplayId).textContent = formatBR(nextStr);
-    }
-}
-
-// --- TAB CONTROL ---
-function switchTab(tab) {
-    currentTab = tab;
-    document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
-    
-    const tabId = 'tab' + tab.charAt(0).toUpperCase() + tab.slice(1);
-    const btn = document.getElementById(tabId);
-    if(btn) btn.classList.add('active');
-    
-    const titles = { 
-        auditoria: 'Auditoria', 
-        atividades: 'Gestão de Atividades', 
-        manutencao: 'Manutenção',
-        documentos: 'Documentos', 
-        backup: 'Backup do Sistema'
-    };
-    const subtitles = { 
-        auditoria: 'Planejamento e execução de auditorias', 
-        atividades: 'Controle de tarefas, reuniões e projetos',
-        manutencao: 'Controle preventivo de equipamentos',
-        documentos: 'Gerenciamento e controle de revisões', 
-        backup: 'Segurança dos dados'
-    };
-    
-    document.getElementById('pageTitle').textContent = titles[tab];
-    document.getElementById('pageSubtitle').textContent = subtitles[tab];
-    
-    const isBackup = tab === 'backup';
-    document.getElementById('filtersBar').style.display = isBackup ? 'none' : 'flex';
-    document.getElementById('cardsGrid').style.display = isBackup ? 'none' : 'grid';
-    document.getElementById('addBtn').style.display = isBackup ? 'none' : 'flex';
-    document.getElementById('backupContent').style.display = isBackup ? 'flex' : 'none';
-
-    document.getElementById('filtersAuditoria').style.display = tab === 'auditoria' ? 'flex' : 'none';
-    document.getElementById('filtersAtividades').style.display = tab === 'atividades' ? 'flex' : 'none';
-    document.getElementById('filtersManutencao').style.display = tab === 'manutencao' ? 'flex' : 'none';
-    document.getElementById('filtersDocumentos').style.display = tab === 'documentos' ? 'flex' : 'none'; 
-    
-    if(!isBackup) {
-        clearFilters();
-    }
-}
-
-document.getElementById('tabAuditoria').onclick = () => switchTab('auditoria');
-document.getElementById('tabAtividades').onclick = () => switchTab('atividades');
-document.getElementById('tabManutencao').onclick = () => switchTab('manutencao');
-document.getElementById('tabDocumentos').onclick = () => switchTab('documentos'); 
-document.getElementById('tabBackup').onclick = () => switchTab('backup');
-
-// --- MODAL & FORM LOGIC ---
-document.getElementById('addBtn').onclick = () => {
-    // Seleciona o primeiro setor/categoria disponível se a lista não estiver vazia
-    const defaultSetor = masterLists.setores[0] || ''; 
-    const defaultAuditCat = masterLists.auditCategorias[0] || ''; 
-    const defaultAtivCat = masterLists.ativCategorias[0] || ''; 
-    const defaultMantCat = masterLists.mantCategorias[0] || ''; 
-    const defaultDocCat = masterLists.docCategorias[0] || ''; 
-
-    if (currentTab === 'auditoria') {
-        editingAuditId = null;
-        document.getElementById('auditTitulo').value = '';
-        document.getElementById('auditDescricao').value = '';
-        document.getElementById('auditDataPublicacao').value = today();
-        document.getElementById('auditDataPrevisao').value = today();
-        document.getElementById('auditResponsavel').value = ''; 
-        document.getElementById('auditAnexos').innerHTML = '';
-        document.getElementById('auditSetor').value = defaultSetor; // NOVO
-        document.getElementById('auditCategoria').value = defaultAuditCat;
-        onCategoryChange('audit');
-        document.getElementById('modalAuditoria').style.display = 'flex';
-    } else if (currentTab === 'atividades') {
-        editingAtivId = null;
-        document.getElementById('ativTitulo').value = '';
-        document.getElementById('ativDescricao').value = '';
-        document.getElementById('ativDataInicio').value = today();
-        document.getElementById('ativDataConclusao').value = today();
-        document.getElementById('ativResponsavel').value = ''; 
-        document.getElementById('ativAnexos').innerHTML = '';
-        document.getElementById('ativSetor').value = defaultSetor; // NOVO
-        document.getElementById('ativCategoria').value = defaultAtivCat;
-        onCategoryChange('ativ');
-        document.getElementById('modalAtividades').style.display = 'flex';
-    } else if (currentTab === 'manutencao') {
-        editingMantId = null;
-        document.getElementById('mantTitulo').value = '';
-        document.getElementById('mantDescricao').value = '';
-        document.getElementById('mantUltima').value = today();
-        document.getElementById('mantIntervalo').value = 30;
-        document.getElementById('mantResponsavelTecnico').value = ''; 
-        document.getElementById('mantResponsavelManutencao').value = ''; 
-        document.getElementById('mantAnexos').innerHTML = '';
-        document.getElementById('mantSetor').value = defaultSetor; // NOVO
-        document.getElementById('mantCategoria').value = defaultMantCat;
-        onCategoryChange('mant');
-        calculateNextDate('mant');
-        document.getElementById('modalManutencao').style.display = 'flex';
-    } else if (currentTab === 'documentos') { 
-        editingDocId = null;
-        document.getElementById('docTitulo').value = '';
-        document.getElementById('docDescricao').value = '';
-        document.getElementById('docDataCriacao').value = today();
-        document.getElementById('docIntervalo').value = 365; // Valor padrão de 1 ano
-        document.getElementById('docResponsavel').value = '';
-        document.getElementById('docRevisor').value = '';
-        document.getElementById('docFlagDias').value = 30;
-        document.getElementById('docAnexos').innerHTML = '';
-        document.getElementById('docSetor').value = defaultSetor; // NOVO
-        document.getElementById('docCategoria').value = defaultDocCat;
-        onCategoryChange('doc');
-        calculateNextDate('doc');
-        document.getElementById('modalDocumentos').style.display = 'flex';
-    }
-};
-
-
-// SAVE FUNCTIONS
-function saveAudit() {
-    const item = {
-        id: editingAuditId || Date.now(),
-        titulo: document.getElementById('auditTitulo').value,
-        descricao: document.getElementById('auditDescricao').value,
-        setor: document.getElementById('auditSetor').value, // NOVO CAMPO
-        categoria: document.getElementById('auditCategoria').value,
-        subcategoria: document.getElementById('auditSub').value, 
-        status: document.getElementById('auditStatus').value,
-        dataPublicacao: document.getElementById('auditDataPublicacao').value,
-        dataPrevisao: document.getElementById('auditDataPrevisao').value,
-        responsavel: document.getElementById('auditResponsavel').value, 
-        flagDias: +document.getElementById('auditFlagDias').value,
-        anexos: getAnexos('audit')
-    };
-    if (editingAuditId) audits = audits.map(a => a.id === editingAuditId ? item : a);
-    else audits.push(item);
-    saveAll(); closeModal('modalAuditoria'); renderCards();
-}
-
-function saveAtividade() {
-    const item = {
-        id: editingAtivId || Date.now(),
-        titulo: document.getElementById('ativTitulo').value,
-        descricao: document.getElementById('ativDescricao').value,
-        setor: document.getElementById('ativSetor').value, // NOVO CAMPO
-        categoria: document.getElementById('ativCategoria').value,
-        subcategoria: document.getElementById('ativSub').value, 
-        status: document.getElementById('ativStatus').value,
-        dataInicio: document.getElementById('ativDataInicio').value,
-        dataConclusao: document.getElementById('ativDataConclusao').value,
-        responsavel: document.getElementById('ativResponsavel').value, 
-        flagDias: +document.getElementById('ativFlagDias').value,
-        anexos: getAnexos('ativ')
-    };
-    if (editingAtivId) activities = activities.map(a => a.id === editingAtivId ? item : a);
-    else activities.push(item);
-    saveAll(); closeModal('modalAtividades'); renderCards();
-}
-
-function saveManutencao() {
-    const ultima = document.getElementById('mantUltima').value;
-    const intervalo = parseInt(document.getElementById('mantIntervalo').value);
-    const nextDate = new Date(ultima);
-    nextDate.setDate(nextDate.getDate() + intervalo);
-    const item = {
-        id: editingMantId || Date.now(),
-        titulo: document.getElementById('mantTitulo').value,
-        descricao: document.getElementById('mantDescricao').value,
-        setor: document.getElementById('mantSetor').value, // NOVO CAMPO
-        categoria: document.getElementById('mantCategoria').value,
-        item: document.getElementById('mantItem').value, 
-        ultima,
-        intervalo,
-        proxima: nextDate.toISOString().split('T')[0],
-        responsavelTecnico: document.getElementById('mantResponsavelTecnico').value, 
-        responsavelManutencao: document.getElementById('mantResponsavelManutencao').value, 
-        status: document.getElementById('mantStatus').value,
-        flagDias: +document.getElementById('mantFlagDias').value,
-        anexos: getAnexos('mant')
-    };
-    if (editingMantId) maintenances = maintenances.map(m => m.id === editingMantId ? item : m);
-    else maintenances.push(item);
-    saveAll(); closeModal('modalManutencao'); renderCards();
-}
-
-function saveDocumento() { 
-    const dataCriacao = document.getElementById('docDataCriacao').value;
-    const docIntervalo = parseInt(document.getElementById('docIntervalo').value);
-    const nextRevisao = new Date(dataCriacao);
-    nextRevisao.setDate(nextRevisao.getDate() + docIntervalo);
-    
-    const item = {
-        id: editingDocId || Date.now(),
-        titulo: document.getElementById('docTitulo').value,
-        descricao: document.getElementById('docDescricao').value,
-        setor: document.getElementById('docSetor').value, // NOVO CAMPO
-        categoria: document.getElementById('docCategoria').value,
-        subcategoria: document.getElementById('docSub').value, 
-        status: document.getElementById('docStatus').value,
-        dataCriacao,
-        docIntervalo, 
-        dataProximaRevisao: nextRevisao.toISOString().split('T')[0], 
-        responsavel: document.getElementById('docResponsavel').value,
-        revisor: document.getElementById('docRevisor').value,
-        flagDias: +document.getElementById('docFlagDias').value,
-        anexos: getAnexos('doc')
-    };
-    if (editingDocId) documents = documents.map(d => d.id === editingDocId ? item : d);
-    else documents.push(item);
-    saveAll(); closeModal('modalDocumentos'); renderCards();
-}
-
-function editItem(id, tab) {
-    if (tab === 'auditoria') {
-        const item = audits.find(a => a.id === id);
-        editingAuditId = id;
-        document.getElementById('auditTitulo').value = item.titulo;
-        document.getElementById('auditDescricao').value = item.descricao;
-        document.getElementById('auditSetor').value = item.setor || ''; // NOVO
-        document.getElementById('auditCategoria').value = item.categoria;
-        onCategoryChange('audit'); 
-        document.getElementById('auditSub').value = item.subcategoria || ''; 
-        document.getElementById('auditStatus').value = item.status;
-        document.getElementById('auditDataPublicacao').value = item.dataPublicacao;
-        document.getElementById('auditDataPrevisao').value = item.dataPrevisao;
-        document.getElementById('auditResponsavel').value = item.responsavel || ''; 
-        document.getElementById('auditFlagDias').value = item.flagDias;
-        restoreAnexos('audit', item.anexos);
-        document.getElementById('modalAuditoria').style.display = 'flex';
-    } else if (tab === 'atividades') {
-        const item = activities.find(a => a.id === id);
-        editingAtivId = id;
-        document.getElementById('ativTitulo').value = item.titulo;
-        document.getElementById('ativDescricao').value = item.descricao;
-        document.getElementById('ativSetor').value = item.setor || ''; // NOVO
-        document.getElementById('ativCategoria').value = item.categoria;
-        onCategoryChange('ativ'); 
-        document.getElementById('ativSub').value = item.subcategoria || ''; 
-        document.getElementById('ativStatus').value = item.status;
-        document.getElementById('ativDataInicio').value = item.dataInicio;
-        document.getElementById('ativDataConclusao').value = item.dataConclusao;
-        document.getElementById('ativResponsavel').value = item.responsavel || ''; 
-        document.getElementById('ativFlagDias').value = item.flagDias;
-        restoreAnexos('ativ', item.anexos);
-        document.getElementById('modalAtividades').style.display = 'flex';
-    } else if (tab === 'manutencao') {
-        const item = maintenances.find(m => m.id === id);
-        editingMantId = id;
-        document.getElementById('mantTitulo').value = item.titulo;
-        document.getElementById('mantDescricao').value = item.descricao;
-        document.getElementById('mantSetor').value = item.setor || ''; // NOVO
-        document.getElementById('mantCategoria').value = item.categoria;
-        onCategoryChange('mant'); 
-        document.getElementById('mantItem').value = item.item;
-        document.getElementById('mantUltima').value = item.ultima;
-        document.getElementById('mantIntervalo').value = item.intervalo;
-        document.getElementById('mantResponsavelTecnico').value = item.responsavelTecnico || ''; 
-        document.getElementById('mantResponsavelManutencao').value = item.responsavelManutencao || ''; 
-        document.getElementById('mantStatus').value = item.status;
-        document.getElementById('mantFlagDias').value = item.flagDias;
-        calculateNextDate('mant');
-        restoreAnexos('mant', item.anexos);
-        document.getElementById('modalManutencao').style.display = 'flex';
-    } else if (tab === 'documentos') { 
-        const item = documents.find(d => d.id === id);
-        editingDocId = id;
-        document.getElementById('docTitulo').value = item.titulo;
-        document.getElementById('docDescricao').value = item.descricao;
-        document.getElementById('docSetor').value = item.setor || ''; // NOVO
-        document.getElementById('docCategoria').value = item.categoria;
-        onCategoryChange('doc'); 
-        document.getElementById('docSub').value = item.subcategoria || ''; 
-        document.getElementById('docStatus').value = item.status;
-        document.getElementById('docDataCriacao').value = item.dataCriacao;
-        document.getElementById('docIntervalo').value = item.docIntervalo; 
-        document.getElementById('docResponsavel').value = item.responsavel || '';
-        document.getElementById('docRevisor').value = item.revisor || '';
-        document.getElementById('docFlagDias').value = item.flagDias;
-        calculateNextDate('doc');
-        restoreAnexos('doc', item.anexos);
-        document.getElementById('modalDocumentos').style.display = 'flex';
-    }
-}
-
-function deleteItem(id, tab) {
-    if (!confirm('Deseja realmente excluir este registro?')) return;
-    if (tab === 'auditoria') audits = audits.filter(a => a.id !== id);
-    else if (tab === 'atividades') activities = activities.filter(a => a.id !== id);
-    else if (tab === 'manutencao') maintenances = maintenances.filter(m => m.id !== id);
-    else if (tab === 'documentos') documents = documents.filter(d => d.id !== id); 
-    saveAll();
-    renderCards();
-}
-
-// Anexos Logic
-function addAnexo(prefix) {
-    const container = document.getElementById(prefix + 'Anexos');
-    const div = document.createElement('div');
-    div.className = 'anexo-item';
-    div.innerHTML = `
-        <i class="fas fa-link"></i>
-        <input placeholder="Título do arquivo" class="anexo-title">
-        <input placeholder="Cole a URL aqui..." class="anexo-url">
-        <i class="fas fa-times" style="cursor:pointer; color:var(--ind-red)" onclick="this.parentElement.remove()"></i>
-    `;
-    container.appendChild(div);
-}
-function getAnexos(prefix) {
-    return [...document.querySelectorAll(`#${prefix}Anexos .anexo-item`)].map(row => ({
-        titulo: row.querySelector('.anexo-title').value,
-        url: row.querySelector('.anexo-url').value
-    })).filter(a => a.url);
-}
-function restoreAnexos(prefix, list) {
-    const container = document.getElementById(prefix + 'Anexos');
-    container.innerHTML = '';
-    (list || []).forEach(a => {
-        addAnexo(prefix);
-        const row = container.lastChild;
-        row.querySelector('.anexo-title').value = a.titulo;
-        row.querySelector('.anexo-url').value = a.url;
-    });
-}
-
-// View Modal
-function openView(id, tab) {
-    let item, statusList;
-    if (tab === 'auditoria') { item = audits.find(i => i.id === id); statusList = masterLists.auditStatus; }
-    else if (tab === 'atividades') { item = activities.find(i => i.id === id); statusList = masterLists.ativStatus; }
-    else if (tab === 'manutencao') { item = maintenances.find(i => i.id === id); statusList = masterLists.mantStatus; }
-    else if (tab === 'documentos') { item = documents.find(i => i.id === id); statusList = masterLists.docStatus; } 
-
-    if (!item) return;
-
-    const statusObj = (statusList || []).find(s => s.name === item.status) || { color: 'default' };
-    const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
-    
-    // Adiciona Subcategoria/Item (Manutenção) na exibição
-    const subcatOrItemLabel = tab === 'manutencao' ? 'Equipamento' : 'Subcategoria';
-    const subcatOrItemValue = tab === 'manutencao' ? item.item : item.subcategoria;
-
-
-    let detailsGrid = '';
-    if (tab === 'auditoria') {
-        detailsGrid = `
-            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
-            <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
-            <div class="view-item"><label>Publicação</label><div>${formatBR(item.dataPublicacao)}</div></div>
-            <div class="view-item"><label>Previsão</label><div>${formatBR(item.dataPrevisao)}</div></div>
-            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
-        `;
-    } else if (tab === 'atividades') {
-        detailsGrid = `
-            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
-            <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
-            <div class="view-item"><label>Data Início</label><div>${formatBR(item.dataInicio)}</div></div>
-            <div class="view-item"><label>Data Conclusão</label><div>${formatBR(item.dataConclusao)}</div></div>
-            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
-        `;
-    } else if (tab === 'manutencao') {
-        detailsGrid = `
-            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-            <div class="view-item"><label>Equipamento</label><div>${item.item}</div></div>
-            <div class="view-item"><label>Periodicidade</label><div>${item.intervalo} dias</div></div>
-            <div class="view-item"><label>Última Manutenção</label><div>${formatBR(item.ultima)}</div></div>
-            <div class="view-item"><label>Próxima Manutenção</label><div>${formatBR(item.proxima)}</div></div>
-            <div class="view-item"><label>Responsável Técnico</label><div>${item.responsavelTecnico || 'ND'}</div></div>
-            <div class="view-item"><label>Responsável pela Manutenção</label><div>${item.responsavelManutencao || 'ND'}</div></div>
-            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
-        `;
-    } else if (tab === 'documentos') { 
-        detailsGrid = `
-            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
-            <div class="view-item"><label>Periodicidade</label><div>${item.docIntervalo} dias</div></div>
-            <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
-            <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
-            <div class="view-item"><label>Data Criação</label><div>${formatBR(item.dataCriacao)}</div></div>
-            <div class="view-item"><label>Próx. Revisão</label><div>${formatBR(item.dataProximaRevisao)}</div></div>
-            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
-        `;
-    }
-
-    const anexosHtml = (item.anexos || []).map(a => 
-        `<a href="${a.url}" target="_blank" class="file-chip"><i class="fas fa-external-link-alt"></i> ${a.titulo || 'Anexo'}</a>`
-    ).join('');
-
-    const html = `
-        <div class="view-header">
-            <h2 style="margin:0; color:var(--primary)">${item.titulo}</h2>
-            <span class="view-status" style="background-color:${statusColorVar}">${item.status}</span>
-        </div>
-        <div class="view-grid">
-            ${detailsGrid}
-        </div>
-        <div>
-            <h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase">Descrição Detalhada</h4>
-            <div class="view-desc">${item.descricao || 'Sem descrição.'}</div>
-        </div>
-        ${anexosHtml ? `<div class="view-files"><h4>Anexos</h4>${anexosHtml}</div>` : ''}
-    `;
-    
-    document.getElementById('viewContent').innerHTML = html;
-    document.getElementById('viewModal').style.display = 'flex';
-}
-
-// List Manager & Color Selection
-function openListManager(genericKey) {
-    let isStatus = false;
-    let listName;
-    
-    if (genericKey === 'setores') { // NOVO PONTO DE ENTRADA
-        currentListKey = 'setores';
-        listName = 'SETORES';
-    } else if (genericKey === 'categorias') {
-        if(currentTab === 'auditoria') currentListKey = 'auditCategorias';
-        else if(currentTab === 'atividades') currentListKey = 'ativCategorias';
-        else if(currentTab === 'manutencao') currentListKey = 'mantCategorias';
-        else currentListKey = 'docCategorias'; 
-        listName = 'CATEGORIA';
-    } else if (genericKey === 'subcategorias' || genericKey === 'itens') { 
-        
-        const prefix = getTabPrefix(currentTab); 
-        const catSelect = document.getElementById(`${prefix}Categoria`);
-        
-        if (!catSelect) { 
-             alert(`Elemento de Categoria (${prefix}Categoria) não encontrado. Verifique se você abriu o modal correspondente à aba ativa.`); 
-             return; 
-        }
-
-        const cat = catSelect.value;
-        
-        if (!cat) { alert("Selecione uma Categoria antes de gerenciar Subcategorias/Itens."); return; }
-        
-        let subcatMapKey;
-        if(currentTab === 'auditoria') subcatMapKey = 'auditSubcats';
-        else if(currentTab === 'atividades') subcatMapKey = 'ativSubcats';
-        else if(currentTab === 'manutencao') subcatMapKey = 'mantItens';
-        else subcatMapKey = 'docSubcats';
-        
-        currentListKey = `${subcatMapKey}_${cat}`; // Chave temporária para o mapa
-        listName = `SUBCATEGORIAS / ITENS DE: ${cat}`;
-        
-    } else if (genericKey === 'status') {
-        if(currentTab === 'auditoria') currentListKey = 'auditStatus';
-        else if(currentTab === 'atividades') currentListKey = 'ativStatus';
-        else if(currentTab === 'manutencao') currentListKey = 'mantStatus';
-        else currentListKey = 'docStatus';
-        isStatus = true;
-        listName = 'STATUS';
-    } else {
-        currentListKey = genericKey; 
-        listName = genericKey.toUpperCase();
-    }
-    
-    document.getElementById('listTitle').textContent = `Gerenciar: ${listName}`;
-    const body = document.getElementById('listBody');
-    body.innerHTML = '';
-
-    if(isStatus) {
-        document.getElementById('colorPickerContainer').style.display = 'block';
-        selectColor('default', document.querySelector('.bg-default')); 
-    } else {
-        document.getElementById('colorPickerContainer').style.display = 'none';
-    }
-
-    let listToRender;
-    let baseKey = currentListKey.split('_')[0]; // Para subcategorias
-
-    if (currentListKey.includes('_')) { // Gerenciando Subcategorias/Itens
-        const cat = currentListKey.split('_')[1];
-        // Tenta buscar a lista dentro do mapa de objetos, inicializando se necessário
-        masterLists[baseKey] = masterLists[baseKey] || {}; 
-        listToRender = masterLists[baseKey][cat] || [];
-    } else {
-        listToRender = masterLists[currentListKey] || [];
-    }
-    
-    listToRender.forEach(val => {
-        let displayHtml = '', itemVal = '';
-        if (typeof val === 'object') {
-            const colorVar = colorMap[val.color] || colorMap['default'];
-            displayHtml = `<span class="color-dot" style="background-color:${colorVar}"></span>${val.name}`;
-            itemVal = val.name; 
-        } else {
-            displayHtml = val;
-            itemVal = val;
-        }
-
-        body.innerHTML += `<tr>
-            <td>${displayHtml}</td>
-            <td class="remove" onclick="removeFromList('${currentListKey}','${itemVal}')"><i class="fas fa-trash"></i></td>
-        </tr>`;
-    });
-    
-    const input = document.getElementById('newListItem');
-    input.value = '';
-    input.onkeydown = (e) => { if(e.key === 'Enter') addToList(); };
-    
-    document.getElementById('modalListManager').style.display = 'flex';
-}
-
-function selectColor(color, el) {
-    selectedColorTemp = color;
-    document.querySelectorAll('.color-option').forEach(c => c.classList.remove('selected'));
-    el.classList.add('selected');
-}
-
-function addToList() {
-    const val = document.getElementById('newListItem').value.trim();
-    if (!val) return;
-    
-    const isStatus = currentListKey.toLowerCase().includes('status');
-    const isSubcat = currentListKey.includes('_'); 
-    
-    let list;
-    if (isSubcat) {
-        const [baseKey, cat] = currentListKey.split('_');
-        masterLists[baseKey][cat] = masterLists[baseKey][cat] || []; // Inicializa se for nulo
-        list = masterLists[baseKey][cat];
-    } else {
-        list = masterLists[currentListKey];
-    }
-
-    if (isStatus) {
-        if(list.some(s => s.name === val)) return;
-        list.push({ name: val, color: selectedColorTemp });
-    } else {
-        if(list.includes(val)) return;
-        list.push(val);
-    }
-
-    // Ordenação
-    list.sort((a,b) => (typeof a === 'object' ? a.name : a).localeCompare(typeof b === 'object' ? b.name : b));
-    
-    saveAll(); populateSelects();
-    
-    let genericTag;
-    if(isSubcat) genericTag = 'subcategorias';
-    else if(isStatus) genericTag = 'status';
-    else if(currentListKey === 'setores') genericTag = 'setores'; // NOVO
-    else genericTag = 'categorias';
-    
-    openListManager(genericTag);
-}
-
-function removeFromList(key, val) {
-    const isStatus = key.toLowerCase().includes('status');
-    const isSubcat = key.includes('_');
-    
-    let list;
-    if (isSubcat) {
-        const [baseKey, cat] = key.split('_');
-        list = masterLists[baseKey][cat];
-        if (isStatus) list = list.filter(s => s.name !== val);
-        else list = list.filter(i => i !== val);
-        masterLists[baseKey][cat] = list; // Atualiza o mapa
-    } else {
-        list = masterLists[key];
-        if (isStatus) masterLists[key] = list.filter(s => s.name !== val);
-        else masterLists[key] = list.filter(i => i !== val);
-    }
-
-    saveAll(); populateSelects();
-    
-    let genericTag;
-    if(isSubcat) genericTag = 'subcategorias';
-    else if(isStatus) genericTag = 'status';
-    else if(key === 'setores') genericTag = 'setores'; // NOVO
-    else genericTag = 'categorias';
-    openListManager(genericTag);
-}
-// --- FUNÇÕES DE BACKUP LOCAL (ARQUIVO) ---
-
-function exportLocalData() {
-    const data = {
-        audits,
-        activities,
-        maintenances,
-        documents, 
-        masterLists,
-        exportDate: new Date().toISOString(),
-        source: "local_export"
-    };
-    
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "Auditoria_Lamic_" + today() + ".json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-}
-
-function importLocalData(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        try {
-            const data = JSON.parse(e.target.result);
-            
-            // Validação básica
-            if (data.audits && data.masterLists) {
-                if(confirm("ATENÇÃO: Isso substituirá os dados atuais e atualizará a nuvem. Deseja continuar?")) {
-                    
-                    // Atualiza variáveis em memória
-                    audits = data.audits || [];
-                    activities = data.activities || [];
-                    maintenances = data.maintenances || [];
-                    documents = data.documents || []; 
-                    
-                    // Tratamento de compatibilidade para masterLists
-                    masterLists = { ...defaultMasterLists, ...data.masterLists };
-                    if (Array.isArray(masterLists.mantItens)) {
-                        masterLists.mantItens = defaultMasterLists.mantItens; 
-                    }
-
-
-                    // Salva na nuvem para persistir a importação
-                    await saveAll(false); 
-                    
-                    alert("Backup local restaurado e sincronizado com a nuvem com sucesso!");
-                    
-                    // Recarrega interface
-                    populateSelects();
-                    renderCards();
-                    input.value = ''; // Limpa o input para permitir re-upload do mesmo arquivo se necessário
-                }
-            } else {
-                alert("O arquivo selecionado não é um backup válido deste sistema.");
-            }
-        } catch (err) {
-            alert("Erro ao ler o arquivo: " + err.message);
-        }
-    };
-    reader.readAsText(file);
-}
-
-function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-// Inicialização (garante que os selects sejam preenchidos ao carregar a página)
-document.addEventListener('DOMContentLoaded', () => {
-    // A inicialização principal dos dados é feita em checkLogin, após autenticação.
-    // Mas as chamadas abaixo garantem que as estruturas de data/dropdowns existam, mesmo que vazias inicialmente.
-    populateYearSelects();
-    populateSelects();
-});
-
-document.onkeydown = function(event) {
-    if (
-        event.keyCode === 123 ||  // F12
-        ctrlShiftKey(event, 'I') ||  // Ctrl + Shift + I
-        ctrlShiftKey(event, 'J') ||  // Ctrl + Shift + J
-        ctrlShiftKey(event, 'C') ||  // Ctrl + Shift + C
-        (event.ctrlKey && event.keyCode === 'U'.charCodeAt(0)) ||  // Ctrl + U
-        (event.ctrlKey && event.keyCode === 'S'.charCodeAt(0))  // Ctrl + S
-    ) {
-        event.preventDefault();
-        return false;
-    }
-};
-        document.addEventListener('contextmenu', function(evento) {
-                // Previne o comportamento padrão (abre o menu)
-                evento.preventDefault();
+        // NOVO: Coleta TODOS os status de TODAS as listas mestras de status dinamicamente
+        let allStatusNames = [];
+        ['auditStatus', 'ativStatus', 'mantStatus', 'docStatus'].forEach(key => {
+            masterLists[key].forEach(s => {
+                if (s.name) allStatusNames.push(s.name);
             });
-
-</script>
+        });
+        const unifiedStatusNames = [...new Set(allStatusNames)].sort();
+    
+        // Funções auxiliares para gerar <option>
+        const makeOpts = (list) => list.map(i => `<option>${i}</option>`).join('');
+        const makeStatusOpts = (list) => list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+        const makeFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i}">${i}</option>`).join('');
+        const makeStatusFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+        
+        // --- FILTROS DASHBOARD ---
+        document.getElementById('fDashSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos");
+        document.getElementById('fDashStatus').innerHTML = makeFilterOpts(unifiedStatusNames, "Status: Todos");
+    
+    
+        // --- MODAIS ---
+        // Setores
+        document.getElementById('auditSetor').innerHTML = makeOpts(setores); 
+        document.getElementById('ativSetor').innerHTML = makeOpts(setores); 
+        document.getElementById('mantSetor').innerHTML = makeOpts(setores); 
+        document.getElementById('docSetor').innerHTML = makeOpts(setores); 
+    
+        // Auditoria
+        document.getElementById('auditCategoria').innerHTML = makeOpts(masterLists.auditCategorias);
+        document.getElementById('auditStatus').innerHTML = makeStatusOpts(masterLists.auditStatus);
+        // Atividades
+        document.getElementById('ativCategoria').innerHTML = makeOpts(masterLists.ativCategorias);
+        document.getElementById('ativStatus').innerHTML = makeStatusOpts(masterLists.ativStatus);
+        // Manutenção
+        document.getElementById('mantCategoria').innerHTML = makeOpts(masterLists.mantCategorias);
+        document.getElementById('mantStatus').innerHTML = makeStatusOpts(masterLists.mantStatus);
+        // Documentos
+        document.getElementById('docCategoria').innerHTML = makeOpts(masterLists.docCategorias);
+        document.getElementById('docStatus').innerHTML = makeStatusOpts(masterLists.docStatus); 
+        
+        onCategoryChange('audit');
+        onCategoryChange('ativ');
+        onCategoryChange('mant');
+        onCategoryChange('doc');
+    
+        // --- FILTROS ABAS (EXISTENTES) ---
+        document.getElementById('fAuditSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
+        document.getElementById('fAtivSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
+        document.getElementById('fMantSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
+        document.getElementById('fDocSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
+    
+        document.getElementById('fAuditCat').innerHTML = makeFilterOpts(masterLists.auditCategorias, "Categoria: Todas");
+        document.getElementById('fAuditStatus').innerHTML = makeStatusFilterOpts(masterLists.auditStatus, "Status: Todos");
+        
+        document.getElementById('fAtivCat').innerHTML = makeFilterOpts(masterLists.ativCategorias, "Categoria: Todas");
+        document.getElementById('fAtivStatus').innerHTML = makeStatusFilterOpts(masterLists.ativStatus, "Status: Todos");
+    
+        document.getElementById('fMantCat').innerHTML = makeFilterOpts(masterLists.mantCategorias, "Categoria: Todas");
+        document.getElementById('fMantStatus').innerHTML = makeStatusFilterOpts(masterLists.mantStatus, "Status: Todos");
+        
+        document.getElementById('fDocCat').innerHTML = makeFilterOpts(masterLists.docCategorias, "Categoria: Todas"); 
+        document.getElementById('fDocStatus').innerHTML = makeStatusFilterOpts(masterLists.docStatus, "Status: Todos"); 
+        
+        onFilterCategoryChange('Audit');
+        onFilterCategoryChange('Ativ');
+        onFilterCategoryChange('Mant');
+        onFilterCategoryChange('Doc');
+    }
+    
+    // Funções auxiliares para obter prefixos de ID corretos
+    function getTabPrefix(tab) {
+        if (tab === 'auditoria') return 'audit';
+        if (tab === 'atividades') return 'ativ';
+        if (tab === 'manutencao') return 'mant';
+        if (tab === 'documentos') return 'doc';
+        return '';
+    }
+    
+    // Funções de atualização em cascata para MODAIS (Setor não interfere, mantido apenas para CategoryChange)
+    function onCategoryChange(prefix) {
+        const catSelect = document.getElementById(`${prefix}Categoria`);
+        let subcatSelect;
+        let listKey;
+        
+        if (prefix === 'mant') {
+            subcatSelect = document.getElementById(`${prefix}Item`);
+            listKey = 'mantItens';
+        } else {
+            subcatSelect = document.getElementById(`${prefix}Sub`);
+            listKey = `${prefix}Subcats`;
+        }
+        
+        if (!subcatSelect) return; 
+    
+        const selectedCat = catSelect.value;
+        const currentSubcat = subcatSelect.value; 
+        
+        if (!selectedCat) {
+            subcatSelect.innerHTML = `<option value="">${prefix === 'mant' ? 'Nenhum Item' : 'Nenhuma Subcategoria'}</option>`;
+            return;
+        }
+    
+        const subcats = masterLists[listKey][selectedCat] || [];
+        
+        subcatSelect.innerHTML = subcats.map(i => `<option value="${i}">${i}</option>`).join('') || 
+                                 `<option value="">${prefix === 'mant' ? 'Nenhum Item' : 'Nenhuma Subcategoria'}</option>`;
+    
+        if (subcats.includes(currentSubcat)) subcatSelect.value = currentSubcat;
+    }
+    
+    // NOVO: Filtro de Setor (Setor NÃO afeta a Categoria no cadastro/filtro)
+    function onFilterSetorChange(prefix) {
+        renderCards();
+    }
+    
+    // Funções de atualização em cascata para FILTROS
+    function onFilterCategoryChange(prefix) {
+        const catSelect = document.getElementById(`f${prefix}Cat`);
+        let subcatSelect;
+        let listKey;
+        let label;
+        
+        if (prefix === 'Mant') {
+            subcatSelect = document.getElementById(`f${prefix}Item`);
+            listKey = 'mantItens';
+            label = 'Item: Todos';
+        } else {
+            subcatSelect = document.getElementById(`f${prefix}Sub`);
+            listKey = `${prefix.toLowerCase()}Subcats`;
+            label = 'Subcategoria: Todas';
+        }
+        
+        if (!subcatSelect) return; 
+    
+        const selectedCat = catSelect.value;
+        const currentSubcat = subcatSelect.value;
+        
+        let subcats = [];
+    
+        if (selectedCat === "") {
+            let allSubcats = [];
+            if (prefix === 'Audit') allSubcats = audits.map(i => i.subcategoria).filter(Boolean);
+            else if (prefix === 'Ativ') allSubcats = activities.map(i => i.subcategoria).filter(Boolean);
+            else if (prefix === 'Mant') allSubcats = maintenances.map(i => i.item).filter(Boolean);
+            else if (prefix === 'Doc') allSubcats = documents.map(i => i.subcategoria).filter(Boolean);
+            
+            subcats = [...new Set(allSubcats)].sort();
+    
+        } else {
+            subcats = masterLists[listKey][selectedCat] || [];
+        }
+        
+        subcatSelect.innerHTML = `<option value="">${label}</option>` + subcats.map(i => `<option value="${i}">${i}</option>`).join('');
+    
+        if (subcats.includes(currentSubcat)) subcatSelect.value = currentSubcat;
+    
+        renderCards();
+    }
+    
+    // Função de cálculo para Manutenção e Documentos (Periodicidade)
+    function calculateNextDate(prefix = 'mant') {
+        let ultima, intervaloId, proximaDisplayId, intervalValue;
+    
+        if (prefix === 'mant') {
+            ultima = document.getElementById('mantUltima').value;
+            intervaloId = 'mantIntervalo';
+            proximaDisplayId = 'mantProxima';
+            intervalValue = parseInt(document.getElementById(intervaloId).value) || 0;
+        } else if (prefix === 'doc') {
+            ultima = document.getElementById('docDataCriacao').value; 
+            intervaloId = 'docIntervalo';
+            proximaDisplayId = 'docProximaRevisao';
+            intervalValue = parseInt(document.getElementById(intervaloId).value) || 0;
+        } else {
+            return;
+        }
+        
+        if (ultima) {
+            const next = new Date(ultima);
+            next.setDate(next.getDate() + intervalValue);
+            const nextStr = next.toISOString().split('T')[0];
+            document.getElementById(proximaDisplayId).textContent = formatBR(nextStr);
+        }
+    }
+    
+    // --- TAB CONTROL ---
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+        
+        const tabId = 'tab' + tab.charAt(0).toUpperCase() + tab.slice(1);
+        const btn = document.getElementById(tabId);
+        if(btn) btn.classList.add('active');
+        
+        const titles = { 
+            dashboard: 'Dashboard', 
+            auditoria: 'Auditoria', 
+            atividades: 'Gestão de Atividades', 
+            manutencao: 'Manutenção',
+            documentos: 'Documentos', 
+            backup: 'Backup do Sistema'
+        };
+        const subtitles = { 
+            dashboard: 'Visão geral e indicadores de desempenho', 
+            auditoria: 'Planejamento e execução de auditorias', 
+            atividades: 'Controle de tarefas, reuniões e projetos',
+            manutencao: 'Controle preventivo de equipamentos',
+            documentos: 'Gerenciamento e controle de revisões', 
+            backup: 'Segurança dos dados'
+        };
+        
+        document.getElementById('pageTitle').textContent = titles[tab];
+        document.getElementById('pageSubtitle').textContent = subtitles[tab];
+        
+        const isBackup = tab === 'backup';
+        const isDashboard = tab === 'dashboard';
+    
+        document.getElementById('filtersBar').style.display = (isBackup || isDashboard) ? 'none' : 'flex';
+        document.getElementById('filtersBarDashboard').style.display = isDashboard ? 'flex' : 'none';
+        document.getElementById('cardsGrid').style.display = (isBackup || isDashboard) ? 'none' : 'grid';
+        document.getElementById('addBtn').style.display = (isBackup || isDashboard) ? 'none' : 'flex';
+        
+        document.getElementById('backupContent').style.display = isBackup ? 'flex' : 'none';
+        document.getElementById('dashboardContent').style.display = isDashboard ? 'flex' : 'none'; 
+    
+        document.getElementById('filtersAuditoria').style.display = tab === 'auditoria' ? 'flex' : 'none';
+        document.getElementById('filtersAtividades').style.display = tab === 'atividades' ? 'flex' : 'none';
+        document.getElementById('filtersManutencao').style.display = tab === 'manutencao' ? 'flex' : 'none';
+        document.getElementById('filtersDocumentos').style.display = tab === 'documentos' ? 'flex' : 'none'; 
+        
+        if(isDashboard) {
+            renderDashboard();
+        } else if(!isBackup) {
+            clearFilters();
+        }
+    }
+    
+    document.getElementById('tabDashboard').onclick = () => switchTab('dashboard'); 
+    document.getElementById('tabAuditoria').onclick = () => switchTab('auditoria');
+    document.getElementById('tabAtividades').onclick = () => switchTab('atividades');
+    document.getElementById('tabManutencao').onclick = () => switchTab('manutencao');
+    document.getElementById('tabDocumentos').onclick = () => switchTab('documentos'); 
+    document.getElementById('tabBackup').onclick = () => switchTab('backup');
+    
+    // --- MODAL & FORM LOGIC ---
+    document.getElementById('addBtn').onclick = () => {
+        const defaultSetor = masterLists.setores[0] || ''; 
+        const defaultAuditCat = masterLists.auditCategorias[0] || ''; 
+        const defaultAtivCat = masterLists.ativCategorias[0] || ''; 
+        const defaultMantCat = masterLists.mantCategorias[0] || ''; 
+        const defaultDocCat = masterLists.docCategorias[0] || ''; 
+    
+        if (currentTab === 'auditoria') {
+            editingAuditId = null;
+            document.getElementById('auditTitulo').value = '';
+            document.getElementById('auditDescricao').value = '';
+            document.getElementById('auditDataPublicacao').value = today();
+            document.getElementById('auditDataPrevisao').value = today();
+            document.getElementById('auditResponsavel').value = ''; 
+            document.getElementById('auditAnexos').innerHTML = '';
+            document.getElementById('auditSetor').value = defaultSetor; 
+            document.getElementById('auditCategoria').value = defaultAuditCat;
+            onCategoryChange('audit');
+            document.getElementById('modalAuditoria').style.display = 'flex';
+        } else if (currentTab === 'atividades') {
+            editingAtivId = null;
+            document.getElementById('ativTitulo').value = '';
+            document.getElementById('ativDescricao').value = '';
+            document.getElementById('ativDataInicio').value = today();
+            document.getElementById('ativDataConclusao').value = today();
+            document.getElementById('ativResponsavel').value = ''; 
+            document.getElementById('ativAnexos').innerHTML = '';
+            document.getElementById('ativSetor').value = defaultSetor; 
+            document.getElementById('ativCategoria').value = defaultAtivCat;
+            onCategoryChange('ativ');
+            document.getElementById('modalAtividades').style.display = 'flex';
+        } else if (currentTab === 'manutencao') {
+            editingMantId = null;
+            document.getElementById('mantTitulo').value = '';
+            document.getElementById('mantDescricao').value = '';
+            document.getElementById('mantUltima').value = today();
+            document.getElementById('mantIntervalo').value = 30;
+            document.getElementById('mantResponsavelTecnico').value = ''; 
+            document.getElementById('mantResponsavelManutencao').value = ''; 
+            document.getElementById('mantAnexos').innerHTML = '';
+            document.getElementById('mantSetor').value = defaultSetor; 
+            document.getElementById('mantCategoria').value = defaultMantCat;
+            onCategoryChange('mant');
+            calculateNextDate('mant');
+            document.getElementById('modalManutencao').style.display = 'flex';
+        } else if (currentTab === 'documentos') { 
+            editingDocId = null;
+            document.getElementById('docTitulo').value = '';
+            document.getElementById('docDescricao').value = '';
+            document.getElementById('docDataCriacao').value = today();
+            document.getElementById('docIntervalo').value = 365; 
+            document.getElementById('docResponsavel').value = '';
+            document.getElementById('docRevisor').value = '';
+            document.getElementById('docFlagDias').value = 30;
+            document.getElementById('docAnexos').innerHTML = '';
+            document.getElementById('docSetor').value = defaultSetor; 
+            document.getElementById('docCategoria').value = defaultDocCat;
+            onCategoryChange('doc');
+            calculateNextDate('doc');
+            document.getElementById('modalDocumentos').style.display = 'flex';
+        }
+    };
+    
+    
+    // SAVE FUNCTIONS
+    function saveAudit() {
+        const item = {
+            id: editingAuditId || Date.now(),
+            titulo: document.getElementById('auditTitulo').value,
+            descricao: document.getElementById('auditDescricao').value,
+            setor: document.getElementById('auditSetor').value, 
+            categoria: document.getElementById('auditCategoria').value,
+            subcategoria: document.getElementById('auditSub').value, 
+            status: document.getElementById('auditStatus').value,
+            dataPublicacao: document.getElementById('auditDataPublicacao').value,
+            dataPrevisao: document.getElementById('auditDataPrevisao').value,
+            responsavel: document.getElementById('auditResponsavel').value, 
+            flagDias: +document.getElementById('auditFlagDias').value,
+            anexos: getAnexos('audit')
+        };
+        if (editingAuditId) audits = audits.map(a => a.id === editingAuditId ? item : a);
+        else audits.push(item);
+        saveAll(); closeModal('modalAuditoria'); renderCards();
+    }
+    
+    function saveAtividade() {
+        const item = {
+            id: editingAtivId || Date.now(),
+            titulo: document.getElementById('ativTitulo').value,
+            descricao: document.getElementById('ativDescricao').value,
+            setor: document.getElementById('ativSetor').value, 
+            categoria: document.getElementById('ativCategoria').value,
+            subcategoria: document.getElementById('ativSub').value, 
+            status: document.getElementById('ativStatus').value,
+            dataInicio: document.getElementById('ativDataInicio').value,
+            dataConclusao: document.getElementById('ativDataConclusao').value,
+            responsavel: document.getElementById('ativResponsavel').value, 
+            flagDias: +document.getElementById('ativFlagDias').value,
+            anexos: getAnexos('ativ')
+        };
+        if (editingAtivId) activities = activities.map(a => a.id === editingAtivId ? item : a);
+        else activities.push(item);
+        saveAll(); closeModal('modalAtividades'); renderCards();
+    }
+    
+    function saveManutencao() {
+        const ultima = document.getElementById('mantUltima').value;
+        const intervalo = parseInt(document.getElementById('mantIntervalo').value);
+        const nextDate = new Date(ultima);
+        nextDate.setDate(nextDate.getDate() + intervalo);
+        const item = {
+            id: editingMantId || Date.now(),
+            titulo: document.getElementById('mantTitulo').value,
+            descricao: document.getElementById('mantDescricao').value,
+            setor: document.getElementById('mantSetor').value, 
+            categoria: document.getElementById('mantCategoria').value,
+            item: document.getElementById('mantItem').value, 
+            ultima,
+            intervalo,
+            proxima: nextDate.toISOString().split('T')[0],
+            responsavelTecnico: document.getElementById('mantResponsavelTecnico').value, 
+            responsavelManutencao: document.getElementById('mantResponsavelManutencao').value, 
+            status: document.getElementById('mantStatus').value,
+            flagDias: +document.getElementById('mantFlagDias').value,
+            anexos: getAnexos('mant')
+        };
+        if (editingMantId) maintenances = maintenances.map(m => m.id === editingMantId ? item : m);
+        else maintenances.push(item);
+        saveAll(); closeModal('modalManutencao'); renderCards();
+    }
+    
+    function saveDocumento() { 
+        const dataCriacao = document.getElementById('docDataCriacao').value;
+        const docIntervalo = parseInt(document.getElementById('docIntervalo').value);
+        const nextRevisao = new Date(dataCriacao);
+        nextRevisao.setDate(nextRevisao.getDate() + docIntervalo);
+        
+        const item = {
+            id: editingDocId || Date.now(),
+            titulo: document.getElementById('docTitulo').value,
+            descricao: document.getElementById('docDescricao').value,
+            setor: document.getElementById('docSetor').value, 
+            categoria: document.getElementById('docCategoria').value,
+            subcategoria: document.getElementById('docSub').value, 
+            status: document.getElementById('docStatus').value,
+            dataCriacao,
+            docIntervalo, 
+            dataProximaRevisao: nextRevisao.toISOString().split('T')[0], 
+            responsavel: document.getElementById('docResponsavel').value,
+            revisor: document.getElementById('docRevisor').value,
+            flagDias: +document.getElementById('docFlagDias').value,
+            anexos: getAnexos('doc')
+        };
+        if (editingDocId) documents = documents.map(d => d.id === editingDocId ? item : d);
+        else documents.push(item);
+        saveAll(); closeModal('modalDocumentos'); renderCards();
+    }
+    
+    function editItem(id, tab) {
+        if (tab === 'auditoria') {
+            const item = audits.find(a => a.id === id);
+            editingAuditId = id;
+            document.getElementById('auditTitulo').value = item.titulo;
+            document.getElementById('auditDescricao').value = item.descricao;
+            document.getElementById('auditSetor').value = item.setor || ''; 
+            document.getElementById('auditCategoria').value = item.categoria;
+            onCategoryChange('audit'); 
+            document.getElementById('auditSub').value = item.subcategoria || ''; 
+            document.getElementById('auditStatus').value = item.status;
+            document.getElementById('auditDataPublicacao').value = item.dataPublicacao;
+            document.getElementById('auditDataPrevisao').value = item.dataPrevisao;
+            document.getElementById('auditResponsavel').value = item.responsavel || ''; 
+            document.getElementById('auditFlagDias').value = item.flagDias;
+            restoreAnexos('audit', item.anexos);
+            document.getElementById('modalAuditoria').style.display = 'flex';
+        } else if (tab === 'atividades') {
+            const item = activities.find(a => a.id === id);
+            editingAtivId = id;
+            document.getElementById('ativTitulo').value = item.titulo;
+            document.getElementById('ativDescricao').value = item.descricao;
+            document.getElementById('ativSetor').value = item.setor || ''; 
+            document.getElementById('ativCategoria').value = item.categoria;
+            onCategoryChange('ativ'); 
+            document.getElementById('ativSub').value = item.subcategoria || ''; 
+            document.getElementById('ativStatus').value = item.status;
+            document.getElementById('ativDataInicio').value = item.dataInicio;
+            document.getElementById('ativDataConclusao').value = item.dataConclusao;
+            document.getElementById('ativResponsavel').value = item.responsavel || ''; 
+            document.getElementById('ativFlagDias').value = item.flagDias;
+            restoreAnexos('ativ', item.anexos);
+            document.getElementById('modalAtividades').style.display = 'flex';
+        } else if (tab === 'manutencao') {
+            const item = maintenances.find(m => m.id === id);
+            editingMantId = id;
+            document.getElementById('mantTitulo').value = item.titulo;
+            document.getElementById('mantDescricao').value = item.descricao;
+            document.getElementById('mantSetor').value = item.setor || ''; 
+            document.getElementById('mantCategoria').value = item.categoria;
+            onCategoryChange('mant'); 
+            document.getElementById('mantItem').value = item.item;
+            document.getElementById('mantUltima').value = item.ultima;
+            document.getElementById('mantIntervalo').value = item.intervalo;
+            document.getElementById('mantResponsavelTecnico').value = item.responsavelTecnico || ''; 
+            document.getElementById('mantResponsavelManutencao').value = item.responsavelManutencao || ''; 
+            document.getElementById('mantStatus').value = item.status;
+            document.getElementById('mantFlagDias').value = item.flagDias;
+            calculateNextDate('mant');
+            restoreAnexos('mant', item.anexos);
+            document.getElementById('modalManutencao').style.display = 'flex';
+        } else if (tab === 'documentos') { 
+            const item = documents.find(d => d.id === id);
+            editingDocId = id;
+            document.getElementById('docTitulo').value = item.titulo;
+            document.getElementById('docDescricao').value = item.descricao;
+            document.getElementById('docSetor').value = item.setor || ''; 
+            document.getElementById('docCategoria').value = item.categoria;
+            onCategoryChange('doc'); 
+            document.getElementById('docSub').value = item.subcategoria || ''; 
+            document.getElementById('docStatus').value = item.status;
+            document.getElementById('docDataCriacao').value = item.dataCriacao;
+            document.getElementById('docIntervalo').value = item.docIntervalo; 
+            document.getElementById('docResponsavel').value = item.responsavel || '';
+            document.getElementById('docRevisor').value = item.revisor || '';
+            document.getElementById('docFlagDias').value = item.flagDias;
+            calculateNextDate('doc');
+            restoreAnexos('doc', item.anexos);
+            document.getElementById('modalDocumentos').style.display = 'flex';
+        }
+    }
+    
+    function deleteItem(id, tab) {
+        if (!confirm('Deseja realmente excluir este registro?')) return;
+        if (tab === 'auditoria') audits = audits.filter(a => a.id !== id);
+        else if (tab === 'atividades') activities = activities.filter(a => a.id !== id);
+        else if (tab === 'manutencao') maintenances = maintenances.filter(m => m.id !== id);
+        else if (tab === 'documentos') documents = documents.filter(d => d.id !== id); 
+        saveAll();
+        renderCards();
+    }
+    
+    // Anexos Logic
+    function addAnexo(prefix) {
+        const container = document.getElementById(prefix + 'Anexos');
+        const div = document.createElement('div');
+        div.className = 'anexo-item';
+        div.innerHTML = `
+            <i class="fas fa-link"></i>
+            <input placeholder="Título do arquivo" class="anexo-title">
+            <input placeholder="Cole a URL aqui..." class="anexo-url">
+            <i class="fas fa-times" style="cursor:pointer; color:var(--ind-red)" onclick="this.parentElement.remove()"></i>
+        `;
+        container.appendChild(div);
+    }
+    function getAnexos(prefix) {
+        return [...document.querySelectorAll(`#${prefix}Anexos .anexo-item`)].map(row => ({
+            titulo: row.querySelector('.anexo-title').value,
+            url: row.querySelector('.anexo-url').value
+        })).filter(a => a.url);
+    }
+    function restoreAnexos(prefix, list) {
+        const container = document.getElementById(prefix + 'Anexos');
+        container.innerHTML = '';
+        (list || []).forEach(a => {
+            addAnexo(prefix);
+            const row = container.lastChild;
+            row.querySelector('.anexo-title').value = a.titulo;
+            row.querySelector('.anexo-url').value = a.url;
+        });
+    }
+    
+    // View Modal
+    function openView(id, tab) {
+        let item, statusList;
+        if (tab === 'auditoria') { item = audits.find(i => i.id === id); statusList = masterLists.auditStatus; }
+        else if (tab === 'atividades') { item = activities.find(i => i.id === id); statusList = masterLists.ativStatus; }
+        else if (tab === 'manutencao') { item = maintenances.find(i => i.id === id); statusList = masterLists.mantStatus; }
+        else if (tab === 'documentos') { item = documents.find(i => i.id === id); statusList = masterLists.docStatus; } 
+    
+        if (!item) return;
+    
+        const statusObj = (statusList || []).find(s => s.name === item.status) || { color: 'default' };
+        const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
+        
+        // Adiciona Subcategoria/Item (Manutenção) na exibição
+        const subcatOrItemLabel = tab === 'manutencao' ? 'Equipamento' : 'Subcategoria';
+        const subcatOrItemValue = tab === 'manutencao' ? item.item : item.subcategoria;
+    
+    
+        let detailsGrid = '';
+        if (tab === 'auditoria') {
+            detailsGrid = `
+                <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
+                <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
+                <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
+                <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
+                <div class="view-item"><label>Publicação</label><div>${formatBR(item.dataPublicacao)}</div></div>
+                <div class="view-item"><label>Previsão</label><div>${formatBR(item.dataPrevisao)}</div></div>
+                <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+            `;
+        } else if (tab === 'atividades') {
+            detailsGrid = `
+                <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
+                <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
+                <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
+                <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
+                <div class="view-item"><label>Data Início</label><div>${formatBR(item.dataInicio)}</div></div>
+                <div class="view-item"><label>Data Conclusão</label><div>${formatBR(item.dataConclusao)}</div></div>
+                <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+            `;
+        } else if (tab === 'manutencao') {
+            detailsGrid = `
+                <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
+                <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
+                <div class="view-item"><label>Equipamento</label><div>${item.item}</div></div>
+                <div class="view-item"><label>Periodicidade</label><div>${item.intervalo} dias</div></div>
+                <div class="view-item"><label>Última Manutenção</label><div>${formatBR(item.ultima)}</div></div>
+                <div class="view-item"><label>Próxima Manutenção</label><div>${formatBR(item.proxima)}</div></div>
+                <div class="view-item"><label>Responsável Técnico</label><div>${item.responsavelTecnico || 'ND'}</div></div>
+                <div class="view-item"><label>Responsável pela Manutenção</label><div>${item.responsavelManutencao || 'ND'}</div></div>
+                <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+            `;
+        } else if (tab === 'documentos') { 
+            detailsGrid = `
+                <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
+                <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
+                <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
+                <div class="view-item"><label>Periodicidade</label><div>${item.docIntervalo} dias</div></div>
+                <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
+                <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
+                <div class="view-item"><label>Data Criação</label><div>${formatBR(item.dataCriacao)}</div></div>
+                <div class="view-item"><label>Próx. Revisão</label><div>${formatBR(item.dataProximaRevisao)}</div></div>
+                <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+            `;
+        }
+    
+        const anexosHtml = (item.anexos || []).map(a => 
+            `<a href="${a.url}" target="_blank" class="file-chip"><i class="fas fa-external-link-alt"></i> ${a.titulo || 'Anexo'}</a>`
+        ).join('');
+    
+        const html = `
+            <div class="view-header">
+                <h2 style="margin:0; color:var(--primary)">${item.titulo}</h2>
+                <span class="view-status" style="background-color:${statusColorVar}">${item.status}</span>
+            </div>
+            <div class="view-grid">
+                ${detailsGrid}
+            </div>
+            <div>
+                <h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase">Descrição Detalhada</h4>
+                <div class="view-desc">${item.descricao || 'Sem descrição.'}</div>
+            </div>
+            ${anexosHtml ? `<div class="view-files"><h4>Anexos</h4>${anexosHtml}</div>` : ''}
+        `;
+        
+        document.getElementById('viewContent').innerHTML = html;
+        document.getElementById('viewModal').style.display = 'flex';
+    }
+    
+    // List Manager & Color Selection
+    function openListManager(genericKey) {
+        let isStatus = false;
+        let listName;
+        
+        if (genericKey === 'setores') { 
+            currentListKey = 'setores';
+            listName = 'SETORES';
+        } else if (genericKey === 'categorias') {
+            if(currentTab === 'auditoria') currentListKey = 'auditCategorias';
+            else if(currentTab === 'atividades') currentListKey = 'ativCategorias';
+            else if(currentTab === 'manutencao') currentListKey = 'mantCategorias';
+            else currentListKey = 'docCategorias'; 
+            listName = 'CATEGORIA';
+        } else if (genericKey === 'subcategorias' || genericKey === 'itens') { 
+            
+            const prefix = getTabPrefix(currentTab); 
+            const catSelect = document.getElementById(`${prefix}Categoria`);
+            
+            if (!catSelect) { 
+                 alert(`Elemento de Categoria (${prefix}Categoria) não encontrado. Verifique se você abriu o modal correspondente à aba ativa.`); 
+                 return; 
+            }
+    
+            const cat = catSelect.value;
+            
+            if (!cat) { alert("Selecione uma Categoria antes de gerenciar Subcategorias/Itens."); return; }
+            
+            let subcatMapKey;
+            if(currentTab === 'auditoria') subcatMapKey = 'auditSubcats';
+            else if(currentTab === 'atividades') subcatMapKey = 'ativSubcats';
+            else if(currentTab === 'manutencao') subcatMapKey = 'mantItens';
+            else subcatMapKey = 'docSubcats';
+            
+            currentListKey = `${subcatMapKey}_${cat}`; 
+            listName = `SUBCATEGORIAS / ITENS DE: ${cat}`;
+            
+        } else if (genericKey === 'status') {
+            if(currentTab === 'auditoria') currentListKey = 'auditStatus';
+            else if(currentTab === 'atividades') currentListKey = 'ativStatus';
+            else if(currentTab === 'manutencao') currentListKey = 'mantStatus';
+            else currentListKey = 'docStatus';
+            isStatus = true;
+            listName = 'STATUS';
+        } else {
+            currentListKey = genericKey; 
+            listName = genericKey.toUpperCase();
+        }
+        
+        document.getElementById('listTitle').textContent = `Gerenciar: ${listName}`;
+        const body = document.getElementById('listBody');
+        body.innerHTML = '';
+    
+        if(isStatus) {
+            document.getElementById('colorPickerContainer').style.display = 'block';
+            selectColor('default', document.querySelector('.bg-default')); 
+        } else {
+            document.getElementById('colorPickerContainer').style.display = 'none';
+        }
+    
+        let listToRender;
+        let baseKey = currentListKey.split('_')[0]; 
+    
+        if (currentListKey.includes('_')) { 
+            const cat = currentListKey.split('_')[1];
+            masterLists[baseKey] = masterLists[baseKey] || {}; 
+            listToRender = masterLists[baseKey][cat] || [];
+        } else {
+            listToRender = masterLists[currentListKey] || [];
+        }
+        
+        listToRender.forEach(val => {
+            let displayHtml = '', itemVal = '';
+            if (typeof val === 'object') {
+                const colorVar = colorMap[val.color] || colorMap['default'];
+                displayHtml = `<span class="color-dot" style="background-color:${colorVar}"></span>${val.name}`;
+                itemVal = val.name; 
+            } else {
+                displayHtml = val;
+                itemVal = val;
+            }
+    
+            body.innerHTML += `<tr>
+                <td>${displayHtml}</td>
+                <td class="remove" onclick="removeFromList('${currentListKey}','${itemVal}')"><i class="fas fa-trash"></i></td>
+            </tr>`;
+        });
+        
+        const input = document.getElementById('newListItem');
+        input.value = '';
+        input.onkeydown = (e) => { if(e.key === 'Enter') addToList(); };
+        
+        document.getElementById('modalListManager').style.display = 'flex';
+    }
+    
+    function selectColor(color, el) {
+        selectedColorTemp = color;
+        document.querySelectorAll('.color-option').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+    }
+    
+    function addToList() {
+        const val = document.getElementById('newListItem').value.trim();
+        if (!val) return;
+        
+        const isStatus = currentListKey.toLowerCase().includes('status');
+        const isSubcat = currentListKey.includes('_'); 
+        
+        let list;
+        if (isSubcat) {
+            const [baseKey, cat] = currentListKey.split('_');
+            masterLists[baseKey][cat] = masterLists[baseKey][cat] || []; 
+            list = masterLists[baseKey][cat];
+        } else {
+            list = masterLists[currentListKey];
+        }
+    
+        if (isStatus) {
+            if(list.some(s => s.name === val)) return;
+            list.push({ name: val, color: selectedColorTemp });
+        } else {
+            if(list.includes(val)) return;
+            list.push(val);
+        }
+    
+        // Ordenação
+        list.sort((a,b) => (typeof a === 'object' ? a.name : a).localeCompare(typeof b === 'object' ? b.name : b));
+        
+        saveAll(); populateSelects();
+        
+        let genericTag;
+        if(isSubcat) genericTag = 'subcategorias';
+        else if(isStatus) genericTag = 'status';
+        else if(currentListKey === 'setores') genericTag = 'setores'; 
+        else genericTag = 'categorias';
+        
+        openListManager(genericTag);
+    }
+    
+    function removeFromList(key, val) {
+        const isStatus = key.toLowerCase().includes('status');
+        const isSubcat = key.includes('_');
+        
+        let list;
+        if (isSubcat) {
+            const [baseKey, cat] = key.split('_');
+            list = masterLists[baseKey][cat];
+            if (isStatus) list = list.filter(s => s.name !== val);
+            else list = list.filter(i => i !== val);
+            masterLists[baseKey][cat] = list; 
+        } else {
+            list = masterLists[key];
+            if (isStatus) masterLists[key] = list.filter(s => s.name !== val);
+            else masterLists[key] = list.filter(i => i !== val);
+        }
+    
+        saveAll(); populateSelects();
+        
+        let genericTag;
+        if(isSubcat) genericTag = 'subcategorias';
+        else if(isStatus) genericTag = 'status';
+        else if(key === 'setores') genericTag = 'setores'; 
+        else genericTag = 'categorias';
+        openListManager(genericTag);
+    }
+    // --- FUNÇÕES DE BACKUP LOCAL (ARQUIVO) ---
+    
+    function exportLocalData() {
+        const data = {
+            audits,
+            activities,
+            maintenances,
+            documents, 
+            masterLists,
+            exportDate: new Date().toISOString(),
+            source: "local_export"
+        };
+        
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "Auditoria_Lamic_" + today() + ".json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    }
+    
+    function importLocalData(input) {
+        const file = input.files[0];
+        if (!file) return;
+    
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                
+                // Validação básica
+                if (data.audits && data.masterLists) {
+                    if(confirm("ATENÇÃO: Isso substituirá os dados atuais e atualizará a nuvem. Deseja continuar?")) {
+                        
+                        audits = data.audits || [];
+                        activities = data.activities || [];
+                        maintenances = data.maintenances || [];
+                        documents = data.documents || []; 
+                        
+                        masterLists = { ...defaultMasterLists, ...data.masterLists };
+                        if (Array.isArray(masterLists.mantItens)) {
+                            masterLists.mantItens = defaultMasterLists.mantItens; 
+                        }
+    
+    
+                        await saveAll(false); 
+                        
+                        alert("Backup local restaurado e sincronizado com a nuvem com sucesso!");
+                        
+                        populateSelects();
+                        switchTab(currentTab); 
+                        input.value = ''; 
+                    }
+                } else {
+                    alert("O arquivo selecionado não é um backup válido deste sistema.");
+                }
+            } catch (err) {
+                alert("Erro ao ler o arquivo: " + err.message);
+            }
+        };
+        reader.readAsText(file);
+    }
+    
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    
+    // Inicialização (garante que os selects sejam preenchidos ao carregar a página)
+    document.addEventListener('DOMContentLoaded', () => {
+        populateYearSelects();
+        populateSelects();
+    });
+    
+    document.onkeydown = function(event) {
+        if (
+            event.keyCode === 123 ||  // F12
+            (event.ctrlKey && event.shiftKey && event.keyCode === 'I'.charCodeAt(0)) ||  // Ctrl + Shift + I
+            (event.ctrlKey && event.shiftKey && event.keyCode === 'J'.charCodeAt(0)) ||  // Ctrl + Shift + J
+            (event.ctrlKey && event.shiftKey && event.keyCode === 'C'.charCodeAt(0)) ||  // Ctrl + Shift + C
+            (event.ctrlKey && event.keyCode === 'U'.charCodeAt(0)) ||  // Ctrl + U
+            (event.ctrlKey && event.keyCode === 'S'.charCodeAt(0))  // Ctrl + S
+        ) {
+            event.preventDefault();
+            return false;
+        }
+    };
+            document.addEventListener('contextmenu', function(evento) {
+                    evento.preventDefault();
+                });
+    
+    </script>
 </body>
 </html>
