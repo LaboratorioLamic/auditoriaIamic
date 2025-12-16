@@ -947,6 +947,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fMantItem" class="filter-input" onchange="renderCards()">
                         <option value="">Item: Todos</option>
                     </select>
+                    <select id="fMantTipo" class="filter-input" onchange="renderCards()">
+                        <option value="">Tipo: Todos</option>
+                    </select>
                     <select id="fMantStatus" class="filter-input" onchange="renderCards()">
                         <option value="">Status: Todos</option>
                     </select>
@@ -1071,6 +1074,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                             </select>
                         </div>
                         <div class="field-group">
+                            <label>Permite gerenciar listas suspensas?</label>
+                            <select id="cfgCanManageLists">
+                                <option value="false">Não</option>
+                                <option value="true">Sim</option>
+                            </select>
+                        </div>
+                        <div class="field-group">
                             <label>Status do login</label>
                             <select id="cfgStatus">
                                 <option value="true">Ativo</option>
@@ -1107,6 +1117,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                                 <th>Editar</th>
                                 <th>Status</th>
                                 <th>Excluir cards</th>
+                                <th>Gerenciar listas</th>
                                 <th style="text-align:right;">Ações</th>
                             </tr>
                         </thead>
@@ -1306,6 +1317,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <div class="select-wrapper">
                     <select id="mantItem"></select>
                     <button onclick="openListManager('itens')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Tipo</label>
+                <div class="select-wrapper">
+                    <select id="mantTipo"></select>
+                    <button onclick="openListManager('tipos')"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
             <div class="field-group">
@@ -1537,6 +1555,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         mantMarcadores: [],
         docMarcadores: [],
     
+        // Lista de Tipos para Manutenção
+        mantTipos: [],
+    
         // O unifiedStatusMap também será removido ou gerado dinamicamente para usar apenas os nomes das listas acima.
     };
     
@@ -1591,7 +1612,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         
         // Manutenção
         mantTitulo: 'Título', mantDescricao: 'Descrição', mantSetor: 'Setor', mantCategoria: 'Categoria',
-        mantItem: 'Item/Equipamento', mantUltima: 'Última Manutenção', mantIntervalo: 'Periodicidade (Dias)',
+        mantItem: 'Item/Equipamento', mantTipo: 'Tipo', mantUltima: 'Última Manutenção', mantIntervalo: 'Periodicidade (Dias)',
         mantResponsavelTecnico: 'Responsável Técnico', mantResponsavelManutencao: 'Responsável Manutenção',
         mantStatus: 'Status', mantFlagDias: 'Alerta (Dias)', mantProxima: 'Próxima Manutenção',
         mantMarcador: 'Marcador',
@@ -1693,13 +1714,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const canDeleteCards = !!u.canDeleteCards;
             // Por padrão, usuários podem editar cards, a menos que explicitamente marcado como somente leitura
             const canEditCards = (u.canEditCards !== undefined ? !!u.canEditCards : true);
+            const canManageLists = !!u.canManageLists;
             return {
                 ...u,
                 name,
                 user,
                 active: active !== false, // qualquer coisa diferente de false é considerado ativo
                 canDeleteCards,
-                canEditCards
+                canEditCards,
+                canManageLists
             };
         });
     }
@@ -1725,6 +1748,14 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         } else {
             box.style.display = 'none';
         }
+        applyListManagerPermissions();
+    }
+
+    function applyListManagerPermissions() {
+        const canManage = userCanManageLists();
+        document.querySelectorAll('button[onclick*="openListManager"]').forEach(btn => {
+            btn.style.display = canManage ? 'block' : 'none';
+        });
     }
 
     function userIsAdmin() {
@@ -1741,6 +1772,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         if (!currentuser) return false;
         if (userIsAdmin()) return true;
         return currentuser.canEditCards === true;
+    }
+
+    function userCanManageLists() {
+        if (!currentuser) return false;
+        if (userIsAdmin()) return true;
+        return currentuser.canManageLists === true;
     }
 
     function userAllowedTabs() {
@@ -1840,6 +1877,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     currentuser = found;
                     updateCurrentuserUI();
                     applyuserPermissionsToTabs();
+                    applyListManagerPermissions();
                     loading.innerHTML = '<i class="fas fa-check"></i> Login realizado. Carregando dados...';
                     await loadCloudData();
                     document.getElementById('loginOverlay').style.display = 'none';
@@ -2462,13 +2500,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const setor = document.getElementById(filterSetorId).value; 
             const cat = document.getElementById(filterCatId).value;
             const itemVal = document.getElementById(filterSubcatId).value;
+            const tipo = document.getElementById('fMantTipo').value;
             const stat = document.getElementById('fMantStatus').value;
             const dateType = document.getElementById('fMantDateType').value;
-    
+            
             data = maintenances.filter(item => {
                 if (setor && item.setor !== setor) return false; 
                 if (cat && item.categoria !== cat) return false;
                 if (itemVal && item.item !== itemVal) return false;
+                if (tipo && item.tipo !== tipo) return false;
                 if (stat && item.status !== stat) return false;
     
                 if (dateType !== 'all') {
@@ -2615,6 +2655,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             } else if (currentTab === 'manutencao') {
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
+                    <div class="card-info-row"><i class="fas fa-tag"></i> <span>${item.tipo || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
                     <div class="card-info-row"><i class="far fa-clock"></i> <span>Próx: <strong>${formatBR(item.proxima)}</strong></span></div>
                 `;
@@ -2707,7 +2748,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     const currentValues = {
         audit: { cat: document.getElementById('auditCategoria')?.value, status: document.getElementById('auditStatus')?.value, mark: document.getElementById('auditMarcador')?.value },
         ativ: { cat: document.getElementById('ativCategoria')?.value, status: document.getElementById('ativStatus')?.value, mark: document.getElementById('ativMarcador')?.value },
-        mant: { cat: document.getElementById('mantCategoria')?.value, status: document.getElementById('mantStatus')?.value, mark: document.getElementById('mantMarcador')?.value },
+        mant: { cat: document.getElementById('mantCategoria')?.value, status: document.getElementById('mantStatus')?.value, mark: document.getElementById('mantMarcador')?.value, tipo: document.getElementById('mantTipo')?.value },
         doc: { cat: document.getElementById('docCategoria')?.value, status: document.getElementById('docStatus')?.value, mark: document.getElementById('docMarcador')?.value }
     };
 
@@ -2737,10 +2778,22 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const markerSelect = document.getElementById(`${p}Marcador`);
         markerSelect.innerHTML = `<option value="">Selecionar marcador</option>` + makeStatusOpts(masterLists[`${p}Marcadores`] || []);
         
+        // Campo Tipo específico para Manutenção
+        if (p === 'mant') {
+            const tipoSelect = document.getElementById('mantTipo');
+            if (tipoSelect) {
+                tipoSelect.innerHTML = `<option value="">Selecionar tipo</option>` + makeOpts(masterLists.mantTipos || []);
+            }
+        }
+        
         // Restaura os valores após o preenchimento do HTML
         if (currentValues[p].cat) document.getElementById(`${p}Categoria`).value = currentValues[p].cat;
         if (currentValues[p].status) document.getElementById(`${p}Status`).value = currentValues[p].status;
         if (currentValues[p].mark) markerSelect.value = currentValues[p].mark;
+        if (p === 'mant' && currentValues[p].tipo) {
+            const tipoSelect = document.getElementById('mantTipo');
+            if (tipoSelect) tipoSelect.value = currentValues[p].tipo;
+        }
     });
 
     // Atualiza Subcategorias/Itens baseado na categoria restaurada
@@ -2760,6 +2813,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     document.getElementById('fAtivCat').innerHTML = makeFilterOpts(masterLists.ativCategorias, "Categoria: Todas");
     document.getElementById('fAtivStatus').innerHTML = makeStatusFilterOpts(masterLists.ativStatus, "Status: Todos");
     document.getElementById('fMantCat').innerHTML = makeFilterOpts(masterLists.mantCategorias, "Categoria: Todas");
+    document.getElementById('fMantTipo').innerHTML = makeFilterOpts(masterLists.mantTipos || [], "Tipo: Todos");
     document.getElementById('fMantStatus').innerHTML = makeStatusFilterOpts(masterLists.mantStatus, "Status: Todos");
     document.getElementById('fDocCat').innerHTML = makeFilterOpts(masterLists.docCategorias, "Categoria: Todas"); 
     document.getElementById('fDocStatus').innerHTML = makeStatusFilterOpts(masterLists.docStatus, "Status: Todos"); 
@@ -3017,6 +3071,7 @@ function resetModal(prefix) {
         document.getElementById('mantFlagDias').value = 7;
         const defaultMantCat = masterLists.mantCategorias[0] || '';
         document.getElementById('mantCategoria').value = defaultMantCat;
+        document.getElementById('mantTipo').value = '';
         calculateNextDate('mant');
     } else if (prefix === 'doc') {
         document.getElementById('docDataCriacao').value = today();
@@ -3201,6 +3256,7 @@ document.getElementById('addBtn').onclick = () => {
             setor: document.getElementById('mantSetor').value, 
             categoria: document.getElementById('mantCategoria').value,
             item: document.getElementById('mantItem').value, 
+            tipo: document.getElementById('mantTipo').value,
             ultima,
             intervalo, // Salva o novo intervalo
             proxima: nextDate.toISOString().split('T')[0], // Salva a nova data calculada
@@ -3341,6 +3397,7 @@ document.getElementById('addBtn').onclick = () => {
             document.getElementById('mantCategoria').value = item.categoria;
             onCategoryChange('mant'); 
             document.getElementById('mantItem').value = item.item;
+            document.getElementById('mantTipo').value = item.tipo || '';
             document.getElementById('mantUltima').value = item.ultima;
             document.getElementById('mantIntervalo').value = item.intervalo; // Corrigido
             document.getElementById('mantResponsavelTecnico').value = item.responsavelTecnico || ''; 
@@ -3484,6 +3541,7 @@ document.getElementById('addBtn').onclick = () => {
         } else if (tab === 'manutencao') {
             detailsGrid = `
                 <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
+                <div class="view-item"><label>Tipo</label><div>${item.tipo || 'ND'}</div></div>
                 <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
                 <div class="view-item"><label>Equipamento</label><div>${item.item}</div></div>
                 <div class="view-item"><label>Periodicidade</label><div>${item.intervalo} dias</div></div>
@@ -3691,6 +3749,14 @@ document.getElementById('addBtn').onclick = () => {
             else currentListKey = 'docMarcadores';
             isStatus = true; // usa a mesma lógica de objetos com cor
             listname = 'MARCADORES';
+        } else if (genericKey === 'tipos') {
+            if(currentTab === 'manutencao') {
+                currentListKey = 'mantTipos';
+                listname = 'TIPOS';
+            } else {
+                alert('Tipos disponíveis apenas para Manutenção.');
+                return;
+            }
         } else {
             currentListKey = genericKey; 
             listname = genericKey.toUpperCase();
@@ -3816,6 +3882,8 @@ document.getElementById('addBtn').onclick = () => {
             openListManager('marcadores');
         } else if (currentListKey === 'setores') {
             openListManager('setores');
+        } else if (currentListKey === 'mantTipos') {
+            openListManager('tipos');
         } else {
             openListManager('categorias');
         }
@@ -3899,6 +3967,8 @@ document.getElementById('addBtn').onclick = () => {
             openListManager('marcadores');
         } else if (key === 'setores') {
             openListManager('setores');
+        } else if (key === 'mantTipos') {
+            openListManager('tipos');
         } else {
             openListManager('categorias');
         }
@@ -4023,6 +4093,7 @@ document.getElementById('addBtn').onclick = () => {
                 const editLabel = u.canEditCards === false ? 'Somente leitura' : 'Editar';
                 const statusLabel = u.active === false ? 'Inativo' : 'Ativo';
                 const canDel = u.canDeleteCards ? 'Sim' : 'Não';
+                const canManage = u.canManageLists ? 'Sim' : 'Não';
                 tbody.innerHTML += `
                     <tr>
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${u.name || '-'}</td>
@@ -4031,6 +4102,7 @@ document.getElementById('addBtn').onclick = () => {
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${editLabel}</td>
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${statusLabel}</td>
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:center;">${canDel}</td>
+                        <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:center;">${canManage}</td>
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:right;">
                             <button class="btn-clear" style="padding:4px 8px; font-size:12px;" onclick="edituserConfig(${idx})"><i class="fas fa-pen"></i></button>
                             <button class="btn-clear" style="padding:4px 8px; font-size:12px; color:var(--ind-red);" onclick="deleteuserConfig(${idx})"><i class="fas fa-trash"></i></button>
@@ -4046,6 +4118,7 @@ document.getElementById('addBtn').onclick = () => {
         const password = document.getElementById('cfgPassword').value;
         const canEdit = document.getElementById('cfgCanEdit').value === 'true';
         const canDelete = document.getElementById('cfgCanDelete').value === 'true';
+        const canManageLists = document.getElementById('cfgCanManageLists').value === 'true';
         const isActive = document.getElementById('cfgStatus').value !== 'false';
         const tabs = Array.from(document.querySelectorAll('.cfg-tab'))
             .filter(chk => chk.checked)
@@ -4074,6 +4147,7 @@ document.getElementById('addBtn').onclick = () => {
                 tabs,
                 canEditCards: canEdit,
                 canDeleteCards: canDelete,
+                canManageLists: canManageLists,
                 active: isActive
             });
         } else {
@@ -4084,6 +4158,7 @@ document.getElementById('addBtn').onclick = () => {
             u.tabs = tabs;
             u.canEditCards = canEdit;
             u.canDeleteCards = canDelete;
+            u.canManageLists = canManageLists;
             u.active = isActive;
         }
 
@@ -4094,6 +4169,7 @@ document.getElementById('addBtn').onclick = () => {
                 currentuser = users[editinguserIndex === null ? users.length - 1 : editinguserIndex];
                 updateCurrentuserUI();
                 applyuserPermissionsToTabs();
+                applyListManagerPermissions();
             }
             resetConfigForm();
             alert('Usuário salvo com sucesso.');
@@ -4110,6 +4186,7 @@ document.getElementById('addBtn').onclick = () => {
         document.getElementById('cfgPassword').value = '';
         document.getElementById('cfgCanEdit').value = (u.canEditCards === false ? 'false' : 'true');
         document.getElementById('cfgCanDelete').value = u.canDeleteCards ? 'true' : 'false';
+        document.getElementById('cfgCanManageLists').value = u.canManageLists ? 'true' : 'false';
         document.getElementById('cfgStatus').value = (u.active === false ? 'false' : 'true');
         const tabs = Array.isArray(u.tabs) && u.tabs.length > 0 ? u.tabs : ['dashboard', 'auditoria'];
         document.querySelectorAll('.cfg-tab').forEach(chk => {
