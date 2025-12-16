@@ -356,7 +356,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 .modal-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:32px;padding-top:20px;border-top:1px solid var(--border)}
 .btn-cancel{background:#f3f4f6;color:var(--text);padding:12px 24px;border-radius:10px;border:none;font-weight:500;cursor:pointer}
 .btn-save{background:var(--ind-green);color:#fff;padding:12px 24px;border-radius:10px;border:none;font-weight:500;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.3)}
-
+.btn-edit{background:var(--c-blue);color:#fff;padding:12px 24px;border-radius:10px;border:none;font-weight:500;cursor:pointer;box-shadow:0 4px 12px rgba(34, 37, 197, 0.3)}
 /* VIEW MODAL */
 #viewContent { display: flex; flex-direction: column; gap: 24px; }
 .view-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
@@ -671,9 +671,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     <button id="tabDashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</button> 
     <div class="sidebar-divider"></div>
     <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Auditoria</button>
-    
-    <button id="tabDocumentos"><i class="fa-solid fa-file-alt"></i> Documentos</button> 
     <button id="tabAtividades"><i class="fa-solid fa-list-check"></i> Gestão de Atividades</button>
+    <button id="tabDocumentos"><i class="fa-solid fa-file-alt"></i> Documentos</button> 
     <button id="tabManutencao"><i class="fa-solid fa-wrench"></i> Manutenção</button>
     <div class="sidebar-divider"></div>
     <button id="tabBackup"><i class="fa-solid fa-database"></i> Backup</button>
@@ -1403,6 +1402,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         <div id="viewContent"></div>
         <div class="modal-actions">
             <button class="btn-cancel" onclick="closeModal('viewModal')">Fechar</button>
+            <button class="btn-edit" id="btnViewEdit" onclick="editCurrentViewItem()" style="display:none;">Editar</button>
         </div>
     </div>
 </div>
@@ -1497,6 +1497,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     let currentListKey = null; 
     let selectedColorTemp = 'default';
     let currentHistoryPage = 1; // NOVO: Para controle da paginação do histórico
+    let currentViewItemId = null;   // ID do item atualmente aberto na visualização
+    let currentViewTab = null;      // Aba do item atualmente aberto na visualização
     
     // --- UTILITÁRIOS ---
     const today = () => new Date().toISOString().split('T')[0];
@@ -2374,6 +2376,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         }
     
         const canEdit = userCanEditCards();
+        const canDelete = userCanDeleteCards();
 
         data.forEach(item => {
             const div = document.createElement('div');
@@ -2435,12 +2438,16 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 ? `<i class="fas fa-pen" onclick="editItem(${item.id}, '${currentTab}')" title="Editar"></i>`
                 : '';
 
+            const deleteIconHtml = canDelete
+                ? `<i class="fas fa-trash" onclick="deleteItem(${item.id}, '${currentTab}')" title="Excluir"></i>`
+                : '';
+
             div.innerHTML = `
                 <div class="card-header">
                     <span class="tag" style="background-color:${statusColorVar}">${item.status || 'Novo'}</span>
                     <div class="card-actions" onclick="event.stopPropagation()">
                         ${editIconHtml}
-                        <i class="fas fa-trash" onclick="deleteItem(${item.id}, '${currentTab}')" title="Excluir"></i>
+                        ${deleteIconHtml}
                     </div>
                 </div>
                 <div style="padding:0 10px; margin-bottom:12px;">
@@ -3195,6 +3202,8 @@ document.getElementById('addBtn').onclick = () => {
     // View Modal e Histórico com Paginação
     function openView(id, tab) {
         currentHistoryPage = 1; // Garante que a primeira página seja carregada
+        currentViewItemId = id;
+        currentViewTab = tab;
         renderViewContent(id, tab);
     }
     
@@ -3290,7 +3299,10 @@ document.getElementById('addBtn').onclick = () => {
         const end = start + itemsPerPage;
         const paginatedHistory = allHistory.slice(start, end);
 
-        const historyHtml = paginatedHistory.map(h => {
+        const isAdmin = (typeof userIsAdmin === 'function') ? userIsAdmin() : false;
+
+        const historyHtml = paginatedHistory.map((h, idx) => {
+            const globalIndex = start + idx;
             const date = new Date(h.timestamp);
             const dateStr = date.toLocaleDateString('pt-BR');
             const timeStr = date.toLocaleTimeString('pt-BR');
@@ -3303,8 +3315,16 @@ document.getElementById('addBtn').onclick = () => {
             }
             
             const usuario = h.usuario ? ` - ${h.usuario}` : '';
+
+            const deleteBtn = isAdmin
+                ? `<button class="history-delete" title="Excluir este registro" onclick="deleteHistoryEntry(${id}, '${tab}', ${globalIndex})" style="border:none; background:transparent; color:var(--ind-red); cursor:pointer; font-size:13px; float:right; margin-left:8px;">
+                        <i class="fas fa-trash"></i>
+                   </button>`
+                : '';
+
             return `
                 <div class="history-item">
+                    ${deleteBtn}
                     <strong>${h.acao}${usuario}</strong>
                     <small>${dateStr} às ${timeStr}</small>
                     ${details}
@@ -3350,6 +3370,45 @@ document.getElementById('addBtn').onclick = () => {
         
         document.getElementById('viewContent').innerHTML = html;
         document.getElementById('viewModal').style.display = 'flex';
+
+        // Controla visibilidade do botão "Editar" conforme permissão
+        const btnEdit = document.getElementById('btnViewEdit');
+        if (btnEdit) {
+            btnEdit.style.display = userCanEditCards() ? 'inline-flex' : 'none';
+        }
+    }
+
+    function deleteHistoryEntry(id, tab, historyIndex) {
+        // Somente admin pode apagar histórico
+        if (!(typeof userIsAdmin === 'function') || !userIsAdmin()) return;
+        if (!confirm('Deseja realmente excluir este registro do histórico?')) return;
+
+        let item;
+        if (tab === 'auditoria') { item = audits.find(i => i.id === id); }
+        else if (tab === 'atividades') { item = activities.find(i => i.id === id); }
+        else if (tab === 'manutencao') { item = maintenances.find(i => i.id === id); }
+        else if (tab === 'documentos') { item = documents.find(i => i.id === id); }
+
+        if (!item || !Array.isArray(item.historico) || item.historico.length === 0) return;
+
+        // historyIndex é baseado na lista invertida (mais recente primeiro)
+        const originalIndex = item.historico.length - 1 - historyIndex;
+        if (originalIndex < 0 || originalIndex >= item.historico.length) return;
+
+        item.historico.splice(originalIndex, 1);
+        saveAll();
+        renderViewContent(id, tab);
+    }
+
+    function editCurrentViewItem() {
+        if (!userCanEditCards()) {
+            alert('Você não tem permissão para editar cards. Seu acesso está configurado como somente leitura.');
+            return;
+        }
+        if (!currentViewItemId || !currentViewTab) return;
+
+        closeModal('viewModal');
+        editItem(currentViewItemId, currentViewTab);
     }
     
     // List Manager & Color Selection
@@ -3459,7 +3518,19 @@ document.getElementById('addBtn').onclick = () => {
         
         const isStatus = currentListKey.toLowerCase().includes('status');
         const isSubcat = currentListKey.includes('_'); 
-        
+
+        // Guarda a categoria e a subcategoria/ item atualmente selecionados no modal da aba ativa
+        const prefix = getTabPrefix(currentTab);
+        const currentCatSelect = document.getElementById(`${prefix}Categoria`);
+        const selectedCategoryBefore = currentCatSelect ? currentCatSelect.value : null;
+        let currentSubSelect = null;
+        if (prefix === 'mant') {
+            currentSubSelect = document.getElementById(`${prefix}Item`);
+        } else {
+            currentSubSelect = document.getElementById(`${prefix}Sub`);
+        }
+        const selectedSubBefore = currentSubSelect ? currentSubSelect.value : null;
+
         let list;
         if (isSubcat) {
             const [baseKey, cat] = currentListKey.split('_');
@@ -3481,6 +3552,23 @@ document.getElementById('addBtn').onclick = () => {
         list.sort((a,b) => (typeof a === 'object' ? a.name : a).localeCompare(typeof b === 'object' ? b.name : b));
         
         saveAll(); populateSelects();
+
+        // Restaura categoria e subcategoria/item após recriar os selects
+        if (selectedCategoryBefore) {
+            const restoredCat = document.getElementById(`${prefix}Categoria`);
+            if (restoredCat) {
+                restoredCat.value = selectedCategoryBefore;
+                // Recarrega a lista de subcategorias/itens para a categoria correta
+                onCategoryChange(prefix);
+
+                if (selectedSubBefore) {
+                    const restoredSub = prefix === 'mant'
+                        ? document.getElementById(`${prefix}Item`)
+                        : document.getElementById(`${prefix}Sub`);
+                    if (restoredSub) restoredSub.value = selectedSubBefore;
+                }
+            }
+        }
         
         let genericTag;
         if(isSubcat) genericTag = 'subcategorias';
@@ -3494,7 +3582,38 @@ document.getElementById('addBtn').onclick = () => {
     function removeFromList(key, val) {
         const isStatus = key.toLowerCase().includes('status');
         const isSubcat = key.includes('_');
-        
+
+        // Bloqueia exclusão de categorias que possuem subcategorias/itens vinculados
+        if (!isStatus && !isSubcat) {
+            const categoryToSubcatMap = {
+                auditCategorias: 'auditSubcats',
+                ativCategorias: 'ativSubcats',
+                docCategorias: 'docSubcats',
+                mantCategorias: 'mantItens'
+            };
+            const subcatKey = categoryToSubcatMap[key];
+            if (subcatKey) {
+                const map = masterLists[subcatKey] || {};
+                const children = map[val] || [];
+                if (Array.isArray(children) && children.length > 0) {
+                    alert('Não é possível excluir esta categoria pois existem subcategorias/itens vinculados. Exclua primeiro as subcategorias/itens.');
+                    return;
+                }
+            }
+        }
+
+        // Guarda a categoria e a subcategoria/ item atualmente selecionados no modal da aba ativa
+        const prefix = getTabPrefix(currentTab);
+        const currentCatSelect = document.getElementById(`${prefix}Categoria`);
+        const selectedCategoryBefore = currentCatSelect ? currentCatSelect.value : null;
+        let currentSubSelect = null;
+        if (prefix === 'mant') {
+            currentSubSelect = document.getElementById(`${prefix}Item`);
+        } else {
+            currentSubSelect = document.getElementById(`${prefix}Sub`);
+        }
+        const selectedSubBefore = currentSubSelect ? currentSubSelect.value : null;
+
         let list;
         if (isSubcat) {
             const [baseKey, cat] = key.split('_');
@@ -3509,6 +3628,23 @@ document.getElementById('addBtn').onclick = () => {
         }
     
         saveAll(); populateSelects();
+
+        // Restaura categoria e subcategoria/item após recriar os selects
+        if (selectedCategoryBefore) {
+            const restoredCat = document.getElementById(`${prefix}Categoria`);
+            if (restoredCat) {
+                restoredCat.value = selectedCategoryBefore;
+                // Recarrega a lista de subcategorias/itens para a categoria correta
+                onCategoryChange(prefix);
+
+                if (selectedSubBefore) {
+                    const restoredSub = prefix === 'mant'
+                        ? document.getElementById(`${prefix}Item`)
+                        : document.getElementById(`${prefix}Sub`);
+                    if (restoredSub) restoredSub.value = selectedSubBefore;
+                }
+            }
+        }
         
         let genericTag;
         if(isSubcat) genericTag = 'subcategorias';
