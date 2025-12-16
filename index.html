@@ -2029,7 +2029,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     const refreshLogic = () => {
         // Define o próximo tempo de espera: 1 minuto (60000ms) para dashboard, 5 segundos (5000ms) para as demais
-        const intervalTime = currentTab === 'dashboard' ? 60000 : 5000;
+        const intervalTime = currentTab === 'dashboard' ? 10000 : 3000;
 
         refreshCloudDataBuffer().then(() => {
             autoRefreshIntervalId = setTimeout(refreshLogic, intervalTime);
@@ -2701,108 +2701,90 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
     
     function populateSelects() {
-    // 1. Captura os valores selecionados atualmente para evitar o "reset" durante o buffer
-    const currentMarks = {
-        audit: document.getElementById('auditMarcador').value,
-        ativ: document.getElementById('ativMarcador').value,
-        mant: document.getElementById('mantMarcador').value,
-        doc: document.getElementById('docMarcador').value
-    };
-    
-    const currentStatus = {
-        audit: document.getElementById('auditStatus').value,
-        ativ: document.getElementById('ativStatus').value,
-        mant: document.getElementById('mantStatus').value,
-        doc: document.getElementById('docStatus').value
-    };
-
-    const setores = masterLists.setores || []; 
-    
-    // Coleta TODOS os status de todas as abas para o filtro do Dashboard
-    let allStatusnames = [];
-    ['auditStatus', 'ativStatus', 'mantStatus', 'docStatus'].forEach(key => {
-        masterLists[key].forEach(s => {
-            if (s.name) allStatusnames.push(s.name);
+        const setores = masterLists.setores || []; 
+        
+        // NOVO: Coleta TODOS os status de TODAS as listas mestras de status dinamicamente
+        let allStatusnames = [];
+        ['auditStatus', 'ativStatus', 'mantStatus', 'docStatus'].forEach(key => {
+            masterLists[key].forEach(s => {
+                if (s.name) allStatusnames.push(s.name);
+            });
         });
-    });
-    const unifiedStatusnames = [...new Set(allStatusnames)].sort();
-
-    // Funções auxiliares para geração de HTML
-    const makeOpts = (list) => list.map(i => `<option>${i}</option>`).join('');
-    const makeStatusOpts = (list) => list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
-    const makeFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i}">${i}</option>`).join('');
-    const makeStatusFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+        const unifiedStatusnames = [...new Set(allStatusnames)].sort();
     
-    // --- ATUALIZAÇÃO DOS FILTROS DO DASHBOARD ---
-    document.getElementById('fDashSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos");
-    document.getElementById('fDashStatus').innerHTML = makeFilterOpts(unifiedStatusnames, "Status: Todos");
-
-    // --- ATUALIZAÇÃO DOS CAMPOS DOS MODAIS (CADASTRO/EDIÇÃO) ---
-    // Setores
-    document.getElementById('auditSetor').innerHTML = makeOpts(setores); 
-    document.getElementById('ativSetor').innerHTML = makeOpts(setores); 
-    document.getElementById('mantSetor').innerHTML = makeOpts(setores); 
-    document.getElementById('docSetor').innerHTML = makeOpts(setores); 
-
-    // Categorias, Status e Marcadores
-    document.getElementById('auditCategoria').innerHTML = makeOpts(masterLists.auditCategorias);
-    document.getElementById('auditStatus').innerHTML = makeStatusOpts(masterLists.auditStatus);
-    document.getElementById('auditMarcador').innerHTML = `<option value="">Selecionar marcador</option>` + makeStatusOpts(masterLists.auditMarcadores || []);
-
-    document.getElementById('ativCategoria').innerHTML = makeOpts(masterLists.ativCategorias);
-    document.getElementById('ativStatus').innerHTML = makeStatusOpts(masterLists.ativStatus);
-    document.getElementById('ativMarcador').innerHTML = `<option value="">Selecionar marcador</option>` + makeStatusOpts(masterLists.ativMarcadores || []);
-
-    document.getElementById('mantCategoria').innerHTML = makeOpts(masterLists.mantCategorias);
-    document.getElementById('mantStatus').innerHTML = makeStatusOpts(masterLists.mantStatus);
-    document.getElementById('mantMarcador').innerHTML = `<option value="">Selecionar marcador</option>` + makeStatusOpts(masterLists.mantMarcadores || []);
-
-    document.getElementById('docCategoria').innerHTML = makeOpts(masterLists.docCategorias);
-    document.getElementById('docStatus').innerHTML = makeStatusOpts(masterLists.docStatus); 
-    document.getElementById('docMarcador').innerHTML = `<option value="">Selecionar marcador</option>` + makeStatusOpts(masterLists.docMarcadores || []); 
+        // Funções auxiliares para gerar <option>
+        const makeOpts = (list) => list.map(i => `<option>${i}</option>`).join('');
+        const makeStatusOpts = (list) => list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+        const makeFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i}">${i}</option>`).join('');
+        const makeStatusFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+        
+        // --- FILTROS DASHBOARD ---
+        document.getElementById('fDashSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos");
+        document.getElementById('fDashStatus').innerHTML = makeFilterOpts(unifiedStatusnames, "Status: Todos");
     
-    // Gatilho para atualizar subcategorias baseado na categoria selecionada
-    onCategoryChange('audit');
-    onCategoryChange('ativ');
-    onCategoryChange('mant');
-    onCategoryChange('doc');
-
-    // --- ATUALIZAÇÃO DOS FILTROS DAS ABAS ---
-    document.getElementById('fAuditSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
-    document.getElementById('fAtivSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
-    document.getElementById('fMantSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
-    document.getElementById('fDocSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
-
-    document.getElementById('fAuditCat').innerHTML = makeFilterOpts(masterLists.auditCategorias, "Categoria: Todas");
-    document.getElementById('fAuditStatus').innerHTML = makeStatusFilterOpts(masterLists.auditStatus, "Status: Todos");
     
-    document.getElementById('fAtivCat').innerHTML = makeFilterOpts(masterLists.ativCategorias, "Categoria: Todas");
-    document.getElementById('fAtivStatus').innerHTML = makeStatusFilterOpts(masterLists.ativStatus, "Status: Todos");
-
-    document.getElementById('fMantCat').innerHTML = makeFilterOpts(masterLists.mantCategorias, "Categoria: Todas");
-    document.getElementById('fMantStatus').innerHTML = makeStatusFilterOpts(masterLists.mantStatus, "Status: Todos");
+        // --- MODAIS ---
+        // Setores
+        document.getElementById('auditSetor').innerHTML = makeOpts(setores); 
+        document.getElementById('ativSetor').innerHTML = makeOpts(setores); 
+        document.getElementById('mantSetor').innerHTML = makeOpts(setores); 
+        document.getElementById('docSetor').innerHTML = makeOpts(setores); 
     
-    document.getElementById('fDocCat').innerHTML = makeFilterOpts(masterLists.docCategorias, "Categoria: Todas"); 
-    document.getElementById('fDocStatus').innerHTML = makeStatusFilterOpts(masterLists.docStatus, "Status: Todos"); 
+        // Auditoria
+        document.getElementById('auditCategoria').innerHTML = makeOpts(masterLists.auditCategorias);
+        document.getElementById('auditStatus').innerHTML = makeStatusOpts(masterLists.auditStatus);
+        document.getElementById('auditMarcador').innerHTML =
+            `<option value="">Selecionar marcador</option>` +
+            makeStatusOpts(masterLists.auditMarcadores || []);
+        // Atividades
+        document.getElementById('ativCategoria').innerHTML = makeOpts(masterLists.ativCategorias);
+        document.getElementById('ativStatus').innerHTML = makeStatusOpts(masterLists.ativStatus);
+        document.getElementById('ativMarcador').innerHTML =
+            `<option value="">Selecionar marcador</option>` +
+            makeStatusOpts(masterLists.ativMarcadores || []);
+        // Manutenção
+        document.getElementById('mantCategoria').innerHTML = makeOpts(masterLists.mantCategorias);
+        document.getElementById('mantStatus').innerHTML = makeStatusOpts(masterLists.mantStatus);
+        document.getElementById('mantMarcador').innerHTML =
+            `<option value="">Selecionar marcador</option>` +
+            makeStatusOpts(masterLists.mantMarcadores || []);
+        // Documentos
+        document.getElementById('docCategoria').innerHTML = makeOpts(masterLists.docCategorias);
+        document.getElementById('docStatus').innerHTML = makeStatusOpts(masterLists.docStatus); 
+        document.getElementById('docMarcador').innerHTML =
+            `<option value="">Selecionar marcador</option>` +
+            makeStatusOpts(masterLists.docMarcadores || []); 
+        
+        onCategoryChange('audit');
+        onCategoryChange('ativ');
+        onCategoryChange('mant');
+        onCategoryChange('doc');
     
-    // 2. RESTAURAÇÃO DOS VALORES: Devolve os valores selecionados aos componentes
-    // Isso impede que o marcador e o status voltem para o "vazio" durante a digitação
-    document.getElementById('auditMarcador').value = currentMarks.audit;
-    document.getElementById('ativMarcador').value = currentMarks.ativ;
-    document.getElementById('mantMarcador').value = currentMarks.mant;
-    document.getElementById('docMarcador').value = currentMarks.doc;
-
-    document.getElementById('auditStatus').value = currentStatus.audit;
-    document.getElementById('ativStatus').value = currentStatus.ativ;
-    document.getElementById('mantStatus').value = currentStatus.mant;
-    document.getElementById('docStatus').value = currentStatus.doc;
-
-    onFilterCategoryChange('Audit');
-    onFilterCategoryChange('Ativ');
-    onFilterCategoryChange('Mant');
-    onFilterCategoryChange('Doc');
-}
-
+        // --- FILTROS ABAS (EXISTENTES) ---
+        document.getElementById('fAuditSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
+        document.getElementById('fAtivSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
+        document.getElementById('fMantSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
+        document.getElementById('fDocSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
+    
+        document.getElementById('fAuditCat').innerHTML = makeFilterOpts(masterLists.auditCategorias, "Categoria: Todas");
+        document.getElementById('fAuditStatus').innerHTML = makeStatusFilterOpts(masterLists.auditStatus, "Status: Todos");
+        
+        document.getElementById('fAtivCat').innerHTML = makeFilterOpts(masterLists.ativCategorias, "Categoria: Todas");
+        document.getElementById('fAtivStatus').innerHTML = makeStatusFilterOpts(masterLists.ativStatus, "Status: Todos");
+    
+        document.getElementById('fMantCat').innerHTML = makeFilterOpts(masterLists.mantCategorias, "Categoria: Todas");
+        document.getElementById('fMantStatus').innerHTML = makeStatusFilterOpts(masterLists.mantStatus, "Status: Todos");
+        
+        document.getElementById('fDocCat').innerHTML = makeFilterOpts(masterLists.docCategorias, "Categoria: Todas"); 
+        document.getElementById('fDocStatus').innerHTML = makeStatusFilterOpts(masterLists.docStatus, "Status: Todos"); 
+        
+        onFilterCategoryChange('Audit');
+        onFilterCategoryChange('Ativ');
+        onFilterCategoryChange('Mant');
+        onFilterCategoryChange('Doc');
+    }
+    
+    
     // Funções auxiliares para obter prefixos de ID corretos
     function getTabPrefix(tab) {
         if (tab === 'auditoria') return 'audit';
@@ -2979,6 +2961,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             clearFilters();
         }
     }
+    
     
     document.getElementById('tabDashboard').onclick = () => switchTab('dashboard'); 
     document.getElementById('tabAuditoria').onclick = () => switchTab('auditoria');
