@@ -357,6 +357,25 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 .btn-cancel{background:#f3f4f6;color:var(--text);padding:12px 24px;border-radius:10px;border:none;font-weight:500;cursor:pointer}
 .btn-save{background:var(--ind-green);color:#fff;padding:12px 24px;border-radius:10px;border:none;font-weight:500;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.3)}
 .btn-edit{background:var(--c-blue);color:#fff;padding:12px 24px;border-radius:10px;border:none;font-weight:500;cursor:pointer;box-shadow:0 4px 12px rgba(34, 37, 197, 0.3)}
+
+.card-marker {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 11px;
+  color: #fff;
+  border-radius: 999px;
+  padding: 4px 8px;
+  gap: 4px;
+  z-index: 10;
+}
+.card-marker i {
+  font-size: 10px;
+}
 /* VIEW MODAL */
 #viewContent { display: flex; flex-direction: column; gap: 24px; }
 .view-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
@@ -1157,6 +1176,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <label>Alerta (Dias antes)</label>
                 <input type="number" id="auditFlagDias" value="7">
             </div>
+            <div class="field-group">
+                <label>Marcador</label>
+                <div class="select-wrapper">
+                    <select id="auditMarcador"></select>
+                    <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
             <div class="field-group full-width">
                 <label>Anexos</label>
                 <div id="auditAnexos"></div>
@@ -1226,6 +1252,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             <div class="field-group">
                 <label>Alerta (Dias antes)</label>
                 <input type="number" id="ativFlagDias" value="3">
+            </div>
+            <div class="field-group">
+                <label>Marcador</label>
+                <div class="select-wrapper">
+                    <select id="ativMarcador"></select>
+                    <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
+                </div>
             </div>
             <div class="field-group full-width">
                 <label>Anexos</label>
@@ -1304,6 +1337,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <label>Alerta (Dias)</label>
                 <input type="number" id="mantFlagDias" value="7">
             </div>
+            <div class="field-group">
+                <label>Marcador</label>
+                <div class="select-wrapper">
+                    <select id="mantMarcador"></select>
+                    <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
             <div class="field-group full-width">
                 <label>Anexos</label>
                 <div id="mantAnexos"></div>
@@ -1381,6 +1421,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             <div class="field-group">
                 <label>Alerta (Dias antes da revisão)</label>
                 <input type="number" id="docFlagDias" value="30">
+            </div>
+            <div class="field-group">
+                <label>Marcador</label>
+                <div class="select-wrapper">
+                    <select id="docMarcador"></select>
+                    <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
+                </div>
             </div>
             <div class="field-group full-width">
                 <label>Anexos (Link para o documento)</label>
@@ -1483,6 +1530,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         ativStatus: [], 
         mantStatus: [], 
         docStatus: [], 
+
+        // Listas de Marcadores (objetos { name, color })
+        auditMarcadores: [],
+        ativMarcadores: [],
+        mantMarcadores: [],
+        docMarcadores: [],
     
         // O unifiedStatusMap também será removido ou gerado dinamicamente para usar apenas os nomes das listas acima.
     };
@@ -1499,6 +1552,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     let currentHistoryPage = 1; // NOVO: Para controle da paginação do histórico
     let currentViewItemId = null;   // ID do item atualmente aberto na visualização
     let currentViewTab = null;      // Aba do item atualmente aberto na visualização
+    let autoRefreshIntervalId = null; // Intervalo de atualização do buffer cloud
     
     // --- UTILITÁRIOS ---
     const today = () => new Date().toISOString().split('T')[0];
@@ -1527,23 +1581,27 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         auditTitulo: 'Título', auditDescricao: 'Descrição', auditSetor: 'Setor', auditCategoria: 'Categoria',
         auditSub: 'Subcategoria', auditStatus: 'Status', auditDataPublicacao: 'Data Publicação',
         auditDataPrevisao: 'Data Previsão', auditResponsavel: 'Responsável', auditFlagDias: 'Alerta (Dias)',
+        auditMarcador: 'Marcador',
         
         // Atividades
         ativTitulo: 'Título', ativDescricao: 'Descrição', ativSetor: 'Setor', ativCategoria: 'Categoria',
         ativSub: 'Subcategoria', ativStatus: 'Status', ativDataInicio: 'Data Início',
         ativDataConclusao: 'Data Conclusão', ativResponsavel: 'Responsável', ativFlagDias: 'Alerta (Dias)',
+        ativMarcador: 'Marcador',
         
         // Manutenção
         mantTitulo: 'Título', mantDescricao: 'Descrição', mantSetor: 'Setor', mantCategoria: 'Categoria',
         mantItem: 'Item/Equipamento', mantUltima: 'Última Manutenção', mantIntervalo: 'Periodicidade (Dias)',
         mantResponsavelTecnico: 'Responsável Técnico', mantResponsavelManutencao: 'Responsável Manutenção',
         mantStatus: 'Status', mantFlagDias: 'Alerta (Dias)', mantProxima: 'Próxima Manutenção',
+        mantMarcador: 'Marcador',
         
         // Documentos
         docTitulo: 'Título', docDescricao: 'Descrição', docSetor: 'Setor', docCategoria: 'Categoria',
         docSub: 'Subcategoria', docStatus: 'Status', docDataCriacao: 'Data Criação',
         docIntervalo: 'Periodicidade (Dias)', docResponsavel: 'Responsável', docRevisor: 'Revisor',
         docFlagDias: 'Alerta (Dias)', docProximaRevisao: 'Próxima Revisão',
+        docMarcador: 'Marcador',
 
         // Anexos (Não é uma propriedade direta, mas ajuda a exibir a mudança)
         anexos: 'Anexos'
@@ -1552,11 +1610,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     // NOVO: Função para calcular e formatar as mudanças
     function calculateChanges(original, current) {
         const changes = [];
+        let silentChanged = false; // Ex.: status / marcador alterados
         
         // Determina o prefixo do item (audit, ativ, mant, doc)
         const prefix = current.type;
         
-        // Propriedades que são derivadas (e não devem ser comparadas)
+        // Propriedades que são derivadas e não devem ser comparadas
         const derivedKeys = ['id', 'historico', 'type', 'proxima', 'dataProximaRevisao'];
         
         for (const key in original) {
@@ -1566,6 +1625,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
             let originalValue = String(original[key] || '').trim();
             let currentValue = String(current[key] || '').trim();
+
+            // Campos que podem mudar sem gerar linha de detalhe no histórico,
+            // mas que ainda assim contam como alteração (status / marcador)
+            if (key === 'status' || key === 'marcador' || key === 'marcadorCor') {
+                if (originalValue !== currentValue) silentChanged = true;
+                continue;
+            }
 
             // Tenta obter o nome de exibição do dicionário fieldnames
             const displaynameKey = `${prefix}${key.charAt(0).toUpperCase() + key.slice(1)}`;
@@ -1597,6 +1663,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
              changes.push(`Anexos: Número de anexos alterado (de ${originalAnexosCount} para ${currentAnexosCount})`);
         }
         
+        // Anexa flag para o chamador saber se houve apenas mudanças "silenciosas"
+        changes.silentChanged = silentChanged;
         return changes;
     }
     // --- LÓGICA DE LOGIN (USUÁRIO + SENHA VIA BIN DE USUÁRIOS) ---
@@ -1870,10 +1938,81 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             updateDateInputs('Dash'); 
             
             switchTab('dashboard'); 
-    
+            
+            // Inicia o buffer de atualização automática (a cada 1 minuto)
+            startAutoRefresh();
+
         } catch (err) {
             alert("Falha ao carregar dados do Cloud: " + err.message);
         }
+    }
+
+    function isEditingModalOpen() {
+        const ids = [
+            'modalAuditoria',
+            'modalAtividades',
+            'modalManutencao',
+            'modalDocumentos',
+            'modalListManager'
+        ];
+        return ids.some(id => {
+            const el = document.getElementById(id);
+            return el && getComputedStyle(el).display !== 'none';
+        });
+    }
+
+    async function refreshCloudDataBuffer() {
+        // Não atualiza se não houver usuário logado
+        if (!currentuser) return;
+
+        try {
+            const res = await fetch(`https://api.jsonbin.io/v3/b/${DATA_BIN_ID}/latest`, {
+                headers: { 'X-Master-Key': API_KEY }
+            });
+            if (!res.ok) return; // silencioso em caso de falha
+
+            const data = await res.json();
+            const record = data.record;
+
+            audits = record.audits || [];
+            activities = record.activities || [];
+            maintenances = record.maintenances || [];
+            documents = record.documents || [];
+
+            if (record.masterLists) {
+                masterLists = { ...defaultMasterLists, ...record.masterLists };
+                if (Array.isArray(masterLists.mantItens)) {
+                    masterLists.mantItens = defaultMasterLists.mantItens;
+                }
+            }
+
+            // Garante que o histórico exista
+            audits.forEach(a => a.historico = a.historico || []);
+            activities.forEach(a => a.historico = a.historico || []);
+            maintenances.forEach(m => m.historico = m.historico || []);
+            documents.forEach(d => d.historico = d.historico || []);
+
+            populateSelects();
+            updateDateInputs('Audit');
+            updateDateInputs('Ativ');
+            updateDateInputs('Mant');
+            updateDateInputs('Doc');
+            updateDateInputs('Dash');
+
+            if (currentTab === 'dashboard') {
+                renderDashboard();
+            } else if (currentTab !== 'backup' && currentTab !== 'configuracoes') {
+                renderCards();
+            }
+        } catch (e) {
+            // silencioso
+            console.error('Erro ao atualizar buffer do Cloud:', e);
+        }
+    }
+
+    function startAutoRefresh() {
+        if (autoRefreshIntervalId) return;
+        autoRefreshIntervalId = setInterval(refreshCloudDataBuffer, 5000); // 1 minuto
     }
     
     async function saveAll(showAlert = false) {
@@ -2373,7 +2512,21 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     return isAClosed ? 1 : -1;
                 }
 
-                // 2) Dentro do mesmo grupo, ordena por data (mais antiga primeiro)
+                // 2) Entre itens "abertos", os que estão no prazo de alerta vêm primeiro
+                if (!isAClosed && !isBClosed) {
+                    const flagA = a.flagDias || 7;
+                    const flagB = b.flagDias || 7;
+                    const dA = daysDiff(a[dateField]);
+                    const dB = daysDiff(b[dateField]);
+                    const isAAlert = dA <= flagA;
+                    const isBAlert = dB <= flagB;
+
+                    if (isAAlert !== isBAlert) {
+                        return isAAlert ? -1 : 1;
+                    }
+                }
+
+                // 3) Dentro do mesmo grupo, ordena por data (mais antiga primeiro)
                 const dateA = new Date(a[dateField]);
                 const dateB = new Date(b[dateField]);
                 return dateA - dateB;
@@ -2406,6 +2559,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
             const statusObj = statusList.find(s => s.name === item.status) || { color: 'default' };
             const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
+
+            // Marcador do card
+            const marcadorText = item.marcador || '';
+            const marcadorColorVar = colorMap[item.marcadorCor] || colorMap['default'];
     
             // layout interativo original dos cards
             div.className = `card ${indicatorClass}`;
@@ -2465,6 +2622,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 </div>
                 <div class="card-body">
                     ${specificContent}
+                    ${marcadorText ? `<div class="card-marker" style="background:${marcadorColorVar}"><i class="fas fa-bookmark"></i> ${marcadorText}</div>` : ''}
                 </div>
             `;
             grid.appendChild(div);
@@ -2550,15 +2708,27 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // Auditoria
         document.getElementById('auditCategoria').innerHTML = makeOpts(masterLists.auditCategorias);
         document.getElementById('auditStatus').innerHTML = makeStatusOpts(masterLists.auditStatus);
+        document.getElementById('auditMarcador').innerHTML =
+            `<option value="">Selecionar marcador</option>` +
+            makeStatusOpts(masterLists.auditMarcadores || []);
         // Atividades
         document.getElementById('ativCategoria').innerHTML = makeOpts(masterLists.ativCategorias);
         document.getElementById('ativStatus').innerHTML = makeStatusOpts(masterLists.ativStatus);
+        document.getElementById('ativMarcador').innerHTML =
+            `<option value="">Selecionar marcador</option>` +
+            makeStatusOpts(masterLists.ativMarcadores || []);
         // Manutenção
         document.getElementById('mantCategoria').innerHTML = makeOpts(masterLists.mantCategorias);
         document.getElementById('mantStatus').innerHTML = makeStatusOpts(masterLists.mantStatus);
+        document.getElementById('mantMarcador').innerHTML =
+            `<option value="">Selecionar marcador</option>` +
+            makeStatusOpts(masterLists.mantMarcadores || []);
         // Documentos
         document.getElementById('docCategoria').innerHTML = makeOpts(masterLists.docCategorias);
         document.getElementById('docStatus').innerHTML = makeStatusOpts(masterLists.docStatus); 
+        document.getElementById('docMarcador').innerHTML =
+            `<option value="">Selecionar marcador</option>` +
+            makeStatusOpts(masterLists.docMarcadores || []); 
         
         onCategoryChange('audit');
         onCategoryChange('ativ');
@@ -2791,6 +2961,10 @@ function resetModal(prefix) {
     // Lida com Responsáveis
     const respEl = document.getElementById(`${prefix}Responsavel`);
     if (respEl) respEl.value = '';
+
+        // Marcador (select)
+        const markEl = document.getElementById(`${prefix}Marcador`);
+        if (markEl && markEl.options.length > 0) markEl.selectedIndex = 0;
     
     // Define o Setor
     const defaultSetor = masterLists.setores[0] || '';
@@ -2892,6 +3066,9 @@ document.getElementById('addBtn').onclick = () => {
         // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
         let item = isNew ? { id: Date.now(), historico: [], type: 'audit' } : audits.find(a => a.id === editingAuditId);
 
+        const selectedAuditMarkerName = document.getElementById('auditMarcador').value;
+        const auditMarkerObj = (masterLists.auditMarcadores || []).find(m => m.name === selectedAuditMarkerName);
+
         const newItem = {
             ...item,
             titulo: document.getElementById('auditTitulo').value,
@@ -2904,6 +3081,8 @@ document.getElementById('addBtn').onclick = () => {
             dataPrevisao: document.getElementById('auditDataPrevisao').value,
             responsavel: document.getElementById('auditResponsavel').value, 
             flagDias: +document.getElementById('auditFlagDias').value, // Lê o valor como número
+            marcador: auditMarkerObj ? auditMarkerObj.name : '',
+            marcadorCor: auditMarkerObj ? auditMarkerObj.color : 'default',
             anexos: getAnexos('audit')
         };
 
@@ -2919,12 +3098,13 @@ document.getElementById('addBtn').onclick = () => {
                     usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
                     detalhes: changes 
                 });
-            } else {
-                // Se não houve alteração, mantém o item original na lista (evita perda de dados)
+            } else if (!changes.silentChanged) {
+                // Se não houve alteração (nem mesmo em status/marcador), mantém o item original
                 audits = audits.map(a => a.id === editingAuditId ? item : a);
                 closeModal('modalAuditoria');
                 return;
             }
+            // Aplica sempre as alterações, mesmo que apenas status/marcador tenham mudado
             audits = audits.map(a => a.id === editingAuditId ? newItem : a);
         }
 
@@ -2935,6 +3115,9 @@ document.getElementById('addBtn').onclick = () => {
         const isNew = !editingAtivId;
         // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
         let item = isNew ? { id: Date.now(), historico: [], type: 'ativ' } : activities.find(a => a.id === editingAtivId);
+
+        const selectedAtivMarkerName = document.getElementById('ativMarcador').value;
+        const ativMarkerObj = (masterLists.ativMarcadores || []).find(m => m.name === selectedAtivMarkerName);
 
         const newItem = {
             ...item,
@@ -2948,6 +3131,8 @@ document.getElementById('addBtn').onclick = () => {
             dataConclusao: document.getElementById('ativDataConclusao').value,
             responsavel: document.getElementById('ativResponsavel').value, 
             flagDias: +document.getElementById('ativFlagDias').value, // Lê o valor como número
+            marcador: ativMarkerObj ? ativMarkerObj.name : '',
+            marcadorCor: ativMarkerObj ? ativMarkerObj.color : 'default',
             anexos: getAnexos('ativ')
         };
         
@@ -2963,7 +3148,7 @@ document.getElementById('addBtn').onclick = () => {
                     usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
                     detalhes: changes 
                 });
-            } else {
+            } else if (!changes.silentChanged) {
                 activities = activities.map(a => a.id === editingAtivId ? item : a);
                 closeModal('modalAtividades');
                 return;
@@ -2986,6 +3171,9 @@ document.getElementById('addBtn').onclick = () => {
         // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
         let item = isNew ? { id: Date.now(), historico: [], type: 'mant' } : maintenances.find(m => m.id === editingMantId);
 
+        const selectedMantMarkerName = document.getElementById('mantMarcador').value;
+        const mantMarkerObj = (masterLists.mantMarcadores || []).find(m => m.name === selectedMantMarkerName);
+
         const newItem = {
             ...item,
             titulo: document.getElementById('mantTitulo').value,
@@ -3000,6 +3188,8 @@ document.getElementById('addBtn').onclick = () => {
             responsavelManutencao: document.getElementById('mantResponsavelManutencao').value, 
             status: document.getElementById('mantStatus').value,
             flagDias: +document.getElementById('mantFlagDias').value, // Lê o valor como número
+            marcador: mantMarkerObj ? mantMarkerObj.name : '',
+            marcadorCor: mantMarkerObj ? mantMarkerObj.color : 'default',
             anexos: getAnexos('mant')
         };
 
@@ -3015,7 +3205,7 @@ document.getElementById('addBtn').onclick = () => {
                     usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
                     detalhes: changes 
                 });
-            } else {
+            } else if (!changes.silentChanged) {
                 maintenances = maintenances.map(m => m.id === editingMantId ? item : m);
                 closeModal('modalManutencao');
                 return;
@@ -3038,6 +3228,9 @@ document.getElementById('addBtn').onclick = () => {
         // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
         let item = isNew ? { id: Date.now(), historico: [], type: 'doc' } : documents.find(d => d.id === editingDocId);
 
+        const selectedDocMarkerName = document.getElementById('docMarcador').value;
+        const docMarkerObj = (masterLists.docMarcadores || []).find(m => m.name === selectedDocMarkerName);
+
         const newItem = {
             ...item,
             titulo: document.getElementById('docTitulo').value,
@@ -3052,6 +3245,8 @@ document.getElementById('addBtn').onclick = () => {
             responsavel: document.getElementById('docResponsavel').value,
             revisor: document.getElementById('docRevisor').value,
             flagDias: +document.getElementById('docFlagDias').value, // Lê o valor como número
+            marcador: docMarkerObj ? docMarkerObj.name : '',
+            marcadorCor: docMarkerObj ? docMarkerObj.color : 'default',
             anexos: getAnexos('doc')
         };
 
@@ -3061,13 +3256,13 @@ document.getElementById('addBtn').onclick = () => {
         } else {
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0) {
-                newItem.historico.push({ 
-                    timestamp: new Date().toISOString(), 
-                    acao: 'Edição de Dados', 
+                newItem.historico.push({
+                    timestamp: new Date().toISOString(),
+                    acao: 'Edição de Dados',
                     usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
-                    detalhes: changes 
+                    detalhes: changes
                 });
-            } else {
+            } else if (!changes.silentChanged) {
                 documents = documents.map(d => d.id === editingDocId ? item : d);
                 closeModal('modalDocumentos');
                 return;
@@ -3097,6 +3292,7 @@ document.getElementById('addBtn').onclick = () => {
             document.getElementById('auditDataPrevisao').value = item.dataPrevisao;
             document.getElementById('auditResponsavel').value = item.responsavel || ''; 
             document.getElementById('auditFlagDias').value = item.flagDias; // Corrigido
+            document.getElementById('auditMarcador').value = item.marcador || '';
             restoreAnexos('audit', item.anexos);
             document.getElementById('modalAuditoria').style.display = 'flex';
         } else if (tab === 'atividades') {
@@ -3113,6 +3309,7 @@ document.getElementById('addBtn').onclick = () => {
             document.getElementById('ativDataConclusao').value = item.dataConclusao;
             document.getElementById('ativResponsavel').value = item.responsavel || ''; 
             document.getElementById('ativFlagDias').value = item.flagDias; // Corrigido
+            document.getElementById('ativMarcador').value = item.marcador || '';
             restoreAnexos('ativ', item.anexos);
             document.getElementById('modalAtividades').style.display = 'flex';
         } else if (tab === 'manutencao') {
@@ -3132,6 +3329,7 @@ document.getElementById('addBtn').onclick = () => {
             document.getElementById('mantFlagDias').value = item.flagDias; // Corrigido
             calculateNextDate('mant');
             restoreAnexos('mant', item.anexos);
+            document.getElementById('mantMarcador').value = item.marcador || '';
             document.getElementById('modalManutencao').style.display = 'flex';
         } else if (tab === 'documentos') { 
             item = documents.find(d => d.id === id);
@@ -3150,6 +3348,7 @@ document.getElementById('addBtn').onclick = () => {
             document.getElementById('docFlagDias').value = item.flagDias; // Corrigido
             calculateNextDate('doc');
             restoreAnexos('doc', item.anexos);
+            document.getElementById('docMarcador').value = item.marcador || '';
             document.getElementById('modalDocumentos').style.display = 'flex';
         }
 
@@ -3465,6 +3664,13 @@ document.getElementById('addBtn').onclick = () => {
             else currentListKey = 'docStatus';
             isStatus = true;
             listname = 'STATUS';
+        } else if (genericKey === 'marcadores') {
+            if(currentTab === 'auditoria') currentListKey = 'auditMarcadores';
+            else if(currentTab === 'atividades') currentListKey = 'ativMarcadores';
+            else if(currentTab === 'manutencao') currentListKey = 'mantMarcadores';
+            else currentListKey = 'docMarcadores';
+            isStatus = true; // usa a mesma lógica de objetos com cor
+            listname = 'MARCADORES';
         } else {
             currentListKey = genericKey; 
             listname = genericKey.toUpperCase();
@@ -3527,6 +3733,7 @@ document.getElementById('addBtn').onclick = () => {
         if (!val) return;
         
         const isStatus = currentListKey.toLowerCase().includes('status');
+        const isMarcadorList = currentListKey.toLowerCase().includes('marcadores');
         const isSubcat = currentListKey.includes('_'); 
 
         // Guarda a categoria e a subcategoria/ item atualmente selecionados no modal da aba ativa
@@ -3550,7 +3757,7 @@ document.getElementById('addBtn').onclick = () => {
             list = masterLists[currentListKey];
         }
     
-        if (isStatus) {
+        if (isStatus || isMarcadorList) {
             if(list.some(s => s.name === val)) return;
             list.push({ name: val, color: selectedColorTemp });
         } else {
@@ -3580,21 +3787,28 @@ document.getElementById('addBtn').onclick = () => {
             }
         }
         
-        let genericTag;
-        if(isSubcat) genericTag = 'subcategorias';
-        else if(isStatus) genericTag = 'status';
-        else if(currentListKey === 'setores') genericTag = 'setores'; 
-        else genericTag = 'categorias';
-        
-        openListManager(genericTag);
+        // Reabre o mesmo tipo de lista que estava sendo editada
+        if (isSubcat) {
+            openListManager('subcategorias');
+        } else if (isStatus) {
+            openListManager('status');
+        } else if (isMarcadorList) {
+            openListManager('marcadores');
+        } else if (currentListKey === 'setores') {
+            openListManager('setores');
+        } else {
+            openListManager('categorias');
+        }
     }
     
     function removeFromList(key, val) {
         const isStatus = key.toLowerCase().includes('status');
+        const isMarcadorList = key.toLowerCase().includes('marcadores');
+        const isObjectList = isStatus || isMarcadorList;
         const isSubcat = key.includes('_');
 
         // Bloqueia exclusão de categorias que possuem subcategorias/itens vinculados
-        if (!isStatus && !isSubcat) {
+        if (!isObjectList && !isSubcat) {
             const categoryToSubcatMap = {
                 auditCategorias: 'auditSubcats',
                 ativCategorias: 'ativSubcats',
@@ -3628,12 +3842,12 @@ document.getElementById('addBtn').onclick = () => {
         if (isSubcat) {
             const [baseKey, cat] = key.split('_');
             list = masterLists[baseKey][cat];
-            if (isStatus) list = list.filter(s => s.name !== val);
+            if (isObjectList) list = list.filter(s => s.name !== val);
             else list = list.filter(i => i !== val);
             masterLists[baseKey][cat] = list; 
         } else {
             list = masterLists[key];
-            if (isStatus) masterLists[key] = list.filter(s => s.name !== val);
+            if (isObjectList) masterLists[key] = list.filter(s => s.name !== val);
             else masterLists[key] = list.filter(i => i !== val);
         }
     
@@ -3656,12 +3870,18 @@ document.getElementById('addBtn').onclick = () => {
             }
         }
         
-        let genericTag;
-        if(isSubcat) genericTag = 'subcategorias';
-        else if(isStatus) genericTag = 'status';
-        else if(key === 'setores') genericTag = 'setores'; 
-        else genericTag = 'categorias';
-        openListManager(genericTag);
+        // Reabre o mesmo tipo de lista que estava sendo editada
+        if (isSubcat) {
+            openListManager('subcategorias');
+        } else if (isStatus) {
+            openListManager('status');
+        } else if (isMarcadorList) {
+            openListManager('marcadores');
+        } else if (key === 'setores') {
+            openListManager('setores');
+        } else {
+            openListManager('categorias');
+        }
     }
     // --- FUNÇÕES DE BACKUP LOCAL (ARQUIVO) ---
     
