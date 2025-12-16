@@ -1963,7 +1963,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     async function refreshCloudDataBuffer() {
         // Não atualiza se não houver usuário logado
-        if (!currentuser) return;
+        if (!currentuser || isEditingModalOpen()) return;
 
         try {
             const res = await fetch(`https://api.jsonbin.io/v3/b/${DATA_BIN_ID}/latest`, {
