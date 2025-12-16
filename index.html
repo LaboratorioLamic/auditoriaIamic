@@ -2883,65 +2883,78 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
     // --- TAB CONTROL ---
     function switchTab(tab) {
-        currentTab = tab;
-        document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
-        
-        const tabId = 'tab' + tab.charAt(0).toUpperCase() + tab.slice(1);
-        const btn = document.getElementById(tabId);
-        if(btn) btn.classList.add('active');
-        
-        const titles = { 
-            dashboard: 'Dashboard', 
-            auditoria: 'Auditoria', 
-            atividades: 'Gestão de Atividades', 
-            manutencao: 'Manutenção',
-            documentos: 'Documentos', 
-            backup: 'Backup do Sistema'
-        };
-        const subtitles = { 
-            dashboard: 'Visão geral e indicadores de desempenho', 
-            auditoria: 'Planejamento e execução de auditorias', 
-            atividades: 'Controle de tarefas, reuniões e projetos',
-            manutencao: 'Controle preventivo de equipamentos',
-            documentos: 'Gerenciamento e controle de revisões', 
-            backup: 'Segurança dos dados'
-        };
-        
-        document.getElementById('pageTitle').textContent = titles[tab];
-        document.getElementById('pageSubtitle').textContent = subtitles[tab];
-        
-        const isBackup = tab === 'backup';
-        const isDashboard = tab === 'dashboard';
-        const isConfig = tab === 'configuracoes';
+    currentTab = tab;
     
-        document.getElementById('filtersBar').style.display = (isBackup || isDashboard || isConfig) ? 'none' : 'flex';
-        document.getElementById('filtersBarDashboard').style.display = isDashboard ? 'flex' : 'none';
-        document.getElementById('cardsGrid').style.display = (isBackup || isDashboard || isConfig) ? 'none' : 'grid';
-        document.getElementById('addBtn').style.display = (isBackup || isDashboard || isConfig) ? 'none' : 'flex';
-        
-        document.getElementById('backupContent').style.display = isBackup ? 'flex' : 'none';
-        document.getElementById('dashboardContent').style.display = isDashboard ? 'flex' : 'none';
-        const cfgEl = document.getElementById('configContent');
-        if (cfgEl) {
-            cfgEl.style.display = isConfig ? 'block' : 'none';
-            if (isConfig) {
-                // Garante que todos usuários pré-cadastrados carregados do JsonBin apareçam na listagem
-                renderusersConfigTable();
-            }
-        }
+    // 1. Gerenciamento visual dos botões da sidebar
+    document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+    const tabId = 'tab' + tab.charAt(0).toUpperCase() + tab.slice(1);
+    const btn = document.getElementById(tabId);
+    if(btn) btn.classList.add('active');
     
-        document.getElementById('filtersAuditoria').style.display = tab === 'auditoria' ? 'flex' : 'none';
-        document.getElementById('filtersAtividades').style.display = tab === 'atividades' ? 'flex' : 'none';
-        document.getElementById('filtersManutencao').style.display = tab === 'manutencao' ? 'flex' : 'none';
-        document.getElementById('filtersDocumentos').style.display = tab === 'documentos' ? 'flex' : 'none'; 
-        
-        if(isDashboard) {
-            renderDashboard();
-        } else if(!isBackup) {
-            clearFilters();
+    // 2. Atualização de títulos e subtítulos
+    const titles = { 
+        dashboard: 'Dashboard', 
+        auditoria: 'Auditoria', 
+        atividades: 'Gestão de Atividades', 
+        manutencao: 'Manutenção',
+        documentos: 'Documentos', 
+        backup: 'Backup do Sistema'
+    };
+    const subtitles = { 
+        dashboard: 'Visão geral e indicadores de desempenho', 
+        auditoria: 'Planejamento e execução de auditorias', 
+        atividades: 'Controle de tarefas, reuniões e projetos',
+        manutencao: 'Controle preventivo de equipamentos',
+        documentos: 'Gerenciamento e controle de revisões', 
+        backup: 'Segurança dos dados'
+    };
+    
+    document.getElementById('pageTitle').textContent = titles[tab];
+    document.getElementById('pageSubtitle').textContent = subtitles[tab];
+    
+    // 3. Controle de visibilidade das seções principais
+    const isBackup = tab === 'backup';
+    const isDashboard = tab === 'dashboard';
+    const isConfig = tab === 'configuracoes';
+
+    document.getElementById('filtersBar').style.display = (isBackup || isDashboard || isConfig) ? 'none' : 'flex';
+    document.getElementById('filtersBarDashboard').style.display = isDashboard ? 'flex' : 'none';
+    document.getElementById('cardsGrid').style.display = (isBackup || isDashboard || isConfig) ? 'none' : 'grid';
+    
+    // --- CORREÇÃO AQUI: Controle do botão "Novo Registro" ---
+    const addBtn = document.getElementById('addBtn');
+    if (addBtn) {
+        // O botão só aparece se NÃO for backup/dash/config E se o usuário tiver permissão de edição
+        const canUserEdit = userCanEditCards(); 
+        if (!isBackup && !isDashboard && !isConfig && canUserEdit) {
+            addBtn.style.display = 'flex';
+        } else {
+            addBtn.style.display = 'none';
         }
     }
     
+    // 4. Exibição do conteúdo específico das abas
+    document.getElementById('backupContent').style.display = isBackup ? 'flex' : 'none';
+    document.getElementById('dashboardContent').style.display = isDashboard ? 'flex' : 'none';
+    const cfgEl = document.getElementById('configContent');
+    if (cfgEl) {
+        cfgEl.style.display = isConfig ? 'block' : 'none';
+        if (isConfig) renderusersConfigTable();
+    }
+
+    // 5. Ativação dos grupos de filtros específicos
+    document.getElementById('filtersAuditoria').style.display = tab === 'auditoria' ? 'flex' : 'none';
+    document.getElementById('filtersAtividades').style.display = tab === 'atividades' ? 'flex' : 'none';
+    document.getElementById('filtersManutencao').style.display = tab === 'manutencao' ? 'flex' : 'none';
+    document.getElementById('filtersDocumentos').style.display = tab === 'documentos' ? 'flex' : 'none'; 
+    
+    // 6. Renderização inicial dos dados da aba
+    if(isDashboard) {
+        renderDashboard();
+    } else if(!isBackup && !isConfig) {
+        clearFilters();
+    }
+}
     
     document.getElementById('tabDashboard').onclick = () => switchTab('dashboard'); 
     document.getElementById('tabAuditoria').onclick = () => switchTab('auditoria');
