@@ -1962,58 +1962,81 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
 
     async function refreshCloudDataBuffer() {
-        // Não atualiza se não houver usuário logado
-        if (!currentuser || isEditingModalOpen()) return;
+    // Não atualiza se não houver usuário logado ou se houver um modal de edição aberto
+    if (!currentuser || isEditingModalOpen()) return;
 
-        try {
-            const res = await fetch(`https://api.jsonbin.io/v3/b/${DATA_BIN_ID}/latest`, {
-                headers: { 'X-Master-Key': API_KEY }
-            });
-            if (!res.ok) return; // silencioso em caso de falha
+    try {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${DATA_BIN_ID}/latest`, {
+            headers: { 'X-Master-Key': API_KEY }
+        });
+        if (!res.ok) return;
 
-            const data = await res.json();
-            const record = data.record;
+        const data = await res.json();
+        const record = data.record;
 
-            audits = record.audits || [];
-            activities = record.activities || [];
-            maintenances = record.maintenances || [];
-            documents = record.documents || [];
-
-            if (record.masterLists) {
-                masterLists = { ...defaultMasterLists, ...record.masterLists };
-                if (Array.isArray(masterLists.mantItens)) {
-                    masterLists.mantItens = defaultMasterLists.mantItens;
-                }
-            }
-
-            // Garante que o histórico exista
-            audits.forEach(a => a.historico = a.historico || []);
-            activities.forEach(a => a.historico = a.historico || []);
-            maintenances.forEach(m => m.historico = m.historico || []);
-            documents.forEach(d => d.historico = d.historico || []);
-
-            populateSelects();
-            updateDateInputs('Audit');
-            updateDateInputs('Ativ');
-            updateDateInputs('Mant');
-            updateDateInputs('Doc');
-            updateDateInputs('Dash');
-
-            if (currentTab === 'dashboard') {
-                renderDashboard();
-            } else if (currentTab !== 'backup' && currentTab !== 'configuracoes') {
-                renderCards();
-            }
-        } catch (e) {
-            // silencioso
-            console.error('Erro ao atualizar buffer do Cloud:', e);
+        // --- LÓGICA ANTI-SOBRECARGA ---
+        // Verifica se a última atualização processada é a mesma que veio do servidor
+        if (this.lastProcessedUpdate === record.lastUpdate) {
+            return; // Se os dados forem idênticos, interrompe o processamento aqui
         }
+        // Armazena o novo timestamp de atualização
+        this.lastProcessedUpdate = record.lastUpdate;
+
+        // Atualiza as variáveis globais com os novos dados do Cloud
+        audits = record.audits || [];
+        activities = record.activities || [];
+        maintenances = record.maintenances || [];
+        documents = record.documents || [];
+
+        // Atualiza as listas mestras (setores, categorias, status, etc)
+        if (record.masterLists) {
+            masterLists = { ...defaultMasterLists, ...record.masterLists };
+            if (Array.isArray(masterLists.mantItens)) {
+                masterLists.mantItens = defaultMasterLists.mantItens;
+            }
+        }
+
+        // Garante a integridade do histórico para cada item
+        audits.forEach(a => a.historico = a.historico || []);
+        activities.forEach(a => a.historico = a.historico || []);
+        maintenances.forEach(m => m.historico = m.historico || []);
+        documents.forEach(d => d.historico = d.historico || []);
+
+        // Sincroniza os selects e inputs de data com os novos dados
+        populateSelects();
+        updateDateInputs('Audit');
+        updateDateInputs('Ativ');
+        updateDateInputs('Mant');
+        updateDateInputs('Doc');
+        updateDateInputs('Dash');
+
+        // Renderiza apenas a aba que o usuário está visualizando no momento
+        if (currentTab === 'dashboard') {
+            renderDashboard();
+        } else if (currentTab !== 'backup' && currentTab !== 'configuracoes') {
+            renderCards();
+        }
+        
+    } catch (e) {
+        console.error('Erro ao atualizar buffer do Cloud:', e);
     }
+}
 
     function startAutoRefresh() {
-        if (autoRefreshIntervalId) return;
-        autoRefreshIntervalId = setInterval(refreshCloudDataBuffer, 5000); // 1 minuto
-    }
+    if (autoRefreshIntervalId) clearInterval(autoRefreshIntervalId);
+
+    const refreshLogic = () => {
+        // Define o próximo tempo de espera: 1 minuto (60000ms) para dashboard, 5 segundos (5000ms) para as demais
+        const intervalTime = currentTab === 'dashboard' ? 60000 : 5000;
+
+        refreshCloudDataBuffer().then(() => {
+            autoRefreshIntervalId = setTimeout(refreshLogic, intervalTime);
+        });
+    };
+
+    // Inicia o ciclo
+    refreshLogic();
+}
     
     async function saveAll(showAlert = false) {
         
