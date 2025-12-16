@@ -1962,10 +1962,11 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
 
     async function refreshCloudDataBuffer() {
-    // Não atualiza se não houver usuário logado ou se houver um modal de edição aberto
-    if (!currentuser || isEditingModalOpen()) return;
+    // 1. Verificação de segurança básica: só prossegue se houver usuário
+    if (!currentuser) return;
 
     try {
+        // 2. Busca os dados no servidor
         const res = await fetch(`https://api.jsonbin.io/v3/b/${DATA_BIN_ID}/latest`, {
             headers: { 'X-Master-Key': API_KEY }
         });
@@ -1974,21 +1975,22 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const data = await res.json();
         const record = data.record;
 
-        // --- LÓGICA ANTI-SOBRECARGA ---
-        // Verifica se a última atualização processada é a mesma que veio do servidor
+        // 3. REGRA DE OURO: Só processa a atualização se o lastUpdate for diferente do que temos em memória
+        // Isso permite que a função rode durante a edição sem "limpar" os campos do usuário, 
+        // a menos que alguém tenha salvo algo novo no banco.
         if (this.lastProcessedUpdate === record.lastUpdate) {
-            return; // Se os dados forem idênticos, interrompe o processamento aqui
+            return; // Dados idênticos, interrompe aqui para não atrapalhar a edição ou navegação
         }
-        // Armazena o novo timestamp de atualização
+        
+        // 4. Se chegou aqui, houve mudança real no banco. Atualizamos o timestamp.
         this.lastProcessedUpdate = record.lastUpdate;
 
-        // Atualiza as variáveis globais com os novos dados do Cloud
+        // 5. Atualiza as variáveis globais
         audits = record.audits || [];
         activities = record.activities || [];
         maintenances = record.maintenances || [];
         documents = record.documents || [];
 
-        // Atualiza as listas mestras (setores, categorias, status, etc)
         if (record.masterLists) {
             masterLists = { ...defaultMasterLists, ...record.masterLists };
             if (Array.isArray(masterLists.mantItens)) {
@@ -1996,13 +1998,14 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             }
         }
 
-        // Garante a integridade do histórico para cada item
+        // 6. Garante histórico e integridade
         audits.forEach(a => a.historico = a.historico || []);
         activities.forEach(a => a.historico = a.historico || []);
         maintenances.forEach(m => m.historico = m.historico || []);
         documents.forEach(d => d.historico = d.historico || []);
 
-        // Sincroniza os selects e inputs de data com os novos dados
+        // 7. Sincroniza componentes visuais
+        // Nota: Se o usuário estiver editando e houver mudança no banco, os selects serão resetados.
         populateSelects();
         updateDateInputs('Audit');
         updateDateInputs('Ativ');
@@ -2010,13 +2013,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         updateDateInputs('Doc');
         updateDateInputs('Dash');
 
-        // Renderiza apenas a aba que o usuário está visualizando no momento
+        // 8. Re-renderiza a tela atual
         if (currentTab === 'dashboard') {
             renderDashboard();
         } else if (currentTab !== 'backup' && currentTab !== 'configuracoes') {
             renderCards();
         }
-        
     } catch (e) {
         console.error('Erro ao atualizar buffer do Cloud:', e);
     }
