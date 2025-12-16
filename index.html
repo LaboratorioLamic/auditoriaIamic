@@ -2701,89 +2701,69 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
     
     function populateSelects() {
-        const setores = masterLists.setores || []; 
+    const setores = masterLists.setores || []; 
+    
+    // Captura os valores selecionados antes de reconstruir os selects para evitar o reset
+    const currentValues = {
+        audit: { cat: document.getElementById('auditCategoria')?.value, status: document.getElementById('auditStatus')?.value, mark: document.getElementById('auditMarcador')?.value },
+        ativ: { cat: document.getElementById('ativCategoria')?.value, status: document.getElementById('ativStatus')?.value, mark: document.getElementById('ativMarcador')?.value },
+        mant: { cat: document.getElementById('mantCategoria')?.value, status: document.getElementById('mantStatus')?.value, mark: document.getElementById('mantMarcador')?.value },
+        doc: { cat: document.getElementById('docCategoria')?.value, status: document.getElementById('docStatus')?.value, mark: document.getElementById('docMarcador')?.value }
+    };
+
+    // Coleta TODOS os status para o Dashboard
+    let allStatusnames = [];
+    ['auditStatus', 'ativStatus', 'mantStatus', 'docStatus'].forEach(key => {
+        (masterLists[key] || []).forEach(s => { if (s.name) allStatusnames.push(s.name); });
+    });
+    const unifiedStatusnames = [...new Set(allStatusnames)].sort();
+
+    const makeOpts = (list) => list.map(i => `<option value="${i}">${i}</option>`).join('');
+    const makeStatusOpts = (list) => list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+    const makeFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i}">${i}</option>`).join('');
+    const makeStatusFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+    
+    // --- FILTROS DASHBOARD ---
+    document.getElementById('fDashSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos");
+    document.getElementById('fDashStatus').innerHTML = makeFilterOpts(unifiedStatusnames, "Status: Todos");
+
+    // --- POPULAR MODAIS (Setores e Categorias) ---
+    ['audit', 'ativ', 'mant', 'doc'].forEach(p => {
+        document.getElementById(`${p}Setor`).innerHTML = makeOpts(setores);
+        document.getElementById(`${p}Categoria`).innerHTML = makeOpts(masterLists[`${p}Categorias`]);
+        document.getElementById(`${p}Status`).innerHTML = makeStatusOpts(masterLists[`${p}Status`]);
         
-        // NOVO: Coleta TODOS os status de TODAS as listas mestras de status dinamicamente
-        let allStatusnames = [];
-        ['auditStatus', 'ativStatus', 'mantStatus', 'docStatus'].forEach(key => {
-            masterLists[key].forEach(s => {
-                if (s.name) allStatusnames.push(s.name);
-            });
-        });
-        const unifiedStatusnames = [...new Set(allStatusnames)].sort();
-    
-        // Funções auxiliares para gerar <option>
-        const makeOpts = (list) => list.map(i => `<option>${i}</option>`).join('');
-        const makeStatusOpts = (list) => list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
-        const makeFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i}">${i}</option>`).join('');
-        const makeStatusFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+        // Correção específica para Marcadores: Garante o placeholder e restaura o valor
+        const markerSelect = document.getElementById(`${p}Marcador`);
+        markerSelect.innerHTML = `<option value="">Selecionar marcador</option>` + makeStatusOpts(masterLists[`${p}Marcadores`] || []);
         
-        // --- FILTROS DASHBOARD ---
-        document.getElementById('fDashSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos");
-        document.getElementById('fDashStatus').innerHTML = makeFilterOpts(unifiedStatusnames, "Status: Todos");
-    
-    
-        // --- MODAIS ---
-        // Setores
-        document.getElementById('auditSetor').innerHTML = makeOpts(setores); 
-        document.getElementById('ativSetor').innerHTML = makeOpts(setores); 
-        document.getElementById('mantSetor').innerHTML = makeOpts(setores); 
-        document.getElementById('docSetor').innerHTML = makeOpts(setores); 
-    
-        // Auditoria
-        document.getElementById('auditCategoria').innerHTML = makeOpts(masterLists.auditCategorias);
-        document.getElementById('auditStatus').innerHTML = makeStatusOpts(masterLists.auditStatus);
-        document.getElementById('auditMarcador').innerHTML =
-            `<option value="">Selecionar marcador</option>` +
-            makeStatusOpts(masterLists.auditMarcadores || []);
-        // Atividades
-        document.getElementById('ativCategoria').innerHTML = makeOpts(masterLists.ativCategorias);
-        document.getElementById('ativStatus').innerHTML = makeStatusOpts(masterLists.ativStatus);
-        document.getElementById('ativMarcador').innerHTML =
-            `<option value="">Selecionar marcador</option>` +
-            makeStatusOpts(masterLists.ativMarcadores || []);
-        // Manutenção
-        document.getElementById('mantCategoria').innerHTML = makeOpts(masterLists.mantCategorias);
-        document.getElementById('mantStatus').innerHTML = makeStatusOpts(masterLists.mantStatus);
-        document.getElementById('mantMarcador').innerHTML =
-            `<option value="">Selecionar marcador</option>` +
-            makeStatusOpts(masterLists.mantMarcadores || []);
-        // Documentos
-        document.getElementById('docCategoria').innerHTML = makeOpts(masterLists.docCategorias);
-        document.getElementById('docStatus').innerHTML = makeStatusOpts(masterLists.docStatus); 
-        document.getElementById('docMarcador').innerHTML =
-            `<option value="">Selecionar marcador</option>` +
-            makeStatusOpts(masterLists.docMarcadores || []); 
-        
-        onCategoryChange('audit');
-        onCategoryChange('ativ');
-        onCategoryChange('mant');
-        onCategoryChange('doc');
-    
-        // --- FILTROS ABAS (EXISTENTES) ---
-        document.getElementById('fAuditSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
-        document.getElementById('fAtivSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
-        document.getElementById('fMantSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
-        document.getElementById('fDocSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
-    
-        document.getElementById('fAuditCat').innerHTML = makeFilterOpts(masterLists.auditCategorias, "Categoria: Todas");
-        document.getElementById('fAuditStatus').innerHTML = makeStatusFilterOpts(masterLists.auditStatus, "Status: Todos");
-        
-        document.getElementById('fAtivCat').innerHTML = makeFilterOpts(masterLists.ativCategorias, "Categoria: Todas");
-        document.getElementById('fAtivStatus').innerHTML = makeStatusFilterOpts(masterLists.ativStatus, "Status: Todos");
-    
-        document.getElementById('fMantCat').innerHTML = makeFilterOpts(masterLists.mantCategorias, "Categoria: Todas");
-        document.getElementById('fMantStatus').innerHTML = makeStatusFilterOpts(masterLists.mantStatus, "Status: Todos");
-        
-        document.getElementById('fDocCat').innerHTML = makeFilterOpts(masterLists.docCategorias, "Categoria: Todas"); 
-        document.getElementById('fDocStatus').innerHTML = makeStatusFilterOpts(masterLists.docStatus, "Status: Todos"); 
-        
-        onFilterCategoryChange('Audit');
-        onFilterCategoryChange('Ativ');
-        onFilterCategoryChange('Mant');
-        onFilterCategoryChange('Doc');
-    }
-    
+        // Restaura os valores após o preenchimento do HTML
+        if (currentValues[p].cat) document.getElementById(`${p}Categoria`).value = currentValues[p].cat;
+        if (currentValues[p].status) document.getElementById(`${p}Status`).value = currentValues[p].status;
+        if (currentValues[p].mark) markerSelect.value = currentValues[p].mark;
+    });
+
+    // Atualiza Subcategorias/Itens baseado na categoria restaurada
+    onCategoryChange('audit');
+    onCategoryChange('ativ');
+    onCategoryChange('mant');
+    onCategoryChange('doc');
+
+    // --- FILTROS DAS ABAS ---
+    document.getElementById('fAuditSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
+    document.getElementById('fAtivSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
+    document.getElementById('fMantSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
+    document.getElementById('fDocSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
+
+    document.getElementById('fAuditCat').innerHTML = makeFilterOpts(masterLists.auditCategorias, "Categoria: Todas");
+    document.getElementById('fAuditStatus').innerHTML = makeStatusFilterOpts(masterLists.auditStatus, "Status: Todos");
+    document.getElementById('fAtivCat').innerHTML = makeFilterOpts(masterLists.ativCategorias, "Categoria: Todas");
+    document.getElementById('fAtivStatus').innerHTML = makeStatusFilterOpts(masterLists.ativStatus, "Status: Todos");
+    document.getElementById('fMantCat').innerHTML = makeFilterOpts(masterLists.mantCategorias, "Categoria: Todas");
+    document.getElementById('fMantStatus').innerHTML = makeStatusFilterOpts(masterLists.mantStatus, "Status: Todos");
+    document.getElementById('fDocCat').innerHTML = makeFilterOpts(masterLists.docCategorias, "Categoria: Todas"); 
+    document.getElementById('fDocStatus').innerHTML = makeStatusFilterOpts(masterLists.docStatus, "Status: Todos"); 
+}
     
     // Funções auxiliares para obter prefixos de ID corretos
     function getTabPrefix(tab) {
