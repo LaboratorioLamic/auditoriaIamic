@@ -670,8 +670,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     <div class="sidebar-divider"></div>
     <button id="tabDashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</button> 
     <div class="sidebar-divider"></div>
-    <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Auditoria</button>
     <button id="tabAtividades"><i class="fa-solid fa-list-check"></i> Gestão de Atividades</button>
+    <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Auditoria</button>
     <button id="tabDocumentos"><i class="fa-solid fa-file-alt"></i> Documentos</button> 
     <button id="tabManutencao"><i class="fa-solid fa-wrench"></i> Manutenção</button>
     <div class="sidebar-divider"></div>
@@ -2364,6 +2364,16 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // ORDENAÇÃO
         if (dateField) {
             data.sort((a, b) => {
+                // 1) Itens com status "Concluído" ou "Cancelado" vão para o final
+                const isAClosed = a.status === 'Concluído' || a.status === 'Cancelado';
+                const isBClosed = b.status === 'Concluído' || b.status === 'Cancelado';
+
+                if (isAClosed !== isBClosed) {
+                    // false (0) vem antes de true (1)
+                    return isAClosed ? 1 : -1;
+                }
+
+                // 2) Dentro do mesmo grupo, ordena por data (mais antiga primeiro)
                 const dateA = new Date(a[dateField]);
                 const dateB = new Date(b[dateField]);
                 return dateA - dateB;
