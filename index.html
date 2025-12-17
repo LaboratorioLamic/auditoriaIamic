@@ -116,6 +116,35 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 .btn-clear{padding:8px 16px;background:transparent;border:1px solid var(--border);color:var(--text-light);border-radius:8px;cursor:pointer;font-size:13px}
 .btn-clear:hover{background:#f3f4f6;color:var(--text)}
 
+/* Title search (lupa) */
+.filter-actions{display:flex;align-items:center;gap:8px}
+.title-search{position:relative;display:flex;align-items:center}
+.title-search-dropdown{
+    position:absolute;
+    top:calc(100% + 10px);
+    left:0; /* abre para a direita do ícone */
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:12px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.08);
+    padding:12px;
+    z-index:100;
+    width:320px;
+    max-width:calc(100vw - 32px);
+}
+.title-search-dropdown .filter-input{width:100%;min-width:unset}
+
+@media (max-width: 640px){
+    .title-search-dropdown{
+        position:fixed;
+        left:16px;
+        right:16px;
+        top:140px;
+        width:auto;
+        max-width:none;
+    }
+}
+
 /* CARDS GRID (FIXED SIZE) */
 .cards-grid {
     display: grid;
@@ -137,7 +166,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     transition: transform 0.2s, box-shadow 0.2s;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 8px; /* distância flexível entre seções */
     height: 200px;
 }
 .card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
@@ -150,15 +180,18 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 .card.ind-yellow::before { background: var(--ind-yellow); }
 .card.ind-red::before { background: var(--ind-red); }
 
-.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: -10px; padding-left: 10px; }
-.card-header h4 { margin: 0; font-size: 16px; font-weight: 600; color: var(--primary); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0; padding-left: 10px; }
+.card-title{padding:0 10px; margin-top:-2px;}
+.card-title h4,
+.card h4 { margin: 0; font-size: 16px; font-weight: 600; color: var(--primary); line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card-actions { display: flex; gap: 8px; opacity: 0; transition: 0.2s; }
 .card:hover .card-actions { opacity: 1; }
 .card-actions i { font-size: 14px; color: var(--text-light); padding: 4px; border-radius: 4px; }
 .card-actions i:hover { background: #f3f4f6; color: var(--primary); }
 
-.card-body { padding-left: 10px; flex: 0.1; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-light); }
-.card-info-row { display: flex; align-items: center; gap: 8px; }
+.card-body { padding-left: 10px; margin-top:auto; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; line-height: 1.2; color: var(--text-light); overflow: hidden; }
+.card-info-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.card-info-row span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-info-row i { width: 16px; text-align: center; color: #9ca3af; }
 
 /* Tag de Status com Cor */
@@ -696,7 +729,6 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     <div class="sidebar-divider"></div>
     <button id="tabBackup"><i class="fa-solid fa-database"></i> Backup</button>
     <button id="tabConfiguracoes" style="display:none;"><i class="fa-solid fa-gear"></i> Configurações</button>
-    <div class="sidebar-divider"></div>
     <div id="currentuserBox" class="sidebar-user" style="display:none;">
         <i class="fa-solid fa-user-circle"></i>
         <span id="currentuserLabel"></span>
@@ -765,8 +797,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         </div>
                     </div>
                 </div>
-
-                <button class="btn-clear" onclick="clearDashboardFilters()" title="Limpar filtros"><i class="fa-solid fa-rotate-left"></i></button>
+                <div class="filter-actions">
+                    <button class="btn-clear" onclick="clearDashboardFilters()" title="Limpar filtros"><i class="fa-solid fa-rotate-left"></i></button>
+                </div>
             </div>
             </div>
 
@@ -785,6 +818,20 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         <p>Total Concluído</p>
                     </div>
                     <h2 id="summaryCompletedCount">0</h2>
+                </div>
+                <div class="summary-card">
+                    <div class="icon-header">
+                        <i class="fas fa-ban" style="color:var(--ind-red); background:#fef2f2"></i>
+                        <p>Total Cancelado</p>
+                    </div>
+                    <h2 id="summaryCancelledCount">0</h2>
+                </div>
+                <div class="summary-card">
+                    <div class="icon-header">
+                        <i class="fas fa-pause-circle" style="color:var(--c-purple); background:#faf5ff"></i>
+                        <p>Total Standby</p>
+                    </div>
+                    <h2 id="summaryStandbyCount">0</h2>
                 </div>
                 <div class="summary-card">
                     <div class="icon-header">
@@ -1024,7 +1071,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     </div>
                 </div>
 
-                <button class="btn-clear" onclick="clearFilters()" title="Limpar filtros"><i class="fa-solid fa-rotate-left"></i></button>
+                <div class="filter-actions">
+                    <div class="title-search">
+                        <button class="btn-clear" onclick="toggleTitleSearch('cards')" title="Pesquisar por título"><i class="fa-solid fa-magnifying-glass"></i></button>
+                        <div class="title-search-dropdown" id="titleSearchDropdown" style="display:none;">
+                            <input id="titleSearchInput" class="filter-input" placeholder="Pesquisar títulos..." oninput="onTitleSearchInput('cards')">
+                        </div>
+                    </div>
+                    <button class="btn-clear" onclick="clearFilters()" title="Limpar filtros"><i class="fa-solid fa-rotate-left"></i></button>
+                </div>
             </div>
             
             <button class="btn-primary" id="addBtn"> <i class="fas fa-plus"></i> Novo Registro
@@ -1584,7 +1639,93 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const [y, m, d] = dateStr.split('-');
         return `${d}/${m}/${y}`;
     };
-    const daysDiff = dateStr => Math.ceil((new Date(dateStr) - new Date()) / (1000*60*60*24));
+    const truncateText = (text, max = 55) => {
+        const s = String(text || '');
+        if (s.length <= max) return s;
+        if (max <= 3) return '.'.repeat(max);
+        return s.slice(0, max - 3).trimEnd() + '...';
+    };
+    const daysDiff = dateStr => {
+        if (!dateStr) return Infinity;
+        const d = new Date(dateStr);
+        if (Number.isNaN(d.getTime())) return Infinity;
+        return Math.ceil((d - new Date()) / (1000*60*60*24));
+    };
+    const isBlankPeriodicity = val => {
+        if (val === null || val === undefined) return true;
+        const s = String(val).trim();
+        if (s === '') return true;
+        const n = Number(s);
+        return !Number.isFinite(n) || n <= 0;
+    };
+
+    // Cards (Manutenção/Documentos):
+    // - "Data" = publicação/criação (sempre)
+    // - "Próx" = próxima (ou N/A quando periodicidade estiver vazia)
+    const getMaintenanceCardDate = item => item?.ultima; // publicação (última manutenção)
+    const getMaintenanceDeadlineDate = item => (isBlankPeriodicity(item?.intervalo) ? null : item?.proxima);
+    const getDocumentCardDate = item => item?.dataCriacao; // publicação (criação)
+    const getDocumentDeadlineDate = item => (isBlankPeriodicity(item?.docIntervalo) ? null : item?.dataProximaRevisao);
+
+    // Busca por título (lupa)
+    let titleSearchCardsEnabled = false;
+    let titleSearchCardsQuery = '';
+    let titleSearchDashEnabled = false;
+    let titleSearchDashQuery = '';
+
+    function setTitleSearchEnabled(context, enabled) {
+        if (context === 'dash') {
+            titleSearchDashEnabled = enabled;
+            if (!enabled) {
+                titleSearchDashQuery = '';
+                const inEl = document.getElementById('dashTitleSearchInput');
+                if (inEl) inEl.value = '';
+                const dd = document.getElementById('dashTitleSearchDropdown');
+                if (dd) dd.style.display = 'none';
+            }
+            renderDashboard();
+        } else {
+            titleSearchCardsEnabled = enabled;
+            if (!enabled) {
+                titleSearchCardsQuery = '';
+                const inEl = document.getElementById('titleSearchInput');
+                if (inEl) inEl.value = '';
+                const dd = document.getElementById('titleSearchDropdown');
+                if (dd) dd.style.display = 'none';
+            }
+            renderCards();
+        }
+    }
+
+    function toggleTitleSearch(context) {
+        const dropdownId = context === 'dash' ? 'dashTitleSearchDropdown' : 'titleSearchDropdown';
+        const inputId = context === 'dash' ? 'dashTitleSearchInput' : 'titleSearchInput';
+        const dd = document.getElementById(dropdownId);
+        if (!dd) return;
+        const isOpen = dd.style.display !== 'none';
+        if (isOpen) {
+            dd.style.display = 'none';
+            setTitleSearchEnabled(context, false);
+        } else {
+            dd.style.display = 'block';
+            setTitleSearchEnabled(context, true);
+            const inEl = document.getElementById(inputId);
+            if (inEl) inEl.focus();
+        }
+    }
+
+    function onTitleSearchInput(context) {
+        const inputId = context === 'dash' ? 'dashTitleSearchInput' : 'titleSearchInput';
+        const inEl = document.getElementById(inputId);
+        const q = (inEl?.value || '').trim().toLowerCase();
+        if (context === 'dash') {
+            titleSearchDashQuery = q;
+            if (titleSearchDashEnabled) renderDashboard();
+        } else {
+            titleSearchCardsQuery = q;
+            if (titleSearchCardsEnabled) renderCards();
+        }
+    }
     
     const colorMap = {
         'blue': 'var(--c-blue)',
@@ -2134,6 +2275,22 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // Qualquer outro status é considerado ativo para fins de G1 e G3
         return 'ativo';
     }
+
+    function normalizeStatusName(name) {
+        return String(name || '')
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, ' ');
+    }
+
+    function isStatusCancelled(name) {
+        return normalizeStatusName(name) === 'cancelado';
+    }
+
+    function isStatusStandby(name) {
+        const n = normalizeStatusName(name);
+        return n === 'standby' || n === 'stand by';
+    }
     
     // NOVO: Função para obter a cor de um status específico (agora a cor é pega da lista mestra dinâmica)
     function getStatusColor(statusname, category) {
@@ -2156,17 +2313,20 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const fStatus = document.getElementById('fDashStatus').value;
         const fDateType = document.getElementById('fDashDateType').value;
         const fMonth = parseInt(document.getElementById('fDashMonth').value);
-        const fYear = parseInt(document.getElementById('fDashYearForMonth').value || document.getElementById('fDashYearOnly').value);
+        const fYearForMonth = parseInt(document.getElementById('fDashYearForMonth').value);
+        const fYearOnly = parseInt(document.getElementById('fDashYearOnly').value);
+        const fYear = (fDateType === 'year') ? fYearOnly : fYearForMonth;
         const fDataIni = document.getElementById('fDashDataIni').value;
         const fDataFim = document.getElementById('fDashDataFim').value;
+        const fTitleQuery = titleSearchDashEnabled ? titleSearchDashQuery : '';
     
     
         // Constrói uma lista completa de todos os itens com metadados unificados
         const rawItems = [].concat(
             audits.map(a => ({ ...a, type: 'audit', statusType: getStatusType(a.status), dateField: a.dataPublicacao, deadlineField: a.dataPrevisao, color: getStatusColor(a.status, 'audit') })),
             activities.map(a => ({ ...a, type: 'ativ', statusType: getStatusType(a.status), dateField: a.dataInicio, deadlineField: a.dataConclusao, color: getStatusColor(a.status, 'ativ') })),
-            maintenances.map(m => ({ ...m, type: 'mant', statusType: getStatusType(m.status), dateField: m.ultima, deadlineField: m.proxima, color: getStatusColor(m.status, 'mant') })),
-            documents.map(d => ({ ...d, type: 'doc', statusType: getStatusType(d.status), dateField: d.dataCriacao, deadlineField: d.dataProximaRevisao, color: getStatusColor(d.status, 'doc') }))
+            maintenances.map(m => ({ ...m, type: 'mant', statusType: getStatusType(m.status), dateField: m.ultima, deadlineField: isBlankPeriodicity(m.intervalo) ? null : m.proxima, color: getStatusColor(m.status, 'mant') })),
+            documents.map(d => ({ ...d, type: 'doc', statusType: getStatusType(d.status), dateField: d.dataCriacao, deadlineField: isBlankPeriodicity(d.docIntervalo) ? null : d.dataProximaRevisao, color: getStatusColor(d.status, 'doc') }))
         );
         
         // --- FILTRAGEM ---
@@ -2181,6 +2341,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
             // 3. Filtro por Status Consolidado
             if (fStatus && item.status !== fStatus) return false;
+
+            // 3.1 Filtro por Título (lupa)
+            if (fTitleQuery) {
+                const t = (item.titulo || '').toLowerCase();
+                if (!t.includes(fTitleQuery)) return false;
+            }
     
             // 4. Filtro por Período de Publicação/Criação (dateField)
             if (fDateType !== 'all') {
@@ -2208,8 +2374,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const activeCount = activeItems.length;
     
         const completedCount = filteredItems.filter(item => item.statusType === 'finalizado').length;
+        const cancelledCount = filteredItems.filter(item => isStatusCancelled(item.status)).length;
+        const standbyCount = filteredItems.filter(item => isStatusStandby(item.status)).length;
         
-        const overdueCount = activeItems.filter(item => {
+        const activeItemsWithDeadline = activeItems.filter(item => !!item.deadlineField);
+        const activeDeadlineCount = activeItemsWithDeadline.length;
+
+        const overdueCount = activeItemsWithDeadline.filter(item => {
             const d = daysDiff(item.deadlineField);
             return d < 0;
         }).length;
@@ -2241,7 +2412,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             longoPrazo: { count: 0, color: 'var(--ind-green)', percent: 0 }
         };
     
-        activeItems.forEach(item => {
+        activeItemsWithDeadline.forEach(item => {
             const d = daysDiff(item.deadlineField);
             if (d < 0) prazoCounts.atrasados.count++;
             else if (d <= 7) prazoCounts.criticos.count++;
@@ -2252,19 +2423,21 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         
         // Calcula porcentagens para G3 (baseado apenas nos itens ativos)
         Object.keys(prazoCounts).forEach(key => {
-            prazoCounts[key].percent = activeCount > 0 ? (prazoCounts[key].count / activeCount) * 100 : 0;
+            prazoCounts[key].percent = activeDeadlineCount > 0 ? (prazoCounts[key].count / activeDeadlineCount) * 100 : 0;
         });
     
-        return { totalCount, activeCount, completedCount, overdueCount, statusCounts, setorCounts, prazoCounts };
+        return { totalCount, activeCount, completedCount, cancelledCount, standbyCount, overdueCount, statusCounts, setorCounts, prazoCounts };
     }
     
     function renderDashboard() {
-        const { totalCount, activeCount, completedCount, overdueCount, statusCounts, setorCounts, prazoCounts } = calculateDashboardData();
+        const { totalCount, activeCount, completedCount, cancelledCount, standbyCount, overdueCount, statusCounts, setorCounts, prazoCounts } = calculateDashboardData();
         
         // --- Cartões de Resumo ---
         document.getElementById('summaryTotalCount').textContent = totalCount;
         document.getElementById('summaryActiveCount').textContent = activeCount;
         document.getElementById('summaryCompletedCount').textContent = completedCount;
+        document.getElementById('summaryCancelledCount').textContent = cancelledCount;
+        document.getElementById('summaryStandbyCount').textContent = standbyCount;
         document.getElementById('summaryOverdueCount').textContent = overdueCount;
     
         // --- G1: Status Consolidado ---
@@ -2415,12 +2588,16 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         let data = [];
         let statusList = [];
         let dateField = '';
+        let getSortDate = null;     // data usada para ordenar e para filtro de data (especial em mant/doc)
+        let getDeadlineDate = null; // data usada para indicador/prazo (N/A => null)
         let filterCatId = '';
         let filterSubcatId = '';
     
         if (currentTab === 'auditoria') {
             statusList = masterLists.auditStatus || [];
             dateField = 'dataPrevisao';
+            getSortDate = (it) => it.dataPrevisao;
+            getDeadlineDate = (it) => it.dataPrevisao;
             filterSetorId = 'fAuditSetor'; 
             filterCatId = 'fAuditCat';
             filterSubcatId = 'fAuditSub';
@@ -2457,6 +2634,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         } else if (currentTab === 'atividades') {
             statusList = masterLists.ativStatus || [];
             dateField = 'dataConclusao';
+            getSortDate = (it) => it.dataConclusao;
+            getDeadlineDate = (it) => it.dataConclusao;
             filterSetorId = 'fAtivSetor'; 
             filterCatId = 'fAtivCat';
             filterSubcatId = 'fAtivSub';
@@ -2493,6 +2672,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         } else if (currentTab === 'manutencao') {
             statusList = masterLists.mantStatus || [];
             dateField = 'proxima';
+            getSortDate = (it) => getMaintenanceCardDate(it); // Data (publicação)
+            getDeadlineDate = (it) => getMaintenanceDeadlineDate(it);
             filterSetorId = 'fMantSetor'; 
             filterCatId = 'fMantCat';
             filterSubcatId = 'fMantItem'; 
@@ -2512,7 +2693,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 if (stat && item.status !== stat) return false;
     
                 if (dateType !== 'all') {
-                    const itemDate = new Date(item[dateField]);
+                    const dateForFilter = getMaintenanceCardDate(item); // Data (publicação)
+                    const itemDate = new Date(dateForFilter);
                     if (dateType === 'month') {
                         if (itemDate.getMonth() !== parseInt(document.getElementById('fMantMonth').value) || 
                             itemDate.getFullYear() !== parseInt(document.getElementById('fMantYearForMonth').value)) return false;
@@ -2521,8 +2703,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     } else if (dateType === 'custom') {
                         const ini = document.getElementById('fMantDataIni').value;
                         const fim = document.getElementById('fMantDataFim').value;
-                        if (ini && item[dateField] < ini) return false;
-                        if (fim && item[dateField] > fim) return false;
+                        if (ini && dateForFilter < ini) return false;
+                        if (fim && dateForFilter > fim) return false;
                     }
                 }
                 return true;
@@ -2530,6 +2712,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         } else if (currentTab === 'documentos') { 
             statusList = masterLists.docStatus || [];
             dateField = 'dataProximaRevisao'; 
+            getSortDate = (it) => getDocumentCardDate(it); // Data (publicação)
+            getDeadlineDate = (it) => getDocumentDeadlineDate(it);
             filterSetorId = 'fDocSetor'; 
             filterCatId = 'fDocCat';
             filterSubcatId = 'fDocSub';
@@ -2547,7 +2731,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 if (stat && item.status !== stat) return false;
     
                 if (dateType !== 'all') {
-                    const itemDate = new Date(item[dateField]);
+                    const dateForFilter = getDocumentCardDate(item); // Data (publicação)
+                    const itemDate = new Date(dateForFilter);
                     if (dateType === 'month') {
                         if (itemDate.getMonth() !== parseInt(document.getElementById('fDocMonth').value) || 
                             itemDate.getFullYear() !== parseInt(document.getElementById('fDocYearForMonth').value)) return false;
@@ -2556,14 +2741,18 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     } else if (dateType === 'custom') {
                         const ini = document.getElementById('fDocDataIni').value;
                         const fim = document.getElementById('fDocDataFim').value;
-                        if (ini && item[dateField] < ini) return false;
-                        if (fim && item[dateField] > fim) return false;
+                        if (ini && dateForFilter < ini) return false;
+                        if (fim && dateForFilter > fim) return false;
                     }
                 }
                 return true;
             });
         }
     
+        // Busca por Título (lupa) - só quando o campo estiver ativo
+        if (titleSearchCardsEnabled && titleSearchCardsQuery) {
+            data = data.filter(item => (item.titulo || '').toLowerCase().includes(titleSearchCardsQuery));
+        }
     
         // ORDENAÇÃO
         if (dateField) {
@@ -2581,8 +2770,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 if (!isAClosed && !isBClosed) {
                     const flagA = a.flagDias || 7;
                     const flagB = b.flagDias || 7;
-                    const dA = daysDiff(a[dateField]);
-                    const dB = daysDiff(b[dateField]);
+                    const dA = daysDiff(getDeadlineDate ? getDeadlineDate(a) : a[dateField]);
+                    const dB = daysDiff(getDeadlineDate ? getDeadlineDate(b) : b[dateField]);
                     const isAAlert = dA <= flagA;
                     const isBAlert = dB <= flagB;
 
@@ -2592,8 +2781,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 }
 
                 // 3) Dentro do mesmo grupo, ordena por data (mais antiga primeiro)
-                const dateA = new Date(a[dateField]);
-                const dateB = new Date(b[dateField]);
+                const dateA = new Date(getSortDate ? getSortDate(a) : a[dateField]);
+                const dateB = new Date(getSortDate ? getSortDate(b) : b[dateField]);
                 return dateA - dateB;
             });
         }
@@ -2609,18 +2798,17 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         data.forEach(item => {
             const div = document.createElement('div');
             const flagDays = item.flagDias || 7;
-            let targetDate;
-            
-            if (currentTab === 'auditoria') targetDate = item.dataPrevisao;
-            else if (currentTab === 'atividades') targetDate = item.dataConclusao;
-            else if (currentTab === 'manutencao') targetDate = item.proxima;
-            else targetDate = item.dataProximaRevisao; 
+            let targetDate = (getDeadlineDate ? getDeadlineDate(item) : null);
+            const fullTitle = item.titulo || '';
+            const displayTitle = truncateText(fullTitle, 55);
     
             const d = daysDiff(targetDate);
             
             let indicatorClass = 'ind-green';
-            if (d < 0) indicatorClass = 'ind-red';
-            else if (d <= flagDays) indicatorClass = 'ind-yellow';
+            if (d !== Infinity) {
+                if (d < 0) indicatorClass = 'ind-red';
+                else if (d <= flagDays) indicatorClass = 'ind-yellow';
+            }
     
             const statusObj = statusList.find(s => s.name === item.status) || { color: 'default' };
             const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
@@ -2644,26 +2832,32 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
+                    <div class="card-info-row"><i class="far fa-calendar"></i> <span>Pub: <strong>${formatBR(item.dataPublicacao)}</strong></span></div>
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>
                 `;
             } else if (currentTab === 'atividades') {
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
+                    <div class="card-info-row"><i class="far fa-calendar"></i> <span>Inicio: <strong>${formatBR(item.dataInicio)}</strong></span></div>
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Fim: <strong>${formatBR(item.dataConclusao)}</strong></span></div>
                 `;
             } else if (currentTab === 'manutencao') {
+                const isNA = isBlankPeriodicity(item.intervalo);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
                     <div class="card-info-row"><i class="fas fa-tag"></i> <span>${item.tipo || 'ND'}</span></div>
-                    <div class="card-info-row"><i class="far fa-clock"></i> <span>Próx: <strong>${formatBR(item.proxima)}</strong></span></div>
+                    <div class="card-info-row"><i class="far fa-clock"></i> <span>Data: <strong>${formatBR(item.ultima)}</strong></span></div>
+                    <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isNA ? 'N/A' : formatBR(item.proxima)}</strong></span></div>
                 `;
             } else { // Documentos
+                const isNA = isBlankPeriodicity(item.docIntervalo);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
-                    <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Rev: <strong>${formatBR(item.dataProximaRevisao)}</strong></span></div>
+                    <div class="card-info-row"><i class="far fa-clock"></i> <span>Data: <strong>${formatBR(item.dataCriacao)}</strong></span></div>
+                    <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isNA ? 'N/A' : formatBR(item.dataProximaRevisao)}</strong></span></div>
                 `;
             }
     
@@ -2683,8 +2877,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         ${deleteIconHtml}
                     </div>
                 </div>
-                <div style="padding:0 10px; margin-bottom:12px;">
-                    <h4 title="${item.titulo}">${item.titulo}</h4>
+                <div class="card-title">
+                    <h4 title="${fullTitle}">${displayTitle}</h4>
                 </div>
                 <div class="card-body">
                     ${specificContent}
@@ -2713,6 +2907,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         document.getElementById('fDashDataIni').value = "";
         document.getElementById('fDashDataFim').value = "";
         
+        setTitleSearchEnabled('dash', false);
         updateDateInputs('Dash');
     }
     
@@ -2728,6 +2923,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         document.getElementById('fDocDateType').value = 'all'; 
         
         document.querySelectorAll('.filters-bar input').forEach(i => i.value = "");
+
+        setTitleSearchEnabled('cards', false);
         
         updateDateInputs('Audit');
         updateDateInputs('Ativ');
@@ -2917,16 +3114,23 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             ultima = document.getElementById('mantUltima').value;
             intervaloId = 'mantIntervalo';
             proximaDisplayId = 'mantProxima';
-            intervalValue = parseInt(document.getElementById(intervaloId).value) || 0;
+            const intervalStr = (document.getElementById(intervaloId).value || '').trim();
+            intervalValue = intervalStr === '' ? null : parseInt(intervalStr);
         } else if (prefix === 'doc') {
             ultima = document.getElementById('docDataCriacao').value; 
             intervaloId = 'docIntervalo';
             proximaDisplayId = 'docProximaRevisao';
-            intervalValue = parseInt(document.getElementById(intervaloId).value) || 0;
+            const intervalStr = (document.getElementById(intervaloId).value || '').trim();
+            intervalValue = intervalStr === '' ? null : parseInt(intervalStr);
         } else {
             return;
         }
         
+        if (!ultima) return;
+        if (!Number.isFinite(intervalValue) || intervalValue <= 0) {
+            document.getElementById(proximaDisplayId).textContent = 'N/A';
+            return;
+        }
         if (ultima) {
             const next = new Date(ultima);
             next.setDate(next.getDate() + intervalValue);
@@ -2970,6 +3174,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     const isBackup = tab === 'backup';
     const isDashboard = tab === 'dashboard';
     const isConfig = tab === 'configuracoes';
+
+    // Garante que a busca por título só atue quando o campo estiver ativo/visível
+    if (isDashboard) setTitleSearchEnabled('cards', false);
+    else setTitleSearchEnabled('dash', false);
 
     document.getElementById('filtersBar').style.display = (isBackup || isDashboard || isConfig) ? 'none' : 'flex';
     document.getElementById('filtersBarDashboard').style.display = isDashboard ? 'flex' : 'none';
@@ -3236,11 +3444,17 @@ document.getElementById('addBtn').onclick = () => {
     
     function saveManutencao() {
         const ultima = document.getElementById('mantUltima').value;
-        const intervalo = parseInt(document.getElementById('mantIntervalo').value) || 0; // Garante que seja um número
-        
-        // Recálculo da próxima data com o NOVO intervalo
-        const nextDate = new Date(ultima);
-        nextDate.setDate(nextDate.getDate() + intervalo);
+        const intervaloStr = (document.getElementById('mantIntervalo').value || '').trim();
+        const intervaloNum = intervaloStr === '' ? null : parseInt(intervaloStr);
+        const hasPeriodicidade = Number.isFinite(intervaloNum) && intervaloNum > 0;
+        const proxima = (hasPeriodicidade && ultima)
+            ? (() => {
+                const nextDate = new Date(ultima);
+                nextDate.setDate(nextDate.getDate() + intervaloNum);
+                return nextDate.toISOString().split('T')[0];
+            })()
+            : '';
+        const intervalo = hasPeriodicidade ? intervaloNum : '';
         
         const isNew = !editingMantId;
         // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
@@ -3259,7 +3473,7 @@ document.getElementById('addBtn').onclick = () => {
             tipo: document.getElementById('mantTipo').value,
             ultima,
             intervalo, // Salva o novo intervalo
-            proxima: nextDate.toISOString().split('T')[0], // Salva a nova data calculada
+            proxima, // Salva a nova data calculada (ou vazio quando N/A)
             responsavelTecnico: document.getElementById('mantResponsavelTecnico').value, 
             responsavelManutencao: document.getElementById('mantResponsavelManutencao').value, 
             status: document.getElementById('mantStatus').value,
@@ -3294,11 +3508,17 @@ document.getElementById('addBtn').onclick = () => {
     
     function saveDocumento() { 
         const dataCriacao = document.getElementById('docDataCriacao').value;
-        const docIntervalo = parseInt(document.getElementById('docIntervalo').value) || 0; // Garante que seja um número
-        
-        // Recálculo da próxima revisão com o NOVO intervalo
-        const nextRevisao = new Date(dataCriacao);
-        nextRevisao.setDate(nextRevisao.getDate() + docIntervalo);
+        const docIntervaloStr = (document.getElementById('docIntervalo').value || '').trim();
+        const docIntervaloNum = docIntervaloStr === '' ? null : parseInt(docIntervaloStr);
+        const hasPeriodicidade = Number.isFinite(docIntervaloNum) && docIntervaloNum > 0;
+        const dataProximaRevisao = (hasPeriodicidade && dataCriacao)
+            ? (() => {
+                const nextRevisao = new Date(dataCriacao);
+                nextRevisao.setDate(nextRevisao.getDate() + docIntervaloNum);
+                return nextRevisao.toISOString().split('T')[0];
+            })()
+            : '';
+        const docIntervalo = hasPeriodicidade ? docIntervaloNum : '';
         
         const isNew = !editingDocId;
         // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
@@ -3317,7 +3537,7 @@ document.getElementById('addBtn').onclick = () => {
             status: document.getElementById('docStatus').value,
             dataCriacao,
             docIntervalo, // Salva o novo intervalo
-            dataProximaRevisao: nextRevisao.toISOString().split('T')[0], // Salva a nova data calculada
+            dataProximaRevisao, // Salva a nova data calculada (ou vazio quando N/A)
             responsavel: document.getElementById('docResponsavel').value,
             revisor: document.getElementById('docRevisor').value,
             flagDias: +document.getElementById('docFlagDias').value, // Lê o valor como número
@@ -3399,7 +3619,7 @@ document.getElementById('addBtn').onclick = () => {
             document.getElementById('mantItem').value = item.item;
             document.getElementById('mantTipo').value = item.tipo || '';
             document.getElementById('mantUltima').value = item.ultima;
-            document.getElementById('mantIntervalo').value = item.intervalo; // Corrigido
+            document.getElementById('mantIntervalo').value = (item.intervalo ?? ''); // permite vazio
             document.getElementById('mantResponsavelTecnico').value = item.responsavelTecnico || ''; 
             document.getElementById('mantResponsavelManutencao').value = item.responsavelManutencao || ''; 
             document.getElementById('mantStatus').value = item.status;
@@ -3419,7 +3639,7 @@ document.getElementById('addBtn').onclick = () => {
             document.getElementById('docSub').value = item.subcategoria || ''; 
             document.getElementById('docStatus').value = item.status;
             document.getElementById('docDataCriacao').value = item.dataCriacao;
-            document.getElementById('docIntervalo').value = item.docIntervalo; // Corrigido
+            document.getElementById('docIntervalo').value = (item.docIntervalo ?? ''); // permite vazio
             document.getElementById('docResponsavel').value = item.responsavel || '';
             document.getElementById('docRevisor').value = item.revisor || '';
             document.getElementById('docFlagDias').value = item.flagDias; // Corrigido
@@ -3539,28 +3759,30 @@ document.getElementById('addBtn').onclick = () => {
                 <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
             `;
         } else if (tab === 'manutencao') {
+            const isNA = isBlankPeriodicity(item.intervalo);
             detailsGrid = `
                 <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
                 <div class="view-item"><label>Tipo</label><div>${item.tipo || 'ND'}</div></div>
                 <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
                 <div class="view-item"><label>Equipamento</label><div>${item.item}</div></div>
-                <div class="view-item"><label>Periodicidade</label><div>${item.intervalo} dias</div></div>
+                <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${item.intervalo} dias`}</div></div>
                 <div class="view-item"><label>Última Manutenção</label><div>${formatBR(item.ultima)}</div></div>
-                <div class="view-item"><label>Próxima Manutenção</label><div>${formatBR(item.proxima)}</div></div>
+                <div class="view-item"><label>Próxima Manutenção</label><div>${isNA ? 'N/A' : formatBR(item.proxima)}</div></div>
                 <div class="view-item"><label>Responsável Técnico</label><div>${item.responsavelTecnico || 'ND'}</div></div>
                 <div class="view-item"><label>Responsável pela Manutenção</label><div>${item.responsavelManutencao || 'ND'}</div></div>
                 <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
             `;
         } else if (tab === 'documentos') { 
+            const isNA = isBlankPeriodicity(item.docIntervalo);
             detailsGrid = `
                 <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
                 <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
                 <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
-                <div class="view-item"><label>Periodicidade</label><div>${item.docIntervalo} dias</div></div>
+                <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${item.docIntervalo} dias`}</div></div>
                 <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
                 <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
                 <div class="view-item"><label>Data Criação</label><div>${formatBR(item.dataCriacao)}</div></div>
-                <div class="view-item"><label>Próx. Revisão</label><div>${formatBR(item.dataProximaRevisao)}</div></div>
+                <div class="view-item"><label>Próx. Revisão</label><div>${isNA ? 'N/A' : formatBR(item.dataProximaRevisao)}</div></div>
                 <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
             `;
         }
