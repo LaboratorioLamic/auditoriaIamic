@@ -2599,8 +2599,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     function renderCards() {
         if(currentTab === 'backup' || currentTab === 'dashboard') return; 
 
-        // Atualiza Subcategorias/Itens dinamicamente (quando Categoria = Todas),
-        // baseado nos demais filtros atuais (setor/status/data/título)
+        // Atualiza dinamicamente os filtros (selects) para mostrar apenas opções
+        // que possuem ao menos 1 card possível com os filtros atuais
         const tabToFilterPrefix = (tab) => {
             if (tab === 'auditoria') return 'Audit';
             if (tab === 'atividades') return 'Ativ';
@@ -2609,7 +2609,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             return '';
         };
         const currentFilterPrefix = tabToFilterPrefix(currentTab);
-        if (currentFilterPrefix) updateFilterSubcatOptions(currentFilterPrefix);
+        if (currentFilterPrefix) updateFilterFacetOptions(currentFilterPrefix);
     
         const grid = document.getElementById('cardsGrid');
         grid.innerHTML = '';
@@ -3137,29 +3137,143 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
 
     function passesOtherFilters(prefix, item) {
+        // Backward compat: agora usa passesFilters (sem exclusões)
+        return passesFilters(prefix, item, {});
+    }
+
+    function passesFilters(prefix, item, excluded = {}) {
         // Setor
-        const setor = document.getElementById(`f${prefix}Setor`)?.value || '';
-        if (setor && (item.setor || '') !== setor) return false;
+        if (!excluded.setor) {
+            const setor = document.getElementById(`f${prefix}Setor`)?.value || '';
+            if (setor && (item.setor || '') !== setor) return false;
+        }
+
+        // Categoria
+        if (!excluded.cat) {
+            const cat = document.getElementById(`f${prefix}Cat`)?.value || '';
+            if (cat && (item.categoria || '') !== cat) return false;
+        }
+
+        // Subcategoria/Item
+        if (!excluded.sub) {
+            let subVal = '';
+            if (prefix === 'Mant') subVal = document.getElementById('fMantItem')?.value || '';
+            else subVal = document.getElementById(`f${prefix}Sub`)?.value || '';
+
+            if (subVal) {
+                const itemSub = (prefix === 'Mant') ? (item.item || '') : (item.subcategoria || '');
+                if (itemSub !== subVal) return false;
+            }
+        }
 
         // Status
-        const stat = document.getElementById(`f${prefix}Status`)?.value || '';
-        if (stat && (item.status || '') !== stat) return false;
+        if (!excluded.status) {
+            const stat = document.getElementById(`f${prefix}Status`)?.value || '';
+            if (stat && (item.status || '') !== stat) return false;
+        }
 
         // Tipo (somente manutenção)
-        if (prefix === 'Mant') {
+        if (prefix === 'Mant' && !excluded.tipo) {
             const tipo = document.getElementById('fMantTipo')?.value || '';
             if (tipo && (item.tipo || '') !== tipo) return false;
         }
 
         // Data
-        if (!passesDateFilter(prefix, item)) return false;
+        if (!excluded.date) {
+            if (!passesDateFilter(prefix, item)) return false;
+        }
 
         // Título (lupa) - quando ativo
-        if (titleSearchCardsEnabled && titleSearchCardsQuery) {
-            if (!normalizeText(item.titulo || '').includes(titleSearchCardsQuery)) return false;
+        if (!excluded.title) {
+            if (titleSearchCardsEnabled && titleSearchCardsQuery) {
+                if (!normalizeText(item.titulo || '').includes(titleSearchCardsQuery)) return false;
+            }
         }
 
         return true;
+    }
+
+    function uniq(list) {
+        return [...new Set((list || []).filter(Boolean))];
+    }
+
+    function setSelectOptions(el, placeholder, options, currentValue) {
+        if (!el) return;
+        const html = `<option value="">${placeholder}</option>` + options.map(v => `<option value="${v}">${v}</option>`).join('');
+        el.innerHTML = html;
+        if (currentValue && options.includes(currentValue)) el.value = currentValue;
+        else el.value = '';
+    }
+
+    function getMasterSetores() {
+        return (masterLists?.setores || []).slice();
+    }
+    function getMasterCategorias(prefix) {
+        if (prefix === 'Audit') return (masterLists?.auditCategorias || []).slice();
+        if (prefix === 'Ativ') return (masterLists?.ativCategorias || []).slice();
+        if (prefix === 'Mant') return (masterLists?.mantCategorias || []).slice();
+        if (prefix === 'Doc') return (masterLists?.docCategorias || []).slice();
+        return [];
+    }
+    function getMasterStatus(prefix) {
+        if (prefix === 'Audit') return (masterLists?.auditStatus || []).slice();
+        if (prefix === 'Ativ') return (masterLists?.ativStatus || []).slice();
+        if (prefix === 'Mant') return (masterLists?.mantStatus || []).slice();
+        if (prefix === 'Doc') return (masterLists?.docStatus || []).slice();
+        return [];
+    }
+
+    function updateFilterFacetOptions(prefix) {
+        // Setor
+        {
+            const el = document.getElementById(`f${prefix}Setor`);
+            const currentValue = el?.value || '';
+            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { setor: true }));
+            const present = new Set(uniq(items.map(it => it.setor || '').filter(Boolean)));
+            const master = getMasterSetores();
+            const ordered = master.filter(v => present.has(v));
+            const extras = [...present].filter(v => !master.includes(v)).sort();
+            setSelectOptions(el, 'Setor: Todos', [...ordered, ...extras], currentValue);
+        }
+
+        // Categoria
+        {
+            const el = document.getElementById(`f${prefix}Cat`);
+            const currentValue = el?.value || '';
+            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { cat: true }));
+            const present = new Set(uniq(items.map(it => it.categoria || '').filter(Boolean)));
+            const master = getMasterCategorias(prefix);
+            const ordered = master.filter(v => present.has(v));
+            const extras = [...present].filter(v => !master.includes(v)).sort();
+            setSelectOptions(el, 'Categoria: Todas', [...ordered, ...extras], currentValue);
+        }
+
+        // Status
+        {
+            const el = document.getElementById(`f${prefix}Status`);
+            const currentValue = el?.value || '';
+            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { status: true }));
+            const present = new Set(uniq(items.map(it => it.status || '').filter(Boolean)));
+            const master = getMasterStatus(prefix).map(s => s.name).filter(Boolean);
+            const ordered = master.filter(v => present.has(v));
+            const extras = [...present].filter(v => !master.includes(v)).sort();
+            setSelectOptions(el, 'Status: Todos', [...ordered, ...extras], currentValue);
+        }
+
+        // Tipo (Manutenção)
+        if (prefix === 'Mant') {
+            const el = document.getElementById('fMantTipo');
+            const currentValue = el?.value || '';
+            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { tipo: true }));
+            const present = new Set(uniq(items.map(it => it.tipo || '').filter(Boolean)));
+            const master = (masterLists?.mantTipos || []).slice();
+            const ordered = master.filter(v => present.has(v));
+            const extras = [...present].filter(v => !master.includes(v)).sort();
+            setSelectOptions(el, 'Tipo: Todos', [...ordered, ...extras], currentValue);
+        }
+
+        // Subcategoria/Item (depende de categoria)
+        updateFilterSubcatOptions(prefix);
     }
 
     function updateFilterSubcatOptions(prefix) {
@@ -3189,13 +3303,20 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
         let options = [];
 
+        // Base: itens possíveis com os demais filtros (exclui o próprio filtro de subcat/item)
+        const itemsPossible = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { sub: true }));
+        const present = new Set(uniq(itemsPossible.map(valueGetter)).filter(Boolean));
+
         if (selectedCat !== "") {
-            // Categoria selecionada => usa array mestre daquela categoria
-            options = (masterLists?.[listKey]?.[selectedCat] || []).slice();
+            // Categoria selecionada => usa array mestre daquela categoria,
+            // porém oculta itens/subcats que não possuem cards visíveis com os demais filtros
+            const masterArr = (masterLists?.[listKey]?.[selectedCat] || []).slice();
+            const ordered = masterArr.filter(v => present.has(v));
+            const extras = [...present].filter(v => !masterArr.includes(v)).sort();
+            options = [...ordered, ...extras];
         } else {
             // Categoria = Todas => opções baseadas nos itens filtrados pelos demais filtros
-            const items = getItemsForFilterPrefix(prefix).filter(it => passesOtherFilters(prefix, it));
-            options = [...new Set(items.map(valueGetter).filter(Boolean))].sort();
+            options = [...present].sort();
         }
 
         subcatSelect.innerHTML = `<option value="">${label}</option>` + options.map(v => `<option value="${v}">${v}</option>`).join('');
