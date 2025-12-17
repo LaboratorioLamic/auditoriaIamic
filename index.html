@@ -2972,10 +2972,43 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
     // Captura os valores selecionados antes de reconstruir os selects para evitar o reset
     const currentValues = {
-        audit: { cat: document.getElementById('auditCategoria')?.value, status: document.getElementById('auditStatus')?.value, mark: document.getElementById('auditMarcador')?.value },
-        ativ: { cat: document.getElementById('ativCategoria')?.value, status: document.getElementById('ativStatus')?.value, mark: document.getElementById('ativMarcador')?.value },
-        mant: { cat: document.getElementById('mantCategoria')?.value, status: document.getElementById('mantStatus')?.value, mark: document.getElementById('mantMarcador')?.value, tipo: document.getElementById('mantTipo')?.value },
-        doc: { cat: document.getElementById('docCategoria')?.value, status: document.getElementById('docStatus')?.value, mark: document.getElementById('docMarcador')?.value }
+        // MODAIS
+        audit: { setor: document.getElementById('auditSetor')?.value, cat: document.getElementById('auditCategoria')?.value, status: document.getElementById('auditStatus')?.value, mark: document.getElementById('auditMarcador')?.value },
+        ativ: { setor: document.getElementById('ativSetor')?.value, cat: document.getElementById('ativCategoria')?.value, status: document.getElementById('ativStatus')?.value, mark: document.getElementById('ativMarcador')?.value },
+        mant: { setor: document.getElementById('mantSetor')?.value, cat: document.getElementById('mantCategoria')?.value, status: document.getElementById('mantStatus')?.value, mark: document.getElementById('mantMarcador')?.value, tipo: document.getElementById('mantTipo')?.value },
+        doc: { setor: document.getElementById('docSetor')?.value, cat: document.getElementById('docCategoria')?.value, status: document.getElementById('docStatus')?.value, mark: document.getElementById('docMarcador')?.value },
+
+        // FILTROS (persistência ao editar listas)
+        dash: {
+            area: document.getElementById('fDashArea')?.value,
+            setor: document.getElementById('fDashSetor')?.value,
+            status: document.getElementById('fDashStatus')?.value
+        },
+        Audit: {
+            setor: document.getElementById('fAuditSetor')?.value,
+            cat: document.getElementById('fAuditCat')?.value,
+            sub: document.getElementById('fAuditSub')?.value,
+            status: document.getElementById('fAuditStatus')?.value
+        },
+        Ativ: {
+            setor: document.getElementById('fAtivSetor')?.value,
+            cat: document.getElementById('fAtivCat')?.value,
+            sub: document.getElementById('fAtivSub')?.value,
+            status: document.getElementById('fAtivStatus')?.value
+        },
+        Mant: {
+            setor: document.getElementById('fMantSetor')?.value,
+            cat: document.getElementById('fMantCat')?.value,
+            item: document.getElementById('fMantItem')?.value,
+            tipo: document.getElementById('fMantTipo')?.value,
+            status: document.getElementById('fMantStatus')?.value
+        },
+        Doc: {
+            setor: document.getElementById('fDocSetor')?.value,
+            cat: document.getElementById('fDocCat')?.value,
+            sub: document.getElementById('fDocSub')?.value,
+            status: document.getElementById('fDocStatus')?.value
+        }
     };
 
     // Coleta TODOS os status para o Dashboard
@@ -2993,6 +3026,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     // --- FILTROS DASHBOARD ---
     document.getElementById('fDashSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos");
     document.getElementById('fDashStatus').innerHTML = makeFilterOpts(unifiedStatusnames, "Status: Todos");
+    if (currentValues.dash.area != null) document.getElementById('fDashArea').value = currentValues.dash.area;
+    if (currentValues.dash.setor != null) document.getElementById('fDashSetor').value = currentValues.dash.setor;
+    if (currentValues.dash.status != null) document.getElementById('fDashStatus').value = currentValues.dash.status;
 
     // --- POPULAR MODAIS (Setores e Categorias) ---
     ['audit', 'ativ', 'mant', 'doc'].forEach(p => {
@@ -3013,6 +3049,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         }
         
         // Restaura os valores após o preenchimento do HTML
+        if (currentValues[p].setor) document.getElementById(`${p}Setor`).value = currentValues[p].setor;
         if (currentValues[p].cat) document.getElementById(`${p}Categoria`).value = currentValues[p].cat;
         if (currentValues[p].status) document.getElementById(`${p}Status`).value = currentValues[p].status;
         if (currentValues[p].mark) markerSelect.value = currentValues[p].mark;
@@ -3043,6 +3080,34 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     document.getElementById('fMantStatus').innerHTML = makeStatusFilterOpts(masterLists.mantStatus, "Status: Todos");
     document.getElementById('fDocCat').innerHTML = makeFilterOpts(masterLists.docCategorias, "Categoria: Todas"); 
     document.getElementById('fDocStatus').innerHTML = makeStatusFilterOpts(masterLists.docStatus, "Status: Todos"); 
+
+    // Restaura valores de filtros para evitar voltar ao primeiro item após editar listas
+    if (currentValues.Audit.setor != null) document.getElementById('fAuditSetor').value = currentValues.Audit.setor;
+    if (currentValues.Ativ.setor != null) document.getElementById('fAtivSetor').value = currentValues.Ativ.setor;
+    if (currentValues.Mant.setor != null) document.getElementById('fMantSetor').value = currentValues.Mant.setor;
+    if (currentValues.Doc.setor != null) document.getElementById('fDocSetor').value = currentValues.Doc.setor;
+
+    if (currentValues.Audit.cat != null) document.getElementById('fAuditCat').value = currentValues.Audit.cat;
+    if (currentValues.Ativ.cat != null) document.getElementById('fAtivCat').value = currentValues.Ativ.cat;
+    if (currentValues.Mant.cat != null) document.getElementById('fMantCat').value = currentValues.Mant.cat;
+    if (currentValues.Doc.cat != null) document.getElementById('fDocCat').value = currentValues.Doc.cat;
+
+    if (currentValues.Audit.status != null) document.getElementById('fAuditStatus').value = currentValues.Audit.status;
+    if (currentValues.Ativ.status != null) document.getElementById('fAtivStatus').value = currentValues.Ativ.status;
+    if (currentValues.Mant.status != null) document.getElementById('fMantStatus').value = currentValues.Mant.status;
+    if (currentValues.Doc.status != null) document.getElementById('fDocStatus').value = currentValues.Doc.status;
+
+    if (currentValues.Mant.tipo != null) document.getElementById('fMantTipo').value = currentValues.Mant.tipo;
+
+    // Subcategoria/Item são facetados dinamicamente; tenta restaurar seleção e, em seguida, recalcula opções visíveis
+    if (typeof updateFilterFacetOptions === 'function') {
+        ['Audit', 'Ativ', 'Mant', 'Doc'].forEach(p => updateFilterFacetOptions(p));
+        // restaura sub/itens após recálculo (se ainda existirem)
+        const aSub = document.getElementById('fAuditSub'); if (aSub && currentValues.Audit.sub != null) aSub.value = currentValues.Audit.sub;
+        const tSub = document.getElementById('fAtivSub'); if (tSub && currentValues.Ativ.sub != null) tSub.value = currentValues.Ativ.sub;
+        const mItem = document.getElementById('fMantItem'); if (mItem && currentValues.Mant.item != null) mItem.value = currentValues.Mant.item;
+        const dSub = document.getElementById('fDocSub'); if (dSub && currentValues.Doc.sub != null) dSub.value = currentValues.Doc.sub;
+    }
 }
     
     // Funções auxiliares para obter prefixos de ID corretos
