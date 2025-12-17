@@ -1154,6 +1154,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                                 <option value="false">Inativo</option>
                             </select>
                         </div>
+                        <div class="field-group">
+                            <label>É administrador?</label>
+                            <select id="cfgIsAdmin">
+                                <option value="false">Não</option>
+                                <option value="true">Sim</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="field-group full-width" style="margin-top:8px;">
@@ -1183,6 +1190,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                                 <th>Abas</th>
                                 <th>Editar</th>
                                 <th>Status</th>
+                                <th>Administrador</th>
                                 <th>Excluir cards</th>
                                 <th>Gerenciar listas</th>
                                 <th style="text-align:right;">Ações</th>
@@ -4660,7 +4668,9 @@ document.getElementById('addBtn').onclick = () => {
         document.getElementById('cfgPassword').value = '';
         document.getElementById('cfgCanEdit').value = 'true';
         document.getElementById('cfgCanDelete').value = 'false';
+        document.getElementById('cfgCanManageLists').value = 'false';
         document.getElementById('cfgStatus').value = 'true';
+        document.getElementById('cfgIsAdmin').value = 'false';
         document.querySelectorAll('.cfg-tab').forEach(chk => {
             chk.checked = (chk.value === 'dashboard' || chk.value === 'auditoria');
         });
@@ -4680,6 +4690,7 @@ document.getElementById('addBtn').onclick = () => {
                 const tabs = Array.isArray(u.tabs) && u.tabs.length > 0 ? u.tabs.join(', ') : 'Dashboard, Auditoria';
                 const editLabel = u.canEditCards === false ? 'Somente leitura' : 'Editar';
                 const statusLabel = u.active === false ? 'Inativo' : 'Ativo';
+                const isAdmin = (u.isAdmin === true || u.user === 'admin') ? 'Sim' : 'Não';
                 const canDel = u.canDeleteCards ? 'Sim' : 'Não';
                 const canManage = u.canManageLists ? 'Sim' : 'Não';
                 tbody.innerHTML += `
@@ -4689,6 +4700,7 @@ document.getElementById('addBtn').onclick = () => {
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${tabs}</td>
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${editLabel}</td>
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${statusLabel}</td>
+                        <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:center; font-weight:${isAdmin === 'Sim' ? 'bold' : 'normal'}; color:${isAdmin === 'Sim' ? 'var(--ind-green)' : 'inherit'};">${isAdmin}</td>
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:center;">${canDel}</td>
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:center;">${canManage}</td>
                         <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:right;">
@@ -4708,6 +4720,7 @@ document.getElementById('addBtn').onclick = () => {
         const canDelete = document.getElementById('cfgCanDelete').value === 'true';
         const canManageLists = document.getElementById('cfgCanManageLists').value === 'true';
         const isActive = document.getElementById('cfgStatus').value !== 'false';
+        const isAdmin = document.getElementById('cfgIsAdmin').value === 'true';
         const tabs = Array.from(document.querySelectorAll('.cfg-tab'))
             .filter(chk => chk.checked)
             .map(chk => chk.value);
@@ -4736,7 +4749,8 @@ document.getElementById('addBtn').onclick = () => {
                 canEditCards: canEdit,
                 canDeleteCards: canDelete,
                 canManageLists: canManageLists,
-                active: isActive
+                active: isActive,
+                isAdmin: isAdmin
             });
         } else {
             const u = users[editinguserIndex];
@@ -4748,6 +4762,7 @@ document.getElementById('addBtn').onclick = () => {
             u.canDeleteCards = canDelete;
             u.canManageLists = canManageLists;
             u.active = isActive;
+            u.isAdmin = isAdmin;
         }
 
         try {
@@ -4776,6 +4791,7 @@ document.getElementById('addBtn').onclick = () => {
         document.getElementById('cfgCanDelete').value = u.canDeleteCards ? 'true' : 'false';
         document.getElementById('cfgCanManageLists').value = u.canManageLists ? 'true' : 'false';
         document.getElementById('cfgStatus').value = (u.active === false ? 'false' : 'true');
+        document.getElementById('cfgIsAdmin').value = (u.isAdmin === true) ? 'true' : 'false';
         const tabs = Array.isArray(u.tabs) && u.tabs.length > 0 ? u.tabs : ['dashboard', 'auditoria'];
         document.querySelectorAll('.cfg-tab').forEach(chk => {
             chk.checked = tabs.includes(chk.value);
