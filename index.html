@@ -416,7 +416,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 .view-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; background: #f9fafb; padding: 20px; border-radius: 16px; }
 .view-item label { display: block; font-size: 11px; text-transform: uppercase; color: #9ca3af; font-weight: 600; margin-bottom: 4px; }
 .view-item div { font-size: 15px; color: var(--primary); font-weight: 500; }
-.view-desc { background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border); line-height: 1.6; color: #4b5563; }
+.view-desc { background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border); line-height: 1.6; color: #4b5563; white-space: pre-wrap; }
 .view-files h4 { font-size: 14px; margin: 0 0 12px; color: var(--primary); }
 .file-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #fff; border: 1px solid #bfdbfe; color: #1e40af; border-radius: 20px; font-size: 13px; text-decoration: none; font-weight: 500; transition:0.2s; cursor: pointer; }
 .file-chip:hover { background: #eff6ff; }
@@ -913,6 +913,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fAuditStatus" class="filter-input" onchange="renderCards()">
                         <option value="">Status: Todos</option>
                     </select>
+                    <select id="fAuditMarcador" class="filter-input" onchange="renderCards()" style="display:none;">
+                        <option value="">Marcador: Todos</option>
+                    </select>
                     
                     <div class="date-controls">
                         <select id="fAuditDateType" onchange="updateDateInputs('Audit')">
@@ -954,6 +957,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     </select>
                     <select id="fAtivStatus" class="filter-input" onchange="renderCards()">
                         <option value="">Status: Todos</option>
+                    </select>
+                    <select id="fAtivMarcador" class="filter-input" onchange="renderCards()" style="display:none;">
+                        <option value="">Marcador: Todos</option>
                     </select>
                     
                     <div class="date-controls">
@@ -1000,6 +1006,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fMantStatus" class="filter-input" onchange="renderCards()">
                         <option value="">Status: Todos</option>
                     </select>
+                    <select id="fMantMarcador" class="filter-input" onchange="renderCards()" style="display:none;">
+                        <option value="">Marcador: Todos</option>
+                    </select>
                     
                     <div class="date-controls">
                         <select id="fMantDateType" onchange="updateDateInputs('Mant')">
@@ -1041,6 +1050,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     </select>
                     <select id="fDocStatus" class="filter-input" onchange="renderCards()">
                         <option value="">Status: Todos</option>
+                    </select>
+                    <select id="fDocMarcador" class="filter-input" onchange="renderCards()" style="display:none;">
+                        <option value="">Marcador: Todos</option>
                     </select>
                     
                     <div class="date-controls">
@@ -2989,26 +3001,30 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             setor: document.getElementById('fAuditSetor')?.value,
             cat: document.getElementById('fAuditCat')?.value,
             sub: document.getElementById('fAuditSub')?.value,
-            status: document.getElementById('fAuditStatus')?.value
+            status: document.getElementById('fAuditStatus')?.value,
+            marcador: document.getElementById('fAuditMarcador')?.value || ''
         },
         Ativ: {
             setor: document.getElementById('fAtivSetor')?.value,
             cat: document.getElementById('fAtivCat')?.value,
             sub: document.getElementById('fAtivSub')?.value,
-            status: document.getElementById('fAtivStatus')?.value
+            status: document.getElementById('fAtivStatus')?.value,
+            marcador: document.getElementById('fAtivMarcador')?.value || ''
         },
         Mant: {
             setor: document.getElementById('fMantSetor')?.value,
             cat: document.getElementById('fMantCat')?.value,
             item: document.getElementById('fMantItem')?.value,
             tipo: document.getElementById('fMantTipo')?.value,
-            status: document.getElementById('fMantStatus')?.value
+            status: document.getElementById('fMantStatus')?.value,
+            marcador: document.getElementById('fMantMarcador')?.value || ''
         },
         Doc: {
             setor: document.getElementById('fDocSetor')?.value,
             cat: document.getElementById('fDocCat')?.value,
             sub: document.getElementById('fDocSub')?.value,
-            status: document.getElementById('fDocStatus')?.value
+            status: document.getElementById('fDocStatus')?.value,
+            marcador: document.getElementById('fDocMarcador')?.value || ''
         }
     };
 
@@ -3081,6 +3097,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     document.getElementById('fMantStatus').innerHTML = makeStatusFilterOpts(masterLists.mantStatus, "Status: Todos");
     document.getElementById('fDocCat').innerHTML = makeFilterOpts(masterLists.docCategorias, "Categoria: Todas"); 
     document.getElementById('fDocStatus').innerHTML = makeStatusFilterOpts(masterLists.docStatus, "Status: Todos"); 
+    
+    // Marcadores serão populados dinamicamente por updateFilterFacetOptions
+    document.getElementById('fAuditMarcador').innerHTML = '<option value="">Marcador: Todos</option>';
+    document.getElementById('fAtivMarcador').innerHTML = '<option value="">Marcador: Todos</option>';
+    document.getElementById('fMantMarcador').innerHTML = '<option value="">Marcador: Todos</option>';
+    document.getElementById('fDocMarcador').innerHTML = '<option value="">Marcador: Todos</option>';
 
     // Restaura valores de filtros para evitar voltar ao primeiro item após editar listas
     if (currentValues.Audit.setor != null) document.getElementById('fAuditSetor').value = currentValues.Audit.setor;
@@ -3097,6 +3119,11 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     if (currentValues.Ativ.status != null) document.getElementById('fAtivStatus').value = currentValues.Ativ.status;
     if (currentValues.Mant.status != null) document.getElementById('fMantStatus').value = currentValues.Mant.status;
     if (currentValues.Doc.status != null) document.getElementById('fDocStatus').value = currentValues.Doc.status;
+
+    if (currentValues.Audit.marcador != null) document.getElementById('fAuditMarcador').value = currentValues.Audit.marcador;
+    if (currentValues.Ativ.marcador != null) document.getElementById('fAtivMarcador').value = currentValues.Ativ.marcador;
+    if (currentValues.Mant.marcador != null) document.getElementById('fMantMarcador').value = currentValues.Mant.marcador;
+    if (currentValues.Doc.marcador != null) document.getElementById('fDocMarcador').value = currentValues.Doc.marcador;
 
     if (currentValues.Mant.tipo != null) document.getElementById('fMantTipo').value = currentValues.Mant.tipo;
 
@@ -3238,6 +3265,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             if (stat && (item.status || '') !== stat) return false;
         }
 
+        // Marcador
+        if (!excluded.marcador) {
+            const marcador = document.getElementById(`f${prefix}Marcador`)?.value || '';
+            if (marcador && (item.marcador || '') !== marcador) return false;
+        }
+
         // Tipo (somente manutenção)
         if (prefix === 'Mant' && !excluded.tipo) {
             const tipo = document.getElementById('fMantTipo')?.value || '';
@@ -3288,6 +3321,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         if (prefix === 'Doc') return (masterLists?.docStatus || []).slice();
         return [];
     }
+    function getMasterMarcadores(prefix) {
+        if (prefix === 'Audit') return (masterLists?.auditMarcadores || []).slice();
+        if (prefix === 'Ativ') return (masterLists?.ativMarcadores || []).slice();
+        if (prefix === 'Mant') return (masterLists?.mantMarcadores || []).slice();
+        if (prefix === 'Doc') return (masterLists?.docMarcadores || []).slice();
+        return [];
+    }
 
     function updateFilterFacetOptions(prefix) {
         // Setor
@@ -3324,6 +3364,29 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const ordered = master.filter(v => present.has(v));
             const extras = [...present].filter(v => !master.includes(v)).sort();
             setSelectOptions(el, 'Status: Todos', [...ordered, ...extras], currentValue);
+        }
+
+        // Marcador
+        {
+            const el = document.getElementById(`f${prefix}Marcador`);
+            if (el) {
+                const currentValue = el?.value || '';
+                const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { marcador: true }));
+                const present = new Set(uniq(items.map(it => it.marcador || '').filter(Boolean)));
+                const master = getMasterMarcadores(prefix).map(m => m.name).filter(Boolean);
+                const ordered = master.filter(v => present.has(v));
+                const extras = [...present].filter(v => !master.includes(v)).sort();
+                const options = [...ordered, ...extras];
+                
+                // Mostra o filtro apenas se houver marcadores visíveis
+                if (options.length > 0) {
+                    el.style.display = 'block';
+                    setSelectOptions(el, 'Marcador: Todos', options, currentValue);
+                } else {
+                    el.style.display = 'none';
+                    el.value = '';
+                }
+            }
         }
 
         // Tipo (Manutenção)
@@ -4166,7 +4229,7 @@ document.getElementById('addBtn').onclick = () => {
             </div>
             <div>
                 <h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase">Descrição Detalhada</h4>
-                <div class="view-desc">${item.descricao || 'Sem descrição.'}</div>
+                <div class="view-desc">${(item.descricao || 'Sem descrição.').replace(/\n/g, '<br>')}</div>
             </div>
             ${anexosHtml ? `<div class="view-files"><h4>Anexos</h4>${anexosHtml}</div>` : ''}
             ${historySection}
