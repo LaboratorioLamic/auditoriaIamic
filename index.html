@@ -1667,6 +1667,23 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     const getDocumentCardDate = item => item?.dataCriacao; // publicação (criação)
     const getDocumentDeadlineDate = item => (isBlankPeriodicity(item?.docIntervalo) ? null : item?.dataProximaRevisao);
 
+    // Normalização de texto (corrige mismatch no mobile por Unicode/acentos)
+    function normalizeText(input) {
+        let s = (input ?? '').toString();
+        // remove zero-width chars comuns em teclado mobile
+        s = s.replace(/[\u200B-\u200D\uFEFF]/g, '');
+        s = s.trim().toLowerCase();
+        // normaliza acentos para comparação mais robusta
+        try {
+            s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        } catch (_) {
+            // ignore - navegadores antigos
+        }
+        // colapsa espaços
+        s = s.replace(/\s+/g, ' ');
+        return s;
+    }
+
     // Busca por título (lupa)
     let titleSearchCardsEnabled = false;
     let titleSearchCardsQuery = '';
@@ -1717,7 +1734,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     function onTitleSearchInput(context) {
         const inputId = context === 'dash' ? 'dashTitleSearchInput' : 'titleSearchInput';
         const inEl = document.getElementById(inputId);
-        const q = (inEl?.value || '').trim().toLowerCase();
+        const q = normalizeText(inEl?.value || '');
         if (context === 'dash') {
             titleSearchDashQuery = q;
             if (titleSearchDashEnabled) renderDashboard();
@@ -2344,7 +2361,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
             // 3.1 Filtro por Título (lupa)
             if (fTitleQuery) {
-                const t = (item.titulo || '').toLowerCase();
+                const t = normalizeText(item.titulo || '');
                 if (!t.includes(fTitleQuery)) return false;
             }
     
@@ -2581,6 +2598,18 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     // --- RENDERIZAÇÃO DE CARDS E FILTROS ---
     function renderCards() {
         if(currentTab === 'backup' || currentTab === 'dashboard') return; 
+
+        // Atualiza Subcategorias/Itens dinamicamente (quando Categoria = Todas),
+        // baseado nos demais filtros atuais (setor/status/data/título)
+        const tabToFilterPrefix = (tab) => {
+            if (tab === 'auditoria') return 'Audit';
+            if (tab === 'atividades') return 'Ativ';
+            if (tab === 'manutencao') return 'Mant';
+            if (tab === 'documentos') return 'Doc';
+            return '';
+        };
+        const currentFilterPrefix = tabToFilterPrefix(currentTab);
+        if (currentFilterPrefix) updateFilterSubcatOptions(currentFilterPrefix);
     
         const grid = document.getElementById('cardsGrid');
         grid.innerHTML = '';
@@ -2751,7 +2780,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
         // Busca por Título (lupa) - só quando o campo estiver ativo
         if (titleSearchCardsEnabled && titleSearchCardsQuery) {
-            data = data.filter(item => (item.titulo || '').toLowerCase().includes(titleSearchCardsQuery));
+            data = data.filter(item => normalizeText(item.titulo || '').includes(titleSearchCardsQuery));
         }
     
         // ORDENAÇÃO
@@ -3062,47 +3091,126 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         renderCards();
     }
     
-    // Funções de atualização em cascata para FILTROS
-    function onFilterCategoryChange(prefix) {
+    // Opções de Subcategoria/Item (FILTROS):
+    // - Se Categoria = Todas: listar opções baseadas nos itens já filtrados pelos demais filtros
+    // - Se Categoria selecionada: listar opções do array mestre daquela categoria
+    function getItemsForFilterPrefix(prefix) {
+        if (prefix === 'Audit') return audits || [];
+        if (prefix === 'Ativ') return activities || [];
+        if (prefix === 'Mant') return maintenances || [];
+        if (prefix === 'Doc') return documents || [];
+        return [];
+    }
+
+    function getDateStrForFilterPrefix(prefix, item) {
+        if (prefix === 'Audit') return item?.dataPrevisao;
+        if (prefix === 'Ativ') return item?.dataConclusao;
+        if (prefix === 'Mant') return getMaintenanceCardDate(item); // Data (publicação)
+        if (prefix === 'Doc') return getDocumentCardDate(item);      // Data (publicação)
+        return null;
+    }
+
+    function passesDateFilter(prefix, item) {
+        const dateType = document.getElementById(`f${prefix}DateType`)?.value || 'all';
+        if (dateType === 'all') return true;
+
+        const dateStr = getDateStrForFilterPrefix(prefix, item);
+        if (!dateStr) return false;
+
+        const itemDate = new Date(dateStr);
+        if (Number.isNaN(itemDate.getTime())) return false;
+
+        if (dateType === 'month') {
+            const m = parseInt(document.getElementById(`f${prefix}Month`)?.value);
+            const y = parseInt(document.getElementById(`f${prefix}YearForMonth`)?.value);
+            if (itemDate.getMonth() !== m || itemDate.getFullYear() !== y) return false;
+        } else if (dateType === 'year') {
+            const y = parseInt(document.getElementById(`f${prefix}YearOnly`)?.value);
+            if (itemDate.getFullYear() !== y) return false;
+        } else if (dateType === 'custom') {
+            const ini = document.getElementById(`f${prefix}DataIni`)?.value;
+            const fim = document.getElementById(`f${prefix}DataFim`)?.value;
+            if (ini && dateStr < ini) return false;
+            if (fim && dateStr > fim) return false;
+        }
+        return true;
+    }
+
+    function passesOtherFilters(prefix, item) {
+        // Setor
+        const setor = document.getElementById(`f${prefix}Setor`)?.value || '';
+        if (setor && (item.setor || '') !== setor) return false;
+
+        // Status
+        const stat = document.getElementById(`f${prefix}Status`)?.value || '';
+        if (stat && (item.status || '') !== stat) return false;
+
+        // Tipo (somente manutenção)
+        if (prefix === 'Mant') {
+            const tipo = document.getElementById('fMantTipo')?.value || '';
+            if (tipo && (item.tipo || '') !== tipo) return false;
+        }
+
+        // Data
+        if (!passesDateFilter(prefix, item)) return false;
+
+        // Título (lupa) - quando ativo
+        if (titleSearchCardsEnabled && titleSearchCardsQuery) {
+            if (!normalizeText(item.titulo || '').includes(titleSearchCardsQuery)) return false;
+        }
+
+        return true;
+    }
+
+    function updateFilterSubcatOptions(prefix) {
         const catSelect = document.getElementById(`f${prefix}Cat`);
+        if (!catSelect) return;
+
         let subcatSelect;
         let listKey;
         let label;
-        
+        let valueGetter;
+
         if (prefix === 'Mant') {
             subcatSelect = document.getElementById(`f${prefix}Item`);
             listKey = 'mantItens';
             label = 'Item: Todos';
+            valueGetter = (it) => it.item;
         } else {
             subcatSelect = document.getElementById(`f${prefix}Sub`);
             listKey = `${prefix.toLowerCase()}Subcats`;
             label = 'Subcategoria: Todas';
+            valueGetter = (it) => it.subcategoria;
         }
-        
-        if (!subcatSelect) return; 
-    
+        if (!subcatSelect) return;
+
         const selectedCat = catSelect.value;
         const currentSubcat = subcatSelect.value;
-        
-        let subcats = [];
-    
-        if (selectedCat === "") {
-            let allSubcats = [];
-            if (prefix === 'Audit') allSubcats = audits.map(i => i.subcategoria).filter(Boolean);
-            else if (prefix === 'Ativ') allSubcats = activities.map(i => i.subcategoria).filter(Boolean);
-            else if (prefix === 'Mant') allSubcats = maintenances.map(i => i.item).filter(Boolean);
-            else if (prefix === 'Doc') allSubcats = documents.map(i => i.subcategoria).filter(Boolean);
-            
-            subcats = [...new Set(allSubcats)].sort();
-    
+
+        let options = [];
+
+        if (selectedCat !== "") {
+            // Categoria selecionada => usa array mestre daquela categoria
+            options = (masterLists?.[listKey]?.[selectedCat] || []).slice();
         } else {
-            subcats = masterLists[listKey][selectedCat] || [];
+            // Categoria = Todas => opções baseadas nos itens filtrados pelos demais filtros
+            const items = getItemsForFilterPrefix(prefix).filter(it => passesOtherFilters(prefix, it));
+            options = [...new Set(items.map(valueGetter).filter(Boolean))].sort();
         }
-        
-        subcatSelect.innerHTML = `<option value="">${label}</option>` + subcats.map(i => `<option value="${i}">${i}</option>`).join('');
-    
-        if (subcats.includes(currentSubcat)) subcatSelect.value = currentSubcat;
-    
+
+        subcatSelect.innerHTML = `<option value="">${label}</option>` + options.map(v => `<option value="${v}">${v}</option>`).join('');
+
+        // preserva seleção se ainda existir, senão volta para "Todos"
+        if (options.includes(currentSubcat)) subcatSelect.value = currentSubcat;
+        else subcatSelect.value = "";
+    }
+
+    // Funções de atualização em cascata para FILTROS
+    function onFilterCategoryChange(prefix) {
+        const catSelect = document.getElementById(`f${prefix}Cat`);
+        if (!catSelect) return;
+
+        updateFilterSubcatOptions(prefix);
         renderCards();
     }
     
