@@ -766,6 +766,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fDashSetor" class="filter-input" onchange="onFilterDashboardChange()">
                         <option value="">Setor: Todos</option>
                     </select>
+                    <select id="fDashCat" class="filter-input" onchange="onFilterDashboardChange()">
+                        <option value="">Categoria: Todas</option>
+                    </select>
                     <select id="fDashStatus" class="filter-input" onchange="onFilterDashboardChange()">
                         <option value="">Status: Todos</option>
                     </select>
@@ -2354,6 +2357,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // --- OBTENÇÃO DOS VALORES DE FILTRO ---
         const fArea = document.getElementById('fDashArea').value; 
         const fSetor = document.getElementById('fDashSetor').value;
+        const fCat = document.getElementById('fDashCat')?.value || '';
         const fStatus = document.getElementById('fDashStatus').value;
         const fDateType = document.getElementById('fDashDateType').value;
         const fMonth = parseInt(document.getElementById('fDashMonth').value);
@@ -2382,6 +2386,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             // 2. Filtro por Setor
             const itemSetor = item.setor || 'Setor Não Definido';
             if (fSetor && itemSetor !== fSetor) return false;
+    
+            // 2.1. Filtro por Categoria
+            if (fCat && item.categoria !== fCat) return false;
     
             // 3. Filtro por Status Consolidado
             if (fStatus && item.status !== fStatus) return false;
@@ -2474,6 +2481,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
     
     function renderDashboard() {
+        // Atualiza os filtros para mostrar apenas opções com dados disponíveis
+        updateDashboardFilterOptions();
+        
         const { totalCount, activeCount, completedCount, cancelledCount, standbyCount, overdueCount, statusCounts, setorCounts, prazoCounts } = calculateDashboardData();
         
         // --- Cartões de Resumo ---
@@ -2959,13 +2969,176 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         if (document.getElementById('fDashDateType').value !== 'all') {
             updateDateInputs('Dash');
         }
+        updateDashboardFilterOptions();
         renderDashboard();
+    }
+    
+    function updateDashboardFilterOptions() {
+        // Constrói uma lista completa de todos os itens
+        const rawItems = [].concat(
+            audits.map(a => ({ ...a, type: 'audit' })),
+            activities.map(a => ({ ...a, type: 'ativ' })),
+            maintenances.map(m => ({ ...m, type: 'mant' })),
+            documents.map(d => ({ ...d, type: 'doc' }))
+        );
+        
+        // Obtém valores atuais dos filtros (exceto o que estamos atualizando)
+        const fArea = document.getElementById('fDashArea')?.value || '';
+        const fSetor = document.getElementById('fDashSetor')?.value || '';
+        const fCat = document.getElementById('fDashCat')?.value || '';
+        const fStatus = document.getElementById('fDashStatus')?.value || '';
+        const fDateType = document.getElementById('fDashDateType')?.value || 'all';
+        const fMonth = parseInt(document.getElementById('fDashMonth')?.value || currentMonth);
+        const fYearForMonth = parseInt(document.getElementById('fDashYearForMonth')?.value || currentYear);
+        const fYearOnly = parseInt(document.getElementById('fDashYearOnly')?.value || currentYear);
+        const fYear = (fDateType === 'year') ? fYearOnly : fYearForMonth;
+        const fDataIni = document.getElementById('fDashDataIni')?.value || '';
+        const fDataFim = document.getElementById('fDashDataFim')?.value || '';
+        const fTitleQuery = titleSearchDashEnabled ? titleSearchDashQuery : '';
+        
+        // Função auxiliar para verificar se um item passa pelos filtros (exceto o filtro sendo atualizado)
+        const passesOtherFilters = (item, excludeFilter) => {
+            // Filtro por Área/Aba (exceto se estiver sendo atualizado)
+            if (excludeFilter !== 'area' && fArea && item.type !== fArea) return false;
+            
+            // Filtro por Setor (exceto se estiver sendo atualizado)
+            if (excludeFilter !== 'setor') {
+                const itemSetor = item.setor || 'Setor Não Definido';
+                if (fSetor && itemSetor !== fSetor) return false;
+            }
+            
+            // Filtro por Categoria (exceto se estiver sendo atualizado)
+            if (excludeFilter !== 'cat' && fCat && item.categoria !== fCat) return false;
+            
+            // Filtro por Status (exceto se estiver sendo atualizado)
+            if (excludeFilter !== 'status' && fStatus && item.status !== fStatus) return false;
+            
+            // Filtro por Título
+            if (fTitleQuery) {
+                const t = normalizeText(item.titulo || '');
+                if (!t.includes(fTitleQuery)) return false;
+            }
+            
+            // Filtro por Período
+            if (fDateType !== 'all') {
+                const dateField = item.type === 'audit' ? item.dataPublicacao :
+                                 item.type === 'ativ' ? item.dataInicio :
+                                 item.type === 'mant' ? item.ultima :
+                                 item.dataCriacao;
+                if (!dateField) return false;
+                
+                const itemDate = new Date(dateField);
+                if (fDateType === 'month') {
+                    if (itemDate.getMonth() !== fMonth || itemDate.getFullYear() !== fYear) return false;
+                } else if (fDateType === 'year') {
+                    if (itemDate.getFullYear() !== fYear) return false;
+                } else if (fDateType === 'custom') {
+                    if (fDataIni && dateField < fDataIni) return false;
+                    if (fDataFim && dateField > fDataFim) return false;
+                }
+            }
+            return true;
+        };
+        
+        // Atualiza filtro de Área
+        {
+            const el = document.getElementById('fDashArea');
+            if (el) {
+                const currentValue = el.value || '';
+                const availableAreas = new Set();
+                rawItems.forEach(item => {
+                    if (passesOtherFilters(item, 'area')) {
+                        availableAreas.add(item.type);
+                    }
+                });
+                const options = ['audit', 'ativ', 'mant', 'doc'].filter(area => availableAreas.has(area));
+                const html = '<option value="">Área: Todas</option>' + 
+                    options.map(area => {
+                        const labels = {
+                            'audit': 'Auditoria',
+                            'ativ': 'Gestão de Atividades',
+                            'mant': 'Manutenção',
+                            'doc': 'Documentos'
+                        };
+                        return `<option value="${area}">${labels[area]}</option>`;
+                    }).join('');
+                el.innerHTML = html;
+                if (currentValue && options.includes(currentValue)) el.value = currentValue;
+                else el.value = '';
+            }
+        }
+        
+        // Atualiza filtro de Setor
+        {
+            const el = document.getElementById('fDashSetor');
+            if (el) {
+                const currentValue = el.value || '';
+                const availableSetores = new Set();
+                rawItems.forEach(item => {
+                    if (passesOtherFilters(item, 'setor')) {
+                        const setor = item.setor || 'Setor Não Definido';
+                        availableSetores.add(setor);
+                    }
+                });
+                const masterSetores = getMasterSetores();
+                const ordered = masterSetores.filter(s => availableSetores.has(s));
+                const extras = [...availableSetores].filter(s => !masterSetores.includes(s)).sort();
+                setSelectOptions(el, 'Setor: Todos', [...ordered, ...extras], currentValue);
+            }
+        }
+        
+        // Atualiza filtro de Categoria
+        {
+            const el = document.getElementById('fDashCat');
+            if (el) {
+                const currentValue = el.value || '';
+                const availableCategorias = new Set();
+                rawItems.forEach(item => {
+                    if (passesOtherFilters(item, 'cat') && item.categoria) {
+                        availableCategorias.add(item.categoria);
+                    }
+                });
+                // Coleta todas as categorias das listas mestre
+                const allCategorias = [];
+                ['auditCategorias', 'ativCategorias', 'mantCategorias', 'docCategorias'].forEach(key => {
+                    (masterLists[key] || []).forEach(cat => { if (cat) allCategorias.push(cat); });
+                });
+                const masterCategorias = [...new Set(allCategorias)].sort();
+                const ordered = masterCategorias.filter(c => availableCategorias.has(c));
+                const extras = [...availableCategorias].filter(c => !masterCategorias.includes(c)).sort();
+                setSelectOptions(el, 'Categoria: Todas', [...ordered, ...extras], currentValue);
+            }
+        }
+        
+        // Atualiza filtro de Status
+        {
+            const el = document.getElementById('fDashStatus');
+            if (el) {
+                const currentValue = el.value || '';
+                const availableStatus = new Set();
+                rawItems.forEach(item => {
+                    if (passesOtherFilters(item, 'status') && item.status) {
+                        availableStatus.add(item.status);
+                    }
+                });
+                // Coleta todos os status das listas mestre
+                const allStatusnames = [];
+                ['auditStatus', 'ativStatus', 'mantStatus', 'docStatus'].forEach(key => {
+                    (masterLists[key] || []).forEach(s => { if (s.name) allStatusnames.push(s.name); });
+                });
+                const masterStatus = [...new Set(allStatusnames)].sort();
+                const ordered = masterStatus.filter(s => availableStatus.has(s));
+                const extras = [...availableStatus].filter(s => !masterStatus.includes(s)).sort();
+                setSelectOptions(el, 'Status: Todos', [...ordered, ...extras], currentValue);
+            }
+        }
     }
     
     // Limpa filtros do Dashboard
     function clearDashboardFilters() {
         document.getElementById('fDashArea').value = "";
         document.getElementById('fDashSetor').value = "";
+        document.getElementById('fDashCat').value = "";
         document.getElementById('fDashStatus').value = "";
         
         document.getElementById('fDashDateType').value = 'all';
@@ -2974,6 +3147,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         
         setTitleSearchEnabled('dash', false);
         updateDateInputs('Dash');
+        updateDashboardFilterOptions();
+        renderDashboard();
     }
     
     
@@ -3018,6 +3193,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         dash: {
             area: document.getElementById('fDashArea')?.value,
             setor: document.getElementById('fDashSetor')?.value,
+            cat: document.getElementById('fDashCat')?.value,
             status: document.getElementById('fDashStatus')?.value
         },
         Audit: {
@@ -3065,9 +3241,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
     // --- FILTROS DASHBOARD ---
     document.getElementById('fDashSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos");
+    // Categoria será populada dinamicamente por updateDashboardFilterOptions
+    document.getElementById('fDashCat').innerHTML = '<option value="">Categoria: Todas</option>';
     document.getElementById('fDashStatus').innerHTML = makeFilterOpts(unifiedStatusnames, "Status: Todos");
     if (currentValues.dash.area != null) document.getElementById('fDashArea').value = currentValues.dash.area;
     if (currentValues.dash.setor != null) document.getElementById('fDashSetor').value = currentValues.dash.setor;
+    if (currentValues.dash.cat != null) document.getElementById('fDashCat').value = currentValues.dash.cat;
     if (currentValues.dash.status != null) document.getElementById('fDashStatus').value = currentValues.dash.status;
 
     // --- POPULAR MODAIS (Setores e Categorias) ---
