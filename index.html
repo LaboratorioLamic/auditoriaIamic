@@ -1851,7 +1851,14 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
             // Comparação de string para todos os outros campos
             if (originalValue !== currentValue) {
-                changes.push(`${displayname}: <strong>${originalValue || 'vazio'}</strong> &rarr; <strong>${currentValue || 'vazio'}</strong>`);
+                // Tratamento especial para descrição: mostra antiga e nova separadamente
+                if (key === 'descricao') {
+                    const oldDesc = (originalValue || 'vazio').replace(/\n/g, '<br>');
+                    const newDesc = (currentValue || 'vazio').replace(/\n/g, '<br>');
+                    changes.push(`<div style="margin-top:4px;"><strong>Descrição antiga:</strong><br><div style="margin-left:10px; margin-top:2px; color:#6b7280;">${oldDesc}</div></div><div style="margin-top:4px;"><strong>Descrição nova:</strong><br><div style="margin-left:10px; margin-top:2px; color:#059669;">${newDesc}</div></div>`);
+                } else {
+                    changes.push(`${displayname}: <strong>${originalValue || 'vazio'}</strong> &rarr; <strong>${currentValue || 'vazio'}</strong>`);
+                }
             }
         }
 
