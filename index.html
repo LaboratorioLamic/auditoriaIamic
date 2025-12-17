@@ -2255,7 +2255,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     const refreshLogic = () => {
         // Define o próximo tempo de espera: 1 minuto (60000ms) para dashboard, 5 segundos (5000ms) para as demais
-        const intervalTime = currentTab === 'dashboard' ? 10000 : 3000;
+        const intervalTime = currentTab === 'dashboard' ? 10000 : 5000;
 
         refreshCloudDataBuffer().then(() => {
             autoRefreshIntervalId = setTimeout(refreshLogic, intervalTime);
