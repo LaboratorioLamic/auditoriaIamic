@@ -2647,6 +2647,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const cat = document.getElementById(filterCatId).value;
             const sub = document.getElementById(filterSubcatId).value;
             const stat = document.getElementById('fAuditStatus').value;
+            const marcador = document.getElementById('fAuditMarcador')?.value || '';
             const dateType = document.getElementById('fAuditDateType').value;
             
             data = audits.filter(item => {
@@ -2654,6 +2655,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 if (cat && item.categoria !== cat) return false;
                 if (sub && item.subcategoria !== sub) return false;
                 if (stat && item.status !== stat) return false;
+                if (marcador && item.marcador !== marcador) return false;
                 
                 if (dateType !== 'all') {
                     const itemDate = new Date(item[dateField]);
@@ -2685,6 +2687,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const cat = document.getElementById(filterCatId).value;
             const sub = document.getElementById(filterSubcatId).value;
             const stat = document.getElementById('fAtivStatus').value;
+            const marcador = document.getElementById('fAtivMarcador')?.value || '';
             const dateType = document.getElementById('fAtivDateType').value;
     
             data = activities.filter(item => {
@@ -2692,6 +2695,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 if (cat && item.categoria !== cat) return false;
                 if (sub && item.subcategoria !== sub) return false;
                 if (stat && item.status !== stat) return false;
+                if (marcador && item.marcador !== marcador) return false;
     
                 if (dateType !== 'all') {
                     const itemDate = new Date(item[dateField]);
@@ -2724,6 +2728,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const itemVal = document.getElementById(filterSubcatId).value;
             const tipo = document.getElementById('fMantTipo').value;
             const stat = document.getElementById('fMantStatus').value;
+            const marcador = document.getElementById('fMantMarcador')?.value || '';
             const dateType = document.getElementById('fMantDateType').value;
             
             data = maintenances.filter(item => {
@@ -2732,6 +2737,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 if (itemVal && item.item !== itemVal) return false;
                 if (tipo && item.tipo !== tipo) return false;
                 if (stat && item.status !== stat) return false;
+                if (marcador && item.marcador !== marcador) return false;
     
                 if (dateType !== 'all') {
                     const dateForFilter = getMaintenanceCardDate(item); // Data (publicação)
@@ -2763,6 +2769,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const cat = document.getElementById(filterCatId).value;
             const sub = document.getElementById(filterSubcatId).value;
             const stat = document.getElementById('fDocStatus').value;
+            const marcador = document.getElementById('fDocMarcador')?.value || '';
             const dateType = document.getElementById('fDocDateType').value;
     
             data = documents.filter(item => {
@@ -2770,6 +2777,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 if (cat && item.categoria !== cat) return false;
                 if (sub && item.subcategoria !== sub) return false;
                 if (stat && item.status !== stat) return false;
+                if (marcador && item.marcador !== marcador) return false;
     
                 if (dateType !== 'all') {
                     const dateForFilter = getDocumentCardDate(item); // Data (publicação)
