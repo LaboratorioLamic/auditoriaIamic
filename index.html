@@ -2834,7 +2834,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const d = daysDiff(targetDate);
             
             let indicatorClass = 'ind-green';
-            if (d !== Infinity) {
+            // Cards com status "Concluído" permanecem verdes mesmo se atrasados
+            if (item.status !== 'Concluído' && d !== Infinity) {
                 if (d < 0) indicatorClass = 'ind-red';
                 else if (d <= flagDays) indicatorClass = 'ind-yellow';
             }
