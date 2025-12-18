@@ -838,13 +838,6 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 </div>
                 <div class="summary-card">
                     <div class="icon-header">
-                        <i class="fas fa-pause-circle" style="color:var(--c-purple); background:#faf5ff"></i>
-                        <p>Total Standby</p>
-                    </div>
-                    <h2 id="summaryStandbyCount">0</h2>
-                </div>
-                <div class="summary-card">
-                    <div class="icon-header">
                         <i class="fas fa-exclamation-triangle" style="color:var(--ind-red); background:#fef2f2"></i>
                         <p>Total Atrasado</p>
                     </div>
@@ -2491,7 +2484,6 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         document.getElementById('summaryActiveCount').textContent = activeCount;
         document.getElementById('summaryCompletedCount').textContent = completedCount;
         document.getElementById('summaryCancelledCount').textContent = cancelledCount;
-        document.getElementById('summaryStandbyCount').textContent = standbyCount;
         document.getElementById('summaryOverdueCount').textContent = overdueCount;
     
         // --- G1: Status Consolidado ---
