@@ -3291,12 +3291,6 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     document.getElementById('fMantStatus').innerHTML = makeStatusFilterOpts(masterLists.mantStatus, "Status: Todos");
     document.getElementById('fDocCat').innerHTML = makeFilterOpts(masterLists.docCategorias, "Categoria: Todas"); 
     document.getElementById('fDocStatus').innerHTML = makeStatusFilterOpts(masterLists.docStatus, "Status: Todos"); 
-    
-    // Marcadores serão populados dinamicamente por updateFilterFacetOptions
-    document.getElementById('fAuditMarcador').innerHTML = '<option value="">Marcador: Todos</option>';
-    document.getElementById('fAtivMarcador').innerHTML = '<option value="">Marcador: Todos</option>';
-    document.getElementById('fMantMarcador').innerHTML = '<option value="">Marcador: Todos</option>';
-    document.getElementById('fDocMarcador').innerHTML = '<option value="">Marcador: Todos</option>';
 
     // Restaura valores de filtros para evitar voltar ao primeiro item após editar listas
     if (currentValues.Audit.setor != null) document.getElementById('fAuditSetor').value = currentValues.Audit.setor;
@@ -3570,13 +3564,20 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 const master = getMasterMarcadores(prefix).map(m => m.name).filter(Boolean);
                 const ordered = master.filter(v => present.has(v));
                 const extras = [...present].filter(v => !master.includes(v)).sort();
-                const options = [...ordered, ...extras];
-                
-                // Mostra o filtro apenas se houver marcadores visíveis
-                if (options.length > 0) {
+                let options = [...ordered, ...extras];
+
+                // Garante que o marcador atualmente selecionado permaneça disponível,
+                // mesmo que não haja cards visíveis com ele após a atualização do buffer.
+                if (currentValue && !options.includes(currentValue)) {
+                    options = [currentValue, ...options];
+                }
+
+                // Mostra o filtro enquanto houver opções OU um valor selecionado.
+                if (options.length > 0 || currentValue) {
                     el.style.display = 'block';
-                    setSelectOptions(el, 'Marcador: Todos', options, currentValue);
+                    setSelectOptions(el, 'Marcador: Todos', options, currentValue || '');
                 } else {
+                    // Somente esconde e limpa se realmente não houver marcador algum selecionado
                     el.style.display = 'none';
                     el.value = '';
                 }
