@@ -134,6 +134,73 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 }
 .title-search-dropdown .filter-input{width:100%;min-width:unset}
 
+/* Checkbox moderno para mostrar/ocultar finalizados */
+.checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.checkbox-wrapper:hover {
+    background-color: #f9fafb;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.checkbox-custom {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+
+.checkbox-wrapper input[type="checkbox"]:checked + .checkbox-custom {
+    background: var(--primary-light);
+    border-color: var(--primary-light);
+}
+
+.checkbox-wrapper input[type="checkbox"]:checked + .checkbox-custom::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.checkbox-wrapper input[type="checkbox"]:focus + .checkbox-custom {
+    box-shadow: 0 0 0 3px rgba(19, 59, 92, 0.1);
+    outline: none;
+}
+
+.checkbox-wrapper:hover .checkbox-custom {
+    border-color: var(--primary-light);
+}
+
+.checkbox-label {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
 @media (max-width: 640px){
     .title-search-dropdown{
         position:fixed;
@@ -142,6 +209,14 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         top:140px;
         width:auto;
         max-width:none;
+    }
+    
+    .checkbox-label {
+        display: none;
+    }
+    
+    .checkbox-wrapper {
+        padding: 8px;
     }
 }
 
@@ -1080,6 +1155,11 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 </div>
 
                 <div class="filter-actions">
+                    <label class="checkbox-wrapper" title="Mostrar itens finalizados">
+                        <input type="checkbox" id="showFinalizedCheckbox" checked onchange="renderCards()">
+                        <span class="checkbox-custom"></span>
+                        <span class="checkbox-label">OK</span>
+                    </label>
                     <div class="title-search">
                         <button class="btn-clear" onclick="toggleTitleSearch('cards')" title="Pesquisar por título"><i class="fa-solid fa-magnifying-glass"></i></button>
                         <div class="title-search-dropdown" id="titleSearchDropdown" style="display:none;">
@@ -2820,6 +2900,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             data = data.filter(item => normalizeText(item.titulo || '').includes(titleSearchCardsQuery));
         }
     
+        // Filtro de finalizados (Concluído e Cancelado)
+        const showFinalized = document.getElementById('showFinalizedCheckbox')?.checked !== false;
+        if (!showFinalized) {
+            data = data.filter(item => {
+                const statusNormalized = normalizeStatusName(item.status || '');
+                return statusNormalized !== 'concluído' && statusNormalized !== 'cancelado';
+            });
+        }
+    
         // ORDENAÇÃO
         if (dateField) {
             data.sort((a, b) => {
@@ -3154,7 +3243,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         document.getElementById('fMantDateType').value = 'all';
         document.getElementById('fDocDateType').value = 'all'; 
         
-        document.querySelectorAll('.filters-bar input').forEach(i => i.value = "");
+        document.querySelectorAll('.filters-bar input').forEach(i => {
+            // Não limpa o checkbox de finalizados, mantém checked por padrão
+            if (i.id !== 'showFinalizedCheckbox') {
+                i.value = "";
+            }
+        });
 
         setTitleSearchEnabled('cards', false);
         
