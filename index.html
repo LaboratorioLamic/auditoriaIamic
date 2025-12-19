@@ -3470,11 +3470,22 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     // - Se Categoria = Todas: listar opções baseadas nos itens já filtrados pelos demais filtros
     // - Se Categoria selecionada: listar opções do array mestre daquela categoria
     function getItemsForFilterPrefix(prefix) {
-        if (prefix === 'Audit') return audits || [];
-        if (prefix === 'Ativ') return activities || [];
-        if (prefix === 'Mant') return maintenances || [];
-        if (prefix === 'Doc') return documents || [];
-        return [];
+        let items = [];
+        if (prefix === 'Audit') items = audits || [];
+        else if (prefix === 'Ativ') items = activities || [];
+        else if (prefix === 'Mant') items = maintenances || [];
+        else if (prefix === 'Doc') items = documents || [];
+        
+        // Aplica filtro de finalizados se o checkbox estiver desmarcado
+        const showFinalized = document.getElementById('showFinalizedCheckbox')?.checked !== false;
+        if (!showFinalized) {
+            items = items.filter(item => {
+                const statusNormalized = normalizeStatusName(item.status || '');
+                return statusNormalized !== 'concluído' && statusNormalized !== 'cancelado';
+            });
+        }
+        
+        return items;
     }
 
     function getDateStrForFilterPrefix(prefix, item) {
