@@ -499,7 +499,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 /* List Manager */
 .list-manager table { width: 100%; border-collapse: collapse; }
 .list-manager td { padding: 12px 8px; border-bottom: 1px solid #f1f5f9; }
-.list-manager .remove { color: var(--ind-red); cursor: pointer; text-align: right; }
+.list-manager td:last-child { text-align: right; }
+.list-manager .list-actions { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.list-manager .list-actions i { cursor: pointer; font-size: 14px; padding: 4px; transition: all 0.2s; }
+.list-manager .list-actions .edit-icon { color: var(--accent); }
+.list-manager .list-actions .edit-icon:hover { color: var(--primary-light); transform: scale(1.1); }
+.list-manager .list-actions .remove-icon { color: var(--ind-red); }
+.list-manager .list-actions .remove-icon:hover { color: #dc2626; transform: scale(1.1); }
 .color-dot { width: 12px; height: 12px; border-radius: 4px; display: inline-block; margin-right: 8px; border: 1px solid rgba(0,0,0,0.1); }
 
 /* Color Picker in Manager */
@@ -4677,7 +4683,12 @@ document.getElementById('addBtn').onclick = () => {
     
             body.innerHTML += `<tr>
                 <td>${displayHtml}</td>
-                <td class="remove" onclick="removeFromList('${currentListKey}','${itemVal}')"><i class="fas fa-trash"></i></td>
+                <td>
+                    <div class="list-actions">
+                        <i class="fas fa-pen edit-icon" onclick="editListItem('${currentListKey}','${itemVal.replace(/'/g, "\\'")}')" title="Editar nome"></i>
+                        <i class="fas fa-trash remove-icon" onclick="removeFromList('${currentListKey}','${itemVal.replace(/'/g, "\\'")}')" title="Excluir"></i>
+                    </div>
+                </td>
             </tr>`;
         });
         
@@ -4763,6 +4774,177 @@ document.getElementById('addBtn').onclick = () => {
         } else if (currentListKey === 'setores') {
             openListManager('setores');
         } else if (currentListKey === 'mantTipos') {
+            openListManager('tipos');
+        } else {
+            openListManager('categorias');
+        }
+    }
+    
+    function editListItem(key, val) {
+        const isStatus = key.toLowerCase().includes('status');
+        const isMarcadorList = key.toLowerCase().includes('marcadores');
+        const isObjectList = isStatus || isMarcadorList;
+        const isSubcat = key.includes('_');
+        
+        const newName = prompt(`Editar nome de "${val}":`, val);
+        if (!newName || newName.trim() === '' || newName.trim() === val) return;
+        
+        const trimmedNewName = newName.trim();
+        
+        // Atualiza na lista mestra
+        let list;
+        if (isSubcat) {
+            const [baseKey, cat] = key.split('_');
+            masterLists[baseKey] = masterLists[baseKey] || {};
+            masterLists[baseKey][cat] = masterLists[baseKey][cat] || [];
+            list = masterLists[baseKey][cat];
+        } else {
+            list = masterLists[key];
+        }
+        
+        // Verifica se o novo nome já existe
+        if (isObjectList) {
+            if (list.some(item => item.name === trimmedNewName)) {
+                alert('Já existe um item com este nome.');
+                return;
+            }
+            const itemIndex = list.findIndex(item => item.name === val);
+            if (itemIndex !== -1) {
+                list[itemIndex].name = trimmedNewName;
+            }
+        } else {
+            if (list.includes(trimmedNewName)) {
+                alert('Já existe um item com este nome.');
+                return;
+            }
+            const itemIndex = list.indexOf(val);
+            if (itemIndex !== -1) {
+                list[itemIndex] = trimmedNewName;
+            }
+        }
+        
+        // Atualiza todos os cards que usam este item
+        const updateCards = (cards, fieldName) => {
+            cards.forEach(card => {
+                if (card[fieldName] === val) {
+                    card[fieldName] = trimmedNewName;
+                }
+            });
+        };
+        
+        // Identifica qual campo atualizar baseado na chave da lista
+        if (key === 'setores') {
+            updateCards(audits, 'setor');
+            updateCards(activities, 'setor');
+            updateCards(maintenances, 'setor');
+            updateCards(documents, 'setor');
+        } else if (key === 'auditCategorias') {
+            updateCards(audits, 'categoria');
+        } else if (key === 'ativCategorias') {
+            updateCards(activities, 'categoria');
+        } else if (key === 'mantCategorias') {
+            updateCards(maintenances, 'categoria');
+        } else if (key === 'docCategorias') {
+            updateCards(documents, 'categoria');
+        } else if (key.startsWith('auditSubcats_')) {
+            updateCards(audits, 'subcategoria');
+        } else if (key.startsWith('ativSubcats_')) {
+            updateCards(activities, 'subcategoria');
+        } else if (key.startsWith('docSubcats_')) {
+            updateCards(documents, 'subcategoria');
+        } else if (key.startsWith('mantItens_')) {
+            updateCards(maintenances, 'item');
+        } else if (key === 'mantTipos') {
+            updateCards(maintenances, 'tipo');
+        } else if (isStatus) {
+            // Identifica qual tipo de status baseado na chave exata
+            if (key === 'auditStatus') {
+                audits.forEach(card => {
+                    if (card.status === val) card.status = trimmedNewName;
+                });
+            } else if (key === 'ativStatus') {
+                activities.forEach(card => {
+                    if (card.status === val) card.status = trimmedNewName;
+                });
+            } else if (key === 'mantStatus') {
+                maintenances.forEach(card => {
+                    if (card.status === val) card.status = trimmedNewName;
+                });
+            } else if (key === 'docStatus') {
+                documents.forEach(card => {
+                    if (card.status === val) card.status = trimmedNewName;
+                });
+            }
+        } else if (isMarcadorList) {
+            // Identifica qual tipo de marcador baseado na chave exata
+            if (key === 'auditMarcadores') {
+                audits.forEach(card => {
+                    if (card.marcador === val) card.marcador = trimmedNewName;
+                });
+            } else if (key === 'ativMarcadores') {
+                activities.forEach(card => {
+                    if (card.marcador === val) card.marcador = trimmedNewName;
+                });
+            } else if (key === 'mantMarcadores') {
+                maintenances.forEach(card => {
+                    if (card.marcador === val) card.marcador = trimmedNewName;
+                });
+            } else if (key === 'docMarcadores') {
+                documents.forEach(card => {
+                    if (card.marcador === val) card.marcador = trimmedNewName;
+                });
+            }
+        }
+        
+        // Ordena a lista
+        list.sort((a,b) => (typeof a === 'object' ? a.name : a).localeCompare(typeof b === 'object' ? b.name : b));
+        
+        // Guarda seleções antes de recarregar
+        const prefix = getTabPrefix(currentTab);
+        const currentCatSelect = document.getElementById(`${prefix}Categoria`);
+        const selectedCategoryBefore = currentCatSelect ? currentCatSelect.value : null;
+        let currentSubSelect = null;
+        if (prefix === 'mant') {
+            currentSubSelect = document.getElementById(`${prefix}Item`);
+        } else {
+            currentSubSelect = document.getElementById(`${prefix}Sub`);
+        }
+        const selectedSubBefore = currentSubSelect ? currentSubSelect.value : null;
+        
+        saveAll(); populateSelects();
+        
+        // Atualiza os cards se estiver em uma aba de cards
+        if (currentTab !== 'dashboard' && currentTab !== 'backup' && currentTab !== 'configuracoes') {
+            renderCards();
+        } else if (currentTab === 'dashboard') {
+            renderDashboard();
+        }
+        
+        // Restaura seleções após recarregar
+        if (selectedCategoryBefore) {
+            const restoredCat = document.getElementById(`${prefix}Categoria`);
+            if (restoredCat) {
+                restoredCat.value = selectedCategoryBefore;
+                onCategoryChange(prefix);
+                if (selectedSubBefore) {
+                    const restoredSub = prefix === 'mant'
+                        ? document.getElementById(`${prefix}Item`)
+                        : document.getElementById(`${prefix}Sub`);
+                    if (restoredSub) restoredSub.value = selectedSubBefore;
+                }
+            }
+        }
+        
+        // Reabre o mesmo tipo de lista
+        if (isSubcat) {
+            openListManager('subcategorias');
+        } else if (isStatus) {
+            openListManager('status');
+        } else if (isMarcadorList) {
+            openListManager('marcadores');
+        } else if (key === 'setores') {
+            openListManager('setores');
+        } else if (key === 'mantTipos') {
             openListManager('tipos');
         } else {
             openListManager('categorias');
