@@ -1890,71 +1890,60 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     // NOVO: Função para calcular e formatar as mudanças
     function calculateChanges(original, current) {
-        const changes = [];
-        let silentChanged = false; // Ex.: status / marcador alterados
-        
-        // Determina o prefixo do item (audit, ativ, mant, doc)
-        const prefix = current.type;
-        
-        // Propriedades que são derivadas e não devem ser comparadas
-        const derivedKeys = ['id', 'historico', 'type', 'proxima', 'dataProximaRevisao'];
-        
-        for (const key in original) {
-            // Ignora propriedades derivadas e metadata interna
-            if (derivedKeys.includes(key)) continue; 
-            if (key === 'anexos') continue; // Anexos são tratados separadamente
+    const changes = [];
+    let silentChanged = false; // Ex.: status / marcador / anexos alterados
+    
+    const prefix = current.type;
+    
+    // Ignoramos 'anexos' da comparação de texto para não aparecer no histórico
+    const derivedKeys = ['id', 'historico', 'type', 'proxima', 'dataProximaRevisao', 'anexos'];
+    
+    for (const key in original) {
+        if (derivedKeys.includes(key)) continue; 
 
-            let originalValue = String(original[key] || '').trim();
-            let currentValue = String(current[key] || '').trim();
+        let originalValue = String(original[key] || '').trim();
+        let currentValue = String(current[key] || '').trim();
 
-            // Campos que podem mudar sem gerar linha de detalhe no histórico,
-            // mas que ainda assim contam como alteração (status / marcador)
-            if (key === 'status' || key === 'marcador' || key === 'marcadorCor') {
-                if (originalValue !== currentValue) silentChanged = true;
-                continue;
-            }
-
-            // Tenta obter o nome de exibição do dicionário fieldnames
-            const displaynameKey = `${prefix}${key.charAt(0).toUpperCase() + key.slice(1)}`;
-            const displayname = fieldnames[displaynameKey] || key;
-            
-            // Tratamento especial para números (periodicidade e alerta)
-            if (key === 'intervalo' || key === 'docIntervalo' || key === 'flagDias') {
-                 // Converte para Number antes de comparar
-                 if (Number(original[key]) !== Number(current[key])) {
-                    changes.push(`${displayname}: <strong>${originalValue || '0'}</strong> &rarr; <strong>${currentValue || '0'}</strong>`);
-                }
-                continue;
-            }
-            
-            // Tratamento para datas (somente para exibição no histórico)
-            if (key.includes('data') && originalValue) originalValue = formatBR(originalValue);
-            if (key.includes('data') && currentValue) currentValue = formatBR(currentValue);
-
-            // Comparação de string para todos os outros campos
-            if (originalValue !== currentValue) {
-                // Tratamento especial para descrição: mostra antiga e nova separadamente
-                if (key === 'descricao') {
-                    const oldDesc = (originalValue || 'vazio').replace(/\n/g, '<br>');
-                    const newDesc = (currentValue || 'vazio').replace(/\n/g, '<br>');
-                    changes.push(`<div style="margin-top:4px;"><strong>Descrição antiga:</strong><br><div style="margin-left:10px; margin-top:2px; color:#6b7280;">${oldDesc}</div></div><div style="margin-top:4px;"><strong>Descrição nova:</strong><br><div style="margin-left:10px; margin-top:2px; color:#059669;">${newDesc}</div></div>`);
-                } else {
-                    changes.push(`${displayname}: <strong>${originalValue || 'vazio'}</strong> &rarr; <strong>${currentValue || 'vazio'}</strong>`);
-                }
-            }
+        // Campos que mudam sem gerar linha de detalhe no histórico
+        if (key === 'status' || key === 'marcador' || key === 'marcadorCor') {
+            if (originalValue !== currentValue) silentChanged = true;
+            continue;
         }
 
-        // Verifica mudanças nos anexos (simplificado)
-        const originalAnexosCount = (original.anexos || []).length;
-        const currentAnexosCount = (current.anexos || []).length;
-        if (originalAnexosCount !== currentAnexosCount) {
-             changes.push(`Anexos: Número de anexos alterado (de ${originalAnexosCount} para ${currentAnexosCount})`);
+        const displaynameKey = `${prefix}${key.charAt(0).toUpperCase() + key.slice(1)}`;
+        const displayname = fieldnames[displaynameKey] || key;
+        
+        if (key === 'intervalo' || key === 'docIntervalo' || key === 'flagDias') {
+             if (Number(original[key]) !== Number(current[key])) {
+                changes.push(`${displayname}: <strong>${originalValue || '0'}</strong> &rarr; <strong>${currentValue || '0'}</strong>`);
+            }
+            continue;
         }
         
-        // Anexa flag para o chamador saber se houve apenas mudanças "silenciosas"
-        changes.silentChanged = silentChanged;
-        return changes;
+        if (key.includes('data') && originalValue) originalValue = formatBR(originalValue);
+        if (key.includes('data') && currentValue) currentValue = formatBR(currentValue);
+
+        if (originalValue !== currentValue) {
+            if (key === 'descricao') {
+                const oldDesc = (originalValue || 'vazio').replace(/\n/g, '<br>');
+                const newDesc = (currentValue || 'vazio').replace(/\n/g, '<br>');
+                changes.push(`<div style="margin-top:4px;"><strong>Descrição antiga:</strong><br><div style="margin-left:10px; margin-top:2px; color:#6b7280;">${oldDesc}</div></div><div style="margin-top:4px;"><strong>Descrição nova:</strong><br><div style="margin-left:10px; margin-top:2px; color:#059669;">${newDesc}</div></div>`);
+            } else {
+                changes.push(`${displayname}: <strong>${originalValue || 'vazio'}</strong> &rarr; <strong>${currentValue || 'vazio'}</strong>`);
+            }
+        }
     }
+
+    // Verificação silenciosa de anexos para disparar o salvamento sem poluir o histórico
+    const originalAnexosJSON = JSON.stringify(original.anexos || []);
+    const currentAnexosJSON = JSON.stringify(current.anexos || []);
+    if (originalAnexosJSON !== currentAnexosJSON) {
+        silentChanged = true;
+    }
+    
+    changes.silentChanged = silentChanged;
+    return changes;
+}
     // --- LÓGICA DE LOGIN (USUÁRIO + SENHA VIA BIN DE USUÁRIOS) ---
     document.getElementById('passwordInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') checkLogin();
@@ -4353,11 +4342,19 @@ document.getElementById('addBtn').onclick = () => {
         container.appendChild(div);
     }
     function getAnexos(prefix) {
-        return [...document.querySelectorAll(`#${prefix}Anexos .anexo-item`)].map(row => ({
-            titulo: row.querySelector('.anexo-title').value,
-            url: row.querySelector('.anexo-url').value
-        })).filter(a => a.url);
-    }
+    // Seleciona as linhas de anexo específicas do container do modal aberto
+    const container = document.getElementById(prefix + 'Anexos');
+    if (!container) return [];
+    
+    return [...container.querySelectorAll('.anexo-item')].map(row => {
+        const titleInput = row.querySelector('.anexo-title');
+        const urlInput = row.querySelector('.anexo-url');
+        return {
+            titulo: titleInput ? titleInput.value : '',
+            url: urlInput ? urlInput.value : ''
+        };
+    }).filter(a => a.url.trim() !== ''); // Só persiste se a URL não estiver vazia
+}
     function restoreAnexos(prefix, list) {
         const container = document.getElementById(prefix + 'Anexos');
         container.innerHTML = '';
