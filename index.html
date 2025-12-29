@@ -1341,6 +1341,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <label>Responsável</label> <input id="auditResponsavel" placeholder="Nome do Responsável">
             </div>
             <div class="field-group">
+                <label>Auditor</label> <input id="auditAuditor" placeholder="Nome do Auditor">
+            </div>
+            <div class="field-group">
                 <label>Alerta (Dias antes)</label>
                 <input type="number" id="auditFlagDias" value="7">
             </div>
@@ -1861,7 +1864,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // Auditoria
         auditTitulo: 'Título', auditDescricao: 'Descrição', auditSetor: 'Setor', auditCategoria: 'Categoria',
         auditSub: 'Subcategoria', auditStatus: 'Status', auditDataPublicacao: 'Data Publicação',
-        auditDataPrevisao: 'Data Previsão', auditResponsavel: 'Responsável', auditFlagDias: 'Alerta (Dias)',
+        auditDataPrevisao: 'Data Previsão', auditResponsavel: 'Responsável', auditAuditor: 'Auditor', auditFlagDias: 'Alerta (Dias)',
         auditMarcador: 'Marcador',
         
         // Atividades
@@ -3916,6 +3919,7 @@ function resetModal(prefix) {
         document.getElementById('auditDataPublicacao').value = today();
         document.getElementById('auditDataPrevisao').value = today();
         document.getElementById('auditFlagDias').value = 7;
+        document.getElementById('auditAuditor').value = '';
         const defaultAuditCat = masterLists.auditCategorias[0] || '';
         document.getElementById('auditCategoria').value = defaultAuditCat;
     } else if (prefix === 'ativ') {
@@ -4015,7 +4019,8 @@ document.getElementById('addBtn').onclick = () => {
             status: document.getElementById('auditStatus').value,
             dataPublicacao: document.getElementById('auditDataPublicacao').value,
             dataPrevisao: document.getElementById('auditDataPrevisao').value,
-            responsavel: document.getElementById('auditResponsavel').value, 
+            responsavel: document.getElementById('auditResponsavel').value,
+            auditor: document.getElementById('auditAuditor').value,
             flagDias: +document.getElementById('auditFlagDias').value, // Lê o valor como número
             marcador: auditMarkerObj ? auditMarkerObj.name : '',
             marcadorCor: auditMarkerObj ? auditMarkerObj.color : 'default',
@@ -4239,7 +4244,8 @@ document.getElementById('addBtn').onclick = () => {
             document.getElementById('auditStatus').value = item.status;
             document.getElementById('auditDataPublicacao').value = item.dataPublicacao;
             document.getElementById('auditDataPrevisao').value = item.dataPrevisao;
-            document.getElementById('auditResponsavel').value = item.responsavel || ''; 
+            document.getElementById('auditResponsavel').value = item.responsavel || '';
+            document.getElementById('auditAuditor').value = item.auditor || '';
             document.getElementById('auditFlagDias').value = item.flagDias; // Corrigido
             document.getElementById('auditMarcador').value = item.marcador || '';
             restoreAnexos('audit', item.anexos);
@@ -4405,6 +4411,7 @@ document.getElementById('addBtn').onclick = () => {
                 <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
                 <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
                 <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
+                <div class="view-item"><label>Auditor</label><div>${item.auditor || 'ND'}</div></div>
                 <div class="view-item"><label>Publicação</label><div>${formatBR(item.dataPublicacao)}</div></div>
                 <div class="view-item"><label>Previsão</label><div>${formatBR(item.dataPrevisao)}</div></div>
                 <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
