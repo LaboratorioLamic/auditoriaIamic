@@ -2373,6 +2373,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             console.error("Erro ao carregar dados:", err);
             alert("Falha ao carregar dados do Cloud: " + err.message);
         }
+        switchTab('dashboard');
     }
 
     function isEditingModalOpen() {
