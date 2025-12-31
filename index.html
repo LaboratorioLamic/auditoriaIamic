@@ -1964,60 +1964,103 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     // NOVO: Função para calcular e formatar as mudanças
     function calculateChanges(original, current) {
     const changes = [];
-    let silentChanged = false; // Ex.: status / marcador / anexos alterados
+    let silentChanged = false; 
     
-    const prefix = current.type;
+    // Lista de chaves técnicas que não devem gerar log de texto, mas disparam o salvamento
+    const ignoreKeys = ['id', 'historico', 'type', 'proxima', 'dataProximaRevisao', 'anexos', 'marcadorCor'];
     
-    // Ignoramos 'anexos' da comparação de texto para não aparecer no histórico
-    const derivedKeys = ['id', 'historico', 'type', 'proxima', 'dataProximaRevisao', 'anexos'];
-    
-    for (const key in original) {
-        if (derivedKeys.includes(key)) continue; 
+    // Mapeamento de chaves do objeto para nomes legíveis
+    const displayNames = {
+        titulo: 'Título', 
+        descricao: 'Descrição', 
+        setor: 'Setor', 
+        categoria: 'Categoria',
+        subcategoria: 'Subcategoria', 
+        item: 'Equipamento', 
+        status: 'Status', 
+        dataPublicacao: 'Data Publicação', 
+        dataPrevisao: 'Data Previsão', 
+        responsavel: 'Responsável', 
+        auditor: 'Auditor', 
+        flagDias: 'Alerta (Dias)',
+        dataInicio: 'Data Início', 
+        dataConclusao: 'Data Conclusão',
+        ultima: 'Última Manutenção', 
+        intervalo: 'Periodicidade', 
+        tipo: 'Tipo',
+        responsavelTecnico: 'Resp. Técnico', 
+        responsavelManutencao: 'Resp. Manutenção',
+        dataCriacao: 'Data Criação', 
+        docIntervalo: 'Periodicidade', 
+        revisor: 'Revisor',
+        marcador: 'Marcador'
+    };
 
-        let originalValue = String(original[key] || '').trim();
-        let currentValue = String(current[key] || '').trim();
+    // Itera sobre todas as chaves do objeto atual
+    for (const key in current) {
+        if (ignoreKeys.includes(key)) continue;
 
-        // Campos que mudam sem gerar linha de detalhe no histórico
-        if (key === 'status' || key === 'marcador' || key === 'marcadorCor') {
-            if (originalValue !== currentValue) silentChanged = true;
-            continue;
-        }
+        // Normalização para comparação (trata null/undefined como string vazia)
+        let valOriginal = original && original[key] !== undefined ? String(original[key]).trim() : '';
+        let valCurrent = current[key] !== undefined ? String(current[key]).trim() : '';
 
-        const displaynameKey = `${prefix}${key.charAt(0).toUpperCase() + key.slice(1)}`;
-        const displayname = fieldnames[displaynameKey] || key;
-        
-        if (key === 'intervalo' || key === 'docIntervalo' || key === 'flagDias') {
-             if (Number(original[key]) !== Number(current[key])) {
-                changes.push(`${displayname}: <strong>${originalValue || '0'}</strong> &rarr; <strong>${currentValue || '0'}</strong>`);
+        if (valOriginal !== valCurrent) {
+            // Se mudou status ou marcador, consideramos "mudança silenciosa" (salva mas não detalha se for só isso)
+            if (key === 'status' || key === 'marcador') {
+                silentChanged = true;
             }
-            continue;
-        }
-        
-        if (key.includes('data') && originalValue) originalValue = formatBR(originalValue);
-        if (key.includes('data') && currentValue) currentValue = formatBR(currentValue);
 
-        if (originalValue !== currentValue) {
+            const label = displayNames[key] || key;
+            
+            // Formatação de datas para o histórico ficar legível
+            let displayOrig = valOriginal;
+            let displayCurr = valCurrent;
+
+            if (key.toLowerCase().includes('data') || key === 'ultima' || key === 'proxima') {
+                displayOrig = original[key] ? formatBR(original[key]) : 'vazio';
+                displayCurr = current[key] ? formatBR(current[key]) : 'vazio';
+            }
+
             if (key === 'descricao') {
-                const oldDesc = (originalValue || 'vazio').replace(/\n/g, '<br>');
-                const newDesc = (currentValue || 'vazio').replace(/\n/g, '<br>');
-                changes.push(`<div style="margin-top:4px;"><strong>Descrição antiga:</strong><br><div style="margin-left:10px; margin-top:2px; color:#6b7280;">${oldDesc}</div></div><div style="margin-top:4px;"><strong>Descrição nova:</strong><br><div style="margin-left:10px; margin-top:2px; color:#059669;">${newDesc}</div></div>`);
+                const descHtml = `
+                    <div style="margin-top:4px;">
+                        <strong>Descrição antiga:</strong><br>
+                        <div style="margin-left:10px; margin-top:2px; color:#6b7280;">${valOriginal.replace(/\n/g, '<br>') || '(vazio)'}</div>
+                    </div>
+                    <div style="margin-top:4px;">
+                        <strong>Descrição nova:</strong><br>
+                        <div style="margin-left:10px; margin-top:2px; color:#059669;">${valCurrent.replace(/\n/g, '<br>') || '(vazio)'}</div>
+                    </div>
+                `.trim();
+                changes.push(descHtml);
             } else {
-                changes.push(`${displayname}: <strong>${originalValue || 'vazio'}</strong> &rarr; <strong>${currentValue || 'vazio'}</strong>`);
+                // Outros campos (Título, Setor, etc)
+                const label = displayNames[key] || key;
+                let displayOrig = valOriginal;
+                let displayCurr = valCurrent;
+
+                if (key.toLowerCase().includes('data') || key === 'ultima') {
+                    displayOrig = original[key] ? formatBR(original[key]) : 'vazio';
+                    displayCurr = current[key] ? formatBR(current[key]) : 'vazio';
+                }
+
+                changes.push(`${label}: <strong>${displayOrig || 'vazio'}</strong> &rarr; <strong>${displayCurr || 'vazio'}</strong>`);
             }
         }
     }
 
-    // Verificação silenciosa de anexos para disparar o salvamento sem poluir o histórico
-    const originalAnexosJSON = JSON.stringify(original.anexos || []);
-    const currentAnexosJSON = JSON.stringify(current.anexos || []);
-    if (originalAnexosJSON !== currentAnexosJSON) {
+    // Verificação de anexos (comparação profunda simples via JSON)
+    if (JSON.stringify(original.anexos || []) !== JSON.stringify(current.anexos || [])) {
         silentChanged = true;
     }
     
+    // Adiciona propriedade auxiliar para controle do fluxo de salvamento
     changes.silentChanged = silentChanged;
     return changes;
 }
-    // --- LÓGICA DE LOGIN (USUÁRIO + SENHA VIA BIN DE USUÁRIOS) ---
+
+
+// --- LÓGICA DE LOGIN (USUÁRIO + SENHA VIA BIN DE USUÁRIOS) ---
     document.getElementById('passwordInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') checkLogin();
     });
@@ -4080,13 +4123,24 @@ document.getElementById('addBtn').onclick = () => {
             flagDias: +document.getElementById('auditFlagDias').value, // Lê o valor como número
             marcador: auditMarkerObj ? auditMarkerObj.name : '',
             marcadorCor: auditMarkerObj ? auditMarkerObj.color : 'default',
-            anexos: getAnexos('audit')
+            anexos: getAnexos('audit'),
+            // Preserva o histórico explicitamente
+            historico: item && Array.isArray(item.historico) ? [...item.historico] : []
         };
 
         if (isNew) {
             newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema' });
             audits.push(newItem);
         } else {
+            // Garante que originalItem existe e tem o histórico preservado
+            if (!originalItem) {
+                originalItem = JSON.parse(JSON.stringify(item));
+            }
+            // Preserva o histórico do item original
+            if (!newItem.historico || !Array.isArray(newItem.historico)) {
+                newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
+            }
+            
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0) {
                 newItem.historico.push({ 
@@ -4130,13 +4184,24 @@ document.getElementById('addBtn').onclick = () => {
             flagDias: +document.getElementById('ativFlagDias').value, // Lê o valor como número
             marcador: ativMarkerObj ? ativMarkerObj.name : '',
             marcadorCor: ativMarkerObj ? ativMarkerObj.color : 'default',
-            anexos: getAnexos('ativ')
+            anexos: getAnexos('ativ'),
+            // Preserva o histórico explicitamente
+            historico: item && Array.isArray(item.historico) ? [...item.historico] : []
         };
         
         if (isNew) {
             newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema' });
             activities.push(newItem);
         } else {
+            // Garante que originalItem existe e tem o histórico preservado
+            if (!originalItem) {
+                originalItem = JSON.parse(JSON.stringify(item));
+            }
+            // Preserva o histórico do item original
+            if (!newItem.historico || !Array.isArray(newItem.historico)) {
+                newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
+            }
+            
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0) {
                 newItem.historico.push({ 
@@ -4194,13 +4259,24 @@ document.getElementById('addBtn').onclick = () => {
             flagDias: +document.getElementById('mantFlagDias').value, // Lê o valor como número
             marcador: mantMarkerObj ? mantMarkerObj.name : '',
             marcadorCor: mantMarkerObj ? mantMarkerObj.color : 'default',
-            anexos: getAnexos('mant')
+            anexos: getAnexos('mant'),
+            // Preserva o histórico explicitamente
+            historico: item && Array.isArray(item.historico) ? [...item.historico] : []
         };
 
         if (isNew) {
             newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema' });
             maintenances.push(newItem);
         } else {
+            // Garante que originalItem existe e tem o histórico preservado
+            if (!originalItem) {
+                originalItem = JSON.parse(JSON.stringify(item));
+            }
+            // Preserva o histórico do item original
+            if (!newItem.historico || !Array.isArray(newItem.historico)) {
+                newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
+            }
+            
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0) {
                 newItem.historico.push({ 
@@ -4257,13 +4333,24 @@ document.getElementById('addBtn').onclick = () => {
             flagDias: +document.getElementById('docFlagDias').value, // Lê o valor como número
             marcador: docMarkerObj ? docMarkerObj.name : '',
             marcadorCor: docMarkerObj ? docMarkerObj.color : 'default',
-            anexos: getAnexos('doc')
+            anexos: getAnexos('doc'),
+            // Preserva o histórico explicitamente
+            historico: item && Array.isArray(item.historico) ? [...item.historico] : []
         };
 
         if (isNew) {
             newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema' });
             documents.push(newItem);
         } else {
+            // Garante que originalItem existe e tem o histórico preservado
+            if (!originalItem) {
+                originalItem = JSON.parse(JSON.stringify(item));
+            }
+            // Preserva o histórico do item original
+            if (!newItem.historico || !Array.isArray(newItem.historico)) {
+                newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
+            }
+            
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0) {
                 newItem.historico.push({
@@ -4441,176 +4528,196 @@ document.getElementById('addBtn').onclick = () => {
         renderViewContent(id, tab);
     }
 
-    function renderViewContent(id, tab) {
-        let item, statusList;
-        if (tab === 'auditoria') { item = audits.find(i => i.id === id); statusList = masterLists.auditStatus; }
-        else if (tab === 'atividades') { item = activities.find(i => i.id === id); statusList = masterLists.ativStatus; }
-        else if (tab === 'manutencao') { item = maintenances.find(i => i.id === id); statusList = masterLists.mantStatus; }
-        else if (tab === 'documentos') { item = documents.find(i => i.id === id); statusList = masterLists.docStatus; } 
+function renderViewContent(id, tab) {
+    let item, statusList;
+    if (tab === 'auditoria') { 
+        item = audits.find(i => i.id === id); 
+        statusList = masterLists.auditStatus; 
+    } else if (tab === 'atividades') { 
+        item = activities.find(i => i.id === id); 
+        statusList = masterLists.ativStatus; 
+    } else if (tab === 'manutencao') { 
+        item = maintenances.find(i => i.id === id); 
+        statusList = masterLists.mantStatus; 
+    } else if (tab === 'documentos') { 
+        item = documents.find(i => i.id === id); 
+        statusList = masterLists.docStatus; 
+    } 
+
+    if (!item) return;
+
+    const statusObj = (statusList || []).find(s => s.name === item.status) || { color: 'default' };
+    const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
     
-        if (!item) return;
-    
-        const statusObj = (statusList || []).find(s => s.name === item.status) || { color: 'default' };
-        const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
-        
-        // Adiciona Subcategoria/Item (Manutenção) na exibição
-        const subcatOrItemLabel = tab === 'manutencao' ? 'Equipamento' : 'Subcategoria';
-        const subcatOrItemValue = tab === 'manutencao' ? item.item : item.subcategoria;
-        
-        // Determina o prefixo para usar no fieldnames
-        const prefix = getTabPrefix(tab);
-    
-        let detailsGrid = '';
-        if (tab === 'auditoria') {
-            detailsGrid = `
-                <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
-                <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-                <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
-                <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
-                <div class="view-item"><label>Auditor</label><div>${item.auditor || 'ND'}</div></div>
-                <div class="view-item"><label>Publicação</label><div>${formatBR(item.dataPublicacao)}</div></div>
-                <div class="view-item"><label>Previsão</label><div>${formatBR(item.dataPrevisao)}</div></div>
-                <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
-            `;
-        } else if (tab === 'atividades') {
-            detailsGrid = `
-                <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
-                <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-                <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
-                <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
-                <div class="view-item"><label>Data Início</label><div>${formatBR(item.dataInicio)}</div></div>
-                <div class="view-item"><label>Data Conclusão</label><div>${formatBR(item.dataConclusao)}</div></div>
-                <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
-            `;
-        } else if (tab === 'manutencao') {
-            const isNA = isBlankPeriodicity(item.intervalo);
-            detailsGrid = `
-                <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
-                <div class="view-item"><label>Tipo</label><div>${item.tipo || 'ND'}</div></div>
-                <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-                <div class="view-item"><label>Equipamento</label><div>${item.item}</div></div>
-                <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${item.intervalo} dias`}</div></div>
-                <div class="view-item"><label>Última Manutenção</label><div>${formatBR(item.ultima)}</div></div>
-                <div class="view-item"><label>Próxima Manutenção</label><div>${isNA ? 'N/A' : formatBR(item.proxima)}</div></div>
-                <div class="view-item"><label>Responsável Técnico</label><div>${item.responsavelTecnico || 'ND'}</div></div>
-                <div class="view-item"><label>Responsável pela Manutenção</label><div>${item.responsavelManutencao || 'ND'}</div></div>
-                <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
-            `;
-        } else if (tab === 'documentos') { 
-            const isNA = isBlankPeriodicity(item.docIntervalo);
-            detailsGrid = `
-                <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
-                <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-                <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
-                <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${item.docIntervalo} dias`}</div></div>
-                <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
-                <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
-                <div class="view-item"><label>Data Criação</label><div>${formatBR(item.dataCriacao)}</div></div>
-                <div class="view-item"><label>Próx. Revisão</label><div>${isNA ? 'N/A' : formatBR(item.dataProximaRevisao)}</div></div>
-                <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
-            `;
-        }
-    
-        const anexosHtml = (item.anexos || []).map(a => 
-            `<a href="${a.url}" target="_blank" class="file-chip"><i class="fas fa-external-link-alt"></i> ${a.titulo || 'Anexo'}</a>`
-        ).join('');
+    const subcatOrItemLabel = tab === 'manutencao' ? 'Equipamento' : 'Subcategoria';
+    const subcatOrItemValue = tab === 'manutencao' ? item.item : item.subcategoria;
 
-        // LÓGICA DE PAGINAÇÃO DO HISTÓRICO
-        const allHistory = (item.historico || []).slice().reverse(); // Copia e inverte para o mais recente primeiro
-        const itemsPerPage = 5;
-        const totalItems = allHistory.length;
-        const totalPages = Math.ceil(totalItems / itemsPerPage);
-        
-        // Limita a 5 páginas
-        const maxPages = 5;
-        const finalPages = Math.min(totalPages, maxPages);
-        
-        // Garante que a página atual seja válida
-        currentHistoryPage = Math.min(Math.max(1, currentHistoryPage), finalPages);
-        
-        const start = (currentHistoryPage - 1) * itemsPerPage;
-        const end = start + itemsPerPage;
-        const paginatedHistory = allHistory.slice(start, end);
-
-        const isAdmin = (typeof userIsAdmin === 'function') ? userIsAdmin() : false;
-
-        const historyHtml = paginatedHistory.map((h, idx) => {
-            const globalIndex = start + idx;
-            const date = new Date(h.timestamp);
-            const dateStr = date.toLocaleDateString('pt-BR');
-            const timeStr = date.toLocaleTimeString('pt-BR');
-            
-            let details = '';
-            if (h.detalhes && h.detalhes.length > 0) {
-                details = h.detalhes.map(d => `<small style="margin-left:10px;">${d}</small>`).join('');
-            } else if (h.acao.includes('Edição') || h.acao.includes('Atualização')) {
-                 details = '<small style="margin-left:10px; color: var(--ind-yellow);">Detalhes não registrados nesta versão.</small>';
-            }
-            
-            const usuario = h.usuario ? ` - ${h.usuario}` : '';
-
-            const deleteBtn = isAdmin
-                ? `<button class="history-delete" title="Excluir este registro" onclick="deleteHistoryEntry(${id}, '${tab}', ${globalIndex})" style="border:none; background:transparent; color:var(--ind-red); cursor:pointer; font-size:13px; float:right; margin-left:8px;">
-                        <i class="fas fa-trash"></i>
-                   </button>`
-                : '';
-
-            return `
-                <div class="history-item">
-                    ${deleteBtn}
-                    <strong>${h.acao}${usuario}</strong>
-                    <small>${dateStr} às ${timeStr}</small>
-                    ${details}
-                </div>
-            `;
-        }).join('');
-        
-        const paginationHtml = finalPages > 1 ? `
-            <div class="history-pagination">
-                <button ${currentHistoryPage === 1 ? 'disabled' : ''} onclick="changeHistoryPage(${id}, '${tab}', -1)">
-                    <i class="fas fa-chevron-left"></i> Anterior
-                </button>
-                <span>Página ${currentHistoryPage} de ${finalPages}</span>
-                <button ${currentHistoryPage === finalPages ? 'disabled' : ''} onclick="changeHistoryPage(${id}, '${tab}', 1)">
-                    Próxima <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        ` : '';
-
-        const historySection = `
-            <div class="view-history">
-                <h4><i class="fas fa-history"></i> Histórico de Edições (${totalItems} itens)</h4>
-                ${historyHtml || '<div style="color:var(--text-light); font-size:13px;">Nenhuma alteração registrada.</div>'}
-                ${paginationHtml}
-            </div>
+    // Montagem do Grid de Detalhes
+    let detailsGrid = '';
+    if (tab === 'auditoria') {
+        detailsGrid = `
+            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
+            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
+            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
+            <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
+            <div class="view-item"><label>Auditor</label><div>${item.auditor || 'ND'}</div></div>
+            <div class="view-item"><label>Publicação</label><div>${formatBR(item.dataPublicacao)}</div></div>
+            <div class="view-item"><label>Previsão</label><div>${formatBR(item.dataPrevisao)}</div></div>
+            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
         `;
-
-        const html = `
-            <div class="view-header">
-                <h2 style="margin:0; color:var(--primary)">${item.titulo}</h2>
-                <span class="view-status" style="background-color:${statusColorVar}">${item.status}</span>
-            </div>
-            <div class="view-grid">
-                ${detailsGrid}
-            </div>
-            <div>
-                <h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase">Descrição Detalhada</h4>
-                <div class="view-desc">${(item.descricao || 'Sem descrição.').replace(/\n/g, '<br>')}</div>
-            </div>
-            ${anexosHtml ? `<div class="view-files"><h4>Anexos</h4>${anexosHtml}</div>` : ''}
-            ${historySection}
+    } else if (tab === 'atividades') {
+        detailsGrid = `
+            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
+            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
+            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
+            <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
+            <div class="view-item"><label>Data Início</label><div>${formatBR(item.dataInicio)}</div></div>
+            <div class="view-item"><label>Data Conclusão</label><div>${formatBR(item.dataConclusao)}</div></div>
+            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
         `;
-        
-        document.getElementById('viewContent').innerHTML = html;
-        document.getElementById('viewModal').style.display = 'flex';
-
-        // Controla visibilidade do botão "Editar" conforme permissão
-        const btnEdit = document.getElementById('btnViewEdit');
-        if (btnEdit) {
-            btnEdit.style.display = userCanEditCards() ? 'inline-flex' : 'none';
-        }
+    } else if (tab === 'manutencao') {
+        const isNA = isBlankPeriodicity(item.intervalo);
+        detailsGrid = `
+            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
+            <div class="view-item"><label>Tipo</label><div>${item.tipo || 'ND'}</div></div>
+            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
+            <div class="view-item"><label>Equipamento</label><div>${item.item}</div></div>
+            <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${item.intervalo} dias`}</div></div>
+            <div class="view-item"><label>Última Manutenção</label><div>${formatBR(item.ultima)}</div></div>
+            <div class="view-item"><label>Próxima Manutenção</label><div>${isNA ? 'N/A' : formatBR(item.proxima)}</div></div>
+            <div class="view-item"><label>Responsável Técnico</label><div>${item.responsavelTecnico || 'ND'}</div></div>
+            <div class="view-item"><label>Responsável pela Manutenção</label><div>${item.responsavelManutencao || 'ND'}</div></div>
+            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+        `;
+    } else if (tab === 'documentos') { 
+        const isNA = isBlankPeriodicity(item.docIntervalo);
+        detailsGrid = `
+            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
+            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
+            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
+            <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${item.docIntervalo} dias`}</div></div>
+            <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
+            <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
+            <div class="view-item"><label>Data Criação</label><div>${formatBR(item.dataCriacao)}</div></div>
+            <div class="view-item"><label>Próx. Revisão</label><div>${isNA ? 'N/A' : formatBR(item.dataProximaRevisao)}</div></div>
+            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+        `;
     }
 
+    const anexosHtml = (item.anexos || []).map(a => 
+        `<a href="${a.url}" target="_blank" class="file-chip"><i class="fas fa-external-link-alt"></i> ${a.titulo || 'Anexo'}</a>`
+    ).join('');
+
+    // --- LÓGICA DE PAGINAÇÃO E PROCESSAMENTO DE HISTÓRICO ---
+    const allHistory = (item.historico || []).slice().reverse(); 
+    const itemsPerPage = 5;
+    const totalItems = allHistory.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const maxPages = 5;
+    const finalPages = Math.min(totalPages, maxPages);
+    
+    currentHistoryPage = Math.min(Math.max(1, currentHistoryPage), finalPages || 1);
+    
+    const start = (currentHistoryPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const paginatedHistory = allHistory.slice(start, end);
+
+    const isAdmin = userIsAdmin();
+
+    const historyHtml = paginatedHistory.map((h, idx) => {
+        const globalIndex = start + idx;
+        const date = new Date(h.timestamp);
+        const dateStr = date.toLocaleDateString('pt-BR');
+        const timeStr = date.toLocaleTimeString('pt-BR');
+        
+        let details = '';
+        
+        // TRATAMENTO PARA INCOMPATIBILIDADE DE FORMATO (ARRAY VS OBJETO INDEXADO)
+        if (h.detalhes) {
+            let detailsArray = [];
+            if (Array.isArray(h.detalhes)) {
+                detailsArray = h.detalhes;
+            } else if (typeof h.detalhes === 'object') {
+                // Converte chaves numéricas do Firebase para Array
+                detailsArray = Object.keys(h.detalhes)
+                    .filter(k => k !== 'silentChanged')
+                    .map(k => h.detalhes[k]);
+            }
+
+            if (detailsArray.length > 0) {
+                details = detailsArray.map(d => 
+                    `<small style="display:block; margin-left:10px; color:var(--text-light); line-height:1.4;">${d}</small>`
+                ).join('');
+            }
+        }
+
+        // Fallback para mensagens de sistema
+        if (!details && (h.acao.includes('Edição') || h.acao.includes('Atualização'))) {
+            details = '<small style="display:block; margin-left:10px; color:var(--ind-yellow); font-style:italic;">Detalhamento indisponível para este registro antigo.</small>';
+        }
+        
+        const usuario = h.usuario ? ` - ${h.usuario}` : '';
+
+        const deleteBtn = isAdmin
+            ? `<button class="history-delete" title="Excluir" onclick="deleteHistoryEntry(${id}, '${tab}', ${globalIndex})" style="border:none; background:transparent; color:var(--ind-red); cursor:pointer; font-size:13px; float:right; margin-left:8px;">
+                    <i class="fas fa-trash"></i>
+               </button>`
+            : '';
+
+        return `
+            <div class="history-item" style="padding: 10px 0; border-bottom: 1px dotted #e5e7eb;">
+                ${deleteBtn}
+                <strong style="display:block; color:var(--primary); font-size:13px;">${h.acao}${usuario}</strong>
+                <small style="color:var(--text-light); font-size:11px;">${dateStr} às ${timeStr}</small>
+                <div style="margin-top:4px;">${details}</div>
+            </div>
+        `;
+    }).join('');
+    
+    const paginationHtml = finalPages > 1 ? `
+        <div class="history-pagination">
+            <button ${currentHistoryPage === 1 ? 'disabled' : ''} onclick="changeHistoryPage(${id}, '${tab}', -1)">
+                <i class="fas fa-chevron-left"></i> Anterior
+            </button>
+            <span>Página ${currentHistoryPage} de ${finalPages}</span>
+            <button ${currentHistoryPage === finalPages ? 'disabled' : ''} onclick="changeHistoryPage(${id}, '${tab}', 1)">
+                Próxima <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    ` : '';
+
+    const historySection = `
+        <div class="view-history">
+            <h4><i class="fas fa-history"></i> Histórico de Edições (${totalItems})</h4>
+            ${historyHtml || '<div style="color:var(--text-light); font-size:13px; padding:10px 0;">Nenhuma alteração registrada.</div>'}
+            ${paginationHtml}
+        </div>
+    `;
+
+    const html = `
+        <div class="view-header">
+            <h2 style="margin:0; color:var(--primary); font-size:20px;">${item.titulo}</h2>
+            <span class="view-status" style="background-color:${statusColorVar}">${item.status}</span>
+        </div>
+        <div class="view-grid">
+            ${detailsGrid}
+        </div>
+        <div>
+            <h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">Descrição Detalhada</h4>
+            <div class="view-desc">${(item.descricao || 'Sem descrição.').replace(/\n/g, '<br>')}</div>
+        </div>
+        ${anexosHtml ? `<div class="view-files" style="margin-top:10px;"><h4>Anexos</h4>${anexosHtml}</div>` : ''}
+        ${historySection}
+    `;
+    
+    document.getElementById('viewContent').innerHTML = html;
+    document.getElementById('viewModal').style.display = 'flex';
+
+    const btnEdit = document.getElementById('btnViewEdit');
+    if (btnEdit) {
+        btnEdit.style.display = userCanEditCards() ? 'inline-flex' : 'none';
+    }
+}
     function deleteHistoryEntry(id, tab, historyIndex) {
         // Somente admin pode apagar histórico
         if (!(typeof userIsAdmin === 'function') || !userIsAdmin()) return;
