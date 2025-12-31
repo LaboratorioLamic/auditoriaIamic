@@ -1969,6 +1969,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     // Lista de chaves técnicas que não devem gerar log de texto, mas disparam o salvamento
     const ignoreKeys = ['id', 'historico', 'type', 'proxima', 'dataProximaRevisao', 'anexos', 'marcadorCor'];
     
+    const fieldOrder = [
+        'titulo', 'descricao', 'setor', 'categoria', 'subcategoria', 
+        'item', 'tipo', 'status', 'dataPublicacao', 'dataPrevisao', 
+        'dataInicio', 'dataConclusao', 'ultima', 'intervalo', 
+        'dataCriacao', 'docIntervalo', 'responsavel', 'auditor', 
+        'responsavelTecnico', 'responsavelManutencao', 'revisor', 
+        'flagDias', 'marcador'
+    ];
+
     // Mapeamento de chaves do objeto para nomes legíveis
     const displayNames = {
         titulo: 'Título', 
@@ -2025,7 +2034,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 const descHtml = `
                     <div style="margin-top:4px;">
                         <strong>Descrição antiga:</strong><br>
-                        <div style="margin-left:10px; margin-top:2px; color:#6b7280;">${valOriginal.replace(/\n/g, '<br>') || '(vazio)'}</div>
+                        <div style="margin-left:10px; margin-top:2px; color:#ff6868;">${valOriginal.replace(/\n/g, '<br>') || '(vazio)'}</div>
                     </div>
                     <div style="margin-top:4px;">
                         <strong>Descrição nova:</strong><br>
