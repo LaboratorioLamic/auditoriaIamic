@@ -7,6 +7,35 @@
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, get, set, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyBe8ILABfly2BHCCg27BmiXmb_3hZlhGls",
+    authDomain: "dados-lamic.firebaseapp.com",
+    databaseURL: "https://dados-lamic-default-rtdb.firebaseio.com",
+    projectId: "dados-lamic",
+    storageBucket: "dados-lamic.firebasestorage.app",
+    messagingSenderId: "949848302620",
+    appId: "1:949848302620:web:c17df5db50a4907b83abd9",
+    measurementId: "G-TFCMD0XP1T"
+  };
+  
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
+  
+  // Make Firebase functions available globally
+  window.firebaseDatabase = database;
+  window.firebaseRef = ref;
+  window.firebaseGet = get;
+  window.firebaseSet = set;
+  window.firebaseOnValue = onValue;
+  window.firebaseOff = off;
+</script>
 
 <style>
 :root {
@@ -958,7 +987,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             <div class="backup-card">
                 <i class="fa-solid fa-cloud-arrow-down fa-3x" style="color:var(--primary); margin-bottom:16px;"></i>
                 <h2 style="margin:0 0 8px; color:var(--primary)">Central de Backup</h2>
-                <p style="color:var(--text-light); margin:0 0 24px 0">Gerencie seus dados via Nuvem (JSONBin) ou Arquivo Local.</p>
+                <p style="color:var(--text-light); margin:0 0 24px 0">Gerencie seus dados via Nuvem (Firebase) ou Arquivo Local.</p>
                 
                 <div class="backup-actions" style="flex-wrap: wrap;">
                     <button class="btn-large btn-export" onclick="exportLocalData()" style="background:var(--ind-green); color:#fff; border:none; flex:1;">
@@ -1667,11 +1696,53 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 </div>
 
 <script>
-    // --- CONFIGURAÇÃO JSONBIN E SEGURANÇA ---
-    const API_KEY = '$2a$10$2elKW8TT6o.K3V176efqwu7kOfD1PnS3D/F0s4Tczc3MYmaU.N1bi';
-    const DATA_BIN_ID = '693d73c4ae596e708f976cf4';
-    // Bin de usuários: cada registro no formato { "name": "", "user": "", "password": "", ... }
-    const userS_BIN_ID = '694049e5d0ea881f402b66b9';
+    // --- CONFIGURAÇÃO FIREBASE ---
+    // Firebase já inicializado no módulo acima
+    // Função auxiliar para garantir que Firebase está carregado
+    function getFirebaseDatabase() {
+        if (!window.firebaseDatabase) {
+            throw new Error('Firebase ainda não foi carregado. Aguarde alguns instantes e tente novamente.');
+        }
+        return window.firebaseDatabase;
+    }
+    
+    function getFirebaseRef() {
+        if (!window.firebaseRef) {
+            throw new Error('Firebase ainda não foi carregado. Aguarde alguns instantes e tente novamente.');
+        }
+        return window.firebaseRef;
+    }
+    
+    function getFirebaseGet() {
+        if (!window.firebaseGet) {
+            throw new Error('Firebase ainda não foi carregado. Aguarde alguns instantes e tente novamente.');
+        }
+        return window.firebaseGet;
+    }
+    
+    function getFirebaseSet() {
+        if (!window.firebaseSet) {
+            throw new Error('Firebase ainda não foi carregado. Aguarde alguns instantes e tente novamente.');
+        }
+        return window.firebaseSet;
+    }
+    
+    function getFirebaseOnValue() {
+        if (!window.firebaseOnValue) {
+            throw new Error('Firebase ainda não foi carregado. Aguarde alguns instantes e tente novamente.');
+        }
+        return window.firebaseOnValue;
+    }
+    
+    function getFirebaseOff() {
+        if (!window.firebaseOff) {
+            throw new Error('Firebase ainda não foi carregado. Aguarde alguns instantes e tente novamente.');
+        }
+        return window.firebaseOff;
+    }
+    
+    // Referências do Firebase Realtime Database
+    let dataListener = null; // Listener para dados em tempo real
     
     let failedAttempts = 0;
     let lockoutTimer = null;
@@ -1733,7 +1804,6 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     let currentHistoryPage = 1; // NOVO: Para controle da paginação do histórico
     let currentViewItemId = null;   // ID do item atualmente aberto na visualização
     let currentViewTab = null;      // Aba do item atualmente aberto na visualização
-    let autoRefreshIntervalId = null; // Intervalo de atualização do buffer cloud
     
     // --- UTILITÁRIOS ---
     const today = () => new Date().toISOString().split('T')[0];
@@ -1956,48 +2026,53 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     });
 
     async function loadusers() {
-        const res = await fetch(`https://api.jsonbin.io/v3/b/${userS_BIN_ID}/latest`, {
-            headers: { 'X-Master-Key': API_KEY }
-        });
-        if (!res.ok) throw new Error('Erro ao carregar usuários');
-        const data = await res.json();
-        const record = data.record;
-        // Aceita tanto array direto quanto objeto { users: [] }
-        let rawUsers = Array.isArray(record) ? record : (record.users || []);
-        if (!Array.isArray(rawUsers)) rawUsers = [];
-        // Normaliza campos (Name/User -> name/user, ativo/active -> active, permissões)
-        users = rawUsers.map(u => {
-            const name = u.name || u.Name || '';
-            const user = u.user || u.User || '';
-            const active = (u.active !== undefined ? u.active : (u.ativo !== undefined ? u.ativo : true));
-            const canDeleteCards = !!u.canDeleteCards;
-            // Por padrão, usuários podem editar cards, a menos que explicitamente marcado como somente leitura
-            const canEditCards = (u.canEditCards !== undefined ? !!u.canEditCards : true);
-            const canManageLists = !!u.canManageLists;
-            return {
+        try {
+            const database = getFirebaseDatabase();
+            const dbRef = getFirebaseRef();
+            const dbGet = getFirebaseGet();
+            
+            // O seu JSON indica que tudo está no nó 'passwords' como uma lista
+            const usersRef = dbRef(database, 'passwords');
+            const snapshot = await dbGet(usersRef);
+            
+            let rawUsers = [];
+            if (snapshot.exists()) {
+                rawUsers = snapshot.val();
+                if (!Array.isArray(rawUsers)) rawUsers = [];
+            }
+            
+            // Mapeia os dados garantindo a consistência das flags
+            users = rawUsers.map(u => ({
                 ...u,
-                name,
-                user,
-                active: active !== false, // qualquer coisa diferente de false é considerado ativo
-                canDeleteCards,
-                canEditCards,
-                canManageLists
-            };
-        });
+                name: u.name || u.Name || u.user || '',
+                user: u.user || u.User || '',
+                password: String(u.password || ''),
+                active: u.active !== false,
+                canDeleteCards: !!u.canDeleteCards,
+                canEditCards: u.canEditCards !== false,
+                canManageLists: !!u.canManageLists,
+                isAdmin: !!u.isAdmin || u.user === 'admin'
+            }));
+        } catch (error) {
+            console.error('Erro ao carregar usuários:', error);
+            throw new Error('Erro ao carregar usuários: ' + error.message);
+        }
     }
 
     async function saveusers() {
-        const payload = Array.isArray(users) ? users : [];
-        await fetch(`https://api.jsonbin.io/v3/b/${userS_BIN_ID}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Master-Key': API_KEY
-            },
-            body: JSON.stringify(payload)
-        });
+        try {
+            const database = getFirebaseDatabase();
+            const dbRef = getFirebaseRef();
+            const dbSet = getFirebaseSet();
+            
+            // Salva a lista completa de volta no nó 'passwords'
+            const usersRef = dbRef(database, 'passwords');
+            await dbSet(usersRef, users);
+        } catch (error) {
+            console.error('Erro ao salvar usuários:', error);
+            throw new Error('Erro ao salvar usuários: ' + error.message);
+        }
     }
-
     function updateCurrentuserUI() {
         const box = document.getElementById('currentuserBox');
         const label = document.getElementById('currentuserLabel');
@@ -2076,6 +2151,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
 
     function logout() {
+        // Para o listener do Firebase
+        stopFirebaseListener();
+        
         // Limpa usuário atual e volta para tela de login
         currentuser = null;
         updateCurrentuserUI();
@@ -2195,51 +2273,61 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         }
     }
     
-    // --- INTEGRAÇÃO JSONBIN (DATA) ---
+    // --- INTEGRAÇÃO FIREBASE (DATA) ---
     
     async function loadCloudData() {
         try {
-            const res = await fetch(`https://api.jsonbin.io/v3/b/${DATA_BIN_ID}/latest`, {
-                headers: { 'X-Master-Key': API_KEY }
-            });
-            if(!res.ok) throw new Error('Erro ao baixar dados');
+            const database = getFirebaseDatabase();
+            const dbRef = getFirebaseRef();
+            const dbGet = getFirebaseGet();
             
-            const data = await res.json();
-            const record = data.record;
-    
-            audits = record.audits || [];
-            activities = record.activities || [];
-            maintenances = record.maintenances || [];
-            documents = record.documents || []; 
+            // Busca a raiz do banco (ou o nó onde os dados residem)
+            const dataRef = dbRef(database, "/"); 
+            const snapshot = await dbGet(dataRef);
             
-            if (record.masterLists) {
-                masterLists = { ...defaultMasterLists, ...record.masterLists };
+            if (!snapshot.exists()) {
+                audits = [];
+                activities = [];
+                maintenances = [];
+                documents = [];
+                masterLists = JSON.parse(JSON.stringify(defaultMasterLists));
+            } else {
+                const record = snapshot.val();
                 
-                if (Array.isArray(masterLists.mantItens)) {
-                    masterLists.mantItens = defaultMasterLists.mantItens; 
+                // Mapeamento direto das chaves do seu JSON
+                audits = record.audits || [];
+                activities = record.activities || [];
+                maintenances = record.maintenances || [];
+                documents = record.documents || []; 
+                
+                if (record.masterLists) {
+                    masterLists = { ...defaultMasterLists, ...record.masterLists };
+                    // Correção para garantir que itens de manutenção não sejam resetados
+                    if (Array.isArray(masterLists.mantItens) && masterLists.mantItens.length === 0) {
+                        masterLists.mantItens = defaultMasterLists.mantItens; 
+                    }
                 }
             }
             
-            // Garante que o histórico exista
-            audits.forEach(a => a.historico = a.historico || []);
-            activities.forEach(a => a.historico = a.historico || []);
-            maintenances.forEach(m => m.historico = m.historico || []);
-            documents.forEach(d => d.historico = d.historico || []);
-    
+            // Garante integridade do histórico para cada item
+            [audits, activities, maintenances, documents].forEach(array => {
+                array.forEach(item => item.historico = item.historico || []);
+            });
+
             populateYearSelects();
-            populateSelects();
-            updateDateInputs('Audit');
-            updateDateInputs('Ativ');
-            updateDateInputs('Mant');
-            updateDateInputs('Doc'); 
-            updateDateInputs('Dash'); 
+            populateSelects();          
+            // Atualiza a interface baseada na aba atual
+            if (currentTab === 'dashboard') {
+                renderDashboard();
+            } else {
+                renderCards();
+            }
             
-            switchTab('dashboard'); 
-            
-            // Inicia o buffer de atualização automática (a cada 1 minuto)
-            startAutoRefresh();
+            // Inicia o monitoramento em tempo real
+            startFirebaseListener();
 
         } catch (err) {
+            console.error("Erro ao carregar dados:", err);
             alert("Falha ao carregar dados do Cloud: " + err.message);
         }
     }
@@ -2258,93 +2346,64 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         });
     }
 
-    async function refreshCloudDataBuffer() {
-    // 1. Verificação de segurança básica: só prossegue se houver usuário
-    if (!currentuser) return;
+    // Listener em tempo real do Firebase (substitui o buffer)
+    function startFirebaseListener() {
+        try {
+            const database = getFirebaseDatabase();
+            const dbRef = getFirebaseRef();
+            const dbOnValue = getFirebaseOnValue();
+            
+            if (!currentuser) return;
+            
+            // Monitora as mudanças gerais no banco
+            const dataRef = dbRef(database, "/");
+            
+            if (dataListener) return; // Evita duplicidade
 
-    try {
-        // 2. Busca os dados no servidor
-        const res = await fetch(`https://api.jsonbin.io/v3/b/${DATA_BIN_ID}/latest`, {
-            headers: { 'X-Master-Key': API_KEY }
-        });
-        if (!res.ok) return;
+            dataListener = dbOnValue(dataRef, (snapshot) => {
+                if (isEditingModalOpen() || !snapshot.exists()) return;
+                
+                const record = snapshot.val();
+                
+                audits = record.audits || [];
+                activities = record.activities || [];
+                maintenances = record.maintenances || [];
+                documents = record.documents || [];
+                
+                if (record.masterLists) {
+                    masterLists = { ...defaultMasterLists, ...record.masterLists };
+                }
 
-        const data = await res.json();
-        const record = data.record;
-
-        // 3. REGRA DE OURO: Só processa a atualização se o lastUpdate for diferente do que temos em memória
-        // Isso permite que a função rode durante a edição sem "limpar" os campos do usuário, 
-        // a menos que alguém tenha salvo algo novo no banco.
-        if (this.lastProcessedUpdate === record.lastUpdate) {
-            return; // Dados idênticos, interrompe aqui para não atrapalhar a edição ou navegação
+                populateSelects();
+                currentTab === 'dashboard' ? renderDashboard() : renderCards();
+            });
+        } catch (error) {
+            console.error('Erro no listener:', error);
         }
-        
-        // 4. Se chegou aqui, houve mudança real no banco. Atualizamos o timestamp.
-        this.lastProcessedUpdate = record.lastUpdate;
-
-        // 5. Atualiza as variáveis globais
-        audits = record.audits || [];
-        activities = record.activities || [];
-        maintenances = record.maintenances || [];
-        documents = record.documents || [];
-
-        if (record.masterLists) {
-            masterLists = { ...defaultMasterLists, ...record.masterLists };
-            if (Array.isArray(masterLists.mantItens)) {
-                masterLists.mantItens = defaultMasterLists.mantItens;
-            }
-        }
-
-        // 6. Garante histórico e integridade
-        audits.forEach(a => a.historico = a.historico || []);
-        activities.forEach(a => a.historico = a.historico || []);
-        maintenances.forEach(m => m.historico = m.historico || []);
-        documents.forEach(d => d.historico = d.historico || []);
-
-        // 7. Sincroniza componentes visuais
-        // Nota: Se o usuário estiver editando e houver mudança no banco, os selects serão resetados.
-        populateSelects();
-        updateDateInputs('Audit');
-        updateDateInputs('Ativ');
-        updateDateInputs('Mant');
-        updateDateInputs('Doc');
-        updateDateInputs('Dash');
-
-        // 8. Re-renderiza a tela atual
-        if (currentTab === 'dashboard') {
-            renderDashboard();
-        } else if (currentTab !== 'backup' && currentTab !== 'configuracoes') {
-            renderCards();
-        }
-    } catch (e) {
-        console.error('Erro ao atualizar buffer do Cloud:', e);
     }
-}
 
-    function startAutoRefresh() {
-    if (autoRefreshIntervalId) clearInterval(autoRefreshIntervalId);
-
-    const refreshLogic = () => {
-        // Define o próximo tempo de espera: 1 minuto (60000ms) para dashboard, 5 segundos (5000ms) para as demais
-        const intervalTime = currentTab === 'dashboard' ? 10000 : 5000;
-
-        refreshCloudDataBuffer().then(() => {
-            autoRefreshIntervalId = setTimeout(refreshLogic, intervalTime);
-        });
-    };
-
-    // Inicia o ciclo
-    refreshLogic();
-}
+    function stopFirebaseListener() {
+        try {
+            if (dataListener) {
+                const database = getFirebaseDatabase();
+                const dbRef = getFirebaseRef();
+                const dbOff = getFirebaseOff();
+                const dataRef = dbRef(database, 'data');
+                dbOff(dataRef, dataListener);
+                dataListener = null;
+            }
+        } catch (error) {
+            console.error('Erro ao parar listener do Firebase:', error);
+        }
+    }
     
     async function saveAll(showAlert = false) {
-        
-        // NOVO: Truncagem do histórico para no máximo 25 itens (5 páginas * 5 itens)
+        // Limita o histórico para evitar que o banco exceda o tamanho permitido
         const maxHistoryItems = 25;
         [audits, activities, maintenances, documents].forEach(arr => {
             arr.forEach(item => {
                 if (item.historico && item.historico.length > maxHistoryItems) {
-                    item.historico.splice(0, item.historico.length - maxHistoryItems);
+                    item.historico = item.historico.slice(-maxHistoryItems);
                 }
             });
         });
@@ -2359,28 +2418,25 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         };
     
         try {
-            const res = await fetch(`https://api.jsonbin.io/v3/b/${DATA_BIN_ID}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Master-Key': API_KEY
-                },
-                body: JSON.stringify(payload)
-            });
-    
-            if(!res.ok) throw new Error('Erro na API');
-            if(showAlert) alert("Dados sincronizados com sucesso!");
+            const database = getFirebaseDatabase();
+            const dbRef = getFirebaseRef();
+            const dbSet = getFirebaseSet();
             
+            // Salva os dados nas chaves individuais na raiz para manter a estrutura do JSON
+            for (const key in payload) {
+                if (payload.hasOwnProperty(key)) {
+                    await dbSet(dbRef(database, key), payload[key]);
+                }
+            }
+            
+            if(showAlert) alert("Dados sincronizados com sucesso!");
             if(currentTab === 'dashboard') renderDashboard();
             
         } catch (err) {
             console.error("Erro ao salvar:", err);
             if(showAlert) alert("Erro ao salvar dados: " + err.message);
         }
-    }
-    
-    // --- LÓGICA DO DASHBOARD (CORRIGIDA) ---
-    
+    }    
     // NOVO: Função para obter o statusType dinamicamente
     function getStatusType(statusname) {
         const finalizadoKeywords = ['concluído', 'finalizado', 'publicado'];
