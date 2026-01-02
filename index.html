@@ -2451,59 +2451,44 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
     
     async function saveAll(showAlert = false) {
-    // 1. Definição de limites para o Histórico (Design Premium: evita lentidão no carregamento)
-    const maxHistoryItems = 25;
-    [audits, activities, maintenances, documents].forEach(arr => {
-        arr.forEach(item => {
-            if (item.historico && item.historico.length > maxHistoryItems) {
-                item.historico = item.historico.slice(-maxHistoryItems);
-            }
-        });
-    });
-
-    // 2. Preparação do payload (Corpo dos dados)
-    const payload = {
-        audits,
-        activities,
-        maintenances,
-        documents, 
-        masterLists,
-        lastUpdate: new Date().toISOString()
-    };
-
     try {
         const database = getFirebaseDatabase();
         const dbRef = getFirebaseRef();
-        
-        /* DEBUG CRÍTICO: 
-           Em vez de iterar com um loop disparando vários 'set', usamos o 'update' na raiz.
-           Isso garante que todas as listas sejam atualizadas em uma única transação atômica.
-        */
         const { update } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
-        
-        // Referência para a raiz do banco de dados
+
+        // 1. Limpeza de Histórico para Performance (Evita lentidão no carregamento)
+        const maxHistoryItems = 25;
+        const dataArrays = [audits, activities, maintenances, documents];
+        dataArrays.forEach(arr => {
+            arr.forEach(item => {
+                if (item.historico && item.historico.length > maxHistoryItems) {
+                    item.historico = item.historico.slice(-maxHistoryItems);
+                }
+            });
+        });
+
+        // 2. Preparação do Objeto de Atualização Atômica
+        const updates = {};
+        updates['/audits'] = audits;
+        updates['/activities'] = activities;
+        updates['/maintenances'] = maintenances;
+        updates['/documents'] = documents;
+        updates['/masterLists'] = masterLists;
+        updates['/lastUpdate'] = new Date().toISOString();
+
+        // 3. Execução do Update na Raiz (Preserva o nó /passwords)
         const rootRef = dbRef(database, "/");
-
-        // Executa a atualização atômica
-        await update(rootRef, payload);
+        await update(rootRef, updates);
         
-        if (showAlert) {
-            alert("Dados sincronizados com sucesso!");
-        }
-
-        /* NOTA DE PERFORMANCE:
-           Não chamamos renderDashboard() ou renderCards() aqui manualmente. 
-           Como o onValue (listener) já está ativo, ele detectará a mudança no servidor 
-           e atualizará a interface automaticamente de forma reativa.
-        */
+        if (showAlert) alert("Dados sincronizados com sucesso!");
         
+        // Nota: O renderDashboard/Cards ocorrerá via Listener (onValue)
     } catch (err) {
-        console.error("Erro crítico na sincronização:", err);
-        if (showAlert) {
-            alert("Erro ao salvar dados no Firebase: " + err.message);
-        }
+        console.error("Erro no Debug de Sincronização:", err);
+        if (showAlert) alert("Erro ao sincronizar dados: " + err.message);
     }
 }
+
     // NOVO: Função para obter o statusType dinamicamente
     function getStatusType(statusname) {
         const finalizadoKeywords = ['concluído', 'finalizado', 'publicado'];
@@ -3552,36 +3537,37 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
     // Funções de atualização em cascata para MODAIS (Setor não interfere, mantido apenas para CategoryChange)
     function onCategoryChange(prefix) {
-        const catSelect = document.getElementById(`${prefix}Categoria`);
-        let subcatSelect;
-        let listKey;
-        
-        if (prefix === 'mant') {
-            subcatSelect = document.getElementById(`${prefix}Item`);
-            listKey = 'mantItens';
-        } else {
-            subcatSelect = document.getElementById(`${prefix}Sub`);
-            listKey = `${prefix}Subcats`;
-        }
-        
-        if (!subcatSelect) return; 
+    const catSelect = document.getElementById(`${prefix}Categoria`);
+    if (!catSelect || !masterLists) return; 
+
+    let subcatSelect;
+    let listKey;
     
-        const selectedCat = catSelect.value;
-        const currentSubcat = subcatSelect.value; 
-        
-        if (!selectedCat) {
-            subcatSelect.innerHTML = `<option value="">${prefix === 'mant' ? 'Nenhum Item' : 'Nenhuma Subcategoria'}</option>`;
-            return;
-        }
-    
-        const subcats = masterLists[listKey][selectedCat] || [];
-        
-        subcatSelect.innerHTML = subcats.map(i => `<option value="${i}">${i}</option>`).join('') || 
-                                 `<option value="">${prefix === 'mant' ? 'Nenhum Item' : 'Nenhuma Subcategoria'}</option>`;
-    
-        if (subcats.includes(currentSubcat)) subcatSelect.value = currentSubcat;
+    if (prefix === 'mant') {
+        subcatSelect = document.getElementById(`${prefix}Item`);
+        listKey = 'mantItens';
+    } else {
+        subcatSelect = document.getElementById(`${prefix}Sub`);
+        listKey = `${prefix}Subcats`;
     }
     
+    if (!subcatSelect) return; 
+
+    const selectedCat = catSelect.value;
+    const currentSubcat = subcatSelect.value; 
+    
+    // Debug: Garante que a estrutura de dados exista antes do acesso
+    masterLists[listKey] = masterLists[listKey] || {};
+    const subcats = masterLists[listKey][selectedCat] || [];
+    
+    subcatSelect.innerHTML = subcats.length > 0 ? 
+        subcats.map(i => `<option value="${i}">${i}</option>`).join('') :
+        `<option value="">Nenhuma opção disponível</option>`;
+
+    // Tenta restaurar a seleção anterior se ela ainda existir na nova lista
+    if (subcats.includes(currentSubcat)) subcatSelect.value = currentSubcat;
+}
+
     // NOVO: Filtro de Setor (Setor NÃO afeta a Categoria no cadastro/filtro)
     function onFilterSetorChange(prefix) {
         renderCards();
@@ -4125,67 +4111,62 @@ document.getElementById('addBtn').onclick = () => {
     
     // SAVE FUNCTIONS
     function saveAudit() {
-        const isNew = !editingAuditId;
-        // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
-        let item = isNew ? { id: Date.now(), historico: [], type: 'audit' } : audits.find(a => a.id === editingAuditId);
+    const isNew = !editingAuditId;
+    let item = isNew ? { 
+        id: Date.now() + Math.floor(Math.random() * 1000), // ID único com salt
+        historico: [], 
+        type: 'audit' 
+    } : audits.find(a => a.id === editingAuditId);
 
-        const selectedAuditMarkerName = document.getElementById('auditMarcador').value;
-        const auditMarkerObj = (masterLists.auditMarcadores || []).find(m => m.name === selectedAuditMarkerName);
+    if (!item) return;
 
-        const newItem = {
-            ...item,
-            titulo: document.getElementById('auditTitulo').value,
-            descricao: document.getElementById('auditDescricao').value,
-            setor: document.getElementById('auditSetor').value, 
-            categoria: document.getElementById('auditCategoria').value,
-            subcategoria: document.getElementById('auditSub').value, 
-            status: document.getElementById('auditStatus').value,
-            dataPublicacao: document.getElementById('auditDataPublicacao').value,
-            dataPrevisao: document.getElementById('auditDataPrevisao').value,
-            responsavel: document.getElementById('auditResponsavel').value,
-            auditor: document.getElementById('auditAuditor').value,
-            flagDias: +document.getElementById('auditFlagDias').value, // Lê o valor como número
-            marcador: auditMarkerObj ? auditMarkerObj.name : '',
-            marcadorCor: auditMarkerObj ? auditMarkerObj.color : 'default',
-            anexos: getAnexos('audit'),
-            // Preserva o histórico explicitamente
-            historico: item && Array.isArray(item.historico) ? [...item.historico] : []
-        };
+    const selectedAuditMarkerName = document.getElementById('auditMarcador').value;
+    const auditMarkerObj = (masterLists.auditMarcadores || []).find(m => m.name === selectedAuditMarkerName);
 
-        if (isNew) {
-            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema' });
-            audits.push(newItem);
-        } else {
-            // Garante que originalItem existe e tem o histórico preservado
-            if (!originalItem) {
-                originalItem = JSON.parse(JSON.stringify(item));
-            }
-            // Preserva o histórico do item original
-            if (!newItem.historico || !Array.isArray(newItem.historico)) {
-                newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
-            }
-            
-            const changes = calculateChanges(originalItem, newItem);
-            if (changes.length > 0) {
-                newItem.historico.push({ 
-                    timestamp: new Date().toISOString(), 
-                    acao: 'Edição de Dados', 
-                    usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
-                    detalhes: changes 
-                });
-            } else if (!changes.silentChanged) {
-                // Se não houve alteração (nem mesmo em status/marcador), mantém o item original
-                audits = audits.map(a => a.id === editingAuditId ? item : a);
-                closeModal('modalAuditoria');
-                return;
-            }
-            // Aplica sempre as alterações, mesmo que apenas status/marcador tenham mudado
-            audits = audits.map(a => a.id === editingAuditId ? newItem : a);
-        }
+    const newItem = {
+        ...item,
+        titulo: document.getElementById('auditTitulo').value,
+        descricao: document.getElementById('auditDescricao').value,
+        setor: document.getElementById('auditSetor').value, 
+        categoria: document.getElementById('auditCategoria').value,
+        subcategoria: document.getElementById('auditSub').value, 
+        status: document.getElementById('auditStatus').value,
+        dataPublicacao: document.getElementById('auditDataPublicacao').value,
+        dataPrevisao: document.getElementById('auditDataPrevisao').value,
+        responsavel: document.getElementById('auditResponsavel').value,
+        auditor: document.getElementById('auditAuditor').value,
+        flagDias: Number(document.getElementById('auditFlagDias').value) || 7,
+        marcador: auditMarkerObj ? auditMarkerObj.name : '',
+        marcadorCor: auditMarkerObj ? auditMarkerObj.color : 'default',
+        anexos: getAnexos('audit')
+    };
 
-        saveAll(); closeModal('modalAuditoria'); renderCards();
-    }
+    const changes = calculateChanges(originalItem || {}, newItem);
     
+    if (isNew) {
+        newItem.historico.push({ 
+            timestamp: new Date().toISOString(), 
+            acao: 'Criação do Registro', 
+            usuario: currentuser?.name || 'Sistema' 
+        });
+        audits.push(newItem);
+    } else if (changes.length > 0 || changes.silentChanged) {
+        if (changes.length > 0) {
+            newItem.historico.push({ 
+                timestamp: new Date().toISOString(), 
+                acao: 'Edição de Dados', 
+                usuario: currentuser?.name || 'Sistema',
+                detalhes: changes 
+            });
+        }
+        audits = audits.map(a => a.id === editingAuditId ? newItem : a);
+    }
+
+    saveAll(); 
+    closeModal('modalAuditoria'); 
+    renderCards();
+}
+
     function saveAtividade() {
         const isNew = !editingAtivId;
         // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
@@ -4528,6 +4509,7 @@ document.getElementById('addBtn').onclick = () => {
         };
     }).filter(a => a.url.trim() !== ''); // Só persiste se a URL não estiver vazia
 }
+
     function restoreAnexos(prefix, list) {
         const container = document.getElementById(prefix + 'Anexos');
         container.innerHTML = '';
