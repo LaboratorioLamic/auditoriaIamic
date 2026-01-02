@@ -2451,45 +2451,59 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
     
     async function saveAll(showAlert = false) {
-        // Limita o histórico para evitar que o banco exceda o tamanho permitido
-        const maxHistoryItems = 25;
-        [audits, activities, maintenances, documents].forEach(arr => {
-            arr.forEach(item => {
-                if (item.historico && item.historico.length > maxHistoryItems) {
-                    item.historico = item.historico.slice(-maxHistoryItems);
-                }
-            });
-        });
-
-        const payload = {
-            audits,
-            activities,
-            maintenances,
-            documents, 
-            masterLists,
-            lastUpdate: new Date().toISOString()
-        };
-    
-        try {
-            const database = getFirebaseDatabase();
-            const dbRef = getFirebaseRef();
-            const dbSet = getFirebaseSet();
-            
-            // Salva os dados nas chaves individuais na raiz para manter a estrutura do JSON
-            for (const key in payload) {
-                if (payload.hasOwnProperty(key)) {
-                    await dbSet(dbRef(database, key), payload[key]);
-                }
+    // 1. Definição de limites para o Histórico (Design Premium: evita lentidão no carregamento)
+    const maxHistoryItems = 25;
+    [audits, activities, maintenances, documents].forEach(arr => {
+        arr.forEach(item => {
+            if (item.historico && item.historico.length > maxHistoryItems) {
+                item.historico = item.historico.slice(-maxHistoryItems);
             }
-            
-            if(showAlert) alert("Dados sincronizados com sucesso!");
-            if(currentTab === 'dashboard') renderDashboard();
-            
-        } catch (err) {
-            console.error("Erro ao salvar:", err);
-            if(showAlert) alert("Erro ao salvar dados: " + err.message);
+        });
+    });
+
+    // 2. Preparação do payload (Corpo dos dados)
+    const payload = {
+        audits,
+        activities,
+        maintenances,
+        documents, 
+        masterLists,
+        lastUpdate: new Date().toISOString()
+    };
+
+    try {
+        const database = getFirebaseDatabase();
+        const dbRef = getFirebaseRef();
+        
+        /* DEBUG CRÍTICO: 
+           Em vez de iterar com um loop disparando vários 'set', usamos o 'update' na raiz.
+           Isso garante que todas as listas sejam atualizadas em uma única transação atômica.
+        */
+        const { update } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
+        
+        // Referência para a raiz do banco de dados
+        const rootRef = dbRef(database, "/");
+
+        // Executa a atualização atômica
+        await update(rootRef, payload);
+        
+        if (showAlert) {
+            alert("Dados sincronizados com sucesso!");
         }
-    }    
+
+        /* NOTA DE PERFORMANCE:
+           Não chamamos renderDashboard() ou renderCards() aqui manualmente. 
+           Como o onValue (listener) já está ativo, ele detectará a mudança no servidor 
+           e atualizará a interface automaticamente de forma reativa.
+        */
+        
+    } catch (err) {
+        console.error("Erro crítico na sincronização:", err);
+        if (showAlert) {
+            alert("Erro ao salvar dados no Firebase: " + err.message);
+        }
+    }
+}
     // NOVO: Função para obter o statusType dinamicamente
     function getStatusType(statusname) {
         const finalizadoKeywords = ['concluído', 'finalizado', 'publicado'];
