@@ -435,6 +435,143 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     white-space: nowrap;
 }
 
+.checkbox-label {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* AUTOCOMPLETE LIST */
+.autocomplete-list {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.autocomplete-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text);
+    transition: background 0.2s;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover {
+    background: #f3f4f6;
+    color: var(--primary);
+}
+
+/* MULTI-SELECT */
+.multi-select {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    min-height: 40px;
+    cursor: text;
+    font-size: 13px;
+    position: relative;
+}
+
+.multi-select.focused {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(11, 37, 69, 0.1);
+}
+
+.multi-select-tag {
+    background: var(--primary-light);
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+}
+
+.multi-select-tag button {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    line-height: 1;
+}
+
+.multi-select-tag button:hover {
+    opacity: 0.8;
+}
+
+.multi-select input {
+    border: none;
+    flex: 1;
+    min-width: 100px;
+    padding: 4px 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+}
+
+.multi-select input:focus {
+    outline: none;
+}
+
+.multi-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: -8px;
+    right: -8px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+}
+
+.multi-select-dropdown.visible {
+    display: block;
+}
+
+.multi-select-option {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 13px;
+    color: var(--text);
+    transition: background 0.2s;
+}
+
+.multi-select-option:last-child {
+    border-bottom: none;
+}
+
+.multi-select-option:hover {
+    background: #f3f4f6;
+}
+
+.multi-select-option.selected {
+    background: #f0f9ff;
+    color: var(--primary);
+    font-weight: 500;
+}
+
 @media (max-width: 640px){
     .title-search-dropdown{
         position:fixed;
@@ -1141,6 +1278,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fDashStatus" class="filter-input" onchange="onFilterDashboardChange()">
                         <option value="">Status: Todos</option>
                     </select>
+                    <select id="fDashResponsavel" class="filter-input" onchange="onFilterDashboardChange()">
+                        <option value="">Responsável: Todos</option>
+                    </select>
                     
                     <div class="date-controls">
                         <select id="fDashDateType" onchange="updateDateInputs('Dash')">
@@ -1272,8 +1412,14 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fAuditCat" class="filter-input" onchange="onFilterCategoryChange('Audit')">
                         <option value="">Categoria: Todas</option>
                     </select>
-                    <select id="fAuditSub" class="filter-input" onchange="renderCards()">
+                    <select id="fAuditSub" class="filter-input" onchange="renderCards()" style="display:none;">
                         <option value="">Subcategoria: Todas</option>
+                    </select>
+                    <select id="fAuditResponsavel" class="filter-input" onchange="renderCards()">
+                        <option value="">Responsável: Todos</option>
+                    </select>
+                    <select id="fAuditRevisor" class="filter-input" onchange="renderCards()">
+                        <option value="">Revisor: Todos</option>
                     </select>
                     <select id="fAuditStatus" class="filter-input" onchange="renderCards()">
                         <option value="">Status: Todos</option>
@@ -1317,8 +1463,14 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fAtivCat" class="filter-input" onchange="onFilterCategoryChange('Ativ')">
                         <option value="">Categoria: Todas</option>
                     </select>
-                    <select id="fAtivSub" class="filter-input" onchange="renderCards()">
+                    <select id="fAtivSub" class="filter-input" onchange="renderCards()" style="display:none;">
                         <option value="">Subcategoria: Todas</option>
+                    </select>
+                    <select id="fAtivResponsavel" class="filter-input" onchange="renderCards()">
+                        <option value="">Responsável: Todos</option>
+                    </select>
+                    <select id="fAtivRevisor" class="filter-input" onchange="renderCards()">
+                        <option value="">Revisor: Todos</option>
                     </select>
                     <select id="fAtivStatus" class="filter-input" onchange="renderCards()">
                         <option value="">Status: Todos</option>
@@ -1362,8 +1514,11 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fMantCat" class="filter-input" onchange="onFilterCategoryChange('Mant')">
                         <option value="">Categoria: Todas</option>
                     </select>
-                    <select id="fMantItem" class="filter-input" onchange="renderCards()">
+                    <select id="fMantItem" class="filter-input" onchange="renderCards()" style="display:none;">
                         <option value="">Item: Todos</option>
+                    </select>
+                    <select id="fMantResponsavel" class="filter-input" onchange="renderCards()">
+                        <option value="">Responsável: Todos</option>
                     </select>
                     <select id="fMantTipo" class="filter-input" onchange="renderCards()">
                         <option value="">Tipo: Todos</option>
@@ -1410,8 +1565,14 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fDocCat" class="filter-input" onchange="onFilterCategoryChange('Doc')">
                         <option value="">Categoria: Todas</option>
                     </select>
-                    <select id="fDocSub" class="filter-input" onchange="renderCards()">
+                    <select id="fDocSub" class="filter-input" onchange="renderCards()" style="display:none;">
                         <option value="">Subcategoria: Todas</option>
+                    </select>
+                    <select id="fDocResponsavel" class="filter-input" onchange="renderCards()">
+                        <option value="">Responsável: Todos</option>
+                    </select>
+                    <select id="fDocRevisor" class="filter-input" onchange="renderCards()">
+                        <option value="">Revisor: Todos</option>
                     </select>
                     <select id="fDocStatus" class="filter-input" onchange="renderCards()">
                         <option value="">Status: Todos</option>
@@ -1626,7 +1787,16 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <input type="date" id="auditDataPrevisao">
             </div>
             <div class="field-group">
-                <label>Responsável</label> <input id="auditResponsavel" placeholder="Nome do Responsável">
+                <label>Responsável</label>
+                <select id="auditResponsavel">
+                    <option value="">Selecione um responsável...</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label>Revisor</label>
+                <select id="auditRevisor">
+                    <option value="">Selecione um revisor...</option>
+                </select>
             </div>
             <div class="field-group">
                 <label>Auditor</label> <input id="auditAuditor" placeholder="Nome do Auditor">
@@ -1706,7 +1876,16 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <input type="date" id="ativDataConclusao">
             </div>
             <div class="field-group">
-                <label>Responsável</label> <input id="ativResponsavel" placeholder="Nome do Responsável">
+                <label>Responsável</label>
+                <select id="ativResponsavel">
+                    <option value="">Selecione um responsável...</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label>Revisor</label>
+                <select id="ativRevisor">
+                    <option value="">Selecione um revisor...</option>
+                </select>
             </div>
             <div class="field-group">
                 <label>Alerta (Dias antes)</label>
@@ -1783,10 +1962,17 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <input type="number" id="mantIntervalo" value="30" onchange="calculateNextDate('mant')">
             </div>
             <div class="field-group">
-                <label>Responsável Técnico</label> <input id="mantResponsavelTecnico" placeholder="Nome do Técnico">
+                <label>Responsável Técnico</label>
+                <select id="mantResponsavelTecnico">
+                    <option value="">Selecione um responsável...</option>
+                </select>
             </div>
             <div class="field-group">
-                <label>Responsável pela Manutenção</label> <input id="mantResponsavelManutencao" placeholder="Nome do Gestor">
+                <label>Responsável pela Manutenção</label>
+                <input type="text" id="mantResponsavelManutencao" placeholder="Nome do responsável">
+            </div>
+            <div class="field-group">
+                <label>Empresa Responsável</label> <input id="mantEmpresaResponsavel" placeholder="Nome da Empresa">
             </div>
             <div class="field-group full-width" style="background:#f0f9ff; padding:10px; border-radius:8px; border:1px solid #bae6fd">
                 <label style="color:#0369a1">Próxima Manutenção (Calculada)</label>
@@ -1878,11 +2064,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             </div>
             <div class="field-group">
                 <label>Responsável</label>
-                <input id="docResponsavel" placeholder="Responsável pela elaboração">
+                <select id="docResponsavel">
+                    <option value="">Selecione um responsável...</option>
+                </select>
             </div>
             <div class="field-group">
-                <label>Revisor/Aprovador</label>
-                <input id="docRevisor" placeholder="Revisor ou Aprovador">
+                <label>Revisor</label>
+                <select id="docRevisor">
+                    <option value="">Selecione um revisor...</option>
+                </select>
             </div>
             <div class="field-group">
                 <label>Alerta (Dias antes da revisão)</label>
@@ -2098,6 +2288,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // Lista de Tipos para Manutenção
         mantTipos: [],
     
+        // Lista de Responsáveis
+        responsaveis: [],
+    
         // O unifiedStatusMap também será removido ou gerado dinamicamente para usar apenas os nomes das listas acima.
     };
     
@@ -2135,6 +2328,62 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         if (Number.isNaN(d.getTime())) return Infinity;
         return Math.ceil((d - new Date()) / (1000*60*60*24));
     };
+    
+    // Função para limpar responsáveis que não são usuários cadastrados
+    function cleanInvalidResponsaveis() {
+        // Coleta todos os nomes de usuários cadastrados
+        const validUserNames = new Set();
+        if (typeof users !== 'undefined') {
+            users.forEach(user => {
+                if (user.name) validUserNames.add(String(user.name));
+            });
+        }
+        if (masterLists.responsaveis) {
+            masterLists.responsaveis.forEach(r => validUserNames.add(String(r)));
+        }
+        
+        const cleanResponsavel = (responsavel) => {
+            if (!responsavel) return '';
+            try {
+                // Se for JSON array, pega o primeiro responsável
+                const parsed = JSON.parse(responsavel);
+                if (Array.isArray(parsed)) {
+                    const firstValid = parsed.find(r => validUserNames.has(String(r)));
+                    return firstValid ? String(firstValid) : '';
+                }
+                return validUserNames.has(String(parsed)) ? String(parsed) : '';
+            } catch {
+                return validUserNames.has(String(responsavel)) ? String(responsavel) : '';
+            }
+        };
+        
+        // Limpa responsáveis em cada tipo de item
+        [audits, activities, documents].forEach(arr => {
+            arr.forEach(item => {
+                if (item.responsavel) {
+                    item.responsavel = cleanResponsavel(item.responsavel);
+                }
+            });
+        });
+        
+        maintenances.forEach(item => {
+            if (item.responsavelTecnico) {
+                item.responsavelTecnico = cleanResponsavel(item.responsavelTecnico);
+            }
+            // responsavelManutencao é campo de texto, não precisa limpar (pode ser qualquer valor)
+        });
+        
+        documents.forEach(item => {
+            if (item.responsavel) {
+                item.responsavel = cleanResponsavel(item.responsavel);
+            }
+        });
+        
+        // Limpa a lista mestre de responsáveis, mantendo apenas usuários válidos
+        if (masterLists.responsaveis) {
+            masterLists.responsaveis = masterLists.responsaveis.filter(r => validUserNames.has(String(r)));
+        }
+    }
     const isBlankPeriodicity = val => {
         if (val === null || val === undefined) return true;
         const s = String(val).trim();
@@ -2152,6 +2401,23 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     const getDocumentDeadlineDate = item => (isBlankPeriodicity(item?.docIntervalo) ? null : item?.dataProximaRevisao);
 
     // Normalização de texto (corrige mismatch no mobile por Unicode/acentos)
+    // Função auxiliar para normalizar responsável (pode ser string, JSON array, ou null)
+    function normalizeResponsavel(responsavel) {
+        if (!responsavel) return '';
+        try {
+            // Tenta fazer parse se for JSON array
+            const parsed = JSON.parse(responsavel);
+            if (Array.isArray(parsed)) {
+                // Pega apenas o primeiro responsável para compatibilidade
+                return String(parsed[0] || '').trim().toLowerCase();
+            }
+            return String(parsed || '').trim().toLowerCase();
+        } catch {
+            // Se não for JSON, trata como string simples
+            return String(responsavel || '').trim().toLowerCase();
+        }
+    }
+    
     function normalizeText(input) {
         let s = (input ?? '').toString();
         // remove zero-width chars comuns em teclado mobile
@@ -2414,6 +2680,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 canManageLists: !!u.canManageLists,
                 isAdmin: !!u.isAdmin || u.user === 'admin'
             }));
+            
+            // Inicializa os usuários no multi-select após carregar
+            initMultiSelectUsers();
         } catch (error) {
             console.error('Erro ao carregar usuários:', error);
             throw new Error('Erro ao carregar usuários: ' + error.message);
@@ -2697,6 +2966,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             [audits, activities, maintenances, documents].forEach(array => {
                 array.forEach(item => item.historico = item.historico || []);
             });
+            
+            // Limpa responsáveis inválidos após carregar os dados
+            cleanInvalidResponsaveis();
 
             populateYearSelects();
             populateSelects();          
@@ -2727,6 +2999,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 maintenances = cachedMaintenances || [];
                 documents = cachedDocuments || [];
                 masterLists = cachedMasterLists ? { ...defaultMasterLists, ...cachedMasterLists } : JSON.parse(JSON.stringify(defaultMasterLists));
+                
+                // Limpa responsáveis inválidos após carregar do cache
+                cleanInvalidResponsaveis();
                 
                 populateYearSelects();
                 populateSelects();
@@ -2836,7 +3111,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const dbRef = getFirebaseRef();
         const { update } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
 
-        // 1. Limpeza de Histórico para Performance (Evita lentidão no carregamento)
+        // 1. Limpeza de responsáveis inválidos (que não são usuários cadastrados)
+        cleanInvalidResponsaveis();
+
+        // 2. Limpeza de Histórico para Performance (Evita lentidão no carregamento)
         const maxHistoryItems = 25;
         const dataArrays = [audits, activities, maintenances, documents];
         dataArrays.forEach(arr => {
@@ -3281,6 +3559,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const sub = document.getElementById(filterSubcatId).value;
             const stat = document.getElementById('fAuditStatus').value;
             const marcador = document.getElementById('fAuditMarcador')?.value || '';
+            const responsavel = document.getElementById('fAuditResponsavel')?.value || '';
+            const revisor = document.getElementById('fAuditRevisor')?.value || ''; // CORREÇÃO: Captura Revisor
             const dateType = document.getElementById('fAuditDateType').value;
             
             data = audits.filter(item => {
@@ -3289,6 +3569,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 if (sub && item.subcategoria !== sub) return false;
                 if (stat && item.status !== stat) return false;
                 if (marcador && item.marcador !== marcador) return false;
+                if (revisor && item.revisor !== revisor) return false; // CORREÇÃO: Filtro Revisor
+                
+                if (responsavel) {
+                    const itemResponsavel = normalizeResponsavel(item.responsavel);
+                    const filterLower = responsavel.toLowerCase();
+                    if (!itemResponsavel || !itemResponsavel.includes(filterLower)) return false;
+                }
                 
                 if (dateType !== 'all') {
                     const itemDate = new Date(item[dateField]);
@@ -3321,6 +3608,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const sub = document.getElementById(filterSubcatId).value;
             const stat = document.getElementById('fAtivStatus').value;
             const marcador = document.getElementById('fAtivMarcador')?.value || '';
+            const responsavel = document.getElementById('fAtivResponsavel')?.value || '';
+            const revisor = document.getElementById('fAtivRevisor')?.value || ''; // CORREÇÃO: Captura Revisor
             const dateType = document.getElementById('fAtivDateType').value;
     
             data = activities.filter(item => {
@@ -3329,6 +3618,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 if (sub && item.subcategoria !== sub) return false;
                 if (stat && item.status !== stat) return false;
                 if (marcador && item.marcador !== marcador) return false;
+                if (revisor && item.revisor !== revisor) return false; // CORREÇÃO: Filtro Revisor
+                
+                if (responsavel) {
+                    const itemResponsavel = normalizeResponsavel(item.responsavel);
+                    const filterLower = responsavel.toLowerCase();
+                    if (!itemResponsavel || !itemResponsavel.includes(filterLower)) return false;
+                }
     
                 if (dateType !== 'all') {
                     const itemDate = new Date(item[dateField]);
@@ -3362,6 +3658,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const tipo = document.getElementById('fMantTipo').value;
             const stat = document.getElementById('fMantStatus').value;
             const marcador = document.getElementById('fMantMarcador')?.value || '';
+            const responsavel = document.getElementById('fMantResponsavel')?.value || '';
             const dateType = document.getElementById('fMantDateType').value;
             
             data = maintenances.filter(item => {
@@ -3371,6 +3668,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 if (tipo && item.tipo !== tipo) return false;
                 if (stat && item.status !== stat) return false;
                 if (marcador && item.marcador !== marcador) return false;
+                
+                if (responsavel) {
+                    const responsavelTec = normalizeResponsavel(item.responsavelTecnico);
+                    const filterLower = responsavel.toLowerCase();
+                    if (!responsavelTec.includes(filterLower)) return false;
+                }
     
                 if (dateType !== 'all') {
                     const dateForFilter = getMaintenanceCardDate(item); // Data (publicação)
@@ -3403,6 +3706,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const sub = document.getElementById(filterSubcatId).value;
             const stat = document.getElementById('fDocStatus').value;
             const marcador = document.getElementById('fDocMarcador')?.value || '';
+            const responsavel = document.getElementById('fDocResponsavel')?.value || '';
+            const revisor = document.getElementById('fDocRevisor')?.value || ''; // CORREÇÃO: Captura Revisor
             const dateType = document.getElementById('fDocDateType').value;
     
             data = documents.filter(item => {
@@ -3411,6 +3716,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 if (sub && item.subcategoria !== sub) return false;
                 if (stat && item.status !== stat) return false;
                 if (marcador && item.marcador !== marcador) return false;
+                if (revisor && item.revisor !== revisor) return false; // CORREÇÃO: Filtro Revisor
+                
+                if (responsavel) {
+                    const itemResponsavel = normalizeResponsavel(item.responsavel);
+                    const filterLower = responsavel.toLowerCase();
+                    if (!itemResponsavel || !itemResponsavel.includes(filterLower)) return false;
+                }
     
                 if (dateType !== 'all') {
                     const dateForFilter = getDocumentCardDate(item); // Data (publicação)
@@ -3487,72 +3799,92 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const canDelete = userCanDeleteCards();
 
         data.forEach(item => {
-            const div = document.createElement('div');
-            const flagDays = item.flagDias || 7;
-            let targetDate = (getDeadlineDate ? getDeadlineDate(item) : null);
-            const fullTitle = item.titulo || '';
-            const displayTitle = truncateText(fullTitle, 55);
+            try {
+                const div = document.createElement('div');
+                const flagDays = item.flagDias || 7;
+                let targetDate = (getDeadlineDate ? getDeadlineDate(item) : null);
+                const fullTitle = item.titulo || '';
+                const displayTitle = truncateText(fullTitle, 55);
     
-            const d = daysDiff(targetDate);
-            
-            let indicatorClass = 'ind-green';
-            // Cards com status "Concluído" permanecem verdes mesmo se atrasados
-            if (item.status !== 'Concluído' && d !== Infinity) {
-                if (d < 0) indicatorClass = 'ind-red';
-                else if (d <= flagDays) indicatorClass = 'ind-yellow';
-            }
+                const d = daysDiff(targetDate);
+                
+                let indicatorClass = 'ind-green';
+                // Cards com status "Concluído" permanecem verdes mesmo se atrasados
+                if (item.status !== 'Concluído' && d !== Infinity) {
+                    if (d < 0) indicatorClass = 'ind-red';
+                    else if (d <= flagDays) indicatorClass = 'ind-yellow';
+                }
     
-            const statusObj = statusList.find(s => s.name === item.status) || { color: 'default' };
-            const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
+                const statusObj = statusList.find(s => s.name === item.status) || { color: 'default' };
+                const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
+    
+                // Marcador do card
+                const marcadorText = item.marcador || '';
+                const marcadorColorVar = colorMap[item.marcadorCor] || colorMap['default'];
+    
+                // layout interativo original dos cards
+                div.className = `card ${indicatorClass}`;
+                div.onclick = () => {
+                    currentHistoryPage = 1; // Reseta a página ao abrir a visualização
+                    openView(item.id, currentTab);
+                };
+    
+                let specificContent = '';
+                const subcatOrItemValue = currentTab === 'manutencao' ? item.item : item.subcategoria;
+                const subcategoryDisplay = subcatOrItemValue ? ` (${subcatOrItemValue})` : '';
+    
+                // Função para formatar responsável para exibição
+                const formatResponsavel = (responsavel) => {
+                    if (!responsavel) return '';
+                    return String(responsavel).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                };
 
-            // Marcador do card
-            const marcadorText = item.marcador || '';
-            const marcadorColorVar = colorMap[item.marcadorCor] || colorMap['default'];
-    
-            // layout interativo original dos cards
-            div.className = `card ${indicatorClass}`;
-            div.onclick = () => {
-                currentHistoryPage = 1; // Reseta a página ao abrir a visualização
-                openView(item.id, currentTab);
-            };
-    
-            let specificContent = '';
-            const subcatOrItemValue = currentTab === 'manutencao' ? item.item : item.subcategoria;
-            const subcategoryDisplay = subcatOrItemValue ? ` (${subcatOrItemValue})` : '';
-    
             if (currentTab === 'auditoria') {
+                const responsaveis = formatResponsavel(item.responsavel);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
+                    ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
                     <div class="card-info-row"><i class="far fa-calendar"></i> <span>Pub: <strong>${formatBR(item.dataPublicacao)}</strong></span></div>
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>
                 `;
             } else if (currentTab === 'atividades') {
+                const responsaveis = formatResponsavel(item.responsavel);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
+                    ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
                     <div class="card-info-row"><i class="far fa-calendar"></i> <span>Inicio: <strong>${formatBR(item.dataInicio)}</strong></span></div>
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Fim: <strong>${formatBR(item.dataConclusao)}</strong></span></div>
                 `;
             } else if (currentTab === 'manutencao') {
                 const isNA = isBlankPeriodicity(item.intervalo);
+                const responsavelTec = formatResponsavel(item.responsavelTecnico);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
                     <div class="card-info-row"><i class="fas fa-tag"></i> <span>${item.tipo || 'ND'}</span></div>
+                    ${responsavelTec ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsavelTec}</span></div>` : ''}
                     <div class="card-info-row"><i class="far fa-clock"></i> <span>Data: <strong>${formatBR(item.ultima)}</strong></span></div>
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isNA ? 'N/A' : formatBR(item.proxima)}</strong></span></div>
                 `;
             } else { // Documentos
                 const isNA = isBlankPeriodicity(item.docIntervalo);
+                const responsaveis = formatResponsavel(item.responsavel);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
+                    ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
                     <div class="card-info-row"><i class="far fa-clock"></i> <span>Data: <strong>${formatBR(item.dataCriacao)}</strong></span></div>
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isNA ? 'N/A' : formatBR(item.dataProximaRevisao)}</strong></span></div>
                 `;
             }
     
+            // Garante que specificContent seja sempre uma string válida
+            if (!specificContent || typeof specificContent !== 'string') {
+                specificContent = '';
+            }
+
             const editIconHtml = canEdit
                 ? `<i class="fas fa-pen" onclick="editItem(${item.id}, '${currentTab}')" title="Editar"></i>`
                 : '';
@@ -3578,12 +3910,30 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 </div>
             `;
             grid.appendChild(div);
+            } catch (error) {
+                console.error('Erro ao renderizar card:', error, item);
+                // Cria um card de fallback mesmo que ocorra erro
+                const fallbackDiv = document.createElement('div');
+                fallbackDiv.className = 'card ind-green';
+                fallbackDiv.innerHTML = `
+                    <div class="card-header">
+                        <span class="tag" style="background-color:#6b7280">Erro</span>
+                    </div>
+                    <div class="card-title">
+                        <h4>Erro ao exibir item</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-info-row"><i class="fas fa-exclamation-triangle"></i> <span>Item ID: ${item.id}</span></div>
+                    </div>
+                `;
+                grid.appendChild(fallbackDiv);
+            }
         });
         
         // Atualiza contador de notificações após renderizar cards
         updateNotificationCount();
     }
-    
+
     // Filtro do Dashboard
     function onFilterDashboardChange() {
         if (document.getElementById('fDashDateType').value !== 'all') {
@@ -3618,6 +3968,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const fSetor = document.getElementById('fDashSetor')?.value || '';
         const fCat = document.getElementById('fDashCat')?.value || '';
         const fStatus = document.getElementById('fDashStatus')?.value || '';
+        const fResponsavel = document.getElementById('fDashResponsavel')?.value || '';
         const fDateType = document.getElementById('fDashDateType')?.value || 'all';
         const fMonth = parseInt(document.getElementById('fDashMonth')?.value || currentMonth);
         const fYearForMonth = parseInt(document.getElementById('fDashYearForMonth')?.value || currentYear);
@@ -3643,6 +3994,20 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             
             // Filtro por Status (exceto se estiver sendo atualizado)
             if (excludeFilter !== 'status' && fStatus && item.status !== fStatus) return false;
+            
+            // Filtro por Responsável (exceto se estiver sendo atualizado)
+            if (excludeFilter !== 'responsavel' && fResponsavel) {
+                if (item.type === 'mant') {
+                    // Para manutenção, verifica apenas responsável técnico
+                    const respTec = normalizeResponsavel(item.responsavelTecnico);
+                    const filterLower = fResponsavel.toLowerCase();
+                    if (!respTec.includes(filterLower)) return false;
+                } else {
+                    itemResponsavel = normalizeResponsavel(item.responsavel);
+                    const filterLower = fResponsavel.toLowerCase();
+                    if (!itemResponsavel || !itemResponsavel.includes(filterLower)) return false;
+                }
+            }
             
             // Filtro por Título
             if (fTitleQuery) {
@@ -3778,6 +4143,61 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 setSelectOptions(el, 'Status: Todos', [...ordered, ...extras], currentValue);
             }
         }
+        
+        // Atualiza filtro de Responsável (Dashboard)
+        {
+            const el = document.getElementById('fDashResponsavel');
+            if (el) {
+                const currentValue = el.value || '';
+                const availableResponsaveis = new Set();
+                rawItems.forEach(item => {
+                    if (passesOtherFilters(item, 'responsavel')) {
+                        if (item.type === 'mant') {
+                            // Para manutenção, coleta apenas o responsável técnico
+                            if (item.responsavelTecnico) {
+                                try {
+                                    const parsed = JSON.parse(item.responsavelTecnico);
+                                    if (Array.isArray(parsed)) {
+                                        parsed.forEach(r => {
+                                            const normalized = String(r || '').trim();
+                                            if (normalized) availableResponsaveis.add(normalized);
+                                        });
+                                    } else {
+                                        const normalized = String(item.responsavelTecnico || '').trim();
+                                        if (normalized) availableResponsaveis.add(normalized);
+                                    }
+                                } catch {
+                                    const normalized = String(item.responsavelTecnico || '').trim();
+                                    if (normalized) availableResponsaveis.add(normalized);
+                                }
+                            }
+                        } else {
+                            const responsavel = item.responsavel || '';
+                            if (responsavel) {
+                                // Se for multi-select (JSON), parseia e adiciona cada um
+                                try {
+                                    const parsed = JSON.parse(responsavel);
+                                    if (Array.isArray(parsed)) {
+                                        parsed.forEach(r => {
+                                            const normalized = String(r || '').trim();
+                                            if (normalized) availableResponsaveis.add(normalized);
+                                        });
+                                    } else {
+                                        const normalized = String(parsed || '').trim();
+                                        if (normalized) availableResponsaveis.add(normalized);
+                                    }
+                                } catch {
+                                    const normalized = String(responsavel || '').trim();
+                                    if (normalized) availableResponsaveis.add(normalized);
+                                }
+                            }
+                        }
+                    }
+                });
+                const sortedResponsaveis = Array.from(availableResponsaveis).sort();
+                setSelectOptions(el, 'Responsável: Todos', sortedResponsaveis, currentValue);
+            }
+        }
     }
     
     // Limpa filtros do Dashboard
@@ -3786,6 +4206,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         document.getElementById('fDashSetor').value = "";
         document.getElementById('fDashCat').value = "";
         document.getElementById('fDashStatus').value = "";
+        document.getElementById('fDashResponsavel').value = "";
         
         document.getElementById('fDashDateType').value = 'all';
         document.getElementById('fDashDataIni').value = "";
@@ -3934,6 +4355,43 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     onCategoryChange('ativ');
     onCategoryChange('mant');
     onCategoryChange('doc');
+    
+    // Popula os selects de responsáveis
+    const responsaveisOptions = ['<option value="">Selecione um responsável...</option>'];
+    
+    // Adiciona responsáveis da lista mestre
+    if (masterLists.responsaveis) {
+        masterLists.responsaveis.forEach(r => {
+            if (r && r.trim()) {
+                responsaveisOptions.push(`<option value="${r}">${r}</option>`);
+            }
+        });
+    }
+    
+    // Adiciona nomes de usuários cadastrados
+    if (typeof users !== 'undefined') {
+        users.forEach(user => {
+            if (user.name && user.name.trim()) {
+                responsaveisOptions.push(`<option value="${user.name}">${user.name}</option>`);
+            }
+        });
+    }
+    
+    // Remove duplicatas e ordena
+    const uniqueOptions = [...new Set(responsaveisOptions)];
+    const sortedOptions = uniqueOptions.sort((a, b) => {
+        const aText = a.match(/>(.*?)</)[1] || '';
+        const bText = b.match(/>(.*?)</)[1] || '';
+        return aText.localeCompare(bText);
+    });
+    
+    // Popula os selects de responsáveis
+    ['auditResponsavel', 'ativResponsavel', 'mantResponsavelTecnico', 'docResponsavel', 'auditRevisor', 'ativRevisor', 'docRevisor'].forEach(id => {
+        const select = document.getElementById(id);
+        if (select) {
+            select.innerHTML = sortedOptions.join('');
+        }
+    });
 
     // --- FILTROS DAS ABAS ---
     document.getElementById('fAuditSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
@@ -4001,18 +4459,41 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     let subcatSelect;
     let listKey;
+    let subcatFieldGroup;
     
     if (prefix === 'mant') {
         subcatSelect = document.getElementById(`${prefix}Item`);
         listKey = 'mantItens';
+        // Para manutenção não há subcategoria, então não precisa ocultar
     } else {
         subcatSelect = document.getElementById(`${prefix}Sub`);
         listKey = `${prefix}Subcats`;
+        // Encontra o field-group pai da subcategoria para ocultar/mostrar
+        if (subcatSelect) {
+            subcatFieldGroup = subcatSelect.closest('.field-group');
+        }
+    }
+    
+    const selectedCat = catSelect.value;
+    
+    // Se categoria estiver vazia ou for "todas", oculta o campo de subcategoria
+    if (!selectedCat || selectedCat === '') {
+        if (subcatFieldGroup) {
+            subcatFieldGroup.style.display = 'none';
+        }
+        if (subcatSelect) {
+            subcatSelect.innerHTML = '<option value="">Nenhuma opção disponível</option>';
+        }
+        return;
+    }
+    
+    // Mostra o campo de subcategoria se uma categoria foi selecionada
+    if (subcatFieldGroup) {
+        subcatFieldGroup.style.display = 'block';
     }
     
     if (!subcatSelect) return; 
 
-    const selectedCat = catSelect.value;
     const currentSubcat = subcatSelect.value; 
     
     // Debug: Garante que a estrutura de dados exista antes do acesso
@@ -4094,62 +4575,86 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
 
     function passesFilters(prefix, item, excluded = {}) {
-        // Setor
-        if (!excluded.setor) {
-            const setor = document.getElementById(`f${prefix}Setor`)?.value || '';
-            if (setor && (item.setor || '') !== setor) return false;
-        }
-
-        // Categoria
-        if (!excluded.cat) {
-            const cat = document.getElementById(`f${prefix}Cat`)?.value || '';
-            if (cat && (item.categoria || '') !== cat) return false;
-        }
-
-        // Subcategoria/Item
-        if (!excluded.sub) {
-            let subVal = '';
-            if (prefix === 'Mant') subVal = document.getElementById('fMantItem')?.value || '';
-            else subVal = document.getElementById(`f${prefix}Sub`)?.value || '';
-
-            if (subVal) {
-                const itemSub = (prefix === 'Mant') ? (item.item || '') : (item.subcategoria || '');
-                if (itemSub !== subVal) return false;
-            }
-        }
-
-        // Status
-        if (!excluded.status) {
-            const stat = document.getElementById(`f${prefix}Status`)?.value || '';
-            if (stat && (item.status || '') !== stat) return false;
-        }
-
-        // Marcador
-        if (!excluded.marcador) {
-            const marcador = document.getElementById(`f${prefix}Marcador`)?.value || '';
-            if (marcador && (item.marcador || '') !== marcador) return false;
-        }
-
-        // Tipo (somente manutenção)
-        if (prefix === 'Mant' && !excluded.tipo) {
-            const tipo = document.getElementById('fMantTipo')?.value || '';
-            if (tipo && (item.tipo || '') !== tipo) return false;
-        }
-
-        // Data
-        if (!excluded.date) {
-            if (!passesDateFilter(prefix, item)) return false;
-        }
-
-        // Título (lupa) - quando ativo
-        if (!excluded.title) {
-            if (titleSearchCardsEnabled && titleSearchCardsQuery) {
-                if (!normalizeText(item.titulo || '').includes(titleSearchCardsQuery)) return false;
-            }
-        }
-
-        return true;
+    // 1. Setor
+    if (!excluded.setor) {
+        const setor = document.getElementById(`f${prefix}Setor`)?.value || '';
+        if (setor && (item.setor || '') !== setor) return false;
     }
+
+    // 2. Categoria
+    if (!excluded.cat) {
+        const cat = document.getElementById(`f${prefix}Cat`)?.value || '';
+        if (cat && (item.categoria || '') !== cat) return false;
+    }
+
+    // 3. Subcategoria / Item / Equipamento
+    if (!excluded.sub) {
+        let subVal = '';
+        if (prefix === 'Mant') subVal = document.getElementById('fMantItem')?.value || '';
+        else subVal = document.getElementById(`f${prefix}Sub`)?.value || '';
+
+        if (subVal) {
+            const itemSub = (prefix === 'Mant') ? (item.item || '') : (item.subcategoria || '');
+            if (itemSub !== subVal) return false;
+        }
+    }
+
+    // 4. Status
+    if (!excluded.status) {
+        const stat = document.getElementById(`f${prefix}Status`)?.value || '';
+        if (stat && (item.status || '') !== stat) return false;
+    }
+
+    // 5. Responsável (Adicionado/Corrigido para suportar Multi-select)
+    if (!excluded.responsavel) {
+        const filterResp = document.getElementById(`f${prefix}Responsavel`)?.value || '';
+        if (filterResp) {
+            // Obtém o campo de responsável dependendo da aba
+            const itemRespRaw = (prefix === 'Mant') ? (item.responsavelTecnico || '') : (item.responsavel || '');
+            // Usa sua função existente para normalizar (trata string ou JSON array)
+            const normalizedItemResp = normalizeResponsavel(itemRespRaw);
+            
+            // Verifica se o responsável selecionado no filtro está contido no(s) responsável(eis) do item
+            if (!normalizedItemResp.includes(filterResp.toLowerCase())) return false;
+        }
+    }
+
+    // 6. Revisor (Exceto para Manutenção)
+    if (prefix !== 'Mant' && !excluded.revisor) {
+        const filterRev = document.getElementById(`f${prefix}Revisor`)?.value || '';
+        if (filterRev) {
+            const itemRev = (item.revisor || '');
+            // Comparação exata para evitar nomes parciais (ex: "Ana" não pegar "Mariana")
+            if (itemRev !== filterRev) return false;
+        }
+    }
+
+    // 7. Marcador
+    if (!excluded.marcador) {
+        const marcador = document.getElementById(`f${prefix}Marcador`)?.value || '';
+        if (marcador && (item.marcador || '') !== marcador) return false;
+    }
+
+    // 8. Tipo (Somente Manutenção)
+    if (prefix === 'Mant' && !excluded.tipo) {
+        const tipo = document.getElementById('fMantTipo')?.value || '';
+        if (tipo && (item.tipo || '') !== tipo) return false;
+    }
+
+    // 9. Data
+    if (!excluded.date) {
+        if (!passesDateFilter(prefix, item)) return false;
+    }
+
+    // 10. Título (Lupa Search)
+    if (!excluded.title) {
+        if (titleSearchCardsEnabled && titleSearchCardsQuery) {
+            if (!normalizeText(item.titulo || '').includes(titleSearchCardsQuery)) return false;
+        }
+    }
+
+    return true;
+}
 
     function uniq(list) {
         return [...new Set((list || []).filter(Boolean))];
@@ -4189,87 +4694,141 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
 
     function updateFilterFacetOptions(prefix) {
-        // Setor
-        {
-            const el = document.getElementById(`f${prefix}Setor`);
+    // Setor
+    {
+        const el = document.getElementById(`f${prefix}Setor`);
+        const currentValue = el?.value || '';
+        const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { setor: true }));
+        const present = new Set(uniq(items.map(it => it.setor || '').filter(Boolean)));
+        const master = getMasterSetores();
+        const ordered = master.filter(v => present.has(v));
+        const extras = [...present].filter(v => !master.includes(v)).sort();
+        setSelectOptions(el, 'Setor: Todos', [...ordered, ...extras], currentValue);
+    }
+
+    // Categoria
+    {
+        const el = document.getElementById(`f${prefix}Cat`);
+        const currentValue = el?.value || '';
+        const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { cat: true }));
+        const present = new Set(uniq(items.map(it => it.categoria || '').filter(Boolean)));
+        const master = getMasterCategorias(prefix);
+        const ordered = master.filter(v => present.has(v));
+        const extras = [...present].filter(v => !master.includes(v)).sort();
+        setSelectOptions(el, 'Categoria: Todas', [...ordered, ...extras], currentValue);
+    }
+
+    // Status
+    {
+        const el = document.getElementById(`f${prefix}Status`);
+        const currentValue = el?.value || '';
+        const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { status: true }));
+        const present = new Set(uniq(items.map(it => it.status || '').filter(Boolean)));
+        const master = getMasterStatus(prefix).map(s => s.name).filter(Boolean);
+        const ordered = master.filter(v => present.has(v));
+        const extras = [...present].filter(v => !master.includes(v)).sort();
+        setSelectOptions(el, 'Status: Todos', [...ordered, ...extras], currentValue);
+    }
+
+    // Marcador
+    {
+        const el = document.getElementById(`f${prefix}Marcador`);
+        if (el) {
             const currentValue = el?.value || '';
-            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { setor: true }));
-            const present = new Set(uniq(items.map(it => it.setor || '').filter(Boolean)));
-            const master = getMasterSetores();
+            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { marcador: true }));
+            const present = new Set(uniq(items.map(it => it.marcador || '').filter(Boolean)));
+            const master = getMasterMarcadores(prefix).map(m => m.name).filter(Boolean);
             const ordered = master.filter(v => present.has(v));
             const extras = [...present].filter(v => !master.includes(v)).sort();
-            setSelectOptions(el, 'Setor: Todos', [...ordered, ...extras], currentValue);
-        }
+            let options = [...ordered, ...extras];
 
-        // Categoria
-        {
-            const el = document.getElementById(`f${prefix}Cat`);
-            const currentValue = el?.value || '';
-            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { cat: true }));
-            const present = new Set(uniq(items.map(it => it.categoria || '').filter(Boolean)));
-            const master = getMasterCategorias(prefix);
-            const ordered = master.filter(v => present.has(v));
-            const extras = [...present].filter(v => !master.includes(v)).sort();
-            setSelectOptions(el, 'Categoria: Todas', [...ordered, ...extras], currentValue);
-        }
+            if (currentValue && !options.includes(currentValue)) {
+                options = [currentValue, ...options];
+            }
 
-        // Status
-        {
-            const el = document.getElementById(`f${prefix}Status`);
-            const currentValue = el?.value || '';
-            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { status: true }));
-            const present = new Set(uniq(items.map(it => it.status || '').filter(Boolean)));
-            const master = getMasterStatus(prefix).map(s => s.name).filter(Boolean);
-            const ordered = master.filter(v => present.has(v));
-            const extras = [...present].filter(v => !master.includes(v)).sort();
-            setSelectOptions(el, 'Status: Todos', [...ordered, ...extras], currentValue);
-        }
-
-        // Marcador
-        {
-            const el = document.getElementById(`f${prefix}Marcador`);
-            if (el) {
-                const currentValue = el?.value || '';
-                const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { marcador: true }));
-                const present = new Set(uniq(items.map(it => it.marcador || '').filter(Boolean)));
-                const master = getMasterMarcadores(prefix).map(m => m.name).filter(Boolean);
-                const ordered = master.filter(v => present.has(v));
-                const extras = [...present].filter(v => !master.includes(v)).sort();
-                let options = [...ordered, ...extras];
-
-                // Garante que o marcador atualmente selecionado permaneça disponível,
-                // mesmo que não haja cards visíveis com ele após a atualização do buffer.
-                if (currentValue && !options.includes(currentValue)) {
-                    options = [currentValue, ...options];
-                }
-
-                // Mostra o filtro enquanto houver opções OU um valor selecionado.
-                if (options.length > 0 || currentValue) {
-                    el.style.display = 'block';
-                    setSelectOptions(el, 'Marcador: Todos', options, currentValue || '');
-                } else {
-                    // Somente esconde e limpa se realmente não houver marcador algum selecionado
-                    el.style.display = 'none';
-                    el.value = '';
-                }
+            if (options.length > 0 || currentValue) {
+                el.style.display = 'block';
+                setSelectOptions(el, 'Marcador: Todos', options, currentValue || '');
+            } else {
+                el.style.display = 'none';
+                el.value = '';
             }
         }
-
-        // Tipo (Manutenção)
-        if (prefix === 'Mant') {
-            const el = document.getElementById('fMantTipo');
-            const currentValue = el?.value || '';
-            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { tipo: true }));
-            const present = new Set(uniq(items.map(it => it.tipo || '').filter(Boolean)));
-            const master = (masterLists?.mantTipos || []).slice();
-            const ordered = master.filter(v => present.has(v));
-            const extras = [...present].filter(v => !master.includes(v)).sort();
-            setSelectOptions(el, 'Tipo: Todos', [...ordered, ...extras], currentValue);
-        }
-
-        // Subcategoria/Item (depende de categoria)
-        updateFilterSubcatOptions(prefix);
     }
+
+    // Tipo (Manutenção)
+    if (prefix === 'Mant') {
+        const el = document.getElementById('fMantTipo');
+        const currentValue = el?.value || '';
+        const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { tipo: true }));
+        const present = new Set(uniq(items.map(it => it.tipo || '').filter(Boolean)));
+        const master = (masterLists?.mantTipos || []).slice();
+        const ordered = master.filter(v => present.has(v));
+        const extras = [...present].filter(v => !master.includes(v)).sort();
+        setSelectOptions(el, 'Tipo: Todos', [...ordered, ...extras], currentValue);
+    }
+
+    // Responsável
+    {
+        const el = document.getElementById(`f${prefix}Responsavel`);
+        if (el) {
+            const currentValue = el?.value || '';
+            // Ignora o filtro de responsável para permitir trocar entre nomes válidos
+            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { responsavel: true }));
+            
+            const allResponsaveis = new Set();
+            items.forEach(item => {
+                if (prefix === 'Mant') {
+                    if (item.responsavelTecnico) {
+                        try {
+                            const parsed = JSON.parse(item.responsavelTecnico);
+                            if (Array.isArray(parsed)) parsed.forEach(r => allResponsaveis.add(String(r)));
+                            else allResponsaveis.add(String(item.responsavelTecnico));
+                        } catch { allResponsaveis.add(String(item.responsavelTecnico)); }
+                    }
+                } else {
+                    if (item.responsavel) {
+                        try {
+                            const parsed = JSON.parse(item.responsavel);
+                            if (Array.isArray(parsed)) parsed.forEach(r => allResponsaveis.add(String(r)));
+                            else allResponsaveis.add(String(item.responsavel));
+                        } catch { allResponsaveis.add(String(item.responsavel)); }
+                    }
+                }
+            });
+            
+            const sortedResponsaveis = Array.from(allResponsaveis).filter(r => r).sort();
+            setSelectOptions(el, 'Responsável: Todos', sortedResponsaveis, currentValue);
+            el.style.display = 'block';
+        }
+    }
+
+    // Revisor (CORRIGIDO)
+    if (prefix !== 'Mant') {
+        const revEl = document.getElementById(`f${prefix}Revisor`);
+        if (revEl) {
+            const currentRevValue = revEl.value || '';
+            // CORREÇÃO: Ignora o próprio filtro de revisor ({ revisor: true }) para que a lista mostre 
+            // todos os revisores possíveis para os cards que já passaram pelos outros filtros.
+            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { revisor: true }));
+            
+            const availableRevisores = new Set();
+            items.forEach(item => {
+                if (item.revisor) {
+                    const normalized = String(item.revisor).trim();
+                    if (normalized) availableRevisores.add(normalized);
+                }
+            });
+            
+            const sortedRevisores = Array.from(availableRevisores).filter(r => r).sort();
+            setSelectOptions(revEl, 'Revisor: Todos', sortedRevisores, currentRevValue);
+            revEl.style.display = 'block';
+        }
+    }
+
+    // Subcategoria/Item
+    updateFilterSubcatOptions(prefix);
+}
 
     function updateFilterSubcatOptions(prefix) {
         const catSelect = document.getElementById(`f${prefix}Cat`);
@@ -4480,6 +5039,12 @@ function resetModal(prefix) {
     const respEl = document.getElementById(`${prefix}Responsavel`);
     if (respEl) respEl.value = '';
 
+    // Lida com Revisores (exceto em manutenção)
+    if (prefix !== 'mant') {
+        const revEl = document.getElementById(`${prefix}Revisor`);
+        if (revEl) revEl.value = '';
+    }
+
         // Marcador (select)
         const markEl = document.getElementById(`${prefix}Marcador`);
         if (markEl && markEl.options.length > 0) markEl.selectedIndex = 0;
@@ -4511,7 +5076,9 @@ function resetModal(prefix) {
     } else if (prefix === 'mant') {
         document.getElementById('mantUltima').value = today();
         document.getElementById('mantIntervalo').value = 30;
-        document.getElementById('mantResponsavelTecnico').value = '';
+        document.getElementById('mantEmpresaResponsavel').value = '';
+        multiSelectStates.mantTec.selected = [];
+        updateMultiSelectDisplay('mantTec');
         document.getElementById('mantResponsavelManutencao').value = '';
         document.getElementById('mantFlagDias').value = 7;
         const defaultMantCat = masterLists.mantCategorias[0] || '';
@@ -4608,7 +5175,8 @@ document.getElementById('addBtn').onclick = () => {
             status: document.getElementById('auditStatus').value,
             dataPublicacao: document.getElementById('auditDataPublicacao').value,
             dataPrevisao: document.getElementById('auditDataPrevisao').value,
-            responsavel: document.getElementById('auditResponsavel').value,
+            responsavel: document.getElementById('auditResponsavel').value || '',
+            revisor: document.getElementById('auditRevisor').value || '',
             auditor: document.getElementById('auditAuditor').value,
             flagDias: Number(document.getElementById('auditFlagDias').value) || 7,
             marcador: auditMarkerObj ? auditMarkerObj.name : '',
@@ -4664,7 +5232,8 @@ document.getElementById('addBtn').onclick = () => {
             status: document.getElementById('ativStatus').value,
             dataInicio: document.getElementById('ativDataInicio').value,
             dataConclusao: document.getElementById('ativDataConclusao').value,
-            responsavel: document.getElementById('ativResponsavel').value, 
+            responsavel: document.getElementById('ativResponsavel').value || '',
+            revisor: document.getElementById('ativRevisor').value || '',
             flagDias: +document.getElementById('ativFlagDias').value, // Lê o valor como número
             marcador: ativMarkerObj ? ativMarkerObj.name : '',
             marcadorCor: ativMarkerObj ? ativMarkerObj.color : 'default',
@@ -4737,8 +5306,9 @@ document.getElementById('addBtn').onclick = () => {
             ultima,
             intervalo, // Salva o novo intervalo
             proxima, // Salva a nova data calculada (ou vazio quando N/A)
-            responsavelTecnico: document.getElementById('mantResponsavelTecnico').value, 
-            responsavelManutencao: document.getElementById('mantResponsavelManutencao').value, 
+            responsavelTecnico: document.getElementById('mantResponsavelTecnico').value || '',
+            responsavelManutencao: document.getElementById('mantResponsavelManutencao').value || '',
+            empresaResponsavel: document.getElementById('mantEmpresaResponsavel').value, 
             status: document.getElementById('mantStatus').value,
             flagDias: +document.getElementById('mantFlagDias').value, // Lê o valor como número
             marcador: mantMarkerObj ? mantMarkerObj.name : '',
@@ -4812,8 +5382,8 @@ document.getElementById('addBtn').onclick = () => {
             dataCriacao,
             docIntervalo, // Salva o novo intervalo
             dataProximaRevisao, // Salva a nova data calculada (ou vazio quando N/A)
-            responsavel: document.getElementById('docResponsavel').value,
-            revisor: document.getElementById('docRevisor').value,
+            responsavel: document.getElementById('docResponsavel').value || '',
+            revisor: document.getElementById('docRevisor').value || '',
             flagDias: +document.getElementById('docFlagDias').value, // Lê o valor como número
             marcador: docMarkerObj ? docMarkerObj.name : '',
             marcadorCor: docMarkerObj ? docMarkerObj.color : 'default',
@@ -4912,6 +5482,7 @@ document.getElementById('addBtn').onclick = () => {
             document.getElementById('auditDataPublicacao').value = item.dataPublicacao;
             document.getElementById('auditDataPrevisao').value = item.dataPrevisao;
             document.getElementById('auditResponsavel').value = item.responsavel || '';
+            document.getElementById('auditRevisor').value = item.revisor || '';
             document.getElementById('auditAuditor').value = item.auditor || '';
             document.getElementById('auditFlagDias').value = item.flagDias; // Corrigido
             document.getElementById('auditMarcador').value = item.marcador || '';
@@ -4929,6 +5500,7 @@ document.getElementById('addBtn').onclick = () => {
             document.getElementById('ativDataInicio').value = item.dataInicio;
             document.getElementById('ativDataConclusao').value = item.dataConclusao;
             document.getElementById('ativResponsavel').value = item.responsavel || ''; 
+            document.getElementById('ativRevisor').value = item.revisor || '';
             document.getElementById('ativFlagDias').value = item.flagDias; // Corrigido
             document.getElementById('ativMarcador').value = item.marcador || '';
             restoreAnexos('ativ', item.anexos);
@@ -4945,7 +5517,8 @@ document.getElementById('addBtn').onclick = () => {
             document.getElementById('mantUltima').value = item.ultima;
             document.getElementById('mantIntervalo').value = (item.intervalo ?? ''); // permite vazio
             document.getElementById('mantResponsavelTecnico').value = item.responsavelTecnico || ''; 
-            document.getElementById('mantResponsavelManutencao').value = item.responsavelManutencao || ''; 
+            document.getElementById('mantResponsavelManutencao').value = item.responsavelManutencao || '';
+            document.getElementById('mantEmpresaResponsavel').value = item.empresaResponsavel || ''; 
             document.getElementById('mantStatus').value = item.status;
             document.getElementById('mantFlagDias').value = item.flagDias; // Corrigido
             calculateNextDate('mant');
@@ -5393,6 +5966,9 @@ function renderViewContent(id, tab) {
                 alert('Tipos disponíveis apenas para Manutenção.');
                 return;
             }
+        } else if (genericKey === 'responsaveis') {
+            currentListKey = 'responsaveis';
+            listname = 'RESPONSÁVEIS';
         } else {
             currentListKey = genericKey; 
             listname = genericKey.toUpperCase();
@@ -5420,6 +5996,14 @@ function renderViewContent(id, tab) {
             listToRender = masterLists[currentListKey] || [];
         }
         
+        // Para responsáveis, verifica quais são usuários cadastrados
+        const userNames = new Set();
+        if (currentListKey === 'responsaveis' && typeof users !== 'undefined') {
+            users.forEach(user => {
+                if (user.name) userNames.add(user.name);
+            });
+        }
+        
         listToRender.forEach(val => {
             let displayHtml = '', itemVal = '';
             if (typeof val === 'object') {
@@ -5430,13 +6014,18 @@ function renderViewContent(id, tab) {
                 displayHtml = val;
                 itemVal = val;
             }
-    
+            
+            // Para responsáveis, verifica se é um usuário cadastrado
+            const isUser = currentListKey === 'responsaveis' && userNames.has(itemVal);
+            const canEdit = !isUser;
+            const canDelete = !isUser;
+            
             body.innerHTML += `<tr>
-                <td>${displayHtml}</td>
+                <td>${displayHtml}${isUser ? ' <span style="color: #666; font-size: 11px;">(Usuário cadastrado)</span>' : ''}</td>
                 <td>
                     <div class="list-actions">
-                        <i class="fas fa-pen edit-icon" onclick="editListItem('${currentListKey}','${itemVal.replace(/'/g, "\\'")}')" title="Editar nome"></i>
-                        <i class="fas fa-trash remove-icon" onclick="removeFromList('${currentListKey}','${itemVal.replace(/'/g, "\\'")}')" title="Excluir"></i>
+                        ${canEdit ? `<i class="fas fa-pen edit-icon" onclick="editListItem('${currentListKey}','${itemVal.replace(/'/g, "\\'")}')" title="Editar nome"></i>` : ''}
+                        ${canDelete ? `<i class="fas fa-trash remove-icon" onclick="removeFromList('${currentListKey}','${itemVal.replace(/'/g, "\\'")}')" title="Excluir"></i>` : ''}
                     </div>
                 </td>
             </tr>`;
@@ -5444,8 +6033,36 @@ function renderViewContent(id, tab) {
         
         const input = document.getElementById('newListItem');
         input.value = '';
-        input.onkeydown = (e) => { if(e.key === 'Enter') addToList(); };
+        input.onkeydown = (e) => { 
+            if(e.key === 'Enter') addToList(); 
+        };
         
+        // Para responsáveis, adiciona evento de input para validar em tempo real
+        if (currentListKey === 'responsaveis') {
+            input.oninput = () => {
+                const addBtn = document.querySelector('button[onclick="addToList()"]');
+                
+                if (typeof users !== 'undefined') {
+                    const userNames = new Set();
+                    users.forEach(user => {
+                        if (user.name) userNames.add(user.name);
+                    });
+                    
+                    const isValidUser = userNames.has(input.value.trim());
+                    addBtn.disabled = !isValidUser && input.value.trim() !== '';
+                    addBtn.style.opacity = (!isValidUser && input.value.trim() !== '') ? '0.5' : '1';
+                    addBtn.style.cursor = (!isValidUser && input.value.trim() !== '') ? 'not-allowed' : 'pointer';
+                    
+                    if (!isValidUser && input.value.trim() !== '') {
+                        addBtn.title = 'Apenas usuários cadastrados podem ser adicionados como responsáveis';
+                    } else {
+                        addBtn.title = '';
+                    }
+                }
+            };
+        }
+        
+                
         document.getElementById('modalListManager').style.display = 'flex';
     }
     
@@ -5928,6 +6545,7 @@ function renderViewContent(id, tab) {
             setor: document.getElementById('fDashSetor')?.value || '',
             categoria: document.getElementById('fDashCat')?.value || '',
             status: document.getElementById('fDashStatus')?.value || '',
+            responsavel: document.getElementById('fDashResponsavel')?.value || '',
             dateType: document.getElementById('fDashDateType')?.value || 'all',
             month: parseInt(document.getElementById('fDashMonth')?.value || currentMonth),
             yearForMonth: parseInt(document.getElementById('fDashYearForMonth')?.value || currentYear),
@@ -5950,6 +6568,17 @@ function renderViewContent(id, tab) {
             
             // Filtro por Status
             if (filters.status && item.status !== filters.status) return false;
+            
+            // Filtro por Responsável
+            if (filters.responsavel) {
+                let itemResponsavel = '';
+                if (type === 'mant') {
+                    itemResponsavel = item.responsavelTecnico || item.responsavelManutencao || '';
+                } else {
+                    itemResponsavel = item.responsavel || '';
+                }
+                if (!itemResponsavel || !itemResponsavel.includes(filters.responsavel)) return false;
+            }
             
             // Filtro por Período
             if (filters.dateType !== 'all') {
@@ -6020,63 +6649,87 @@ function renderViewContent(id, tab) {
     }
     
     function getFilteredNotifications(data, tabType) {
-        const notifications = [];
-        
-        data.forEach(item => {
-            // Excluir itens finalizados (Concluído ou Cancelado)
-            if (item.status === 'Concluído' || item.status === 'Cancelado') {
+    const notifications = [];
+    
+    // CAPTURA OS FILTROS ATIVOS NA ABA ATUAL
+    const prefix = getFilterPrefixForTab(currentTab);
+    const filterResponsavel = document.getElementById(`f${prefix}Responsavel`)?.value || '';
+    const filterRevisor = document.getElementById(`f${prefix}Revisor`)?.value || '';
+    
+    data.forEach(item => {
+        // 1. Excluir itens finalizados (Concluído ou Cancelado)
+        if (item.status === 'Concluído' || item.status === 'Cancelado') {
+            return;
+        }
+
+        // 2. FILTRO DE RESPONSÁVEL (Respeita a seleção da tela)
+        if (filterResponsavel) {
+            const itemRespRaw = tabType === 'mant' ? (item.responsavelTecnico || '') : (item.responsavel || '');
+            const normalizedItemResp = normalizeResponsavel(itemRespRaw); // Usa sua função de limpeza de JSON/String
+            if (!normalizedItemResp.includes(filterResponsavel.toLowerCase())) {
                 return;
             }
-            
-            const deadlineField = getDeadlineFieldForTab(tabType, item);
-            if (!deadlineField) return;
-            
-            const flagDays = item.flagDias || (tabType === 'ativ' ? 3 : 7);
-            const d = daysDiff(deadlineField);
-            
-            // Somente atrasados e alertas
-            if (d < 0) {
-                // ATRASADO
-                notifications.push({
-                    id: item.id,
-                    type: tabType,
-                    title: item.titulo,
-                    status: item.status,
-                    statusColor: getStatusColor(item.status, tabType),
-                    setor: item.setor,
-                    categoria: item.categoria,
-                    subcatOrItem: tabType === 'mant' ? item.item : item.subcategoria,
-                    marcador: item.marcador || '',
-                    marcadorCor: item.marcadorCor || 'default',
-                    dateField: deadlineField,
-                    priority: 0, // 0 = atrasado (maior prioridade)
-                    indicatorType: 'overdue',
-                    daysInfo: `${Math.abs(d)} dia${Math.abs(d) > 1 ? 's' : ''} atrasado`
-                });
-            } else if (d <= flagDays) {
-                // ALERTA
-                notifications.push({
-                    id: item.id,
-                    type: tabType,
-                    title: item.titulo,
-                    status: item.status,
-                    statusColor: getStatusColor(item.status, tabType),
-                    setor: item.setor,
-                    categoria: item.categoria,
-                    subcatOrItem: tabType === 'mant' ? item.item : item.subcategoria,
-                    marcador: item.marcador || '',
-                    marcadorCor: item.marcadorCor || 'default',
-                    dateField: deadlineField,
-                    priority: 1, // 1 = alerta
-                    indicatorType: 'alert',
-                    daysInfo: `${d} dia${d > 1 ? 's' : ''} para vencer`
-                });
+        }
+
+        // 3. FILTRO DE REVISOR (Respeita a seleção da tela - Ignora se for Manutenção pois não possui o campo)
+        if (filterRevisor && tabType !== 'mant') {
+            const itemRev = normalizeText(item.revisor || '');
+            if (!itemRev.includes(normalizeText(filterRevisor))) {
+                return;
             }
-        });
+        }
         
-        return notifications;
-    }
+        const deadlineField = getDeadlineFieldForTab(tabType, item);
+        if (!deadlineField) return;
+        
+        const flagDays = item.flagDias || (tabType === 'ativ' ? 3 : 7);
+        const d = daysDiff(deadlineField);
+        
+        // Somente atrasados e alertas
+        if (d < 0) {
+            // ATRASADO
+            notifications.push({
+                id: item.id,
+                type: tabType,
+                title: item.titulo,
+                status: item.status,
+                statusColor: getStatusColor(item.status, tabType),
+                setor: item.setor,
+                categoria: item.categoria,
+                subcatOrItem: tabType === 'mant' ? item.item : item.subcategoria,
+                responsavel: tabType === 'mant' ? (item.responsavelTecnico || item.responsavelManutencao || '') : (item.responsavel || ''),
+                marcador: item.marcador || '',
+                marcadorCor: item.marcadorCor || 'default',
+                dateField: deadlineField,
+                priority: 0, // 0 = atrasado (maior prioridade)
+                indicatorType: 'overdue',
+                daysInfo: `${Math.abs(d)} dia${Math.abs(d) > 1 ? 's' : ''} atrasado`
+            });
+        } else if (d <= flagDays) {
+            // ALERTA
+            notifications.push({
+                id: item.id,
+                type: tabType,
+                title: item.titulo,
+                status: item.status,
+                statusColor: getStatusColor(item.status, tabType),
+                setor: item.setor,
+                categoria: item.categoria,
+                subcatOrItem: tabType === 'mant' ? item.item : item.subcategoria,
+                responsavel: tabType === 'mant' ? (item.responsavelTecnico || item.responsavelManutencao || '') : (item.responsavel || ''),
+                marcador: item.marcador || '',
+                marcadorCor: item.marcadorCor || 'default',
+                dateField: deadlineField,
+                priority: 1, // 1 = alerta
+                indicatorType: 'alert',
+                daysInfo: `${d} dia${d > 1 ? 's' : ''} para vencer`
+            });
+        }
+    });
     
+    return notifications;
+}
+
     function getDeadlineFieldForTab(tabType, item) {
         if (tabType === 'audit') return item.dataPrevisao;
         if (tabType === 'ativ') return item.dataConclusao;
@@ -6147,6 +6800,12 @@ function renderViewContent(id, tab) {
                             <i class="fas fa-folder"></i>
                             <span>${notif.categoria || '-'} ${subcatDisplay}</span>
                         </div>
+                        ${notif.responsavel ? `
+                        <div class="notification-item-details-row">
+                            <i class="fas fa-user"></i>
+                            <span>${notif.responsavel}</span>
+                        </div>
+                        ` : ''}
                         <div class="notification-item-details-row">
                             <i class="${notif.indicatorType === 'overdue' ? 'fas fa-exclamation-circle' : 'fas fa-exclamation-triangle'}"></i>
                             <span style="color: ${notif.indicatorType === 'overdue' ? 'var(--c-red)' : 'var(--c-yellow)'}; font-weight: 600;">${notif.daysInfo}</span>
@@ -6348,6 +7007,82 @@ function renderViewContent(id, tab) {
         });
     }
 
+    // FUNÇÕES PARA AUTOCOMPLETE DE RESPONSÁVEIS
+    function updateResponsavelList(tab) {
+        const inputId = tab === 'audit' ? 'auditResponsavel' : tab === 'ativ' ? 'ativResponsavel' : tab === 'mant' ? 'mantResponsavelTecnico' : 'docResponsavel';
+        const listId = tab === 'audit' ? 'auditResponsavelList' : tab === 'ativ' ? 'ativResponsavelList' : tab === 'mant' ? 'mantResponsavelTecnicoList' : 'docResponsavelList';
+        
+        const input = document.getElementById(inputId);
+        const list = document.getElementById(listId);
+        
+        if (!input || !list) return;
+        
+        const query = input.value.toLowerCase().trim();
+        
+        // Obtém lista de usuários cadastrados
+        const userNames = users.map(u => u.name).filter(Boolean);
+        
+        // Filtra usuários que correspondem ao texto digitado
+        const filtered = userNames.filter(name => 
+            name.toLowerCase().includes(query)
+        );
+        
+        // Mostra a lista apenas se há texto e há resultados
+        if (query.length > 0 && filtered.length > 0) {
+            list.style.display = 'block';
+            list.innerHTML = filtered.map(name => `
+                <div class="autocomplete-item" onclick="selectResponsavel('${inputId}', '${name.replace(/'/g, "\\'")}')">${name}</div>
+            `).join('');
+        } else {
+            list.style.display = 'none';
+        }
+    }
+    
+    function selectResponsavel(inputId, name) {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.value = name;
+        }
+        // Esconde a lista
+        const listId = inputId.replace('Responsavel', 'ResponsavelList');
+        const list = document.getElementById(listId);
+        if (list) {
+            list.style.display = 'none';
+        }
+    }
+    
+    // Esconde a lista ao clicar fora
+    document.addEventListener('click', function(e) {
+        document.querySelectorAll('.autocomplete-list').forEach(list => {
+            if (!list.contains(e.target) && !list.previousElementSibling.contains(e.target)) {
+                list.style.display = 'none';
+            }
+        });
+    });
+    
+    // FUNÇÕES PARA MOSTRAR/ESCONDER SUBCATEGORIA E RESPONSÁVEL COM BASE NA CATEGORIA
+    function onFilterCategoryChange(prefix) {
+        // Mostra/esconde subcategoria
+        const subId = prefix === 'Mant' ? 'fMantItem' : `f${prefix}Sub`;
+        const subEl = document.getElementById(subId);
+        const responsavelId = `f${prefix}Responsavel`;
+        const responsavelEl = document.getElementById(responsavelId);
+        const catEl = document.getElementById(`f${prefix}Cat`);
+        
+        if (catEl && catEl.value === '') {
+            // Categoria vazia ("todas") - esconde apenas subcategoria, responsável sempre visível
+            if (subEl) subEl.style.display = 'none';
+            // Responsável sempre visível
+            if (responsavelEl) responsavelEl.style.display = 'block';
+        } else {
+            // Categoria selecionada - mostra subcategoria e responsável
+            if (subEl) subEl.style.display = 'block';
+            if (responsavelEl) responsavelEl.style.display = 'block';
+            updateFilterFacetOptions(prefix);
+        }
+        renderCards();
+    }
+
     document.onkeydown = function(event) {
         if (
             event.keyCode === 123 ||  // F12
@@ -6364,7 +7099,280 @@ function renderViewContent(id, tab) {
             document.addEventListener('contextmenu', function(evento) {
                     evento.preventDefault();
                 });
-    
+
+    // ========== MULTI-SELECT FUNCTIONS ==========
+    const multiSelectStates = {
+        audit: { selected: [], allUsers: [] },
+        ativ: { selected: [], allUsers: [] },
+        mantTec: { selected: [], allUsers: [] },
+        doc: { selected: [], allUsers: [] }
+    };
+
+    function initMultiSelectUsers() {
+        // Coleta todos os usuários únicos de todos os registros
+        const allResponsaveis = new Set();
+        
+        audits.forEach(item => {
+            if (item.responsavel) {
+                try {
+                    const parsed = JSON.parse(item.responsavel);
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach(r => allResponsaveis.add(String(r)));
+                    } else {
+                        allResponsaveis.add(String(item.responsavel));
+                    }
+                } catch {
+                    allResponsaveis.add(String(item.responsavel));
+                }
+            }
+        });
+        activities.forEach(item => {
+            if (item.responsavel) {
+                try {
+                    const parsed = JSON.parse(item.responsavel);
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach(r => allResponsaveis.add(String(r)));
+                    } else {
+                        allResponsaveis.add(String(item.responsavel));
+                    }
+                } catch {
+                    allResponsaveis.add(String(item.responsavel));
+                }
+            }
+        });
+        maintenances.forEach(item => {
+            if (item.responsavelTecnico) {
+                try {
+                    const parsed = JSON.parse(item.responsavelTecnico);
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach(r => allResponsaveis.add(String(r)));
+                    } else {
+                        allResponsaveis.add(String(item.responsavelTecnico));
+                    }
+                } catch {
+                    allResponsaveis.add(String(item.responsavelTecnico));
+                }
+            }
+            // Não inclui responsavelManutenção na lista de usuários do multi-select
+        });
+        documents.forEach(item => {
+            if (item.responsavel) {
+                try {
+                    const parsed = JSON.parse(item.responsavel);
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach(r => allResponsaveis.add(String(r)));
+                    } else {
+                        allResponsaveis.add(String(item.responsavel));
+                    }
+                } catch {
+                    allResponsaveis.add(String(item.responsavel));
+                }
+            }
+        });
+        
+        // Adiciona responsáveis da lista mestre
+        if (masterLists.responsaveis) {
+            masterLists.responsaveis.forEach(r => allResponsaveis.add(String(r)));
+        }
+        
+        // Também adiciona nomes de usuários cadastrados
+        if (typeof users !== 'undefined') {
+            users.forEach(user => {
+                if (user.name) allResponsaveis.add(String(user.name));
+            });
+        }
+
+        const sortedUsers = Array.from(allResponsaveis).filter(r => r).sort();
+        
+        multiSelectStates.audit.allUsers = sortedUsers;
+        multiSelectStates.ativ.allUsers = sortedUsers;
+        multiSelectStates.mantTec.allUsers = sortedUsers;
+        multiSelectStates.doc.allUsers = sortedUsers;
+    }
+
+    function toggleMultiSelectDropdown(event, type) {
+        event.stopPropagation();
+        const dropdown = document.getElementById(`${getMultiSelectBaseId(type)}Dropdown`);
+        const container = document.getElementById(`${getMultiSelectBaseId(type)}Container`);
+        
+        if (dropdown.classList.contains('visible')) {
+            dropdown.classList.remove('visible');
+            container.classList.remove('focused');
+        } else {
+            // Fecha outros dropdowns
+            document.querySelectorAll('.multi-select-dropdown.visible').forEach(d => {
+                d.classList.remove('visible');
+            });
+            document.querySelectorAll('.multi-select.focused').forEach(c => {
+                c.classList.remove('focused');
+            });
+            
+            dropdown.classList.add('visible');
+            container.classList.add('focused');
+            renderMultiSelectDropdown(type);
+            document.getElementById(`${getMultiSelectBaseId(type)}Input`).focus();
+        }
+    }
+
+    function getMultiSelectBaseId(type) {
+        if (type === 'audit') return 'auditResponsavel';
+        if (type === 'ativ') return 'ativResponsavel';
+        if (type === 'mantTec') return 'mantResponsavelTecnico';
+        if (type === 'mantManu') return 'mantResponsavelManutencao';
+        if (type === 'doc') return 'docResponsavel';
+    }
+
+    function renderMultiSelectDropdown(type) {
+        const baseId = getMultiSelectBaseId(type);
+        const dropdown = document.getElementById(`${baseId}Dropdown`);
+        const state = multiSelectStates[type];
+        const filterText = document.getElementById(`${baseId}Input`).value.toLowerCase();
+        
+        const filtered = state.allUsers.filter(user => {
+            const userStr = String(user || '').toLowerCase();
+            return userStr.includes(filterText);
+        });
+        
+        dropdown.innerHTML = filtered.map(user => {
+            const userStr = String(user || '');
+            return `
+            <div class="multi-select-option ${state.selected.includes(userStr) ? 'selected' : ''}" 
+                 onclick="toggleMultiSelectOption('${type}', '${userStr.replace(/'/g, "\\'")}')">
+                ${userStr}
+            </div>
+        `;
+        }).join('');
+    }
+
+    function filterMultiSelectOptions(type) {
+        const baseId = getMultiSelectBaseId(type);
+        const dropdown = document.getElementById(`${baseId}Dropdown`);
+        const input = document.getElementById(`${baseId}Input`);
+        
+        // Se há texto no input, garante que o dropdown permaneça aberto
+        if (input.value.trim() !== '') {
+            dropdown.classList.add('visible');
+            document.getElementById(`${baseId}Container`).classList.add('focused');
+        }
+        
+        renderMultiSelectDropdown(type);
+    }
+
+    function toggleMultiSelectOption(type, user) {
+        const state = multiSelectStates[type];
+        const idx = state.selected.indexOf(user);
+        
+        if (idx > -1) {
+            state.selected.splice(idx, 1);
+        } else {
+            state.selected.push(user);
+        }
+        
+        updateMultiSelectDisplay(type);
+        renderMultiSelectDropdown(type);
+        
+        // Mantém o foco no input para continuar adicionando responsáveis
+        const baseId = getMultiSelectBaseId(type);
+        const inputElement = document.getElementById(`${baseId}Input`);
+        if (inputElement) {
+            inputElement.focus();
+        }
+    }
+
+    function updateMultiSelectDisplay(type) {
+        const baseId = getMultiSelectBaseId(type);
+        const container = document.getElementById(`${baseId}Container`);
+        const hiddenInput = document.getElementById(baseId);
+        const state = multiSelectStates[type];
+        
+        // Limpa os tags anteriores
+        const tags = container.querySelectorAll('.multi-select-tag');
+        tags.forEach(tag => tag.remove());
+        
+        // Adiciona os novos tags
+        const inputElement = container.querySelector('input[type="text"]');
+        state.selected.forEach(user => {
+            const tag = document.createElement('div');
+            tag.className = 'multi-select-tag';
+            tag.innerHTML = `
+                ${user}
+                <button type="button" onclick="event.stopPropagation(); removeMultiSelectOption('${type}', '${user.replace(/'/g, "\\'")}')" title="Remover">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            container.insertBefore(tag, inputElement);
+        });
+        
+        // Salva no hidden input como JSON
+        hiddenInput.value = JSON.stringify(state.selected);
+    }
+
+    function removeMultiSelectOption(type, user) {
+        const state = multiSelectStates[type];
+        const idx = state.selected.indexOf(user);
+        if (idx > -1) {
+            state.selected.splice(idx, 1);
+        }
+        updateMultiSelectDisplay(type);
+        renderMultiSelectDropdown(type);
+    }
+
+    function loadMultiSelectData(type, dataArray) {
+        const baseId = getMultiSelectBaseId(type);
+        const hiddenInput = document.getElementById(baseId);
+        const state = multiSelectStates[type];
+        
+        try {
+            state.selected = JSON.parse(hiddenInput.value || '[]');
+        } catch (e) {
+            state.selected = [];
+        }
+        
+        updateMultiSelectDisplay(type);
+    }
+
+    // Fecha dropdown ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.multi-select')) {
+            // Fecha todos os dropdowns
+            document.querySelectorAll('.multi-select-dropdown').forEach(dropdown => {
+                dropdown.classList.remove('visible');
+            });
+        }
+    });
+
+    // Impede que o dropdown feche ao clicar dentro do multi-select
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.multi-select')) {
+            e.stopPropagation();
+        }
+    });
+
+    // Adiciona evento de teclado para os inputs de multi-select
+    document.addEventListener('keydown', (e) => {
+        if (e.target.classList.contains('multi-select-input')) {
+            const container = e.target.closest('.multi-select');
+            const baseId = container.id.replace('Container', '');
+            const dropdown = document.getElementById(`${baseId}Dropdown`);
+            
+            if (e.key === 'Escape') {
+                // Limpa o campo e fecha o dropdown
+                e.target.value = '';
+                dropdown.classList.remove('visible');
+                container.classList.remove('focused');
+            } else if (e.key === 'Enter') {
+                // Impede o submit do formulário
+                e.preventDefault();
+            } else if (e.key !== 'Tab') {
+                // Para qualquer outra tecla, garante que o dropdown permaneça aberto
+                if (e.target.value.trim() !== '') {
+                    dropdown.classList.add('visible');
+                    container.classList.add('focused');
+                }
+            }
+        }
+    });
+
     </script>
 </body>
 </html>
