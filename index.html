@@ -5757,7 +5757,7 @@ function renderViewContent(id, tab) {
                 if (a.priority !== b.priority) {
                     return a.priority - b.priority;
                 }
-                return new Date(b.dateField) - new Date(a.dateField);
+                return new Date(a.dateField) - new Date(b.dateField);
             });
         }
         
@@ -5767,7 +5767,7 @@ function renderViewContent(id, tab) {
             if (a.priority !== b.priority) {
                 return a.priority - b.priority;
             }
-            return new Date(b.dateField) - new Date(a.dateField);
+            return new Date(a.dateField) - new Date(b.dateField);
         });
     }
     
@@ -5872,6 +5872,11 @@ function renderViewContent(id, tab) {
         const notifications = [];
         
         data.forEach(item => {
+            // Excluir itens finalizados (Concluído ou Cancelado)
+            if (item.status === 'Concluído' || item.status === 'Cancelado') {
+                return;
+            }
+            
             const deadlineField = getDeadlineFieldForTab(tabType, item);
             if (!deadlineField) return;
             
