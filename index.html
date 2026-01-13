@@ -6046,6 +6046,8 @@ function renderViewContent(id, tab) {
                     setor: item.setor,
                     categoria: item.categoria,
                     subcatOrItem: tabType === 'mant' ? item.item : item.subcategoria,
+                    marcador: item.marcador || '',
+                    marcadorCor: item.marcadorCor || 'default',
                     dateField: deadlineField,
                     priority: 0, // 0 = atrasado (maior prioridade)
                     indicatorType: 'overdue',
@@ -6062,6 +6064,8 @@ function renderViewContent(id, tab) {
                     setor: item.setor,
                     categoria: item.categoria,
                     subcatOrItem: tabType === 'mant' ? item.item : item.subcategoria,
+                    marcador: item.marcador || '',
+                    marcadorCor: item.marcadorCor || 'default',
                     dateField: deadlineField,
                     priority: 1, // 1 = alerta
                     indicatorType: 'alert',
@@ -6125,6 +6129,8 @@ function renderViewContent(id, tab) {
             const statusColorVar = colorMap[notif.statusColor] || colorMap['default'];
             const indicatorClass = notif.indicatorType === 'overdue' ? 'overdue' : 'alert';
             const subcatDisplay = notif.subcatOrItem ? ` (${notif.subcatOrItem})` : '';
+            const marcadorColorVar = colorMap[notif.marcadorCor] || colorMap['default'];
+            const marcadorHtml = notif.marcador ? `<div style="background: ${marcadorColorVar}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; width: fit-content; display: flex; align-items: center; gap: 4px;"><i class="fas fa-bookmark" style="color: white; font-size: 10px;"></i>${notif.marcador}</div>` : '';
             
             return `
                 <div class="notification-item ${indicatorClass}">
@@ -6145,6 +6151,7 @@ function renderViewContent(id, tab) {
                             <i class="${notif.indicatorType === 'overdue' ? 'fas fa-exclamation-circle' : 'fas fa-exclamation-triangle'}"></i>
                             <span style="color: ${notif.indicatorType === 'overdue' ? 'var(--c-red)' : 'var(--c-yellow)'}; font-weight: 600;">${notif.daysInfo}</span>
                         </div>
+                        ${marcadorHtml}
                     </div>
                     <div class="notification-item-actions" onclick="event.stopPropagation()">
                         <button title="Visualizar" onclick="closeNotificationModal(); currentHistoryPage = 1; openView(${notif.id}, '${notif.type}')">
