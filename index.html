@@ -2000,6 +2000,56 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         return window.firebaseOff;
     }
     
+    // ===== SISTEMA DE CACHE COM LOCALSTORAGE =====
+    const CACHE_KEYS = {
+        audits: 'lamic_audits_cache',
+        activities: 'lamic_activities_cache',
+        maintenances: 'lamic_maintenances_cache',
+        documents: 'lamic_documents_cache',
+        masterLists: 'lamic_masterLists_cache',
+        lastSync: 'lamic_lastSync_timestamp',
+        users: 'lamic_users_cache'
+    };
+
+    function saveToLocalStorage(key, data) {
+        try {
+            localStorage.setItem(CACHE_KEYS[key], JSON.stringify(data));
+            localStorage.setItem(CACHE_KEYS.lastSync, new Date().toISOString());
+        } catch (error) {
+            console.error(`Erro ao salvar ${key} no localStorage:`, error);
+        }
+    }
+
+    function loadFromLocalStorage(key) {
+        try {
+            const cached = localStorage.getItem(CACHE_KEYS[key]);
+            return cached ? JSON.parse(cached) : null;
+        } catch (error) {
+            console.error(`Erro ao carregar ${key} do localStorage:`, error);
+            return null;
+        }
+    }
+
+    function getLastSyncTime() {
+        try {
+            const lastSync = localStorage.getItem(CACHE_KEYS.lastSync);
+            return lastSync ? new Date(lastSync) : null;
+        } catch (error) {
+            console.error('Erro ao obter último sincronismo:', error);
+            return null;
+        }
+    }
+
+    function clearAllCache() {
+        try {
+            Object.values(CACHE_KEYS).forEach(key => localStorage.removeItem(key));
+        } catch (error) {
+            console.error('Erro ao limpar cache:', error);
+        }
+    }
+
+    // ===== FIM SISTEMA DE CACHE COM LOCALSTORAGE =====
+    
     // Referências do Firebase Realtime Database
     let dataListener = null; // Listener para dados em tempo real
     
@@ -2597,11 +2647,27 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const snapshot = await dbGet(dataRef);
             
             if (!snapshot.exists()) {
-                audits = [];
-                activities = [];
-                maintenances = [];
-                documents = [];
-                masterLists = JSON.parse(JSON.stringify(defaultMasterLists));
+                // Se Firebase está vazio, tenta carregar do localStorage
+                const cachedAudits = loadFromLocalStorage('audits');
+                const cachedActivities = loadFromLocalStorage('activities');
+                const cachedMaintenances = loadFromLocalStorage('maintenances');
+                const cachedDocuments = loadFromLocalStorage('documents');
+                const cachedMasterLists = loadFromLocalStorage('masterLists');
+                
+                if (cachedAudits || cachedActivities || cachedMaintenances || cachedDocuments) {
+                    console.log('Carregando dados do localStorage (Firebase vazio)');
+                    audits = cachedAudits || [];
+                    activities = cachedActivities || [];
+                    maintenances = cachedMaintenances || [];
+                    documents = cachedDocuments || [];
+                    masterLists = cachedMasterLists ? { ...defaultMasterLists, ...cachedMasterLists } : JSON.parse(JSON.stringify(defaultMasterLists));
+                } else {
+                    audits = [];
+                    activities = [];
+                    maintenances = [];
+                    documents = [];
+                    masterLists = JSON.parse(JSON.stringify(defaultMasterLists));
+                }
             } else {
                 const record = snapshot.val();
                 
@@ -2618,6 +2684,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         masterLists.mantItens = defaultMasterLists.mantItens; 
                     }
                 }
+                
+                // Atualiza o cache local com os dados do Firebase
+                saveToLocalStorage('audits', audits);
+                saveToLocalStorage('activities', activities);
+                saveToLocalStorage('maintenances', maintenances);
+                saveToLocalStorage('documents', documents);
+                saveToLocalStorage('masterLists', masterLists);
             }
             
             // Garante integridade do histórico para cada item
@@ -2639,7 +2712,33 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
         } catch (err) {
             console.error("Erro ao carregar dados:", err);
-            alert("Falha ao carregar dados do Cloud: " + err.message);
+            
+            // Fallback: Tenta carregar do localStorage em caso de erro
+            console.log('Tentando carregar dados do localStorage como fallback...');
+            const cachedAudits = loadFromLocalStorage('audits');
+            const cachedActivities = loadFromLocalStorage('activities');
+            const cachedMaintenances = loadFromLocalStorage('maintenances');
+            const cachedDocuments = loadFromLocalStorage('documents');
+            const cachedMasterLists = loadFromLocalStorage('masterLists');
+            
+            if (cachedAudits || cachedActivities || cachedMaintenances || cachedDocuments) {
+                audits = cachedAudits || [];
+                activities = cachedActivities || [];
+                maintenances = cachedMaintenances || [];
+                documents = cachedDocuments || [];
+                masterLists = cachedMasterLists ? { ...defaultMasterLists, ...cachedMasterLists } : JSON.parse(JSON.stringify(defaultMasterLists));
+                
+                populateYearSelects();
+                populateSelects();
+                if (currentTab === 'dashboard') {
+                    renderDashboard();
+                } else {
+                    renderCards();
+                }
+                alert("Dados carregados do cache local. Reconecte-se para sincronizar com o servidor.");
+            } else {
+                alert("Falha ao carregar dados. Erro: " + err.message);
+            }
         }
         switchTab('dashboard');
     }
@@ -2677,6 +2776,21 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 
                 const record = snapshot.val();
                 
+                // NOVO: Compara com dados em memória antes de atualizar
+                const hasChanges = 
+                    JSON.stringify(record.audits) !== JSON.stringify(audits) ||
+                    JSON.stringify(record.activities) !== JSON.stringify(activities) ||
+                    JSON.stringify(record.maintenances) !== JSON.stringify(maintenances) ||
+                    JSON.stringify(record.documents) !== JSON.stringify(documents) ||
+                    JSON.stringify(record.masterLists) !== JSON.stringify(masterLists);
+                
+                if (!hasChanges) {
+                    console.log('Nenhuma mudança detectada no Firebase');
+                    return;
+                }
+                
+                console.log('Atualizações detectadas no Firebase. Sincronizando...');
+                
                 audits = record.audits || [];
                 activities = record.activities || [];
                 maintenances = record.maintenances || [];
@@ -2685,6 +2799,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 if (record.masterLists) {
                     masterLists = { ...defaultMasterLists, ...record.masterLists };
                 }
+                
+                // NOVO: Atualiza o cache local após receber mudanças do Firebase
+                saveToLocalStorage('audits', audits);
+                saveToLocalStorage('activities', activities);
+                saveToLocalStorage('maintenances', maintenances);
+                saveToLocalStorage('documents', documents);
+                saveToLocalStorage('masterLists', masterLists);
 
                 populateSelects();
                 currentTab === 'dashboard' ? renderDashboard() : renderCards();
@@ -2739,12 +2860,34 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const rootRef = dbRef(database, "/");
         await update(rootRef, updates);
         
+        // 4. NOVO: Atualizar localStorage APENAS se o Firebase foi bem-sucedido
+        console.log('Sincronização com Firebase bem-sucedida. Atualizando cache local...');
+        saveToLocalStorage('audits', audits);
+        saveToLocalStorage('activities', activities);
+        saveToLocalStorage('maintenances', maintenances);
+        saveToLocalStorage('documents', documents);
+        saveToLocalStorage('masterLists', masterLists);
+        
         if (showAlert) alert("Dados sincronizados com sucesso!");
         
         // Nota: O renderDashboard/Cards ocorrerá via Listener (onValue)
     } catch (err) {
-        console.error("Erro no Debug de Sincronização:", err);
-        if (showAlert) alert("Erro ao sincronizar dados: " + err.message);
+        console.error("Erro na sincronização com Firebase:", err);
+        
+        // FALLBACK: Se falhar, ainda salva no localStorage para não perder dados
+        console.log('Erro ao sincronizar com Firebase. Salvando dados apenas no localStorage...');
+        try {
+            saveToLocalStorage('audits', audits);
+            saveToLocalStorage('activities', activities);
+            saveToLocalStorage('maintenances', maintenances);
+            saveToLocalStorage('documents', documents);
+            saveToLocalStorage('masterLists', masterLists);
+            
+            if (showAlert) alert("⚠️ Dados salvos localmente. Reconecte-se para sincronizar com o servidor.");
+        } catch (storageErr) {
+            console.error("Erro ao salvar no localStorage:", storageErr);
+            if (showAlert) alert("❌ Erro ao salvar dados: " + err.message);
+        }
     }
 }
 
@@ -4439,60 +4582,68 @@ document.getElementById('addBtn').onclick = () => {
     
     // SAVE FUNCTIONS
     function saveAudit() {
-    const isNew = !editingAuditId;
-    let item = isNew ? { 
-        id: Date.now() + Math.floor(Math.random() * 1000), // ID único com salt
-        historico: [], 
-        type: 'audit' 
-    } : audits.find(a => a.id === editingAuditId);
+    try {
+        const isNew = !editingAuditId;
+        let item = isNew ? { 
+            id: Date.now() + Math.floor(Math.random() * 1000), // ID único com salt
+            historico: [], 
+            type: 'audit' 
+        } : audits.find(a => a.id === editingAuditId);
 
-    if (!item) return;
+        if (!item) {
+            console.error('Item de auditoria não encontrado');
+            return;
+        }
 
-    const selectedAuditMarkerName = document.getElementById('auditMarcador').value;
-    const auditMarkerObj = (masterLists.auditMarcadores || []).find(m => m.name === selectedAuditMarkerName);
+        const selectedAuditMarkerName = document.getElementById('auditMarcador').value;
+        const auditMarkerObj = (masterLists.auditMarcadores || []).find(m => m.name === selectedAuditMarkerName);
 
-    const newItem = {
-        ...item,
-        titulo: document.getElementById('auditTitulo').value,
-        descricao: document.getElementById('auditDescricao').value,
-        setor: document.getElementById('auditSetor').value, 
-        categoria: document.getElementById('auditCategoria').value,
-        subcategoria: document.getElementById('auditSub').value, 
-        status: document.getElementById('auditStatus').value,
-        dataPublicacao: document.getElementById('auditDataPublicacao').value,
-        dataPrevisao: document.getElementById('auditDataPrevisao').value,
-        responsavel: document.getElementById('auditResponsavel').value,
-        auditor: document.getElementById('auditAuditor').value,
-        flagDias: Number(document.getElementById('auditFlagDias').value) || 7,
-        marcador: auditMarkerObj ? auditMarkerObj.name : '',
-        marcadorCor: auditMarkerObj ? auditMarkerObj.color : 'default',
-        anexos: getAnexos('audit')
-    };
+        const newItem = {
+            ...item,
+            titulo: document.getElementById('auditTitulo').value,
+            descricao: document.getElementById('auditDescricao').value,
+            setor: document.getElementById('auditSetor').value, 
+            categoria: document.getElementById('auditCategoria').value,
+            subcategoria: document.getElementById('auditSub').value, 
+            status: document.getElementById('auditStatus').value,
+            dataPublicacao: document.getElementById('auditDataPublicacao').value,
+            dataPrevisao: document.getElementById('auditDataPrevisao').value,
+            responsavel: document.getElementById('auditResponsavel').value,
+            auditor: document.getElementById('auditAuditor').value,
+            flagDias: Number(document.getElementById('auditFlagDias').value) || 7,
+            marcador: auditMarkerObj ? auditMarkerObj.name : '',
+            marcadorCor: auditMarkerObj ? auditMarkerObj.color : 'default',
+            anexos: getAnexos('audit')
+        };
 
-    const changes = calculateChanges(originalItem || {}, newItem);
-    
-    if (isNew) {
-        newItem.historico.push({ 
-            timestamp: new Date().toISOString(), 
-            acao: 'Criação do Registro', 
-            usuario: currentuser?.name || 'Sistema' 
-        });
-        audits.push(newItem);
-    } else if (changes.length > 0 || changes.silentChanged) {
-        if (changes.length > 0) {
+        const changes = calculateChanges(originalItem || {}, newItem);
+        
+        if (isNew) {
             newItem.historico.push({ 
                 timestamp: new Date().toISOString(), 
-                acao: 'Edição de Dados', 
-                usuario: currentuser?.name || 'Sistema',
-                detalhes: changes 
+                acao: 'Criação do Registro', 
+                usuario: currentuser?.name || 'Sistema' 
             });
+            audits.push(newItem);
+        } else if (changes.length > 0 || changes.silentChanged) {
+            if (changes.length > 0) {
+                newItem.historico.push({ 
+                    timestamp: new Date().toISOString(), 
+                    acao: 'Edição de Dados', 
+                    usuario: currentuser?.name || 'Sistema',
+                    detalhes: changes 
+                });
+            }
+            audits = audits.map(a => a.id === editingAuditId ? newItem : a);
         }
-        audits = audits.map(a => a.id === editingAuditId ? newItem : a);
-    }
 
-    saveAll(); 
-    closeModal('modalAuditoria'); 
-    renderCards();
+        saveAll(); 
+        closeModal('modalAuditoria'); 
+        renderCards();
+    } catch (error) {
+        console.error('Erro ao salvar auditoria:', error);
+        alert('Erro ao salvar auditoria. Dados foram salvos localmente.');
+    }
 }
 
     function saveAtividade() {
