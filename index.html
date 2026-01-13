@@ -119,6 +119,211 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 .btn-primary:hover{background:var(--primary);transform:translateY(-1px)}
 .btn-primary:active{transform:translateY(0)}
 
+/* NOTIFICATION ICON */
+.notification-container {
+    position: relative;
+    right: 150px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.notification-container:hover {
+    background: #f3f4f6;
+}
+
+.notification-icon {
+    font-size: 20px;
+    color: var(--primary);
+}
+
+.notification-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--c-red);
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.notification-badge.hidden {
+    display: none;
+}
+
+/* NOTIFICATION MODAL */
+.notification-modal {
+    display: none;
+    position: fixed;
+    top: 80px;
+    right: 40px;
+    width: 400px;
+    max-height: 600px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    border: 1px solid var(--border);
+    z-index: 999;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.notification-modal.active {
+    display: flex;
+}
+
+.notification-modal-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f9fafb;
+}
+
+.notification-modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--primary);
+}
+
+.notification-modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-light);
+    font-size: 16px;
+    padding: 4px;
+}
+
+.notification-modal-close:hover {
+    color: var(--primary);
+}
+
+.notification-modal-content {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.notification-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.notification-item:hover {
+    background: #f9fafb;
+}
+
+.notification-item.alert {
+    background: #fffbeb;
+    border-left: 4px solid var(--ind-yellow);
+}
+
+.notification-item.overdue {
+    background: #fef2f2;
+    border-left: 4px solid var(--ind-red);
+}
+
+.notification-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.notification-item-title {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 13px;
+    flex: 1;
+    word-break: break-word;
+}
+
+.notification-item-status {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.notification-item-details {
+    font-size: 12px;
+    color: var(--text-light);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.notification-item-details-row {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.notification-item-details-row i {
+    width: 14px;
+    text-align: center;
+    color: #9ca3af;
+}
+
+.notification-item-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding-top: 4px;
+}
+
+.notification-item-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.notification-item-actions button:hover {
+    background: rgba(0,0,0,0.05);
+    color: var(--primary);
+}
+
+.notification-empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--text-light);
+}
+
+.notification-empty i {
+    font-size: 32px;
+    margin-bottom: 8px;
+    opacity: 0.5;
+}
+
 /* CONTENT AREA */
 .content{flex:1;padding:30px 40px;overflow-y:auto;display:flex;flex-direction:column;gap:24px}
 
@@ -856,6 +1061,20 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         <div class="title-area">
             <h1 id="pageTitle">Dashboard</h1>
             <small id="pageSubtitle">Visão geral e indicadores de desempenho</small>
+        </div>
+        <div class="notification-container" id="notificationContainer" onclick="toggleNotificationModal()">
+            <i class="notification-icon fas fa-bell"></i>
+            <div class="notification-badge hidden" id="notificationBadge">0</div>
+        </div>
+        <div class="notification-modal" id="notificationModal">
+            <div class="notification-modal-header">
+                <h3>Notificações</h3>
+                <button class="notification-modal-close" onclick="closeNotificationModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="notification-modal-content" id="notificationModalContent">
+            </div>
         </div>
         </header>
 
@@ -2546,15 +2765,40 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const fDataIni = document.getElementById('fDashDataIni').value;
         const fDataFim = document.getElementById('fDashDataFim').value;
         const fTitleQuery = titleSearchDashEnabled ? titleSearchDashQuery : '';
-    
+        
+        // Obtém as abas que o usuário tem permissão
+        const allowedTabs = userAllowedTabs();
+        const areaMapping = {
+            'audit': 'auditoria',
+            'ativ': 'atividades',
+            'mant': 'manutencao',
+            'doc': 'documentos'
+        };
     
         // Constrói uma lista completa de todos os itens com metadados unificados
-        const rawItems = [].concat(
-            audits.map(a => ({ ...a, type: 'audit', statusType: getStatusType(a.status), dateField: a.dataPublicacao, deadlineField: a.dataPrevisao, color: getStatusColor(a.status, 'audit') })),
-            activities.map(a => ({ ...a, type: 'ativ', statusType: getStatusType(a.status), dateField: a.dataInicio, deadlineField: a.dataConclusao, color: getStatusColor(a.status, 'ativ') })),
-            maintenances.map(m => ({ ...m, type: 'mant', statusType: getStatusType(m.status), dateField: m.ultima, deadlineField: isBlankPeriodicity(m.intervalo) ? null : m.proxima, color: getStatusColor(m.status, 'mant') })),
-            documents.map(d => ({ ...d, type: 'doc', statusType: getStatusType(d.status), dateField: d.dataCriacao, deadlineField: isBlankPeriodicity(d.docIntervalo) ? null : d.dataProximaRevisao, color: getStatusColor(d.status, 'doc') }))
-        );
+        // Filtra apenas dados das abas que o usuário tem permissão
+        let rawItems = [];
+        
+        if (!allowedTabs || allowedTabs.includes('auditoria')) {
+            rawItems = rawItems.concat(
+                audits.map(a => ({ ...a, type: 'audit', statusType: getStatusType(a.status), dateField: a.dataPublicacao, deadlineField: a.dataPrevisao, color: getStatusColor(a.status, 'audit') }))
+            );
+        }
+        if (!allowedTabs || allowedTabs.includes('atividades')) {
+            rawItems = rawItems.concat(
+                activities.map(a => ({ ...a, type: 'ativ', statusType: getStatusType(a.status), dateField: a.dataInicio, deadlineField: a.dataConclusao, color: getStatusColor(a.status, 'ativ') }))
+            );
+        }
+        if (!allowedTabs || allowedTabs.includes('manutencao')) {
+            rawItems = rawItems.concat(
+                maintenances.map(m => ({ ...m, type: 'mant', statusType: getStatusType(m.status), dateField: m.ultima, deadlineField: isBlankPeriodicity(m.intervalo) ? null : m.proxima, color: getStatusColor(m.status, 'mant') }))
+            );
+        }
+        if (!allowedTabs || allowedTabs.includes('documentos')) {
+            rawItems = rawItems.concat(
+                documents.map(d => ({ ...d, type: 'doc', statusType: getStatusType(d.status), dateField: d.dataCriacao, deadlineField: isBlankPeriodicity(d.docIntervalo) ? null : d.dataProximaRevisao, color: getStatusColor(d.status, 'doc') }))
+            );
+        }
         
         // --- FILTRAGEM ---
         let filteredItems = rawItems.filter(item => {
@@ -2776,6 +3020,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         if (activeCount === 0) {
             listAlertaPrazos.innerHTML = '<li style="text-align:center; padding:20px; flex-direction:row; justify-content:center; border-bottom:none;">Nenhum item ativo para análise de prazos com os filtros atuais.</li>';
         }
+        
+        // Atualiza contador de notificações
+        updateNotificationCount();
     }
     
     
@@ -3149,6 +3396,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             `;
             grid.appendChild(div);
         });
+        
+        // Atualiza contador de notificações após renderizar cards
+        updateNotificationCount();
     }
     
     // Filtro do Dashboard
@@ -3161,13 +3411,24 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
     
     function updateDashboardFilterOptions() {
-        // Constrói uma lista completa de todos os itens
-        const rawItems = [].concat(
-            audits.map(a => ({ ...a, type: 'audit' })),
-            activities.map(a => ({ ...a, type: 'ativ' })),
-            maintenances.map(m => ({ ...m, type: 'mant' })),
-            documents.map(d => ({ ...d, type: 'doc' }))
-        );
+        // Obtém as abas que o usuário tem permissão
+        const allowedTabs = userAllowedTabs();
+        
+        // Constrói uma lista completa de todos os itens (filtrando apenas abas permitidas)
+        let rawItems = [];
+        
+        if (!allowedTabs || allowedTabs.includes('auditoria')) {
+            rawItems = rawItems.concat(audits.map(a => ({ ...a, type: 'audit' })));
+        }
+        if (!allowedTabs || allowedTabs.includes('atividades')) {
+            rawItems = rawItems.concat(activities.map(a => ({ ...a, type: 'ativ' })));
+        }
+        if (!allowedTabs || allowedTabs.includes('manutencao')) {
+            rawItems = rawItems.concat(maintenances.map(m => ({ ...m, type: 'mant' })));
+        }
+        if (!allowedTabs || allowedTabs.includes('documentos')) {
+            rawItems = rawItems.concat(documents.map(d => ({ ...d, type: 'doc' })));
+        }
         
         // Obtém valores atuais dos filtros (exceto o que estamos atualizando)
         const fArea = document.getElementById('fDashArea')?.value || '';
@@ -3238,17 +3499,32 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         availableAreas.add(item.type);
                     }
                 });
-                const options = ['audit', 'ativ', 'mant', 'doc'].filter(area => availableAreas.has(area));
+                
+                // Ordem das abas conforme aparecem na sidebar
+                const areaOrder = ['audit', 'ativ', 'mant', 'doc'];
+                // Filtra apenas as áreas que o usuário tem permissão e que estão disponíveis
+                const allowedTabs = userAllowedTabs();
+                const areaMapping = {
+                    'audit': 'auditoria',
+                    'ativ': 'atividades',
+                    'mant': 'manutencao',
+                    'doc': 'documentos'
+                };
+                
+                const options = areaOrder.filter(area => {
+                    const tabName = areaMapping[area];
+                    return availableAreas.has(area) && (!allowedTabs || allowedTabs.includes(tabName));
+                });
+                
+                const labels = {
+                    'audit': 'Auditoria',
+                    'ativ': 'Gestão de Atividades',
+                    'mant': 'Manutenção',
+                    'doc': 'Documentos'
+                };
+                
                 const html = '<option value="">Área: Todas</option>' + 
-                    options.map(area => {
-                        const labels = {
-                            'audit': 'Auditoria',
-                            'ativ': 'Gestão de Atividades',
-                            'mant': 'Manutenção',
-                            'doc': 'Documentos'
-                        };
-                        return `<option value="${area}">${labels[area]}</option>`;
-                    }).join('');
+                    options.map(area => `<option value="${area}">${labels[area]}</option>`).join('');
                 el.innerHTML = html;
                 if (currentValue && options.includes(currentValue)) el.value = currentValue;
                 else el.value = '';
@@ -3981,6 +4257,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     } else if(!isBackup && !isConfig) {
         clearFilters();
     }
+    
+    // 7. Atualiza o contador de notificações para a aba
+    updateNotificationCount();
 }
     
     document.getElementById('tabDashboard').onclick = () => switchTab('dashboard'); 
@@ -3996,6 +4275,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         }
         switchTab('configuracoes');
     };
+    
+    // Fechar notificações ao clicar fora do modal
+    document.addEventListener('click', (e) => {
+        const modal = document.getElementById('notificationModal');
+        const container = document.getElementById('notificationContainer');
+        if (modal && !modal.contains(e.target) && !container.contains(e.target)) {
+            closeNotificationModal();
+        }
+    });
     
 // --- MODAL & FORM LOGIC (CORRIGIDA) ---
 
@@ -4379,9 +4667,49 @@ document.getElementById('addBtn').onclick = () => {
             alert('Você não tem permissão para editar cards. Seu acesso está configurado como somente leitura.');
             return;
         }
-        let item;
-        if (tab === 'auditoria') {
+        
+        // Busca o item em todos os arrays se não encontrar no tab especificado
+        let item = null;
+        let finalTab = tab;
+        
+        if (tab === 'audit' || tab === 'auditoria') {
             item = audits.find(a => a.id === id);
+            finalTab = 'auditoria';
+        } else if (tab === 'ativ' || tab === 'atividades') {
+            item = activities.find(a => a.id === id);
+            finalTab = 'atividades';
+        } else if (tab === 'mant' || tab === 'manutencao') {
+            item = maintenances.find(m => m.id === id);
+            finalTab = 'manutencao';
+        } else if (tab === 'doc' || tab === 'documentos') {
+            item = documents.find(d => d.id === id);
+            finalTab = 'documentos';
+        }
+        
+        // Se não encontrou, tenta procurar em todos os arrays
+        if (!item) {
+            item = audits.find(a => a.id === id);
+            if (item) finalTab = 'auditoria';
+            else {
+                item = activities.find(a => a.id === id);
+                if (item) finalTab = 'atividades';
+                else {
+                    item = maintenances.find(m => m.id === id);
+                    if (item) finalTab = 'manutencao';
+                    else {
+                        item = documents.find(d => d.id === id);
+                        if (item) finalTab = 'documentos';
+                    }
+                }
+            }
+        }
+        
+        if (!item) {
+            alert('Item não encontrado.');
+            return;
+        }
+        
+        if (finalTab === 'auditoria') {
             editingAuditId = id;
             document.getElementById('auditTitulo').value = item.titulo;
             document.getElementById('auditDescricao').value = item.descricao;
@@ -4398,8 +4726,7 @@ document.getElementById('addBtn').onclick = () => {
             document.getElementById('auditMarcador').value = item.marcador || '';
             restoreAnexos('audit', item.anexos);
             document.getElementById('modalAuditoria').style.display = 'flex';
-        } else if (tab === 'atividades') {
-            item = activities.find(a => a.id === id);
+        } else if (finalTab === 'atividades') {
             editingAtivId = id;
             document.getElementById('ativTitulo').value = item.titulo;
             document.getElementById('ativDescricao').value = item.descricao;
@@ -4415,8 +4742,7 @@ document.getElementById('addBtn').onclick = () => {
             document.getElementById('ativMarcador').value = item.marcador || '';
             restoreAnexos('ativ', item.anexos);
             document.getElementById('modalAtividades').style.display = 'flex';
-        } else if (tab === 'manutencao') {
-            item = maintenances.find(m => m.id === id);
+        } else if (finalTab === 'manutencao') {
             editingMantId = id;
             document.getElementById('mantTitulo').value = item.titulo;
             document.getElementById('mantDescricao').value = item.descricao;
@@ -4435,8 +4761,7 @@ document.getElementById('addBtn').onclick = () => {
             restoreAnexos('mant', item.anexos);
             document.getElementById('mantMarcador').value = item.marcador || '';
             document.getElementById('modalManutencao').style.display = 'flex';
-        } else if (tab === 'documentos') { 
-            item = documents.find(d => d.id === id);
+        } else if (finalTab === 'documentos') { 
             editingDocId = id;
             document.getElementById('docTitulo').value = item.titulo;
             document.getElementById('docDescricao').value = item.descricao;
@@ -4535,32 +4860,67 @@ document.getElementById('addBtn').onclick = () => {
     }
 
 function renderViewContent(id, tab) {
-    let item, statusList;
-    if (tab === 'auditoria') { 
+    let item, statusList, finalTab = tab;
+    
+    // Normaliza o tab para os valores esperados
+    if (tab === 'audit') finalTab = 'auditoria';
+    else if (tab === 'ativ') finalTab = 'atividades';
+    else if (tab === 'mant') finalTab = 'manutencao';
+    else if (tab === 'doc') finalTab = 'documentos';
+    
+    // Tenta encontrar o item no array correto
+    if (finalTab === 'auditoria') { 
         item = audits.find(i => i.id === id); 
         statusList = masterLists.auditStatus; 
-    } else if (tab === 'atividades') { 
+    } else if (finalTab === 'atividades') { 
         item = activities.find(i => i.id === id); 
         statusList = masterLists.ativStatus; 
-    } else if (tab === 'manutencao') { 
+    } else if (finalTab === 'manutencao') { 
         item = maintenances.find(i => i.id === id); 
         statusList = masterLists.mantStatus; 
-    } else if (tab === 'documentos') { 
+    } else if (finalTab === 'documentos') { 
         item = documents.find(i => i.id === id); 
         statusList = masterLists.docStatus; 
-    } 
+    }
+    
+    // Se não encontrou, procura em todos os arrays
+    if (!item) {
+        item = audits.find(i => i.id === id);
+        if (item) {
+            finalTab = 'auditoria';
+            statusList = masterLists.auditStatus;
+        } else {
+            item = activities.find(i => i.id === id);
+            if (item) {
+                finalTab = 'atividades';
+                statusList = masterLists.ativStatus;
+            } else {
+                item = maintenances.find(i => i.id === id);
+                if (item) {
+                    finalTab = 'manutencao';
+                    statusList = masterLists.mantStatus;
+                } else {
+                    item = documents.find(i => i.id === id);
+                    if (item) {
+                        finalTab = 'documentos';
+                        statusList = masterLists.docStatus;
+                    }
+                }
+            }
+        }
+    }
 
     if (!item) return;
 
     const statusObj = (statusList || []).find(s => s.name === item.status) || { color: 'default' };
     const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
     
-    const subcatOrItemLabel = tab === 'manutencao' ? 'Equipamento' : 'Subcategoria';
-    const subcatOrItemValue = tab === 'manutencao' ? item.item : item.subcategoria;
+    const subcatOrItemLabel = finalTab === 'manutencao' ? 'Equipamento' : 'Subcategoria';
+    const subcatOrItemValue = finalTab === 'manutencao' ? item.item : item.subcategoria;
 
     // Montagem do Grid de Detalhes
     let detailsGrid = '';
-    if (tab === 'auditoria') {
+    if (finalTab === 'auditoria') {
         detailsGrid = `
             <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
             <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
@@ -4571,7 +4931,7 @@ function renderViewContent(id, tab) {
             <div class="view-item"><label>Previsão</label><div>${formatBR(item.dataPrevisao)}</div></div>
             <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
         `;
-    } else if (tab === 'atividades') {
+    } else if (finalTab === 'atividades') {
         detailsGrid = `
             <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
             <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
@@ -4581,7 +4941,7 @@ function renderViewContent(id, tab) {
             <div class="view-item"><label>Data Conclusão</label><div>${formatBR(item.dataConclusao)}</div></div>
             <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
         `;
-    } else if (tab === 'manutencao') {
+    } else if (finalTab === 'manutencao') {
         const isNA = isBlankPeriodicity(item.intervalo);
         detailsGrid = `
             <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
@@ -4595,7 +4955,7 @@ function renderViewContent(id, tab) {
             <div class="view-item"><label>Responsável pela Manutenção</label><div>${item.responsavelManutencao || 'ND'}</div></div>
             <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
         `;
-    } else if (tab === 'documentos') { 
+    } else if (finalTab === 'documentos') { 
         const isNA = isBlankPeriodicity(item.docIntervalo);
         detailsGrid = `
             <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
@@ -4730,10 +5090,36 @@ function renderViewContent(id, tab) {
         if (!confirm('Deseja realmente excluir este registro do histórico?')) return;
 
         let item;
-        if (tab === 'auditoria') { item = audits.find(i => i.id === id); }
-        else if (tab === 'atividades') { item = activities.find(i => i.id === id); }
-        else if (tab === 'manutencao') { item = maintenances.find(i => i.id === id); }
-        else if (tab === 'documentos') { item = documents.find(i => i.id === id); }
+        let finalTab = tab;
+        
+        // Normaliza o tab
+        if (tab === 'audit') finalTab = 'auditoria';
+        else if (tab === 'ativ') finalTab = 'atividades';
+        else if (tab === 'mant') finalTab = 'manutencao';
+        else if (tab === 'doc') finalTab = 'documentos';
+        
+        if (finalTab === 'auditoria') { item = audits.find(i => i.id === id); }
+        else if (finalTab === 'atividades') { item = activities.find(i => i.id === id); }
+        else if (finalTab === 'manutencao') { item = maintenances.find(i => i.id === id); }
+        else if (finalTab === 'documentos') { item = documents.find(i => i.id === id); }
+        
+        // Se não encontrou, tenta procurar em todos os arrays
+        if (!item) {
+            item = audits.find(i => i.id === id);
+            if (item) finalTab = 'auditoria';
+            else {
+                item = activities.find(i => i.id === id);
+                if (item) finalTab = 'atividades';
+                else {
+                    item = maintenances.find(i => i.id === id);
+                    if (item) finalTab = 'manutencao';
+                    else {
+                        item = documents.find(i => i.id === id);
+                        if (item) finalTab = 'documentos';
+                    }
+                }
+            }
+        }
 
         if (!item || !Array.isArray(item.historico) || item.historico.length === 0) return;
 
@@ -5278,6 +5664,304 @@ function renderViewContent(id, tab) {
     }
     
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    
+    // --- SISTEMA DE NOTIFICAÇÕES ---
+    
+    function getNotificationsForTab() {
+        let data = [];
+        let tabType = '';
+        
+        if (currentTab === 'auditoria') {
+            data = audits;
+            tabType = 'audit';
+        } else if (currentTab === 'atividades') {
+            data = activities;
+            tabType = 'ativ';
+        } else if (currentTab === 'manutencao') {
+            data = maintenances;
+            tabType = 'mant';
+        } else if (currentTab === 'documentos') {
+            data = documents;
+            tabType = 'doc';
+        } else if (currentTab === 'dashboard') {
+            // Dashboard mostra notificações de todos, respeitando filtros
+            const dashboardFilters = getDashboardFilters();
+            const allowedTabs = userAllowedTabs(); // Abas que o usuário tem permissão de acessar
+            
+            let allData = [
+                { items: audits, type: 'audit', tabName: 'auditoria' },
+                { items: activities, type: 'ativ', tabName: 'atividades' },
+                { items: maintenances, type: 'mant', tabName: 'manutencao' },
+                { items: documents, type: 'doc', tabName: 'documentos' }
+            ];
+            
+            // Filtra apenas as abas que o usuário tem permissão de acessar
+            if (allowedTabs && allowedTabs.length > 0) {
+                allData = allData.filter(d => allowedTabs.includes(d.tabName));
+            }
+            
+            // Filtra por área se selecionada
+            if (dashboardFilters.area) {
+                allData = allData.filter(d => d.type === dashboardFilters.area);
+            }
+            
+            // Aplica todos os filtros e coleta notificações
+            const allNotifications = [];
+            allData.forEach(({ items, type }) => {
+                const filtered = applyDashboardFiltersToData(items, type, dashboardFilters);
+                allNotifications.push(...getFilteredNotifications(filtered, type));
+            });
+            
+            // Ordena: atrasados primeiro, depois alertas
+            return allNotifications.sort((a, b) => {
+                if (a.priority !== b.priority) {
+                    return a.priority - b.priority;
+                }
+                return new Date(b.dateField) - new Date(a.dateField);
+            });
+        }
+        
+        // Para abas específicas, aplica filtros
+        const filteredData = applyCurrentTabFilters(data, tabType);
+        return getFilteredNotifications(filteredData, tabType).sort((a, b) => {
+            if (a.priority !== b.priority) {
+                return a.priority - b.priority;
+            }
+            return new Date(b.dateField) - new Date(a.dateField);
+        });
+    }
+    
+    function getDashboardFilters() {
+        return {
+            area: document.getElementById('fDashArea')?.value || '',
+            setor: document.getElementById('fDashSetor')?.value || '',
+            categoria: document.getElementById('fDashCat')?.value || '',
+            status: document.getElementById('fDashStatus')?.value || '',
+            dateType: document.getElementById('fDashDateType')?.value || 'all',
+            month: parseInt(document.getElementById('fDashMonth')?.value || currentMonth),
+            yearForMonth: parseInt(document.getElementById('fDashYearForMonth')?.value || currentYear),
+            yearOnly: parseInt(document.getElementById('fDashYearOnly')?.value || currentYear),
+            dataIni: document.getElementById('fDashDataIni')?.value || '',
+            dataFim: document.getElementById('fDashDataFim')?.value || ''
+        };
+    }
+    
+    function applyDashboardFiltersToData(data, type, filters) {
+        return data.filter(item => {
+            // Filtro por Setor
+            if (filters.setor) {
+                const itemSetor = item.setor || 'Setor Não Definido';
+                if (itemSetor !== filters.setor) return false;
+            }
+            
+            // Filtro por Categoria
+            if (filters.categoria && item.categoria !== filters.categoria) return false;
+            
+            // Filtro por Status
+            if (filters.status && item.status !== filters.status) return false;
+            
+            // Filtro por Período
+            if (filters.dateType !== 'all') {
+                const dateField = type === 'audit' ? item.dataPublicacao :
+                                 type === 'ativ' ? item.dataInicio :
+                                 type === 'mant' ? item.ultima :
+                                 item.dataCriacao;
+                if (!dateField) return false;
+                
+                const itemDate = new Date(dateField);
+                const year = (filters.dateType === 'year') ? filters.yearOnly : filters.yearForMonth;
+                
+                if (filters.dateType === 'month') {
+                    if (itemDate.getMonth() !== filters.month || itemDate.getFullYear() !== year) return false;
+                } else if (filters.dateType === 'year') {
+                    if (itemDate.getFullYear() !== year) return false;
+                } else if (filters.dateType === 'custom') {
+                    if (filters.dataIni && dateField < filters.dataIni) return false;
+                    if (filters.dataFim && dateField > filters.dataFim) return false;
+                }
+            }
+            
+            return true;
+        });
+    }
+    
+    function applyCurrentTabFilters(data, tabType) {
+        if (currentTab === 'dashboard') return data;
+        
+        let filtered = data;
+        const prefix = getFilterPrefixForTab(currentTab);
+        
+        // Setor
+        const sectorFilter = document.getElementById(`f${prefix}Setor`)?.value || '';
+        if (sectorFilter) {
+            filtered = filtered.filter(item => item.setor === sectorFilter);
+        }
+        
+        // Categoria
+        const catFilter = document.getElementById(`f${prefix}Cat`)?.value || '';
+        if (catFilter) {
+            filtered = filtered.filter(item => item.categoria === catFilter);
+        }
+        
+        // Subcategoria/Item
+        const subId = tabType === 'mant' ? `f${prefix}Item` : `f${prefix}Sub`;
+        const subFilter = document.getElementById(subId)?.value || '';
+        if (subFilter) {
+            const subField = tabType === 'mant' ? 'item' : 'subcategoria';
+            filtered = filtered.filter(item => item[subField] === subFilter);
+        }
+        
+        // Status
+        const statusFilter = document.getElementById(`f${prefix}Status`)?.value || '';
+        if (statusFilter) {
+            filtered = filtered.filter(item => item.status === statusFilter);
+        }
+        
+        return filtered;
+    }
+    
+    function getFilterPrefixForTab(tab) {
+        if (tab === 'auditoria') return 'Audit';
+        if (tab === 'atividades') return 'Ativ';
+        if (tab === 'manutencao') return 'Mant';
+        if (tab === 'documentos') return 'Doc';
+        return '';
+    }
+    
+    function getFilteredNotifications(data, tabType) {
+        const notifications = [];
+        
+        data.forEach(item => {
+            const deadlineField = getDeadlineFieldForTab(tabType, item);
+            if (!deadlineField) return;
+            
+            const flagDays = item.flagDias || (tabType === 'ativ' ? 3 : 7);
+            const d = daysDiff(deadlineField);
+            
+            // Somente atrasados e alertas
+            if (d < 0) {
+                // ATRASADO
+                notifications.push({
+                    id: item.id,
+                    type: tabType,
+                    title: item.titulo,
+                    status: item.status,
+                    statusColor: getStatusColor(item.status, tabType),
+                    setor: item.setor,
+                    categoria: item.categoria,
+                    subcatOrItem: tabType === 'mant' ? item.item : item.subcategoria,
+                    dateField: deadlineField,
+                    priority: 0, // 0 = atrasado (maior prioridade)
+                    indicatorType: 'overdue',
+                    daysInfo: `${Math.abs(d)} dia${Math.abs(d) > 1 ? 's' : ''} atrasado`
+                });
+            } else if (d <= flagDays) {
+                // ALERTA
+                notifications.push({
+                    id: item.id,
+                    type: tabType,
+                    title: item.titulo,
+                    status: item.status,
+                    statusColor: getStatusColor(item.status, tabType),
+                    setor: item.setor,
+                    categoria: item.categoria,
+                    subcatOrItem: tabType === 'mant' ? item.item : item.subcategoria,
+                    dateField: deadlineField,
+                    priority: 1, // 1 = alerta
+                    indicatorType: 'alert',
+                    daysInfo: `${d} dia${d > 1 ? 's' : ''} para vencer`
+                });
+            }
+        });
+        
+        return notifications;
+    }
+    
+    function getDeadlineFieldForTab(tabType, item) {
+        if (tabType === 'audit') return item.dataPrevisao;
+        if (tabType === 'ativ') return item.dataConclusao;
+        if (tabType === 'mant') return isBlankPeriodicity(item.intervalo) ? null : item.proxima;
+        if (tabType === 'doc') return isBlankPeriodicity(item.docIntervalo) ? null : item.dataProximaRevisao;
+        return null;
+    }
+    
+    function updateNotificationCount() {
+        const notifications = getNotificationsForTab();
+        const badge = document.getElementById('notificationBadge');
+        const count = notifications.length;
+        
+        if (count > 0) {
+            badge.textContent = count;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+    
+    function toggleNotificationModal() {
+        const modal = document.getElementById('notificationModal');
+        modal.classList.toggle('active');
+        
+        if (modal.classList.contains('active')) {
+            renderNotificationModal();
+        }
+    }
+    
+    function closeNotificationModal() {
+        document.getElementById('notificationModal').classList.remove('active');
+    }
+    
+    function renderNotificationModal() {
+        const notifications = getNotificationsForTab();
+        const content = document.getElementById('notificationModalContent');
+        
+        if (notifications.length === 0) {
+            content.innerHTML = `
+                <div class="notification-empty">
+                    <i class="fas fa-bell-slash"></i>
+                    <p>Nenhuma notificação</p>
+                </div>
+            `;
+            return;
+        }
+        
+        content.innerHTML = notifications.map(notif => {
+            const statusColorVar = colorMap[notif.statusColor] || colorMap['default'];
+            const indicatorClass = notif.indicatorType === 'overdue' ? 'overdue' : 'alert';
+            const subcatDisplay = notif.subcatOrItem ? ` (${notif.subcatOrItem})` : '';
+            
+            return `
+                <div class="notification-item ${indicatorClass}">
+                    <div class="notification-item-header">
+                        <span class="notification-item-title" title="${notif.title}">${truncateText(notif.title, 40)}</span>
+                        <span class="notification-item-status" style="background-color: ${statusColorVar}">${notif.status}</span>
+                    </div>
+                    <div class="notification-item-details">
+                        <div class="notification-item-details-row">
+                            <i class="fas fa-building"></i>
+                            <span>${notif.setor || 'ND'}</span>
+                        </div>
+                        <div class="notification-item-details-row">
+                            <i class="fas fa-folder"></i>
+                            <span>${notif.categoria || '-'} ${subcatDisplay}</span>
+                        </div>
+                        <div class="notification-item-details-row">
+                            <i class="${notif.indicatorType === 'overdue' ? 'fas fa-exclamation-circle' : 'fas fa-exclamation-triangle'}"></i>
+                            <span style="color: ${notif.indicatorType === 'overdue' ? 'var(--c-red)' : 'var(--c-yellow)'}; font-weight: 600;">${notif.daysInfo}</span>
+                        </div>
+                    </div>
+                    <div class="notification-item-actions" onclick="event.stopPropagation()">
+                        <button title="Visualizar" onclick="closeNotificationModal(); currentHistoryPage = 1; openView(${notif.id}, '${notif.type}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button title="Editar" onclick="closeNotificationModal(); editItem(${notif.id}, '${notif.type}')">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
     
     // Inicialização (garante que os selects sejam preenchidos ao carregar a página)
     document.addEventListener('DOMContentLoaded', () => {
