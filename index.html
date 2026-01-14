@@ -3306,7 +3306,11 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             cleanInvalidResponsaveis();
 
             populateYearSelects();
-            populateSelects();          
+            populateSelects();
+            
+            // Restaura os filtros salvos após popular os selects
+            restoreFiltersFromLocalStorage();
+            
             // Atualiza a interface baseada na aba atual
             if (currentTab === 'dashboard') {
                 renderDashboard();
@@ -3340,6 +3344,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 
                 populateYearSelects();
                 populateSelects();
+                
+                // Restaura os filtros salvos após popular os selects
+                restoreFiltersFromLocalStorage();
+                
                 if (currentTab === 'dashboard') {
                     renderDashboard();
                 } else {
@@ -4670,7 +4678,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             setor: document.getElementById('fDashSetor')?.value,
             cat: document.getElementById('fDashCat')?.value,
             sub: document.getElementById('fDashSub')?.value,
-            status: document.getElementById('fDashStatus')?.value
+            status: document.getElementById('fDashStatus')?.value,
+            responsavel: document.getElementById('fDashResponsavel')?.value,
+            revisor: document.getElementById('fDashRevisor')?.value,
+            dateType: document.getElementById('fDashDateType')?.value,
+            month: document.getElementById('fDashMonth')?.value,
+            yearForMonth: document.getElementById('fDashYearForMonth')?.value,
+            yearOnly: document.getElementById('fDashYearOnly')?.value,
+            dataIni: document.getElementById('fDashDataIni')?.value,
+            dataFim: document.getElementById('fDashDataFim')?.value
         },
         Audit: {
             setor: document.getElementById('fAuditSetor')?.value,
@@ -4726,6 +4742,16 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     if (currentValues.dash.cat != null) document.getElementById('fDashCat').value = currentValues.dash.cat;
     if (currentValues.dash.sub != null) document.getElementById('fDashSub').value = currentValues.dash.sub;
     if (currentValues.dash.status != null) document.getElementById('fDashStatus').value = currentValues.dash.status;
+    // Restaura filtros de Data e Responsável/Revisor do Dashboard (serão atualizados dinamicamente em updateDashboardFilterOptions)
+    if (currentValues.dash.dateType != null) document.getElementById('fDashDateType').value = currentValues.dash.dateType;
+    if (currentValues.dash.month != null) document.getElementById('fDashMonth').value = currentValues.dash.month;
+    if (currentValues.dash.yearForMonth != null) document.getElementById('fDashYearForMonth').value = currentValues.dash.yearForMonth;
+    if (currentValues.dash.yearOnly != null) document.getElementById('fDashYearOnly').value = currentValues.dash.yearOnly;
+    if (currentValues.dash.dataIni != null) document.getElementById('fDashDataIni').value = currentValues.dash.dataIni;
+    if (currentValues.dash.dataFim != null) document.getElementById('fDashDataFim').value = currentValues.dash.dataFim;
+    // Responsável e Revisor serão restaurados após updateDashboardFilterOptions
+    const dashResponsavelValue = currentValues.dash.responsavel;
+    const dashRevisorValue = currentValues.dash.revisor;
 
     // --- POPULAR MODAIS (Setores e Categorias) ---
     ['audit', 'ativ', 'mant', 'doc'].forEach(p => {
@@ -4852,6 +4878,20 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const tSub = document.getElementById('fAtivSub'); if (tSub && currentValues.Ativ.sub != null) tSub.value = currentValues.Ativ.sub;
         const mItem = document.getElementById('fMantItem'); if (mItem && currentValues.Mant.item != null) mItem.value = currentValues.Mant.item;
         const dSub = document.getElementById('fDocSub'); if (dSub && currentValues.Doc.sub != null) dSub.value = currentValues.Doc.sub;
+    }
+
+    // Atualiza filtros dinâmicos do Dashboard (Responsável, Revisor, etc)
+    updateDashboardFilterOptions();
+
+    // Restaura valores de Responsável e Revisor do Dashboard após updateDashboardFilterOptions populá-los
+    // Note: Os valores são passados como variáveis globais de populateSelects
+    if (typeof dashResponsavelValue !== 'undefined' && dashResponsavelValue != null) {
+        const elResp = document.getElementById('fDashResponsavel');
+        if (elResp) elResp.value = dashResponsavelValue;
+    }
+    if (typeof dashRevisorValue !== 'undefined' && dashRevisorValue != null) {
+        const elRev = document.getElementById('fDashRevisor');
+        if (elRev) elRev.value = dashRevisorValue;
     }
 }
     
