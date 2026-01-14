@@ -1630,9 +1630,6 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
                                     <label style="font-size:12px;color:var(--text-light);margin:0">Subcategoria</label>
                                     <select id="dropSub" class="filter-input" onchange="onDropdownFilterChange('subcategoria')"></select>
-
-                                    <label style="font-size:12px;color:var(--text-light);margin:0">Marcador</label>
-                                    <select id="dropMarcador" class="filter-input" onchange="onDropdownFilterChange('marcador')"></select>
                                 </div>
                             </div>
                         </div>
@@ -4498,6 +4495,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     document.getElementById('fMantStatus').innerHTML = makeStatusFilterOpts(masterLists.mantStatus, "Status: Todos");
     document.getElementById('fDocCat').innerHTML = makeFilterOpts(masterLists.docCategorias, "Categoria: Todas"); 
     document.getElementById('fDocStatus').innerHTML = makeStatusFilterOpts(masterLists.docStatus, "Status: Todos"); 
+
+    // Popula selects ocultos de Marcador
+    document.getElementById('fAuditMarcador').innerHTML = makeStatusOpts(masterLists.auditMarcadores || []);
+    document.getElementById('fAtivMarcador').innerHTML = makeStatusOpts(masterLists.ativMarcadores || []);
+    document.getElementById('fMantMarcador').innerHTML = makeStatusOpts(masterLists.mantMarcadores || []);
+    document.getElementById('fDocMarcador').innerHTML = makeStatusOpts(masterLists.docMarcadores || []);
 
     // Restaura valores de filtros para evitar voltar ao primeiro item após editar listas
     if (currentValues.Audit.setor != null) document.getElementById('fAuditSetor').value = currentValues.Audit.setor;
