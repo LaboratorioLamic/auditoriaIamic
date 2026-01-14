@@ -4611,35 +4611,45 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
     
     function clearFilters() {
+        // Mapeia a aba atual para o prefixo dos filtros
+        const tabPrefix = {
+            'auditoria': 'Audit',
+            'atividades': 'Ativ',
+            'manutencao': 'Mant',
+            'documentos': 'Doc'
+        }[currentTab] || 'Audit';
+
+        const filterPrefix = `f${tabPrefix}`;
+
+        // Limpa apenas os filtros da aba atual
         document.querySelectorAll('.filters-bar select').forEach(s => {
-            if(!s.id.includes('DateType') && !s.id.includes('Month') && !s.id.includes('Year')) s.value = "";
-        });
-        
-        document.getElementById('fAuditDateType').value = 'all';
-        document.getElementById('fAtivDateType').value = 'all';
-        document.getElementById('fMantDateType').value = 'all';
-        document.getElementById('fDocDateType').value = 'all'; 
-        
-        document.querySelectorAll('.filters-bar input').forEach(i => {
-            // Não limpa o checkbox de finalizados, mantém checked por padrão
-            if (i.id !== 'showFinalizedCheckbox') {
-                i.value = "";
+            // Só limpa se for filtro da aba atual
+            if (s.id.startsWith(filterPrefix) && !s.id.includes('DateType') && !s.id.includes('Month') && !s.id.includes('Year')) {
+                s.value = "";
             }
         });
+        
+        // Limpa apenas a data type da aba atual
+        const dateTypeId = `f${tabPrefix}DateType`;
+        const dateTypeEl = document.getElementById(dateTypeId);
+        if (dateTypeEl) dateTypeEl.value = 'all';
+        
+        // Limpa inputs de data da aba atual
+        const dataIniId = `f${tabPrefix}DataIni`;
+        const dataFimId = `f${tabPrefix}DataFim`;
+        const dataIniEl = document.getElementById(dataIniId);
+        const dataFimEl = document.getElementById(dataFimId);
+        if (dataIniEl) dataIniEl.value = "";
+        if (dataFimEl) dataFimEl.value = "";
 
         setTitleSearchEnabled('cards', false);
         
-        updateDateInputs('Audit');
-        updateDateInputs('Ativ');
-        updateDateInputs('Mant');
-        updateDateInputs('Doc'); 
+        updateDateInputs(tabPrefix);
         
         saveFiltersToLocalStorage();
         
-        onFilterSetorChange('Audit');
-        onFilterSetorChange('Ativ');
-        onFilterSetorChange('Mant');
-        onFilterSetorChange('Doc');
+        onFilterSetorChange(tabPrefix);
+        renderCards();
     }
     
     
