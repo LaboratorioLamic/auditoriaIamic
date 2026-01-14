@@ -5668,8 +5668,9 @@ document.getElementById('addBtn').onclick = () => {
         
         // NOVO: Sincroniza referências em outros cards quando há mudança em campos de lista suspensa
         if (!isNew && originalItem) {
-            // Lista de campos que referem a itens de listas suspensas
-            const fieldsToSync = ['setor', 'categoria', 'subcategoria', 'status', 'marcador'];
+            // Lista de campos que referem a itens de listas suspensas (estrutura da lista mestre)
+            // NOTA: status e marcador sao campos especificos de cada card, nao devem ser sincronizados
+            const fieldsToSync = ['setor', 'categoria', 'subcategoria'];
             fieldsToSync.forEach(field => {
                 if (originalItem[field] !== newItem[field]) {
                     syncReferenceAcrossCards('audit', field, originalItem[field], newItem[field]);
@@ -5747,7 +5748,8 @@ document.getElementById('addBtn').onclick = () => {
             }
             
             // NOVO: Sincroniza referências em outros cards quando há mudança em campos de lista suspensa
-            const fieldsToSync = ['setor', 'categoria', 'subcategoria', 'status', 'marcador'];
+            // NOTA: status e marcador sao campos especificos de cada card, nao devem ser sincronizados
+            const fieldsToSync = ['setor', 'categoria', 'subcategoria'];
             fieldsToSync.forEach(field => {
                 if (originalItem[field] !== newItem[field]) {
                     syncReferenceAcrossCards('ativ', field, originalItem[field], newItem[field]);
@@ -5831,7 +5833,8 @@ document.getElementById('addBtn').onclick = () => {
             }
             
             // NOVO: Sincroniza referências em outros cards quando há mudança em campos de lista suspensa
-            const fieldsToSync = ['setor', 'categoria', 'item', 'tipo', 'status', 'marcador'];
+            // NOTA: status e marcador sao campos especificos de cada card, nao devem ser sincronizados
+            const fieldsToSync = ['setor', 'categoria', 'item', 'tipo'];
             fieldsToSync.forEach(field => {
                 if (originalItem[field] !== newItem[field]) {
                     syncReferenceAcrossCards('mant', field, originalItem[field], newItem[field]);
@@ -5913,7 +5916,8 @@ document.getElementById('addBtn').onclick = () => {
             }
             
             // NOVO: Sincroniza referências em outros cards quando há mudança em campos de lista suspensa
-            const fieldsToSync = ['setor', 'categoria', 'subcategoria', 'status', 'marcador'];
+            // NOTA: status e marcador sao campos especificos de cada card, nao devem ser sincronizados
+            const fieldsToSync = ['setor', 'categoria', 'subcategoria'];
             fieldsToSync.forEach(field => {
                 if (originalItem[field] !== newItem[field]) {
                     syncReferenceAcrossCards('doc', field, originalItem[field], newItem[field]);
