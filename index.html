@@ -5434,6 +5434,31 @@ document.getElementById('addBtn').onclick = () => {
     };
     
     
+    // Função para sincronizar referências em todos os cards quando um item de lista é alterado
+    function syncReferenceAcrossCards(cardType, fieldName, oldValue, newValue) {
+        if (!oldValue || oldValue === newValue) return; // Não atualiza se não mudou
+        
+        // Função auxiliar para atualizar cards de um tipo
+        const updateCardArray = (cardArray) => {
+            cardArray.forEach(card => {
+                if (card[fieldName] === oldValue) {
+                    card[fieldName] = newValue;
+                }
+            });
+        };
+        
+        // Atualiza o tipo de card correto
+        if (cardType === 'audit' || cardType === 'auditoria') {
+            updateCardArray(audits);
+        } else if (cardType === 'ativ' || cardType === 'atividades') {
+            updateCardArray(activities);
+        } else if (cardType === 'mant' || cardType === 'manutencao') {
+            updateCardArray(maintenances);
+        } else if (cardType === 'doc' || cardType === 'documentos') {
+            updateCardArray(documents);
+        }
+    }
+    
     // SAVE FUNCTIONS
     function saveAudit() {
     try {
@@ -5472,6 +5497,17 @@ document.getElementById('addBtn').onclick = () => {
         };
 
         const changes = calculateChanges(originalItem || {}, newItem);
+        
+        // NOVO: Sincroniza referências em outros cards quando há mudança em campos de lista suspensa
+        if (!isNew && originalItem) {
+            // Lista de campos que referem a itens de listas suspensas
+            const fieldsToSync = ['setor', 'categoria', 'subcategoria', 'status', 'marcador'];
+            fieldsToSync.forEach(field => {
+                if (originalItem[field] !== newItem[field]) {
+                    syncReferenceAcrossCards('audit', field, originalItem[field], newItem[field]);
+                }
+            });
+        }
         
         if (isNew) {
             newItem.historico.push({ 
@@ -5541,6 +5577,14 @@ document.getElementById('addBtn').onclick = () => {
             if (!newItem.historico || !Array.isArray(newItem.historico)) {
                 newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
             }
+            
+            // NOVO: Sincroniza referências em outros cards quando há mudança em campos de lista suspensa
+            const fieldsToSync = ['setor', 'categoria', 'subcategoria', 'status', 'marcador'];
+            fieldsToSync.forEach(field => {
+                if (originalItem[field] !== newItem[field]) {
+                    syncReferenceAcrossCards('ativ', field, originalItem[field], newItem[field]);
+                }
+            });
             
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0) {
@@ -5618,6 +5662,14 @@ document.getElementById('addBtn').onclick = () => {
                 newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
             }
             
+            // NOVO: Sincroniza referências em outros cards quando há mudança em campos de lista suspensa
+            const fieldsToSync = ['setor', 'categoria', 'item', 'tipo', 'status', 'marcador'];
+            fieldsToSync.forEach(field => {
+                if (originalItem[field] !== newItem[field]) {
+                    syncReferenceAcrossCards('mant', field, originalItem[field], newItem[field]);
+                }
+            });
+            
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0) {
                 newItem.historico.push({ 
@@ -5691,6 +5743,14 @@ document.getElementById('addBtn').onclick = () => {
             if (!newItem.historico || !Array.isArray(newItem.historico)) {
                 newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
             }
+            
+            // NOVO: Sincroniza referências em outros cards quando há mudança em campos de lista suspensa
+            const fieldsToSync = ['setor', 'categoria', 'subcategoria', 'status', 'marcador'];
+            fieldsToSync.forEach(field => {
+                if (originalItem[field] !== newItem[field]) {
+                    syncReferenceAcrossCards('doc', field, originalItem[field], newItem[field]);
+                }
+            });
             
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0) {
