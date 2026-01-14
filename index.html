@@ -352,7 +352,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
 /* Title search (lupa) */
 .filter-actions{display:flex;align-items:center;gap:8px}
-.title-search{position:relative;display:flex;align-items:center}
+.title-search{position:relative;display:flex;align-items:center;gap:8px}
 .title-search-dropdown{
     position:absolute;
     top:calc(100% + 10px);
@@ -1406,10 +1406,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <div style="font-weight:600; color:var(--primary); font-size:14px;"><i class="fa-solid fa-filter"></i> Filtros:</div>
                 
                 <div id="filtersAuditoria" class="filter-group" style="display:flex;">
-                    <select id="fAuditSetor" class="filter-input" onchange="onFilterSetorChange('Audit')">
+                    <select id="fAuditSetor" class="filter-input" onchange="onFilterSetorChange('Audit')" style="display:none;">
                         <option value="">Setor: Todos</option>
                     </select>
-                    <select id="fAuditCat" class="filter-input" onchange="onFilterCategoryChange('Audit')">
+                    <select id="fAuditCat" class="filter-input" onchange="onFilterCategoryChange('Audit')" style="display:none;">
                         <option value="">Categoria: Todas</option>
                     </select>
                     <select id="fAuditSub" class="filter-input" onchange="renderCards()" style="display:none;">
@@ -1457,10 +1457,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 </div>
 
                 <div id="filtersAtividades" class="filter-group" style="display:none;">
-                    <select id="fAtivSetor" class="filter-input" onchange="onFilterSetorChange('Ativ')">
+                    <select id="fAtivSetor" class="filter-input" onchange="onFilterSetorChange('Ativ')" style="display:none;">
                         <option value="">Setor: Todos</option>
                     </select>
-                    <select id="fAtivCat" class="filter-input" onchange="onFilterCategoryChange('Ativ')">
+                    <select id="fAtivCat" class="filter-input" onchange="onFilterCategoryChange('Ativ')" style="display:none;">
                         <option value="">Categoria: Todas</option>
                     </select>
                     <select id="fAtivSub" class="filter-input" onchange="renderCards()" style="display:none;">
@@ -1508,10 +1508,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 </div>
 
                 <div id="filtersManutencao" class="filter-group" style="display:none;">
-                    <select id="fMantSetor" class="filter-input" onchange="onFilterSetorChange('Mant')">
+                    <select id="fMantSetor" class="filter-input" onchange="onFilterSetorChange('Mant')" style="display:none;">
                         <option value="">Setor: Todos</option>
                     </select>
-                    <select id="fMantCat" class="filter-input" onchange="onFilterCategoryChange('Mant')">
+                    <select id="fMantCat" class="filter-input" onchange="onFilterCategoryChange('Mant')" style="display:none;">
                         <option value="">Categoria: Todas</option>
                     </select>
                     <select id="fMantItem" class="filter-input" onchange="renderCards()" style="display:none;">
@@ -1559,10 +1559,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 </div>
 
                 <div id="filtersDocumentos" class="filter-group" style="display:none;"> 
-                    <select id="fDocSetor" class="filter-input" onchange="onFilterSetorChange('Doc')">
+                    <select id="fDocSetor" class="filter-input" onchange="onFilterSetorChange('Doc')" style="display:none;">
                         <option value="">Setor: Todos</option>
                     </select>
-                    <select id="fDocCat" class="filter-input" onchange="onFilterCategoryChange('Doc')">
+                    <select id="fDocCat" class="filter-input" onchange="onFilterCategoryChange('Doc')" style="display:none;">
                         <option value="">Categoria: Todas</option>
                     </select>
                     <select id="fDocSub" class="filter-input" onchange="renderCards()" style="display:none;">
@@ -1616,7 +1616,27 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         <span class="checkbox-label">OK</span>
                     </label>
                     <div class="title-search">
+                        <button class="btn-clear" id="filtersToggleBtn" onclick="toggleFiltersDropdown()" title="Filtros"><i class="fa-solid fa-filter"></i></button>
                         <button class="btn-clear" onclick="toggleTitleSearch('cards')" title="Pesquisar por título"><i class="fa-solid fa-magnifying-glass"></i></button>
+
+                        <div class="filters-dropdown title-search-dropdown" id="filtersDropdown" style="display:none;">
+                            <div style="padding:10px; width:290px; max-width:calc(100vw - 32px); box-sizing:border-box;">
+                                <div style="display:flex;flex-direction:column;gap:8px">
+                                    <label style="font-size:12px;color:var(--text-light);margin:0">Setor</label>
+                                    <select id="dropSetor" class="filter-input" onchange="onDropdownFilterChange('setor')"></select>
+
+                                    <label style="font-size:12px;color:var(--text-light);margin:0">Categoria</label>
+                                    <select id="dropCat" class="filter-input" onchange="onDropdownFilterChange('categoria')"></select>
+
+                                    <label style="font-size:12px;color:var(--text-light);margin:0">Subcategoria</label>
+                                    <select id="dropSub" class="filter-input" onchange="onDropdownFilterChange('subcategoria')"></select>
+
+                                    <label style="font-size:12px;color:var(--text-light);margin:0">Marcador</label>
+                                    <select id="dropMarcador" class="filter-input" onchange="onDropdownFilterChange('marcador')"></select>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="title-search-dropdown" id="titleSearchDropdown" style="display:none;">
                             <input id="titleSearchInput" class="filter-input" placeholder="Pesquisar títulos..." oninput="onTitleSearchInput('cards')">
                         </div>
@@ -2492,6 +2512,76 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             titleSearchCardsQuery = q;
             if (titleSearchCardsEnabled) renderCards();
         }
+    }
+    
+    // --- Dropdown de Filtros (sincroniza com os selects reais das abas) ---
+    function toggleFiltersDropdown() {
+        const dd = document.getElementById('filtersDropdown');
+        if (!dd) return;
+        const isOpen = dd.style.display === 'block';
+        if (isOpen) {
+            dd.style.display = 'none';
+        } else {
+            populateFiltersDropdown();
+            dd.style.display = 'block';
+        }
+    }
+
+    function populateFiltersDropdown() {
+        const map = { 'auditoria':'Audit', 'atividades':'Ativ', 'manutencao':'Mant', 'documentos':'Doc' };
+        const prefix = map[currentTab] || 'Audit';
+
+        const ids = {
+            setor: `f${prefix}Setor`,
+            categoria: `f${prefix}Cat`,
+            subcategoria: prefix === 'Mant' ? `f${prefix}Item` : `f${prefix}Sub`,
+            marcador: `f${prefix}Marcador`
+        };
+
+        // Copia opções e valor dos selects reais para os selects do dropdown
+        Object.entries(ids).forEach(([key, realId]) => {
+            const realEl = document.getElementById(realId);
+            const dropEl = document.getElementById('drop' + (key === 'categoria' ? 'Cat' : (key === 'subcategoria' ? 'Sub' : key.charAt(0).toUpperCase() + key.slice(1))));
+            if (!dropEl) return;
+            if (realEl) {
+                dropEl.innerHTML = realEl.innerHTML;
+                try { dropEl.value = realEl.value; } catch(_) { dropEl.selectedIndex = 0; }
+            } else {
+                dropEl.innerHTML = '<option value="">Nenhuma opção</option>';
+                dropEl.value = '';
+            }
+        });
+    }
+
+    function onDropdownFilterChange(type) {
+        const map = { 'auditoria':'Audit', 'atividades':'Ativ', 'manutencao':'Mant', 'documentos':'Doc' };
+        const prefix = map[currentTab] || 'Audit';
+
+        const realIds = {
+            setor: `f${prefix}Setor`,
+            categoria: `f${prefix}Cat`,
+            subcategoria: prefix === 'Mant' ? `f${prefix}Item` : `f${prefix}Sub`,
+            marcador: `f${prefix}Marcador`
+        };
+
+        const dropIdMap = { setor: 'dropSetor', categoria: 'dropCat', subcategoria: 'dropSub', marcador: 'dropMarcador' };
+        const dropEl = document.getElementById(dropIdMap[type]);
+        const realEl = document.getElementById(realIds[type]);
+        if (!dropEl || !realEl) return;
+
+        // Atualiza o select real e re-renderiza
+        try { realEl.value = dropEl.value; } catch(_) { realEl.selectedIndex = 0; }
+
+        // Se a categoria mudou, atualiza subcategorias reais antes de repopular o dropdown
+        if (type === 'categoria') {
+            // chama a função de mudança de categoria para reconstruir subcategoria real
+            const modalPrefix = prefix.toLowerCase(); // 'audit','ativ','mant','doc'
+            try { onCategoryChange(modalPrefix); } catch (_) {}
+            // Re-popula o dropdown para refletir novas opções de sub
+            populateFiltersDropdown();
+        }
+
+        renderCards();
     }
     
     const colorMap = {
@@ -5690,6 +5780,7 @@ function renderViewContent(id, tab) {
             <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
             <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
             <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
+            <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
             <div class="view-item"><label>Auditor</label><div>${item.auditor || 'ND'}</div></div>
             <div class="view-item"><label>Publicação</label><div>${formatBR(item.dataPublicacao)}</div></div>
             <div class="view-item"><label>Previsão</label><div>${formatBR(item.dataPrevisao)}</div></div>
@@ -5701,6 +5792,7 @@ function renderViewContent(id, tab) {
             <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
             <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
             <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
+            <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
             <div class="view-item"><label>Data Início</label><div>${formatBR(item.dataInicio)}</div></div>
             <div class="view-item"><label>Data Conclusão</label><div>${formatBR(item.dataConclusao)}</div></div>
             <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
