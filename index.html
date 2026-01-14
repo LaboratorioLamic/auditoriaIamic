@@ -1257,7 +1257,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     <div class="content">
         
-        <div class="filters-bar" id="filtersBarDashboard" style="display:flex;">
+        <div class="filters-bar" id="filtersBarDashboard" style="display:flex; position:relative;">
             <div class="filter-controls">
                 <div style="font-weight:600; color:var(--primary); font-size:14px;"><i class="fa-solid fa-filter"></i> Filtros:</div>
                 
@@ -1269,17 +1269,25 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         <option value="mant">Manutenção</option>
                         <option value="doc">Documentos</option>
                     </select>
-                    <select id="fDashSetor" class="filter-input" onchange="onFilterDashboardChange()">
-                        <option value="">Setor: Todos</option>
-                    </select>
-                    <select id="fDashCat" class="filter-input" onchange="onFilterDashboardChange()">
-                        <option value="">Categoria: Todas</option>
-                    </select>
                     <select id="fDashStatus" class="filter-input" onchange="onFilterDashboardChange()">
                         <option value="">Status: Todos</option>
                     </select>
                     <select id="fDashResponsavel" class="filter-input" onchange="onFilterDashboardChange()">
                         <option value="">Responsável: Todos</option>
+                    </select>
+                    <select id="fDashRevisor" class="filter-input" onchange="onFilterDashboardChange()">
+                        <option value="">Revisor: Todos</option>
+                    </select>
+
+                    <!-- Selects ocultos para Setor, Categoria e Subcategoria -->
+                    <select id="fDashSetor" class="filter-input" style="display:none;" onchange="onFilterDashboardChange()">
+                        <option value="">Setor: Todos</option>
+                    </select>
+                    <select id="fDashCat" class="filter-input" style="display:none;" onchange="onFilterDashboardChange()">
+                        <option value="">Categoria: Todas</option>
+                    </select>
+                    <select id="fDashSub" class="filter-input" style="display:none;" onchange="onFilterDashboardChange()">
+                        <option value="">Subcategoria: Todas</option>
                     </select>
                     
                     <div class="date-controls">
@@ -1310,10 +1318,27 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     </div>
                 </div>
                 <div class="filter-actions">
+                    <div style="position:relative;">
+                        <button class="btn-clear" id="filtersToggleBtnDash" onclick="toggleFiltersDropdownDashboard()" title="Filtros"><i class="fa-solid fa-filter"></i></button>
+                        <div class="filters-dropdown title-search-dropdown" id="filtersDropdownDashboard" style="display:none;">
+                            <div style="padding:10px; width:290px; max-width:calc(100vw - 32px); box-sizing:border-box;">
+                                <div style="display:flex;flex-direction:column;gap:8px">
+                                    <label style="font-size:12px;color:var(--text-light);margin:0">Setor</label>
+                                    <select id="dropDashSetor" class="filter-input" onchange="onDropdownFilterChangeDashboard('setor')"></select>
+
+                                    <label style="font-size:12px;color:var(--text-light);margin:0">Categoria</label>
+                                    <select id="dropDashCat" class="filter-input" onchange="onDropdownFilterChangeDashboard('categoria')"></select>
+
+                                    <label style="font-size:12px;color:var(--text-light);margin:0">Subcategoria</label>
+                                    <select id="dropDashSub" class="filter-input" onchange="onDropdownFilterChangeDashboard('subcategoria')"></select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <button class="btn-clear" onclick="clearDashboardFilters()" title="Limpar filtros"><i class="fa-solid fa-rotate-left"></i></button>
                 </div>
             </div>
-            </div>
+        </div>
 
         <div id="dashboardContent" style="display:flex;">
             <div class="summary-cards">
@@ -1757,7 +1782,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
 <div class="modal" id="modalAuditoria">
     <div class="modal-content">
-        <div class="modal-header"><h3>Nova Auditoria</h3></div>
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>Nova Auditoria</h3>
+            <button class="btn-close" onclick="closeModal('modalAuditoria')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+        </div>
         <div class="form-grid">
             <div class="field-group full-width">
                 <label>Título</label>
@@ -1846,7 +1874,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
 <div class="modal" id="modalAtividades">
     <div class="modal-content">
-        <div class="modal-header"><h3>Nova Atividade</h3></div>
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>Nova Atividade</h3>
+            <button class="btn-close" onclick="closeModal('modalAtividades')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+        </div>
         <div class="form-grid">
             <div class="field-group full-width">
                 <label>Título</label>
@@ -1932,7 +1963,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
 <div class="modal" id="modalManutencao">
     <div class="modal-content">
-        <div class="modal-header"><h3>Nova Manutenção</h3></div>
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>Nova Manutenção</h3>
+            <button class="btn-close" onclick="closeModal('modalManutencao')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+        </div>
         <div class="form-grid">
             <div class="field-group full-width">
                 <label>Título</label>
@@ -2029,7 +2063,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 </div>
 
 <div class="modal" id="modalDocumentos"> <div class="modal-content">
-        <div class="modal-header"><h3>Novo Documento</h3></div>
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>Novo Documento</h3>
+            <button class="btn-close" onclick="closeModal('modalDocumentos')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+        </div>
         <div class="form-grid">
             <div class="field-group full-width">
                 <label>Título/Nome do Documento</label>
@@ -2119,6 +2156,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
 <div class="modal" id="viewModal">
     <div class="modal-content">
+        <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+            <button class="btn-close" onclick="closeModal('viewModal')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+        </div>
         <div id="viewContent"></div>
         <div class="modal-actions">
             <button class="btn-cancel" onclick="closeModal('viewModal')">Fechar</button>
@@ -2579,6 +2619,103 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         }
 
         renderCards();
+    }
+    
+    function toggleFiltersDropdownDashboard() {
+        const dd = document.getElementById('filtersDropdownDashboard');
+        if (!dd) return;
+        const isOpen = dd.style.display === 'block';
+        if (isOpen) {
+            dd.style.display = 'none';
+        } else {
+            populateFiltersDropdownDashboard();
+            dd.style.display = 'block';
+        }
+    }
+
+    function populateFiltersDropdownDashboard() {
+        const ids = {
+            setor: 'fDashSetor',
+            categoria: 'fDashCat',
+            subcategoria: 'fDashSub'
+        };
+
+        const dropIds = {
+            setor: 'dropDashSetor',
+            categoria: 'dropDashCat',
+            subcategoria: 'dropDashSub'
+        };
+
+        // Copia opções e valor dos selects reais para os selects do dropdown
+        Object.entries(ids).forEach(([key, realId]) => {
+            const realEl = document.getElementById(realId);
+            const dropEl = document.getElementById(dropIds[key]);
+            if (!dropEl) return;
+            if (realEl) {
+                dropEl.innerHTML = realEl.innerHTML;
+                try { dropEl.value = realEl.value; } catch(_) { dropEl.selectedIndex = 0; }
+            } else {
+                dropEl.innerHTML = '<option value="">Nenhuma opção</option>';
+                dropEl.value = '';
+            }
+        });
+    }
+
+    function onDropdownFilterChangeDashboard(type) {
+        const realIds = {
+            setor: 'fDashSetor',
+            categoria: 'fDashCat',
+            subcategoria: 'fDashSub'
+        };
+
+        const dropIdMap = { setor: 'dropDashSetor', categoria: 'dropDashCat', subcategoria: 'dropDashSub' };
+        const dropEl = document.getElementById(dropIdMap[type]);
+        const realEl = document.getElementById(realIds[type]);
+        if (!dropEl || !realEl) return;
+
+        // Atualiza o select real e re-renderiza
+        try { realEl.value = dropEl.value; } catch(_) { realEl.selectedIndex = 0; }
+
+        // Se a categoria mudou, atualiza subcategorias reais antes de repopular o dropdown
+        if (type === 'categoria') {
+            // Atualiza as opções de subcategoria baseado na categoria selecionada
+            updateDashboardSubcategorias();
+            // Re-popula o dropdown para refletir novas opções de sub
+            populateFiltersDropdownDashboard();
+        }
+
+        onFilterDashboardChange();
+    }
+
+    function updateDashboardSubcategorias() {
+        const fDashArea = document.getElementById('fDashArea')?.value || '';
+        const fDashCat = document.getElementById('fDashCat')?.value || '';
+        const fDashSub = document.getElementById('fDashSub');
+        if (!fDashSub) return;
+
+        // Limpa subcategorias
+        fDashSub.innerHTML = '<option value="">Subcategoria: Todas</option>';
+
+        if (!fDashCat) return;
+
+        // Baseado no tipo de área, obtém as subcategorias
+        let subcategories = [];
+        
+        // Se temos a área definida, filtra por ela
+        if (fDashArea === 'mant') {
+            // Para manutenção, mostra itens
+            subcategories = (masterLists.mantItens || []).filter(s => s.categoria === fDashCat);
+        } else {
+            // Para outras áreas, mostra subcategorias
+            subcategories = (masterLists.subcategorias || []).filter(s => s.categoria === fDashCat);
+        }
+
+        subcategories.forEach(sub => {
+            const opt = document.createElement('option');
+            opt.value = sub.subcategoria || sub.item || '';
+            opt.textContent = sub.subcategoria || sub.item || '';
+            fDashSub.appendChild(opt);
+        });
     }
     
     const colorMap = {
@@ -3305,6 +3442,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const fSetor = document.getElementById('fDashSetor').value;
         const fCat = document.getElementById('fDashCat')?.value || '';
         const fStatus = document.getElementById('fDashStatus').value;
+        const fResponsavel = document.getElementById('fDashResponsavel').value;
+        const fRevisor = document.getElementById('fDashRevisor').value;
         const fDateType = document.getElementById('fDashDateType').value;
         const fMonth = parseInt(document.getElementById('fDashMonth').value);
         const fYearForMonth = parseInt(document.getElementById('fDashYearForMonth').value);
@@ -3363,6 +3502,23 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
             // 3. Filtro por Status Consolidado
             if (fStatus && item.status !== fStatus) return false;
+
+            // 3.2 Filtro por Responsável
+            if (fResponsavel) {
+                let itemResponsavel = '';
+                if (item.type === 'mant') {
+                    itemResponsavel = item.responsavelTecnico || item.responsavelManutencao || '';
+                } else {
+                    itemResponsavel = item.responsavel || '';
+                }
+                if (!itemResponsavel || !itemResponsavel.includes(fResponsavel)) return false;
+            }
+
+            // 3.3 Filtro por Revisor
+            if (fRevisor) {
+                const itemRevisor = item.revisor || '';
+                if (!itemRevisor || !itemRevisor.includes(fRevisor)) return false;
+            }
 
             // 3.1 Filtro por Título (lupa)
             if (fTitleQuery) {
@@ -4285,6 +4441,39 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 setSelectOptions(el, 'Responsável: Todos', sortedResponsaveis, currentValue);
             }
         }
+        
+        // Atualiza filtro de Revisor (Dashboard)
+        {
+            const el = document.getElementById('fDashRevisor');
+            if (el) {
+                const currentValue = el.value || '';
+                const availableRevisores = new Set();
+                rawItems.forEach(item => {
+                    if (passesOtherFilters(item, 'revisor')) {
+                        const revisor = item.revisor || '';
+                        if (revisor) {
+                            try {
+                                const parsed = JSON.parse(revisor);
+                                if (Array.isArray(parsed)) {
+                                    parsed.forEach(r => {
+                                        const normalized = String(r || '').trim();
+                                        if (normalized) availableRevisores.add(normalized);
+                                    });
+                                } else {
+                                    const normalized = String(parsed || '').trim();
+                                    if (normalized) availableRevisores.add(normalized);
+                                }
+                            } catch {
+                                const normalized = String(revisor || '').trim();
+                                if (normalized) availableRevisores.add(normalized);
+                            }
+                        }
+                    }
+                });
+                const sortedRevisores = Array.from(availableRevisores).sort();
+                setSelectOptions(el, 'Revisor: Todos', sortedRevisores, currentValue);
+            }
+        }
     }
     
     // Limpa filtros do Dashboard
@@ -4292,8 +4481,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         document.getElementById('fDashArea').value = "";
         document.getElementById('fDashSetor').value = "";
         document.getElementById('fDashCat').value = "";
+        document.getElementById('fDashSub').value = "";
         document.getElementById('fDashStatus').value = "";
         document.getElementById('fDashResponsavel').value = "";
+        document.getElementById('fDashRevisor').value = "";
         
         document.getElementById('fDashDateType').value = 'all';
         document.getElementById('fDashDataIni').value = "";
@@ -4353,6 +4544,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             area: document.getElementById('fDashArea')?.value,
             setor: document.getElementById('fDashSetor')?.value,
             cat: document.getElementById('fDashCat')?.value,
+            sub: document.getElementById('fDashSub')?.value,
             status: document.getElementById('fDashStatus')?.value
         },
         Audit: {
@@ -4402,10 +4594,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     document.getElementById('fDashSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos");
     // Categoria será populada dinamicamente por updateDashboardFilterOptions
     document.getElementById('fDashCat').innerHTML = '<option value="">Categoria: Todas</option>';
+    document.getElementById('fDashSub').innerHTML = '<option value="">Subcategoria: Todas</option>';
     document.getElementById('fDashStatus').innerHTML = makeFilterOpts(unifiedStatusnames, "Status: Todos");
     if (currentValues.dash.area != null) document.getElementById('fDashArea').value = currentValues.dash.area;
     if (currentValues.dash.setor != null) document.getElementById('fDashSetor').value = currentValues.dash.setor;
     if (currentValues.dash.cat != null) document.getElementById('fDashCat').value = currentValues.dash.cat;
+    if (currentValues.dash.sub != null) document.getElementById('fDashSub').value = currentValues.dash.sub;
     if (currentValues.dash.status != null) document.getElementById('fDashStatus').value = currentValues.dash.status;
 
     // --- POPULAR MODAIS (Setores e Categorias) ---
@@ -6641,6 +6835,7 @@ function renderViewContent(id, tab) {
             categoria: document.getElementById('fDashCat')?.value || '',
             status: document.getElementById('fDashStatus')?.value || '',
             responsavel: document.getElementById('fDashResponsavel')?.value || '',
+            revisor: document.getElementById('fDashRevisor')?.value || '',
             dateType: document.getElementById('fDashDateType')?.value || 'all',
             month: parseInt(document.getElementById('fDashMonth')?.value || currentMonth),
             yearForMonth: parseInt(document.getElementById('fDashYearForMonth')?.value || currentYear),
@@ -6673,6 +6868,12 @@ function renderViewContent(id, tab) {
                     itemResponsavel = item.responsavel || '';
                 }
                 if (!itemResponsavel || !itemResponsavel.includes(filters.responsavel)) return false;
+            }
+            
+            // Filtro por Revisor
+            if (filters.revisor) {
+                const itemRevisor = item.revisor || '';
+                if (!itemRevisor || !itemRevisor.includes(filters.revisor)) return false;
             }
             
             // Filtro por Período
