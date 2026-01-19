@@ -5532,8 +5532,7 @@ function resetModal(prefix) {
         document.getElementById('mantUltima').value = today();
         document.getElementById('mantIntervalo').value = 30;
         document.getElementById('mantEmpresaResponsavel').value = '';
-        multiSelectStates.mantTec.selected = [];
-        updateMultiSelectDisplay('mantTec');
+        document.getElementById('mantResponsavelTecnico').value = '';
         document.getElementById('mantResponsavelManutencao').value = '';
         document.getElementById('mantFlagDias').value = 7;
         const defaultMantCat = masterLists.mantCategorias[0] || '';
@@ -7636,7 +7635,6 @@ function renderViewContent(id, tab) {
     const multiSelectStates = {
         audit: { selected: [], allUsers: [] },
         ativ: { selected: [], allUsers: [] },
-        mantTec: { selected: [], allUsers: [] },
         doc: { selected: [], allUsers: [] }
     };
 
@@ -7718,7 +7716,6 @@ function renderViewContent(id, tab) {
         
         multiSelectStates.audit.allUsers = sortedUsers;
         multiSelectStates.ativ.allUsers = sortedUsers;
-        multiSelectStates.mantTec.allUsers = sortedUsers;
         multiSelectStates.doc.allUsers = sortedUsers;
     }
 
@@ -7749,8 +7746,6 @@ function renderViewContent(id, tab) {
     function getMultiSelectBaseId(type) {
         if (type === 'audit') return 'auditResponsavel';
         if (type === 'ativ') return 'ativResponsavel';
-        if (type === 'mantTec') return 'mantResponsavelTecnico';
-        if (type === 'mantManu') return 'mantResponsavelManutencao';
         if (type === 'doc') return 'docResponsavel';
     }
 
