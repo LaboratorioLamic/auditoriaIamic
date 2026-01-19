@@ -3458,7 +3458,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         cleanInvalidResponsaveis();
 
         // 2. Limpeza de Histórico para Performance (Evita lentidão no carregamento)
-        const maxHistoryItems = 25;
+        const maxHistoryItems = 150;
         const dataArrays = [audits, activities, maintenances, documents];
         dataArrays.forEach(arr => {
             arr.forEach(item => {
