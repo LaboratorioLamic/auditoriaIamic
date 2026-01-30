@@ -1216,6 +1216,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     <div class="sidebar-divider"></div>
     <button id="tabAtividades"><i class="fa-solid fa-list-check"></i> Gestão de Atividades</button>
     <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Auditoria</button>
+    <button id="tabTreinamentos"><i class="fa-solid fa-graduation-cap"></i> Treinamentos</button>
     <button id="tabDocumentos"><i class="fa-solid fa-file-alt"></i> Documentos</button> 
     <button id="tabManutencao"><i class="fa-solid fa-wrench"></i> Manutenção</button>
     <div class="sidebar-divider"></div>
@@ -1338,7 +1339,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <button class="btn-clear" onclick="clearDashboardFilters()" title="Limpar filtros"><i class="fa-solid fa-rotate-left"></i></button>
                 </div>
             </div>
-        </div>
+            </div>
 
         <div id="dashboardContent" style="display:flex;">
             <div class="summary-cards">
@@ -1479,6 +1480,59 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                             <input type="date" id="fAuditDataFim" onchange="renderCards()">
                         </div>
                     </div>
+            </div>
+            
+                <div id="filtersTreinamentos" class="filter-group" style="display:none;">
+                    <select id="fTrainSetor" class="filter-input" onchange="onFilterSetorChange('Train')" style="display:none;">
+                        <option value="">Setor: Todos</option>
+                    </select>
+                    <select id="fTrainCat" class="filter-input" onchange="onFilterCategoryChange('Train')" style="display:none;">
+                        <option value="">Categoria: Todas</option>
+                    </select>
+                    <select id="fTrainSub" class="filter-input" onchange="renderCards()" style="display:none;">
+                        <option value="">Subcategoria: Todas</option>
+                    </select>
+                    <select id="fTrainResponsavel" class="filter-input" onchange="renderCards()">
+                        <option value="">Responsável: Todos</option>
+                    </select>
+                    <select id="fTrainAuditor" class="filter-input" onchange="renderCards()">
+                        <option value="">Instrutor: Todos</option>
+                    </select>
+                    <select id="fTrainStatus" class="filter-input" onchange="renderCards()">
+                        <option value="">Status: Todos</option>
+                    </select>
+                    <select id="fTrainMarcador" class="filter-input" onchange="renderCards()" style="display:none;">
+                        <option value="">Marcador: Todos</option>
+                    </select>
+                    
+                    <div class="date-controls">
+                        <select id="fTrainDateType" onchange="updateDateInputs('Train')">
+                            <option value="all" selected>Período: Data</option>
+                            <option value="month">Mês</option>
+                            <option value="year">Ano</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+                        
+                        <div id="fTrainGroupMonth" style="display:none; gap:4px">
+                            <select id="fTrainMonth" onchange="renderCards()">
+                                <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
+                                <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
+                                <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
+                                <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
+                            </select>
+                            <select id="fTrainYearForMonth" onchange="renderCards()"></select>
+                        </div>
+
+                        <select id="fTrainYearOnly" style="display:none" onchange="renderCards()"></select>
+
+                        <div id="fTrainGroupCustom" style="display:none; align-items:center; gap:4px">
+                            <input type="date" id="fTrainDataIni" onchange="renderCards()">
+                            <span>até</span>
+                            <input type="date" id="fTrainDataFim" onchange="renderCards()">
+                        </div>
+                    </div>
+                    
+                    <button class="btn-clear" onclick="clearFilters()" title="Limpar filtros"><i class="fa-solid fa-rotate-left"></i></button>
                 </div>
 
                 <div id="filtersAtividades" class="filter-group" style="display:none;">
@@ -1741,11 +1795,22 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         <div class="config-tabs">
                             <label><input type="checkbox" class="cfg-tab" value="dashboard" checked> Dashboard</label>
                             <label><input type="checkbox" class="cfg-tab" value="auditoria" checked> Auditoria</label>
+                            <label><input type="checkbox" class="cfg-tab" value="treinamentos"> Treinamentos</label>
                             <label><input type="checkbox" class="cfg-tab" value="documentos"> Documentos</label>
                             <label><input type="checkbox" class="cfg-tab" value="atividades"> Atividades</label>
                             <label><input type="checkbox" class="cfg-tab" value="manutencao"> Manutenção</label>
                             <label><input type="checkbox" class="cfg-tab" value="backup"> Backup</label>
                         </div>
+                    </div>
+
+                    <div class="field-group full-width" style="margin-top:8px;">
+                        <label>Acesso aos Setores</label>
+                        <button type="button" class="btn-select-setores" onclick="openSetoresModal()" style="width:100%; padding:12px 16px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border:none; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.3s ease; box-shadow:0 2px 8px rgba(102, 126, 234, 0.3);">
+                            <i class="fa-solid fa-building"></i>
+                            <span id="setoresButtonText">Selecionar Setores</span>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                        <p style="color:#6b7280; font-size:12px; margin-top:8px;">Usuários com permissão de gerenciar listas têm acesso a todos os setores automaticamente.</p>
                     </div>
 
                     <div class="config-actions">
@@ -1836,7 +1901,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <select id="auditResponsavel">
                     <option value="">Selecione um responsável...</option>
                 </select>
-            </div>
+                </div>
             <div class="field-group">
                 <label>Revisor</label>
                 <select id="auditRevisor">
@@ -1868,6 +1933,93 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         <div class="modal-actions">
             <button class="btn-cancel" onclick="closeModal('modalAuditoria')">Cancelar</button>
             <button class="btn-save" onclick="saveAudit()">Salvar Registro</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalTreinamentos">
+    <div class="modal-content">
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>Novo Treinamento</h3>
+            <button class="btn-close" onclick="closeModal('modalTreinamentos')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+        </div>
+        <div class="form-grid">
+            <div class="field-group full-width">
+                <label>Título</label>
+                <input id="trainTitulo" placeholder="Ex: Treinamento de Segurança do Trabalho">
+            </div>
+            <div class="field-group full-width">
+                <label>Descrição</label>
+                <textarea id="trainDescricao" rows="2"></textarea>
+            </div>
+            <div class="field-group">
+                <label>Setor</label>
+                <div class="select-wrapper">
+                    <select id="trainSetor" onchange="onCategoryChange('train')"></select>
+                    <button onclick="openListManager('setores')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Categoria</label>
+                <div class="select-wrapper">
+                    <select id="trainCategoria" onchange="onCategoryChange('train')"></select>
+                    <button onclick="openListManager('categorias')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Subcategoria</label>
+                <div class="select-wrapper">
+                    <select id="trainSub"></select>
+                    <button onclick="openListManager('subcategorias')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Status</label>
+                <div class="select-wrapper">
+                    <select id="trainStatus"></select>
+                    <button onclick="openListManager('status')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Data Publicação</label>
+                <input type="date" id="trainDataPublicacao">
+            </div>
+            <div class="field-group">
+                <label>Data Previsão</label>
+                <input type="date" id="trainDataPrevisao">
+            </div>
+            <div class="field-group">
+                <label>Responsável</label>
+                <select id="trainResponsavel">
+                    <option value="">Selecione um responsável...</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label>Instrutor</label>
+                <input id="trainInstrutor" placeholder="Nome do Instrutor">
+            </div>
+            <div class="field-group">
+                <label>Alerta (Dias antes)</label>
+                <input type="number" id="trainFlagDias" value="7">
+            </div>
+            <div class="field-group">
+                <label>Marcador</label>
+                <div class="select-wrapper">
+                    <select id="trainMarcador"></select>
+                    <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group full-width">
+                <label>Anexos</label>
+                <div id="trainAnexos"></div>
+                <button type="button" class="btn-add-anexo" onclick="addAnexo('train')">
+                    <i class="fas fa-paperclip"></i> Adicionar Arquivo ou Link
+                </button>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('modalTreinamentos')">Cancelar</button>
+            <button class="btn-save" onclick="saveTraining()">Salvar Registro</button>
         </div>
     </div>
 </div>
@@ -1928,7 +2080,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 <select id="ativResponsavel">
                     <option value="">Selecione um responsável...</option>
                 </select>
-            </div>
+                </div>
             <div class="field-group">
                 <label>Revisor</label>
                 <select id="ativRevisor">
@@ -2201,6 +2353,29 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     </div>
 </div>
 
+<div class="modal" id="modalSetoresPermissoes">
+    <div class="modal-content" style="width:500px; max-width:90vw;">
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0; color:#1f2937;"><i class="fa-solid fa-building"></i> Selecionar Setores Permitidos</h3>
+            <button class="btn-close" onclick="closeModal('modalSetoresPermissoes')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+        </div>
+        <div style="margin-bottom:16px;">
+            <p style="color:#6b7280; font-size:13px; margin:0 0 12px 0;">Selecione os setores que este usuário pode visualizar nos cadastros e filtros.</p>
+            <div style="display:flex; gap:8px; margin-bottom:12px;">
+                <button type="button" onclick="selectAllSetores()" style="padding:6px 12px; background:#f3f4f6; border:1px solid #d1d5db; border-radius:6px; font-size:12px; cursor:pointer; color:#374151;">Selecionar Todos</button>
+                <button type="button" onclick="deselectAllSetores()" style="padding:6px 12px; background:#f3f4f6; border:1px solid #d1d5db; border-radius:6px; font-size:12px; cursor:pointer; color:#374151;">Desselecionar Todos</button>
+            </div>
+        </div>
+        <div id="modalSetoresList" style="max-height:400px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:8px; padding:12px; background:#f9fafb;">
+            <!-- Setores serão renderizados aqui -->
+        </div>
+        <div class="modal-actions" style="margin-top:20px; display:flex; gap:8px; justify-content:flex-end;">
+            <button class="btn-cancel" onclick="closeModal('modalSetoresPermissoes')">Cancelar</button>
+            <button class="btn-save" onclick="saveSetoresPermissoes()">Salvar</button>
+        </div>
+    </div>
+</div>
+
 <script>
     // --- CONFIGURAÇÃO FIREBASE ---
     // Firebase já inicializado no módulo acima
@@ -2415,6 +2590,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
     // --- DADOS E ESTADO (Iniciam vazios) ---
     let audits = [];
+    let trainings = [];
     let activities = [];
     let maintenances = [];
     let documents = [];
@@ -2429,12 +2605,14 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // Listas Principais (Limpas)
         setores: [], 
         auditCategorias: [],
+        trainCategorias: [],
         ativCategorias: [],
         mantCategorias: [],
         docCategorias: [], 
     
         // Listas de Subcategorias/Itens (Limpas)
         auditSubcats: {},
+        trainSubcats: {},
         ativSubcats: {},
         mantItens: {},
         docSubcats: {},
@@ -2442,12 +2620,14 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // Listas de Status: ZERADAS (Serão preenchidas via interface/API)
         // Se estiverem vazias, o usuário deve criá-las via modal.
         auditStatus: [], 
+        trainStatus: [],
         ativStatus: [], 
         mantStatus: [], 
         docStatus: [], 
 
         // Listas de Marcadores (objetos { name, color })
         auditMarcadores: [],
+        trainMarcadores: [],
         ativMarcadores: [],
         mantMarcadores: [],
         docMarcadores: [],
@@ -2465,6 +2645,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
     let currentTab = 'dashboard'; 
     let editingAuditId = null;
+    let editingTrainId = null;
     let editingAtivId = null;
     let editingMantId = null;
     let editingDocId = null; 
@@ -2525,7 +2706,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         };
         
         // Limpa responsáveis em cada tipo de item
-        [audits, activities, documents].forEach(arr => {
+        [audits, trainings, activities, documents].forEach(arr => {
             arr.forEach(item => {
                 if (item.responsavel) {
                     item.responsavel = cleanResponsavel(item.responsavel);
@@ -3093,6 +3274,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const tabMap = {
             dashboard: 'tabDashboard',
             auditoria: 'tabAuditoria',
+            treinamentos: 'tabTreinamentos',
             documentos: 'tabDocumentos',
             atividades: 'tabAtividades',
             manutencao: 'tabManutencao',
@@ -3253,20 +3435,23 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             if (!snapshot.exists()) {
                 // Se Firebase está vazio, tenta carregar do localStorage
                 const cachedAudits = loadFromLocalStorage('audits');
+                const cachedTrainings = loadFromLocalStorage('trainings');
                 const cachedActivities = loadFromLocalStorage('activities');
                 const cachedMaintenances = loadFromLocalStorage('maintenances');
                 const cachedDocuments = loadFromLocalStorage('documents');
                 const cachedMasterLists = loadFromLocalStorage('masterLists');
                 
-                if (cachedAudits || cachedActivities || cachedMaintenances || cachedDocuments) {
+                if (cachedAudits || cachedTrainings || cachedActivities || cachedMaintenances || cachedDocuments) {
                     console.log('Carregando dados do localStorage (Firebase vazio)');
                     audits = cachedAudits || [];
+                    trainings = cachedTrainings || [];
                     activities = cachedActivities || [];
                     maintenances = cachedMaintenances || [];
                     documents = cachedDocuments || [];
                     masterLists = cachedMasterLists ? { ...defaultMasterLists, ...cachedMasterLists } : JSON.parse(JSON.stringify(defaultMasterLists));
                 } else {
                     audits = [];
+                    trainings = [];
                     activities = [];
                     maintenances = [];
                     documents = [];
@@ -3277,6 +3462,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 
                 // Mapeamento direto das chaves do seu JSON
                 audits = record.audits || [];
+                trainings = record.trainings || [];
                 activities = record.activities || [];
                 maintenances = record.maintenances || [];
                 documents = record.documents || []; 
@@ -3291,6 +3477,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 
                 // Atualiza o cache local com os dados do Firebase
                 saveToLocalStorage('audits', audits);
+                saveToLocalStorage('trainings', trainings);
                 saveToLocalStorage('activities', activities);
                 saveToLocalStorage('maintenances', maintenances);
                 saveToLocalStorage('documents', documents);
@@ -3298,7 +3485,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             }
             
             // Garante integridade do histórico para cada item
-            [audits, activities, maintenances, documents].forEach(array => {
+            [audits, trainings, activities, maintenances, documents].forEach(array => {
                 array.forEach(item => item.historico = item.historico || []);
             });
             
@@ -3306,7 +3493,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             cleanInvalidResponsaveis();
 
             populateYearSelects();
-            populateSelects();
+            populateSelects();          
             
             // Restaura os filtros salvos após popular os selects
             restoreFiltersFromLocalStorage();
@@ -3459,7 +3646,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
         // 2. Limpeza de Histórico para Performance (Evita lentidão no carregamento)
         const maxHistoryItems = 150;
-        const dataArrays = [audits, activities, maintenances, documents];
+        const dataArrays = [audits, trainings, activities, maintenances, documents];
         dataArrays.forEach(arr => {
             arr.forEach(item => {
                 if (item.historico && item.historico.length > maxHistoryItems) {
@@ -3471,6 +3658,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // 2. Preparação do Objeto de Atualização Atômica
         const updates = {};
         updates['/audits'] = audits;
+        updates['/trainings'] = trainings;
         updates['/activities'] = activities;
         updates['/maintenances'] = maintenances;
         updates['/documents'] = documents;
@@ -3484,6 +3672,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // 4. NOVO: Atualizar localStorage APENAS se o Firebase foi bem-sucedido
         console.log('Sincronização com Firebase bem-sucedida. Atualizando cache local...');
         saveToLocalStorage('audits', audits);
+        saveToLocalStorage('trainings', trainings);
         saveToLocalStorage('activities', activities);
         saveToLocalStorage('maintenances', maintenances);
         saveToLocalStorage('documents', documents);
@@ -3499,6 +3688,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         console.log('Erro ao sincronizar com Firebase. Salvando dados apenas no localStorage...');
         try {
             saveToLocalStorage('audits', audits);
+            saveToLocalStorage('trainings', trainings);
             saveToLocalStorage('activities', activities);
             saveToLocalStorage('maintenances', maintenances);
             saveToLocalStorage('documents', documents);
@@ -3888,6 +4078,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // que possuem ao menos 1 card possível com os filtros atuais
         const tabToFilterPrefix = (tab) => {
             if (tab === 'auditoria') return 'Audit';
+            if (tab === 'treinamentos') return 'Train';
             if (tab === 'atividades') return 'Ativ';
             if (tab === 'manutencao') return 'Mant';
             if (tab === 'documentos') return 'Doc';
@@ -4162,51 +4353,61 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
         data.forEach(item => {
             try {
-                const div = document.createElement('div');
-                const flagDays = item.flagDias || 7;
-                let targetDate = (getDeadlineDate ? getDeadlineDate(item) : null);
-                const fullTitle = item.titulo || '';
-                const displayTitle = truncateText(fullTitle, 55);
+            const div = document.createElement('div');
+            const flagDays = item.flagDias || 7;
+            let targetDate = (getDeadlineDate ? getDeadlineDate(item) : null);
+            const fullTitle = item.titulo || '';
+            const displayTitle = truncateText(fullTitle, 55);
     
-                const d = daysDiff(targetDate);
-                
-                let indicatorClass = 'ind-green';
-                // Cards com status "Concluído" permanecem verdes mesmo se atrasados
-                if (item.status !== 'Concluído' && d !== Infinity) {
-                    if (d < 0) indicatorClass = 'ind-red';
-                    else if (d <= flagDays) indicatorClass = 'ind-yellow';
-                }
+            const d = daysDiff(targetDate);
+            
+            let indicatorClass = 'ind-green';
+            // Cards com status "Concluído" permanecem verdes mesmo se atrasados
+            if (item.status !== 'Concluído' && d !== Infinity) {
+                if (d < 0) indicatorClass = 'ind-red';
+                else if (d <= flagDays) indicatorClass = 'ind-yellow';
+            }
     
-                const statusObj = statusList.find(s => s.name === item.status) || { color: 'default' };
-                const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
+            const statusObj = statusList.find(s => s.name === item.status) || { color: 'default' };
+            const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
+
+            // Marcador do card
+            const marcadorText = item.marcador || '';
+            const marcadorColorVar = colorMap[item.marcadorCor] || colorMap['default'];
     
-                // Marcador do card
-                const marcadorText = item.marcador || '';
-                const marcadorColorVar = colorMap[item.marcadorCor] || colorMap['default'];
+            // layout interativo original dos cards
+            div.className = `card ${indicatorClass}`;
+            div.onclick = () => {
+                currentHistoryPage = 1; // Reseta a página ao abrir a visualização
+                openView(item.id, currentTab);
+            };
     
-                // layout interativo original dos cards
-                div.className = `card ${indicatorClass}`;
-                div.onclick = () => {
-                    currentHistoryPage = 1; // Reseta a página ao abrir a visualização
-                    openView(item.id, currentTab);
-                };
-    
-                let specificContent = '';
-                const subcatOrItemValue = currentTab === 'manutencao' ? item.item : item.subcategoria;
-                const subcategoryDisplay = subcatOrItemValue ? ` (${subcatOrItemValue})` : '';
+            let specificContent = '';
+            const subcatOrItemValue = currentTab === 'manutencao' ? item.item : item.subcategoria;
+            const subcategoryDisplay = subcatOrItemValue ? ` (${subcatOrItemValue})` : '';
     
                 // Função para formatar responsável para exibição
                 const formatResponsavel = (responsavel) => {
                     if (!responsavel) return '';
                     return String(responsavel).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                 };
-
+    
             if (currentTab === 'auditoria') {
                 const responsaveis = formatResponsavel(item.responsavel);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
                     ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
+                    <div class="card-info-row"><i class="far fa-calendar"></i> <span>Pub: <strong>${formatBR(item.dataPublicacao)}</strong></span></div>
+                    <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>
+                `;
+            } else if (currentTab === 'treinamentos') {
+                const responsaveis = formatResponsavel(item.responsavel || '');
+                specificContent = `
+                    <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
+                    <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
+                    ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
+                    ${item.instrutor ? `<div class="card-info-row"><i class="fas fa-chalkboard-teacher"></i> <span>Instrutor: ${item.instrutor}</span></div>` : ''}
                     <div class="card-info-row"><i class="far fa-calendar"></i> <span>Pub: <strong>${formatBR(item.dataPublicacao)}</strong></span></div>
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>
                 `;
@@ -4246,7 +4447,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             if (!specificContent || typeof specificContent !== 'string') {
                 specificContent = '';
             }
-
+    
             const editIconHtml = canEdit
                 ? `<i class="fas fa-pen" onclick="editItem(${item.id}, '${currentTab}')" title="Editar"></i>`
                 : '';
@@ -4295,7 +4496,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // Atualiza contador de notificações após renderizar cards
         updateNotificationCount();
     }
-
+    
     // Filtro do Dashboard
     function onFilterDashboardChange() {
         if (document.getElementById('fDashDateType').value !== 'all') {
@@ -4661,13 +4862,26 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
     
     
+    // Função para obter setores permitidos do usuário atual
+    function getAllowedSetores() {
+        if (!currentuser) return null; // null = todos os setores (admin ou sem restrição)
+        if (userIsAdmin()) return null;
+        if (currentuser.canManageLists === true) return null; // Usuários com permissão de gerenciar listas veem todos
+        if (Array.isArray(currentuser.allowedSetores) && currentuser.allowedSetores.length > 0) {
+            return currentuser.allowedSetores;
+        }
+        return []; // Se não tem setores permitidos, não vê nenhum
+    }
+    
     function populateSelects() {
     const setores = masterLists.setores || []; 
+    const allowedSetores = getAllowedSetores(); // null = todos, array = apenas os permitidos 
     
     // Captura os valores selecionados antes de reconstruir os selects para evitar o reset
     const currentValues = {
         // MODAIS
         audit: { setor: document.getElementById('auditSetor')?.value, cat: document.getElementById('auditCategoria')?.value, status: document.getElementById('auditStatus')?.value, mark: document.getElementById('auditMarcador')?.value },
+        train: { setor: document.getElementById('trainSetor')?.value, cat: document.getElementById('trainCategoria')?.value, status: document.getElementById('trainStatus')?.value, mark: document.getElementById('trainMarcador')?.value },
         ativ: { setor: document.getElementById('ativSetor')?.value, cat: document.getElementById('ativCategoria')?.value, status: document.getElementById('ativStatus')?.value, mark: document.getElementById('ativMarcador')?.value },
         mant: { setor: document.getElementById('mantSetor')?.value, cat: document.getElementById('mantCategoria')?.value, status: document.getElementById('mantStatus')?.value, mark: document.getElementById('mantMarcador')?.value, tipo: document.getElementById('mantTipo')?.value },
         doc: { setor: document.getElementById('docSetor')?.value, cat: document.getElementById('docCategoria')?.value, status: document.getElementById('docStatus')?.value, mark: document.getElementById('docMarcador')?.value },
@@ -4695,6 +4909,13 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             status: document.getElementById('fAuditStatus')?.value,
             marcador: document.getElementById('fAuditMarcador')?.value || ''
         },
+        Train: {
+            setor: document.getElementById('fTrainSetor')?.value,
+            cat: document.getElementById('fTrainCat')?.value,
+            sub: document.getElementById('fTrainSub')?.value,
+            status: document.getElementById('fTrainStatus')?.value,
+            marcador: document.getElementById('fTrainMarcador')?.value || ''
+        },
         Ativ: {
             setor: document.getElementById('fAtivSetor')?.value,
             cat: document.getElementById('fAtivCat')?.value,
@@ -4721,18 +4942,21 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     // Coleta TODOS os status para o Dashboard
     let allStatusnames = [];
-    ['auditStatus', 'ativStatus', 'mantStatus', 'docStatus'].forEach(key => {
+    ['auditStatus', 'trainStatus', 'ativStatus', 'mantStatus', 'docStatus'].forEach(key => {
         (masterLists[key] || []).forEach(s => { if (s.name) allStatusnames.push(s.name); });
     });
     const unifiedStatusnames = [...new Set(allStatusnames)].sort();
 
-    const makeOpts = (list) => list.map(i => `<option value="${i}">${i}</option>`).join('');
-    const makeStatusOpts = (list) => list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
-    const makeFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i}">${i}</option>`).join('');
-    const makeStatusFilterOpts = (list, label) => `<option value="">${label}</option>` + list.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+    const makeOpts = (list) => (list || []).map(i => `<option value="${i}">${i}</option>`).join('');
+    const makeStatusOpts = (list) => (list || []).map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+    const makeFilterOpts = (list, label) => `<option value="">${label}</option>` + (list || []).map(i => `<option value="${i}">${i}</option>`).join('');
+    const makeStatusFilterOpts = (list, label) => `<option value="">${label}</option>` + (list || []).map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+    
+    // Filtra setores baseado nas permissões do usuário (allowedSetores já declarado acima)
+    const filteredSetores = allowedSetores === null ? setores : setores.filter(s => allowedSetores.includes(s));
     
     // --- FILTROS DASHBOARD ---
-    document.getElementById('fDashSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos");
+    document.getElementById('fDashSetor').innerHTML = makeFilterOpts(filteredSetores, "Setor: Todos");
     // Categoria será populada dinamicamente por updateDashboardFilterOptions
     document.getElementById('fDashCat').innerHTML = '<option value="">Categoria: Todas</option>';
     document.getElementById('fDashSub').innerHTML = '<option value="">Subcategoria: Todas</option>';
@@ -4754,10 +4978,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     const dashRevisorValue = currentValues.dash.revisor;
 
     // --- POPULAR MODAIS (Setores e Categorias) ---
-    ['audit', 'ativ', 'mant', 'doc'].forEach(p => {
-        document.getElementById(`${p}Setor`).innerHTML = makeOpts(setores);
-        document.getElementById(`${p}Categoria`).innerHTML = makeOpts(masterLists[`${p}Categorias`]);
-        document.getElementById(`${p}Status`).innerHTML = makeStatusOpts(masterLists[`${p}Status`]);
+    ['audit', 'train', 'ativ', 'mant', 'doc'].forEach(p => {
+        document.getElementById(`${p}Setor`).innerHTML = makeOpts(filteredSetores);
+        document.getElementById(`${p}Categoria`).innerHTML = makeOpts(masterLists[`${p}Categorias`] || []);
+        document.getElementById(`${p}Status`).innerHTML = makeStatusOpts(masterLists[`${p}Status`] || []);
         
         // Correção específica para Marcadores: Garante o placeholder e restaura o valor
         const markerSelect = document.getElementById(`${p}Marcador`);
@@ -4784,6 +5008,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     // Atualiza Subcategorias/Itens baseado na categoria restaurada
     onCategoryChange('audit');
+    onCategoryChange('train');
     onCategoryChange('ativ');
     onCategoryChange('mant');
     onCategoryChange('doc');
@@ -4818,7 +5043,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     });
     
     // Popula os selects de responsáveis
-    ['auditResponsavel', 'ativResponsavel', 'mantResponsavelTecnico', 'docResponsavel', 'auditRevisor', 'ativRevisor', 'docRevisor'].forEach(id => {
+    ['auditResponsavel', 'trainResponsavel', 'ativResponsavel', 'mantResponsavelTecnico', 'docResponsavel', 'auditRevisor', 'ativRevisor', 'docRevisor'].forEach(id => {
         const select = document.getElementById(id);
         if (select) {
             select.innerHTML = sortedOptions.join('');
@@ -4826,13 +5051,16 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     });
 
     // --- FILTROS DAS ABAS ---
-    document.getElementById('fAuditSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
-    document.getElementById('fAtivSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
-    document.getElementById('fMantSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
-    document.getElementById('fDocSetor').innerHTML = makeFilterOpts(setores, "Setor: Todos"); 
+    document.getElementById('fAuditSetor').innerHTML = makeFilterOpts(filteredSetores, "Setor: Todos"); 
+    document.getElementById('fTrainSetor').innerHTML = makeFilterOpts(filteredSetores, "Setor: Todos"); 
+    document.getElementById('fAtivSetor').innerHTML = makeFilterOpts(filteredSetores, "Setor: Todos"); 
+    document.getElementById('fMantSetor').innerHTML = makeFilterOpts(filteredSetores, "Setor: Todos"); 
+    document.getElementById('fDocSetor').innerHTML = makeFilterOpts(filteredSetores, "Setor: Todos");
 
     document.getElementById('fAuditCat').innerHTML = makeFilterOpts(masterLists.auditCategorias, "Categoria: Todas");
     document.getElementById('fAuditStatus').innerHTML = makeStatusFilterOpts(masterLists.auditStatus, "Status: Todos");
+    document.getElementById('fTrainCat').innerHTML = makeFilterOpts(masterLists.trainCategorias, "Categoria: Todas");
+    document.getElementById('fTrainStatus').innerHTML = makeStatusFilterOpts(masterLists.trainStatus, "Status: Todos");
     document.getElementById('fAtivCat').innerHTML = makeFilterOpts(masterLists.ativCategorias, "Categoria: Todas");
     document.getElementById('fAtivStatus').innerHTML = makeStatusFilterOpts(masterLists.ativStatus, "Status: Todos");
     document.getElementById('fMantCat').innerHTML = makeFilterOpts(masterLists.mantCategorias, "Categoria: Todas");
@@ -4843,30 +5071,35 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     // Popula selects ocultos de Marcador
     document.getElementById('fAuditMarcador').innerHTML = makeStatusOpts(masterLists.auditMarcadores || []);
+    document.getElementById('fTrainMarcador').innerHTML = makeStatusOpts(masterLists.trainMarcadores || []);
     document.getElementById('fAtivMarcador').innerHTML = makeStatusOpts(masterLists.ativMarcadores || []);
     document.getElementById('fMantMarcador').innerHTML = makeStatusOpts(masterLists.mantMarcadores || []);
     document.getElementById('fDocMarcador').innerHTML = makeStatusOpts(masterLists.docMarcadores || []);
 
     // Restaura valores de filtros para evitar voltar ao primeiro item após editar listas
-    if (currentValues.Audit.setor != null) document.getElementById('fAuditSetor').value = currentValues.Audit.setor;
-    if (currentValues.Ativ.setor != null) document.getElementById('fAtivSetor').value = currentValues.Ativ.setor;
-    if (currentValues.Mant.setor != null) document.getElementById('fMantSetor').value = currentValues.Mant.setor;
-    if (currentValues.Doc.setor != null) document.getElementById('fDocSetor').value = currentValues.Doc.setor;
+    if (currentValues.Audit?.setor != null) document.getElementById('fAuditSetor').value = currentValues.Audit.setor;
+    if (currentValues.Train?.setor != null) document.getElementById('fTrainSetor').value = currentValues.Train.setor;
+    if (currentValues.Ativ?.setor != null) document.getElementById('fAtivSetor').value = currentValues.Ativ.setor;
+    if (currentValues.Mant?.setor != null) document.getElementById('fMantSetor').value = currentValues.Mant.setor;
+    if (currentValues.Doc?.setor != null) document.getElementById('fDocSetor').value = currentValues.Doc.setor;
 
-    if (currentValues.Audit.cat != null) document.getElementById('fAuditCat').value = currentValues.Audit.cat;
-    if (currentValues.Ativ.cat != null) document.getElementById('fAtivCat').value = currentValues.Ativ.cat;
-    if (currentValues.Mant.cat != null) document.getElementById('fMantCat').value = currentValues.Mant.cat;
-    if (currentValues.Doc.cat != null) document.getElementById('fDocCat').value = currentValues.Doc.cat;
+    if (currentValues.Audit?.cat != null) document.getElementById('fAuditCat').value = currentValues.Audit.cat;
+    if (currentValues.Train?.cat != null) document.getElementById('fTrainCat').value = currentValues.Train.cat;
+    if (currentValues.Ativ?.cat != null) document.getElementById('fAtivCat').value = currentValues.Ativ.cat;
+    if (currentValues.Mant?.cat != null) document.getElementById('fMantCat').value = currentValues.Mant.cat;
+    if (currentValues.Doc?.cat != null) document.getElementById('fDocCat').value = currentValues.Doc.cat;
 
-    if (currentValues.Audit.status != null) document.getElementById('fAuditStatus').value = currentValues.Audit.status;
-    if (currentValues.Ativ.status != null) document.getElementById('fAtivStatus').value = currentValues.Ativ.status;
-    if (currentValues.Mant.status != null) document.getElementById('fMantStatus').value = currentValues.Mant.status;
-    if (currentValues.Doc.status != null) document.getElementById('fDocStatus').value = currentValues.Doc.status;
+    if (currentValues.Audit?.status != null) document.getElementById('fAuditStatus').value = currentValues.Audit.status;
+    if (currentValues.Train?.status != null) document.getElementById('fTrainStatus').value = currentValues.Train.status;
+    if (currentValues.Ativ?.status != null) document.getElementById('fAtivStatus').value = currentValues.Ativ.status;
+    if (currentValues.Mant?.status != null) document.getElementById('fMantStatus').value = currentValues.Mant.status;
+    if (currentValues.Doc?.status != null) document.getElementById('fDocStatus').value = currentValues.Doc.status;
 
-    if (currentValues.Audit.marcador != null) document.getElementById('fAuditMarcador').value = currentValues.Audit.marcador;
-    if (currentValues.Ativ.marcador != null) document.getElementById('fAtivMarcador').value = currentValues.Ativ.marcador;
-    if (currentValues.Mant.marcador != null) document.getElementById('fMantMarcador').value = currentValues.Mant.marcador;
-    if (currentValues.Doc.marcador != null) document.getElementById('fDocMarcador').value = currentValues.Doc.marcador;
+    if (currentValues.Audit?.marcador != null) document.getElementById('fAuditMarcador').value = currentValues.Audit.marcador;
+    if (currentValues.Train?.marcador != null) document.getElementById('fTrainMarcador').value = currentValues.Train.marcador;
+    if (currentValues.Ativ?.marcador != null) document.getElementById('fAtivMarcador').value = currentValues.Ativ.marcador;
+    if (currentValues.Mant?.marcador != null) document.getElementById('fMantMarcador').value = currentValues.Mant.marcador;
+    if (currentValues.Doc?.marcador != null) document.getElementById('fDocMarcador').value = currentValues.Doc.marcador;
 
     if (currentValues.Mant.tipo != null) document.getElementById('fMantTipo').value = currentValues.Mant.tipo;
 
@@ -4898,6 +5131,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     // Funções auxiliares para obter prefixos de ID corretos
     function getTabPrefix(tab) {
         if (tab === 'auditoria') return 'audit';
+        if (tab === 'treinamentos') return 'train';
         if (tab === 'atividades') return 'ativ';
         if (tab === 'manutencao') return 'mant';
         if (tab === 'documentos') return 'doc';
@@ -4971,6 +5205,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     function getItemsForFilterPrefix(prefix) {
         let items = [];
         if (prefix === 'Audit') items = audits || [];
+        else if (prefix === 'Train') items = trainings || [];
         else if (prefix === 'Ativ') items = activities || [];
         else if (prefix === 'Mant') items = maintenances || [];
         else if (prefix === 'Doc') items = documents || [];
@@ -5028,34 +5263,34 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     function passesFilters(prefix, item, excluded = {}) {
     // 1. Setor
-    if (!excluded.setor) {
-        const setor = document.getElementById(`f${prefix}Setor`)?.value || '';
-        if (setor && (item.setor || '') !== setor) return false;
-    }
+        if (!excluded.setor) {
+            const setor = document.getElementById(`f${prefix}Setor`)?.value || '';
+            if (setor && (item.setor || '') !== setor) return false;
+        }
 
     // 2. Categoria
-    if (!excluded.cat) {
-        const cat = document.getElementById(`f${prefix}Cat`)?.value || '';
-        if (cat && (item.categoria || '') !== cat) return false;
-    }
+        if (!excluded.cat) {
+            const cat = document.getElementById(`f${prefix}Cat`)?.value || '';
+            if (cat && (item.categoria || '') !== cat) return false;
+        }
 
     // 3. Subcategoria / Item / Equipamento
-    if (!excluded.sub) {
-        let subVal = '';
-        if (prefix === 'Mant') subVal = document.getElementById('fMantItem')?.value || '';
-        else subVal = document.getElementById(`f${prefix}Sub`)?.value || '';
+        if (!excluded.sub) {
+            let subVal = '';
+            if (prefix === 'Mant') subVal = document.getElementById('fMantItem')?.value || '';
+            else subVal = document.getElementById(`f${prefix}Sub`)?.value || '';
 
-        if (subVal) {
-            const itemSub = (prefix === 'Mant') ? (item.item || '') : (item.subcategoria || '');
-            if (itemSub !== subVal) return false;
+            if (subVal) {
+                const itemSub = (prefix === 'Mant') ? (item.item || '') : (item.subcategoria || '');
+                if (itemSub !== subVal) return false;
+            }
         }
-    }
 
     // 4. Status
-    if (!excluded.status) {
-        const stat = document.getElementById(`f${prefix}Status`)?.value || '';
-        if (stat && (item.status || '') !== stat) return false;
-    }
+        if (!excluded.status) {
+            const stat = document.getElementById(`f${prefix}Status`)?.value || '';
+            if (stat && (item.status || '') !== stat) return false;
+        }
 
     // 5. Responsável (Adicionado/Corrigido para suportar Multi-select)
     if (!excluded.responsavel) {
@@ -5071,8 +5306,17 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         }
     }
 
-    // 6. Revisor (Exceto para Manutenção)
-    if (prefix !== 'Mant' && !excluded.revisor) {
+    // 6. Instrutor (Apenas para Treinamentos)
+    if (prefix === 'Train' && !excluded.instrutor) {
+        const filterInstr = document.getElementById('fTrainAuditor')?.value || '';
+        if (filterInstr) {
+            const itemInstr = (item.instrutor || '');
+            if (itemInstr !== filterInstr) return false;
+        }
+    }
+    
+    // 7. Revisor (Exceto para Manutenção e Treinamentos)
+    if (prefix !== 'Mant' && prefix !== 'Train' && !excluded.revisor) {
         const filterRev = document.getElementById(`f${prefix}Revisor`)?.value || '';
         if (filterRev) {
             const itemRev = (item.revisor || '');
@@ -5082,31 +5326,31 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
 
     // 7. Marcador
-    if (!excluded.marcador) {
-        const marcador = document.getElementById(`f${prefix}Marcador`)?.value || '';
-        if (marcador && (item.marcador || '') !== marcador) return false;
-    }
+        if (!excluded.marcador) {
+            const marcador = document.getElementById(`f${prefix}Marcador`)?.value || '';
+            if (marcador && (item.marcador || '') !== marcador) return false;
+        }
 
     // 8. Tipo (Somente Manutenção)
-    if (prefix === 'Mant' && !excluded.tipo) {
-        const tipo = document.getElementById('fMantTipo')?.value || '';
-        if (tipo && (item.tipo || '') !== tipo) return false;
-    }
+        if (prefix === 'Mant' && !excluded.tipo) {
+            const tipo = document.getElementById('fMantTipo')?.value || '';
+            if (tipo && (item.tipo || '') !== tipo) return false;
+        }
 
     // 9. Data
-    if (!excluded.date) {
-        if (!passesDateFilter(prefix, item)) return false;
-    }
+        if (!excluded.date) {
+            if (!passesDateFilter(prefix, item)) return false;
+        }
 
     // 10. Título (Lupa Search)
-    if (!excluded.title) {
-        if (titleSearchCardsEnabled && titleSearchCardsQuery) {
-            if (!normalizeText(item.titulo || '').includes(titleSearchCardsQuery)) return false;
+        if (!excluded.title) {
+            if (titleSearchCardsEnabled && titleSearchCardsQuery) {
+                if (!normalizeText(item.titulo || '').includes(titleSearchCardsQuery)) return false;
+            }
         }
-    }
 
-    return true;
-}
+        return true;
+    }
 
     function uniq(list) {
         return [...new Set((list || []).filter(Boolean))];
@@ -5146,79 +5390,79 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
 
     function updateFilterFacetOptions(prefix) {
-    // Setor
-    {
-        const el = document.getElementById(`f${prefix}Setor`);
-        const currentValue = el?.value || '';
-        const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { setor: true }));
-        const present = new Set(uniq(items.map(it => it.setor || '').filter(Boolean)));
-        const master = getMasterSetores();
-        const ordered = master.filter(v => present.has(v));
-        const extras = [...present].filter(v => !master.includes(v)).sort();
-        setSelectOptions(el, 'Setor: Todos', [...ordered, ...extras], currentValue);
-    }
-
-    // Categoria
-    {
-        const el = document.getElementById(`f${prefix}Cat`);
-        const currentValue = el?.value || '';
-        const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { cat: true }));
-        const present = new Set(uniq(items.map(it => it.categoria || '').filter(Boolean)));
-        const master = getMasterCategorias(prefix);
-        const ordered = master.filter(v => present.has(v));
-        const extras = [...present].filter(v => !master.includes(v)).sort();
-        setSelectOptions(el, 'Categoria: Todas', [...ordered, ...extras], currentValue);
-    }
-
-    // Status
-    {
-        const el = document.getElementById(`f${prefix}Status`);
-        const currentValue = el?.value || '';
-        const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { status: true }));
-        const present = new Set(uniq(items.map(it => it.status || '').filter(Boolean)));
-        const master = getMasterStatus(prefix).map(s => s.name).filter(Boolean);
-        const ordered = master.filter(v => present.has(v));
-        const extras = [...present].filter(v => !master.includes(v)).sort();
-        setSelectOptions(el, 'Status: Todos', [...ordered, ...extras], currentValue);
-    }
-
-    // Marcador
-    {
-        const el = document.getElementById(`f${prefix}Marcador`);
-        if (el) {
+        // Setor
+        {
+            const el = document.getElementById(`f${prefix}Setor`);
             const currentValue = el?.value || '';
-            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { marcador: true }));
-            const present = new Set(uniq(items.map(it => it.marcador || '').filter(Boolean)));
-            const master = getMasterMarcadores(prefix).map(m => m.name).filter(Boolean);
+            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { setor: true }));
+            const present = new Set(uniq(items.map(it => it.setor || '').filter(Boolean)));
+            const master = getMasterSetores();
             const ordered = master.filter(v => present.has(v));
             const extras = [...present].filter(v => !master.includes(v)).sort();
-            let options = [...ordered, ...extras];
+            setSelectOptions(el, 'Setor: Todos', [...ordered, ...extras], currentValue);
+        }
 
-            if (currentValue && !options.includes(currentValue)) {
-                options = [currentValue, ...options];
-            }
+        // Categoria
+        {
+            const el = document.getElementById(`f${prefix}Cat`);
+            const currentValue = el?.value || '';
+            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { cat: true }));
+            const present = new Set(uniq(items.map(it => it.categoria || '').filter(Boolean)));
+            const master = getMasterCategorias(prefix);
+            const ordered = master.filter(v => present.has(v));
+            const extras = [...present].filter(v => !master.includes(v)).sort();
+            setSelectOptions(el, 'Categoria: Todas', [...ordered, ...extras], currentValue);
+        }
 
-            if (options.length > 0 || currentValue) {
-                el.style.display = 'block';
-                setSelectOptions(el, 'Marcador: Todos', options, currentValue || '');
-            } else {
-                el.style.display = 'none';
-                el.value = '';
+        // Status
+        {
+            const el = document.getElementById(`f${prefix}Status`);
+            const currentValue = el?.value || '';
+            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { status: true }));
+            const present = new Set(uniq(items.map(it => it.status || '').filter(Boolean)));
+            const master = getMasterStatus(prefix).map(s => s.name).filter(Boolean);
+            const ordered = master.filter(v => present.has(v));
+            const extras = [...present].filter(v => !master.includes(v)).sort();
+            setSelectOptions(el, 'Status: Todos', [...ordered, ...extras], currentValue);
+        }
+
+        // Marcador
+        {
+            const el = document.getElementById(`f${prefix}Marcador`);
+            if (el) {
+                const currentValue = el?.value || '';
+                const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { marcador: true }));
+                const present = new Set(uniq(items.map(it => it.marcador || '').filter(Boolean)));
+                const master = getMasterMarcadores(prefix).map(m => m.name).filter(Boolean);
+                const ordered = master.filter(v => present.has(v));
+                const extras = [...present].filter(v => !master.includes(v)).sort();
+                let options = [...ordered, ...extras];
+
+                if (currentValue && !options.includes(currentValue)) {
+                    options = [currentValue, ...options];
+                }
+
+                if (options.length > 0 || currentValue) {
+                    el.style.display = 'block';
+                    setSelectOptions(el, 'Marcador: Todos', options, currentValue || '');
+                } else {
+                    el.style.display = 'none';
+                    el.value = '';
+                }
             }
         }
-    }
 
-    // Tipo (Manutenção)
-    if (prefix === 'Mant') {
-        const el = document.getElementById('fMantTipo');
-        const currentValue = el?.value || '';
-        const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { tipo: true }));
-        const present = new Set(uniq(items.map(it => it.tipo || '').filter(Boolean)));
-        const master = (masterLists?.mantTipos || []).slice();
-        const ordered = master.filter(v => present.has(v));
-        const extras = [...present].filter(v => !master.includes(v)).sort();
-        setSelectOptions(el, 'Tipo: Todos', [...ordered, ...extras], currentValue);
-    }
+        // Tipo (Manutenção)
+        if (prefix === 'Mant') {
+            const el = document.getElementById('fMantTipo');
+            const currentValue = el?.value || '';
+            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { tipo: true }));
+            const present = new Set(uniq(items.map(it => it.tipo || '').filter(Boolean)));
+            const master = (masterLists?.mantTipos || []).slice();
+            const ordered = master.filter(v => present.has(v));
+            const extras = [...present].filter(v => !master.includes(v)).sort();
+            setSelectOptions(el, 'Tipo: Todos', [...ordered, ...extras], currentValue);
+        }
 
     // Responsável
     {
@@ -5279,8 +5523,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
 
     // Subcategoria/Item
-    updateFilterSubcatOptions(prefix);
-}
+        updateFilterSubcatOptions(prefix);
+    }
 
     function updateFilterSubcatOptions(prefix) {
         const catSelect = document.getElementById(`f${prefix}Cat`);
@@ -5388,6 +5632,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     const titles = { 
         dashboard: 'Dashboard', 
         auditoria: 'Auditoria', 
+        treinamentos: 'Treinamentos',
         atividades: 'Gestão de Atividades', 
         manutencao: 'Manutenção',
         documentos: 'Documentos', 
@@ -5396,6 +5641,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     const subtitles = { 
         dashboard: 'Visão geral e indicadores de desempenho', 
         auditoria: 'Planejamento e execução de auditorias', 
+        treinamentos: 'Planejamento e execução de treinamentos',
         atividades: 'Controle de tarefas, reuniões e projetos',
         manutencao: 'Controle preventivo de equipamentos',
         documentos: 'Gerenciamento e controle de revisões', 
@@ -5436,11 +5682,18 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     const cfgEl = document.getElementById('configContent');
     if (cfgEl) {
         cfgEl.style.display = isConfig ? 'block' : 'none';
-        if (isConfig) renderusersConfigTable();
+        if (isConfig) {
+            renderusersConfigTable();
+            // Atualiza o botão de setores se necessário
+            if (masterLists && masterLists.setores && typeof updateSetoresButtonText === 'function') {
+                updateSetoresButtonText();
+            }
+        }
     }
 
     // 5. Ativação dos grupos de filtros específicos
     document.getElementById('filtersAuditoria').style.display = tab === 'auditoria' ? 'flex' : 'none';
+    document.getElementById('filtersTreinamentos').style.display = tab === 'treinamentos' ? 'flex' : 'none';
     document.getElementById('filtersAtividades').style.display = tab === 'atividades' ? 'flex' : 'none';
     document.getElementById('filtersManutencao').style.display = tab === 'manutencao' ? 'flex' : 'none';
     document.getElementById('filtersDocumentos').style.display = tab === 'documentos' ? 'flex' : 'none'; 
@@ -5461,6 +5714,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
     document.getElementById('tabDashboard').onclick = () => switchTab('dashboard'); 
     document.getElementById('tabAuditoria').onclick = () => switchTab('auditoria');
+    document.getElementById('tabTreinamentos').onclick = () => switchTab('treinamentos');
     document.getElementById('tabAtividades').onclick = () => switchTab('atividades');
     document.getElementById('tabManutencao').onclick = () => switchTab('manutencao');
     document.getElementById('tabDocumentos').onclick = () => switchTab('documentos'); 
@@ -5522,6 +5776,13 @@ function resetModal(prefix) {
         document.getElementById('auditAuditor').value = '';
         const defaultAuditCat = masterLists.auditCategorias[0] || '';
         document.getElementById('auditCategoria').value = defaultAuditCat;
+    } else if (prefix === 'train') {
+        document.getElementById('trainDataPublicacao').value = today();
+        document.getElementById('trainDataPrevisao').value = today();
+        document.getElementById('trainFlagDias').value = 7;
+        document.getElementById('trainInstrutor').value = '';
+        const defaultTrainCat = masterLists.trainCategorias[0] || '';
+        document.getElementById('trainCategoria').value = defaultTrainCat;
     } else if (prefix === 'ativ') {
         document.getElementById('ativDataInicio').value = today();
         document.getElementById('ativDataConclusao').value = today();
@@ -5555,29 +5816,6 @@ function resetModal(prefix) {
 }
 
 
-document.getElementById('addBtn').onclick = () => {
-    // Limpa o item original para garantir que um novo item não registre "mudanças"
-    originalItem = null;
-
-    if (currentTab === 'auditoria') {
-        editingAuditId = null;
-        resetModal('audit');
-        document.getElementById('modalAuditoria').style.display = 'flex';
-    } else if (currentTab === 'atividades') {
-        editingAtivId = null;
-        resetModal('ativ');
-        document.getElementById('modalAtividades').style.display = 'flex';
-    } else if (currentTab === 'manutencao') {
-        editingMantId = null;
-        resetModal('mant');
-        document.getElementById('modalManutencao').style.display = 'flex';
-    } else if (currentTab === 'documentos') { 
-        editingDocId = null;
-        resetModal('doc');
-        document.getElementById('modalDocumentos').style.display = 'flex';
-    }
-};
-
     document.getElementById('addBtn').onclick = () => {
         originalItem = null;
     
@@ -5585,6 +5823,10 @@ document.getElementById('addBtn').onclick = () => {
             editingAuditId = null;
             resetModal('audit');
             document.getElementById('modalAuditoria').style.display = 'flex';
+        } else if (currentTab === 'treinamentos') {
+            editingTrainId = null;
+            resetModal('train');
+            document.getElementById('modalTreinamentos').style.display = 'flex';
         } else if (currentTab === 'atividades') {
             editingAtivId = null;
             resetModal('ativ');
@@ -5702,6 +5944,81 @@ document.getElementById('addBtn').onclick = () => {
     } catch (error) {
         console.error('Erro ao salvar auditoria:', error);
         alert('Erro ao salvar auditoria. Dados foram salvos localmente.');
+    }
+}
+
+    function saveTraining() {
+    try {
+        const isNew = !editingTrainId;
+        let item = isNew ? { 
+            id: Date.now() + Math.floor(Math.random() * 1000), // ID único com salt
+            historico: [], 
+            type: 'train' 
+        } : trainings.find(t => t.id === editingTrainId);
+
+        if (!item) {
+            console.error('Item de treinamento não encontrado');
+            return;
+        }
+
+        const selectedTrainMarkerName = document.getElementById('trainMarcador').value;
+        const trainMarkerObj = (masterLists.trainMarcadores || []).find(m => m.name === selectedTrainMarkerName);
+
+        const newItem = {
+            ...item,
+            titulo: document.getElementById('trainTitulo').value,
+            descricao: document.getElementById('trainDescricao').value,
+            setor: document.getElementById('trainSetor').value, 
+            categoria: document.getElementById('trainCategoria').value,
+            subcategoria: document.getElementById('trainSub').value, 
+            status: document.getElementById('trainStatus').value,
+            dataPublicacao: document.getElementById('trainDataPublicacao').value,
+            dataPrevisao: document.getElementById('trainDataPrevisao').value,
+            responsavel: document.getElementById('trainResponsavel').value || '',
+            instrutor: document.getElementById('trainInstrutor').value || '',
+            flagDias: Number(document.getElementById('trainFlagDias').value) || 7,
+            marcador: trainMarkerObj ? trainMarkerObj.name : '',
+            marcadorCor: trainMarkerObj ? trainMarkerObj.color : 'default',
+            anexos: getAnexos('train')
+        };
+
+        const changes = calculateChanges(originalItem || {}, newItem);
+        
+        // Sincroniza referências em outros cards quando há mudança em campos de lista suspensa
+        if (!isNew && originalItem) {
+            const fieldsToSync = ['setor', 'categoria', 'subcategoria'];
+            fieldsToSync.forEach(field => {
+                if (originalItem[field] !== newItem[field]) {
+                    syncReferenceAcrossCards('train', field, originalItem[field], newItem[field]);
+                }
+            });
+        }
+        
+        if (isNew) {
+            newItem.historico.push({ 
+                timestamp: new Date().toISOString(), 
+                acao: 'Criação do Registro', 
+                usuario: currentuser?.name || 'Sistema' 
+            });
+            trainings.push(newItem);
+        } else if (changes.length > 0 || changes.silentChanged) {
+            if (changes.length > 0) {
+                newItem.historico.push({ 
+                    timestamp: new Date().toISOString(), 
+                    acao: 'Edição de Dados', 
+                    usuario: currentuser?.name || 'Sistema',
+                    detalhes: changes 
+                });
+            }
+            trainings = trainings.map(t => t.id === editingTrainId ? newItem : t);
+        }
+
+        saveAll(); 
+        closeModal('modalTreinamentos'); 
+        renderCards();
+    } catch (error) {
+        console.error('Erro ao salvar treinamento:', error);
+        alert('Erro ao salvar treinamento. Dados foram salvos localmente.');
     }
 }
 
@@ -5954,6 +6271,9 @@ document.getElementById('addBtn').onclick = () => {
         if (tab === 'audit' || tab === 'auditoria') {
             item = audits.find(a => a.id === id);
             finalTab = 'auditoria';
+        } else if (tab === 'train' || tab === 'treinamentos') {
+            item = trainings.find(t => t.id === id);
+            finalTab = 'treinamentos';
         } else if (tab === 'ativ' || tab === 'atividades') {
             item = activities.find(a => a.id === id);
             finalTab = 'atividades';
@@ -5970,6 +6290,9 @@ document.getElementById('addBtn').onclick = () => {
             item = audits.find(a => a.id === id);
             if (item) finalTab = 'auditoria';
             else {
+                item = trainings.find(t => t.id === id);
+                if (item) finalTab = 'treinamentos';
+            else {
                 item = activities.find(a => a.id === id);
                 if (item) finalTab = 'atividades';
                 else {
@@ -5978,6 +6301,7 @@ document.getElementById('addBtn').onclick = () => {
                     else {
                         item = documents.find(d => d.id === id);
                         if (item) finalTab = 'documentos';
+                        }
                     }
                 }
             }
@@ -6023,6 +6347,23 @@ document.getElementById('addBtn').onclick = () => {
             document.getElementById('ativMarcador').value = item.marcador || '';
             restoreAnexos('ativ', item.anexos);
             document.getElementById('modalAtividades').style.display = 'flex';
+        } else if (finalTab === 'treinamentos') {
+            editingTrainId = id;
+            document.getElementById('trainTitulo').value = item.titulo;
+            document.getElementById('trainDescricao').value = item.descricao;
+            document.getElementById('trainSetor').value = item.setor || ''; 
+            document.getElementById('trainCategoria').value = item.categoria;
+            onCategoryChange('train'); 
+            document.getElementById('trainSub').value = item.subcategoria || ''; 
+            document.getElementById('trainStatus').value = item.status;
+            document.getElementById('trainDataPublicacao').value = item.dataPublicacao;
+            document.getElementById('trainDataPrevisao').value = item.dataPrevisao;
+            document.getElementById('trainResponsavel').value = item.responsavel || '';
+            document.getElementById('trainInstrutor').value = item.instrutor || '';
+            document.getElementById('trainFlagDias').value = item.flagDias;
+            document.getElementById('trainMarcador').value = item.marcador || '';
+            restoreAnexos('train', item.anexos);
+            document.getElementById('modalTreinamentos').style.display = 'flex';
         } else if (finalTab === 'manutencao') {
             editingMantId = id;
             document.getElementById('mantTitulo').value = item.titulo;
@@ -6146,6 +6487,7 @@ function renderViewContent(id, tab) {
     
     // Normaliza o tab para os valores esperados
     if (tab === 'audit') finalTab = 'auditoria';
+    else if (tab === 'train') finalTab = 'treinamentos';
     else if (tab === 'ativ') finalTab = 'atividades';
     else if (tab === 'mant') finalTab = 'manutencao';
     else if (tab === 'doc') finalTab = 'documentos';
@@ -6154,6 +6496,9 @@ function renderViewContent(id, tab) {
     if (finalTab === 'auditoria') { 
         item = audits.find(i => i.id === id); 
         statusList = masterLists.auditStatus; 
+    } else if (finalTab === 'treinamentos') { 
+        item = trainings.find(i => i.id === id); 
+        statusList = masterLists.trainStatus; 
     } else if (finalTab === 'atividades') { 
         item = activities.find(i => i.id === id); 
         statusList = masterLists.ativStatus; 
@@ -6539,7 +6884,7 @@ function renderViewContent(id, tab) {
             const isUser = currentListKey === 'responsaveis' && userNames.has(itemVal);
             const canEdit = !isUser;
             const canDelete = !isUser;
-            
+    
             body.innerHTML += `<tr>
                 <td>${displayHtml}${isUser ? ' <span style="color: #666; font-size: 11px;">(Usuário cadastrado)</span>' : ''}</td>
                 <td>
@@ -6582,7 +6927,7 @@ function renderViewContent(id, tab) {
             };
         }
         
-                
+        
         document.getElementById('modalListManager').style.display = 'flex';
     }
     
@@ -7176,18 +7521,18 @@ function renderViewContent(id, tab) {
     }
     
     function getFilteredNotifications(data, tabType) {
-    const notifications = [];
+        const notifications = [];
     
     // CAPTURA OS FILTROS ATIVOS NA ABA ATUAL
     const prefix = getFilterPrefixForTab(currentTab);
     const filterResponsavel = document.getElementById(`f${prefix}Responsavel`)?.value || '';
     const filterRevisor = document.getElementById(`f${prefix}Revisor`)?.value || '';
-    
-    data.forEach(item => {
+        
+        data.forEach(item => {
         // 1. Excluir itens finalizados (Concluído ou Cancelado)
-        if (item.status === 'Concluído' || item.status === 'Cancelado') {
-            return;
-        }
+            if (item.status === 'Concluído' || item.status === 'Cancelado') {
+                return;
+            }
 
         // 2. FILTRO DE RESPONSÁVEL (Respeita a seleção da tela)
         if (filterResponsavel) {
@@ -7204,59 +7549,59 @@ function renderViewContent(id, tab) {
             if (!itemRev.includes(normalizeText(filterRevisor))) {
                 return;
             }
-        }
-        
-        const deadlineField = getDeadlineFieldForTab(tabType, item);
-        if (!deadlineField) return;
-        
-        const flagDays = item.flagDias || (tabType === 'ativ' ? 3 : 7);
-        const d = daysDiff(deadlineField);
-        
-        // Somente atrasados e alertas
-        if (d < 0) {
-            // ATRASADO
-            notifications.push({
-                id: item.id,
-                type: tabType,
-                title: item.titulo,
-                status: item.status,
-                statusColor: getStatusColor(item.status, tabType),
-                setor: item.setor,
-                categoria: item.categoria,
-                subcatOrItem: tabType === 'mant' ? item.item : item.subcategoria,
+            }
+            
+            const deadlineField = getDeadlineFieldForTab(tabType, item);
+            if (!deadlineField) return;
+            
+            const flagDays = item.flagDias || (tabType === 'ativ' ? 3 : 7);
+            const d = daysDiff(deadlineField);
+            
+            // Somente atrasados e alertas
+            if (d < 0) {
+                // ATRASADO
+                notifications.push({
+                    id: item.id,
+                    type: tabType,
+                    title: item.titulo,
+                    status: item.status,
+                    statusColor: getStatusColor(item.status, tabType),
+                    setor: item.setor,
+                    categoria: item.categoria,
+                    subcatOrItem: tabType === 'mant' ? item.item : item.subcategoria,
                 responsavel: tabType === 'mant' ? (item.responsavelTecnico || item.responsavelManutencao || '') : (item.responsavel || ''),
-                marcador: item.marcador || '',
-                marcadorCor: item.marcadorCor || 'default',
-                dateField: deadlineField,
-                priority: 0, // 0 = atrasado (maior prioridade)
-                indicatorType: 'overdue',
-                daysInfo: `${Math.abs(d)} dia${Math.abs(d) > 1 ? 's' : ''} atrasado`
-            });
-        } else if (d <= flagDays) {
-            // ALERTA
-            notifications.push({
-                id: item.id,
-                type: tabType,
-                title: item.titulo,
-                status: item.status,
-                statusColor: getStatusColor(item.status, tabType),
-                setor: item.setor,
-                categoria: item.categoria,
-                subcatOrItem: tabType === 'mant' ? item.item : item.subcategoria,
+                    marcador: item.marcador || '',
+                    marcadorCor: item.marcadorCor || 'default',
+                    dateField: deadlineField,
+                    priority: 0, // 0 = atrasado (maior prioridade)
+                    indicatorType: 'overdue',
+                    daysInfo: `${Math.abs(d)} dia${Math.abs(d) > 1 ? 's' : ''} atrasado`
+                });
+            } else if (d <= flagDays) {
+                // ALERTA
+                notifications.push({
+                    id: item.id,
+                    type: tabType,
+                    title: item.titulo,
+                    status: item.status,
+                    statusColor: getStatusColor(item.status, tabType),
+                    setor: item.setor,
+                    categoria: item.categoria,
+                    subcatOrItem: tabType === 'mant' ? item.item : item.subcategoria,
                 responsavel: tabType === 'mant' ? (item.responsavelTecnico || item.responsavelManutencao || '') : (item.responsavel || ''),
-                marcador: item.marcador || '',
-                marcadorCor: item.marcadorCor || 'default',
-                dateField: deadlineField,
-                priority: 1, // 1 = alerta
-                indicatorType: 'alert',
-                daysInfo: `${d} dia${d > 1 ? 's' : ''} para vencer`
-            });
-        }
-    });
+                    marcador: item.marcador || '',
+                    marcadorCor: item.marcadorCor || 'default',
+                    dateField: deadlineField,
+                    priority: 1, // 1 = alerta
+                    indicatorType: 'alert',
+                    daysInfo: `${d} dia${d > 1 ? 's' : ''} para vencer`
+                });
+            }
+        });
+        
+        return notifications;
+    }
     
-    return notifications;
-}
-
     function getDeadlineFieldForTab(tabType, item) {
         if (tabType === 'audit') return item.dataPrevisao;
         if (tabType === 'ativ') return item.dataConclusao;
@@ -7378,6 +7723,9 @@ function renderViewContent(id, tab) {
     // --- CONFIGURAÇÕES: GESTÃO DE USUÁRIOS ---
     let editinguserIndex = null; // índice em users (exceto admin) para edição
 
+    // Variável para armazenar setores selecionados temporariamente no modal
+    let tempSelectedSetores = [];
+
     function resetConfigForm() {
         document.getElementById('cfgname').value = '';
         document.getElementById('cfguser').value = '';
@@ -7389,8 +7737,133 @@ function renderViewContent(id, tab) {
         document.getElementById('cfgIsAdmin').value = 'false';
         document.querySelectorAll('.cfg-tab').forEach(chk => {
             chk.checked = (chk.value === 'dashboard' || chk.value === 'auditoria');
+            chk.disabled = false;
         });
+        tempSelectedSetores = [];
+        updateSetoresButtonText();
         editinguserIndex = null;
+        
+        // Adiciona listener para canManageLists
+        const canManageInput = document.getElementById('cfgCanManageLists');
+        if (canManageInput) {
+            canManageInput.onchange = function() {
+                updateSetoresButtonText();
+            };
+        }
+    }
+
+    function openSetoresModal() {
+        const canManageLists = document.getElementById('cfgCanManageLists')?.value === 'true';
+        const setores = masterLists.setores || [];
+        
+        // Se canManageLists está marcado, todos os setores são permitidos
+        if (canManageLists) {
+            tempSelectedSetores = setores.slice();
+        } else if (tempSelectedSetores.length === 0) {
+            // Se não há setores temporários, tenta carregar do usuário sendo editado
+            if (editinguserIndex !== null && users[editinguserIndex] && Array.isArray(users[editinguserIndex].allowedSetores)) {
+                tempSelectedSetores = users[editinguserIndex].allowedSetores.slice();
+            }
+        }
+        
+        renderModalSetores();
+        document.getElementById('modalSetoresPermissoes').style.display = 'flex';
+    }
+
+    function renderModalSetores() {
+        const container = document.getElementById('modalSetoresList');
+        if (!container) return;
+        
+        const setores = masterLists.setores || [];
+        const canManageLists = document.getElementById('cfgCanManageLists')?.value === 'true';
+        
+        container.innerHTML = '';
+        
+        if (setores.length === 0) {
+            container.innerHTML = '<p style="color:#9ca3af; font-size:13px; text-align:center; padding:20px;">Nenhum setor cadastrado. Adicione setores primeiro.</p>';
+            return;
+        }
+        
+        setores.forEach(setor => {
+            const isChecked = tempSelectedSetores.includes(setor);
+            const checkbox = document.createElement('label');
+            checkbox.style.cssText = 'display:flex; align-items:center; padding:10px 12px; margin-bottom:6px; background:white; border:1px solid #e5e7eb; border-radius:6px; cursor:pointer; transition:all 0.2s ease;';
+            checkbox.onmouseover = function() { if (!canManageLists) this.style.background = '#f9fafb'; };
+            checkbox.onmouseout = function() { this.style.background = 'white'; };
+            checkbox.innerHTML = `
+                <input type="checkbox" class="modal-setor-checkbox" value="${setor}" ${isChecked ? 'checked' : ''} ${canManageLists ? 'disabled' : ''} style="margin-right:10px; width:18px; height:18px; cursor:pointer;">
+                <span style="flex:1; font-size:14px; color:#1f2937;">${setor}</span>
+            `;
+            if (!canManageLists) {
+                checkbox.onclick = function(e) {
+                    if (e.target.type !== 'checkbox') {
+                        const checkbox = this.querySelector('input[type="checkbox"]');
+                        checkbox.checked = !checkbox.checked;
+                        updateTempSelectedSetores();
+                    } else {
+                        updateTempSelectedSetores();
+                    }
+                };
+            }
+            container.appendChild(checkbox);
+        });
+    }
+
+    function updateTempSelectedSetores() {
+        tempSelectedSetores = Array.from(document.querySelectorAll('.modal-setor-checkbox'))
+            .filter(chk => chk.checked && !chk.disabled)
+            .map(chk => chk.value);
+    }
+
+    function selectAllSetores() {
+        const canManageLists = document.getElementById('cfgCanManageLists')?.value === 'true';
+        if (canManageLists) return; // Não faz nada se canManageLists está marcado
+        
+        document.querySelectorAll('.modal-setor-checkbox').forEach(chk => {
+            if (!chk.disabled) chk.checked = true;
+        });
+        updateTempSelectedSetores();
+    }
+
+    function deselectAllSetores() {
+        const canManageLists = document.getElementById('cfgCanManageLists')?.value === 'true';
+        if (canManageLists) return; // Não faz nada se canManageLists está marcado
+        
+        document.querySelectorAll('.modal-setor-checkbox').forEach(chk => {
+            if (!chk.disabled) chk.checked = false;
+        });
+        updateTempSelectedSetores();
+    }
+
+    function saveSetoresPermissoes() {
+        const canManageLists = document.getElementById('cfgCanManageLists')?.value === 'true';
+        if (canManageLists) {
+            // Se canManageLists está marcado, todos os setores são permitidos
+            tempSelectedSetores = (masterLists.setores || []).slice();
+        } else {
+            updateTempSelectedSetores();
+        }
+        updateSetoresButtonText();
+        closeModal('modalSetoresPermissoes');
+    }
+
+    function updateSetoresButtonText() {
+        const buttonText = document.getElementById('setoresButtonText');
+        if (!buttonText) return;
+        
+        const canManageLists = document.getElementById('cfgCanManageLists')?.value === 'true';
+        const count = tempSelectedSetores.length;
+        const total = (masterLists.setores || []).length;
+        
+        if (canManageLists) {
+            buttonText.textContent = `Todos os Setores (${total})`;
+        } else if (count === 0) {
+            buttonText.textContent = 'Selecionar Setores';
+        } else if (count === total) {
+            buttonText.textContent = `Todos os Setores (${total})`;
+        } else {
+            buttonText.textContent = `${count} de ${total} Setores Selecionados`;
+        }
     }
 
     function renderusersConfigTable() {
@@ -7437,9 +7910,20 @@ function renderViewContent(id, tab) {
         const canManageLists = document.getElementById('cfgCanManageLists').value === 'true';
         const isActive = document.getElementById('cfgStatus').value !== 'false';
         const isAdmin = document.getElementById('cfgIsAdmin').value === 'true';
+        // Coleta abas selecionadas (canManageLists não afeta mais as abas)
         const tabs = Array.from(document.querySelectorAll('.cfg-tab'))
             .filter(chk => chk.checked)
             .map(chk => chk.value);
+        
+        // Coleta setores permitidos
+        let allowedSetores = [];
+        if (canManageLists) {
+            // Se tem permissão de gerenciar listas, permite todos os setores
+            allowedSetores = (masterLists.setores || []).slice();
+        } else {
+            // Usa os setores selecionados no modal
+            allowedSetores = tempSelectedSetores.slice();
+        }
 
         if (!name || !user || (!password && editinguserIndex === null)) {
             alert('Preencha ao menos Nome, Login e Senha (para novos usuários).');
@@ -7465,6 +7949,7 @@ function renderViewContent(id, tab) {
                 canEditCards: canEdit,
                 canDeleteCards: canDelete,
                 canManageLists: canManageLists,
+                allowedSetores: allowedSetores,
                 active: isActive,
                 isAdmin: isAdmin
             });
@@ -7477,6 +7962,7 @@ function renderViewContent(id, tab) {
             u.canEditCards = canEdit;
             u.canDeleteCards = canDelete;
             u.canManageLists = canManageLists;
+            u.allowedSetores = allowedSetores;
             u.active = isActive;
             u.isAdmin = isAdmin;
         }
@@ -7511,7 +7997,20 @@ function renderViewContent(id, tab) {
         const tabs = Array.isArray(u.tabs) && u.tabs.length > 0 ? u.tabs : ['dashboard', 'auditoria'];
         document.querySelectorAll('.cfg-tab').forEach(chk => {
             chk.checked = tabs.includes(chk.value);
+            chk.disabled = false; // canManageLists não afeta mais as abas
         });
+        // Carrega setores permitidos
+        const allowedSetores = Array.isArray(u.allowedSetores) ? u.allowedSetores : [];
+        tempSelectedSetores = allowedSetores.slice();
+        updateSetoresButtonText();
+        
+        // Adiciona listener para canManageLists (apenas para atualizar o botão de setores)
+        const canManageInput = document.getElementById('cfgCanManageLists');
+        if (canManageInput) {
+            canManageInput.onchange = function() {
+                updateSetoresButtonText();
+            };
+        }
     }
 
     async function deleteuserConfig(idx) {
@@ -7707,9 +8206,9 @@ function renderViewContent(id, tab) {
         
         // Também adiciona nomes de usuários cadastrados
         if (typeof users !== 'undefined') {
-            users.forEach(user => {
+        users.forEach(user => {
                 if (user.name) allResponsaveis.add(String(user.name));
-            });
+        });
         }
 
         const sortedUsers = Array.from(allResponsaveis).filter(r => r).sort();
@@ -7723,6 +8222,11 @@ function renderViewContent(id, tab) {
         event.stopPropagation();
         const dropdown = document.getElementById(`${getMultiSelectBaseId(type)}Dropdown`);
         const container = document.getElementById(`${getMultiSelectBaseId(type)}Container`);
+        
+        if (!dropdown || !container) {
+            console.warn(`Multi-select elements not found for type: ${type}`);
+            return;
+        }
         
         if (dropdown.classList.contains('visible')) {
             dropdown.classList.remove('visible');
@@ -7782,7 +8286,7 @@ function renderViewContent(id, tab) {
             document.getElementById(`${baseId}Container`).classList.add('focused');
         }
         
-        renderMultiSelectDropdown(type);
+            renderMultiSelectDropdown(type);
     }
 
     function toggleMultiSelectOption(type, user) {
@@ -7899,7 +8403,7 @@ function renderViewContent(id, tab) {
             }
         }
     });
-
+    
     </script>
 </body>
 </html>
