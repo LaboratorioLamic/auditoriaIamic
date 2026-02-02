@@ -874,6 +874,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
 .modal-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:32px;padding-top:20px;border-top:1px solid var(--border)}
 .btn-cancel{background:#f3f4f6;color:var(--text);padding:12px 24px;border-radius:10px;border:none;font-weight:500;cursor:pointer}
+.btn-duplicate{background:var(--c-yellow);color:#fff;padding:12px 24px;border-radius:10px;border:none;font-weight:500;cursor:pointer;box-shadow:0 4px 12px rgba(250, 204, 21, 0.3)}
+.btn-duplicate:hover{background:#f59e0b;transform:translateY(-1px)}
 .btn-save{background:var(--ind-green);color:#fff;padding:12px 24px;border-radius:10px;border:none;font-weight:500;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.3)}
 .btn-edit{background:var(--c-blue);color:#fff;padding:12px 24px;border-radius:10px;border:none;font-weight:500;cursor:pointer;box-shadow:0 4px 12px rgba(34, 37, 197, 0.3)}
 
@@ -1438,19 +1440,19 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fAuditCat" class="filter-input" onchange="onFilterCategoryChange('Audit')" style="display:none;">
                         <option value="">Categoria: Todas</option>
                     </select>
-                    <select id="fAuditSub" class="filter-input" onchange="renderCards()" style="display:none;">
+                    <select id="fAuditSub" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
                         <option value="">Subcategoria: Todas</option>
                     </select>
-                    <select id="fAuditResponsavel" class="filter-input" onchange="renderCards()">
+                    <select id="fAuditResponsavel" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Responsável: Todos</option>
                     </select>
-                    <select id="fAuditRevisor" class="filter-input" onchange="renderCards()">
+                    <select id="fAuditRevisor" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Revisor: Todos</option>
                     </select>
-                    <select id="fAuditStatus" class="filter-input" onchange="renderCards()">
+                    <select id="fAuditStatus" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Status: Todos</option>
                     </select>
-                    <select id="fAuditMarcador" class="filter-input" onchange="renderCards()" style="display:none;">
+                    <select id="fAuditMarcador" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
                         <option value="">Marcador: Todos</option>
                     </select>
                     
@@ -1463,21 +1465,21 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         </select>
                         
                         <div id="fAuditGroupMonth" style="display:none; gap:4px">
-                            <select id="fAuditMonth" onchange="renderCards()">
+                            <select id="fAuditMonth" onchange="closeFilters(); renderCards()">
                                 <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
                                 <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
                                 <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
                                 <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
                             </select>
-                            <select id="fAuditYearForMonth" onchange="renderCards()"></select>
+                            <select id="fAuditYearForMonth" onchange="closeFilters(); renderCards()"></select>
                         </div>
 
-                        <select id="fAuditYearOnly" style="display:none" onchange="renderCards()"></select>
+                        <select id="fAuditYearOnly" style="display:none" onchange="closeFilters(); renderCards()"></select>
 
                         <div id="fAuditGroupCustom" style="display:none; align-items:center; gap:4px">
-                            <input type="date" id="fAuditDataIni" onchange="renderCards()">
+                            <input type="date" id="fAuditDataIni" onchange="closeFilters(); renderCards()">
                             <span style="color:#ccc">a</span>
-                            <input type="date" id="fAuditDataFim" onchange="renderCards()">
+                            <input type="date" id="fAuditDataFim" onchange="closeFilters(); renderCards()">
                         </div>
                     </div>
             </div>
@@ -1489,19 +1491,19 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fTrainCat" class="filter-input" onchange="onFilterCategoryChange('Train')" style="display:none;">
                         <option value="">Categoria: Todas</option>
                     </select>
-                    <select id="fTrainSub" class="filter-input" onchange="renderCards()" style="display:none;">
+                    <select id="fTrainSub" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
                         <option value="">Subcategoria: Todas</option>
                     </select>
-                    <select id="fTrainResponsavel" class="filter-input" onchange="renderCards()">
+                    <select id="fTrainResponsavel" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Responsável: Todos</option>
                     </select>
-                    <select id="fTrainAuditor" class="filter-input" onchange="renderCards()">
+                    <select id="fTrainAuditor" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Instrutor: Todos</option>
                     </select>
-                    <select id="fTrainStatus" class="filter-input" onchange="renderCards()">
+                    <select id="fTrainStatus" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Status: Todos</option>
                     </select>
-                    <select id="fTrainMarcador" class="filter-input" onchange="renderCards()" style="display:none;">
+                    <select id="fTrainMarcador" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
                         <option value="">Marcador: Todos</option>
                     </select>
                     
@@ -1514,21 +1516,21 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         </select>
                         
                         <div id="fTrainGroupMonth" style="display:none; gap:4px">
-                            <select id="fTrainMonth" onchange="renderCards()">
+                            <select id="fTrainMonth" onchange="closeFilters(); renderCards()">
                                 <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
                                 <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
                                 <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
                                 <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
                             </select>
-                            <select id="fTrainYearForMonth" onchange="renderCards()"></select>
+                            <select id="fTrainYearForMonth" onchange="closeFilters(); renderCards()"></select>
                         </div>
 
-                        <select id="fTrainYearOnly" style="display:none" onchange="renderCards()"></select>
+                        <select id="fTrainYearOnly" style="display:none" onchange="closeFilters(); renderCards()"></select>
 
                         <div id="fTrainGroupCustom" style="display:none; align-items:center; gap:4px">
-                            <input type="date" id="fTrainDataIni" onchange="renderCards()">
+                            <input type="date" id="fTrainDataIni" onchange="closeFilters(); renderCards()">
                             <span>até</span>
-                            <input type="date" id="fTrainDataFim" onchange="renderCards()">
+                            <input type="date" id="fTrainDataFim" onchange="closeFilters(); renderCards()">
                         </div>
                     </div>
                     
@@ -1542,19 +1544,19 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fAtivCat" class="filter-input" onchange="onFilterCategoryChange('Ativ')" style="display:none;">
                         <option value="">Categoria: Todas</option>
                     </select>
-                    <select id="fAtivSub" class="filter-input" onchange="renderCards()" style="display:none;">
+                    <select id="fAtivSub" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
                         <option value="">Subcategoria: Todas</option>
                     </select>
-                    <select id="fAtivResponsavel" class="filter-input" onchange="renderCards()">
+                    <select id="fAtivResponsavel" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Responsável: Todos</option>
                     </select>
-                    <select id="fAtivRevisor" class="filter-input" onchange="renderCards()">
+                    <select id="fAtivRevisor" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Revisor: Todos</option>
                     </select>
-                    <select id="fAtivStatus" class="filter-input" onchange="renderCards()">
+                    <select id="fAtivStatus" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Status: Todos</option>
                     </select>
-                    <select id="fAtivMarcador" class="filter-input" onchange="renderCards()" style="display:none;">
+                    <select id="fAtivMarcador" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
                         <option value="">Marcador: Todos</option>
                     </select>
                     
@@ -1567,21 +1569,21 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         </select>
                         
                         <div id="fAtivGroupMonth" style="display:none; gap:4px">
-                            <select id="fAtivMonth" onchange="renderCards()">
+                            <select id="fAtivMonth" onchange="closeFilters(); renderCards()">
                                 <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
                                 <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
                                 <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
                                 <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
                             </select>
-                            <select id="fAtivYearForMonth" onchange="renderCards()"></select>
+                            <select id="fAtivYearForMonth" onchange="closeFilters(); renderCards()"></select>
                         </div>
 
-                        <select id="fAtivYearOnly" style="display:none" onchange="renderCards()"></select>
+                        <select id="fAtivYearOnly" style="display:none" onchange="closeFilters(); renderCards()"></select>
 
                         <div id="fAtivGroupCustom" style="display:none; align-items:center; gap:4px">
-                            <input type="date" id="fAtivDataIni" onchange="renderCards()">
+                            <input type="date" id="fAtivDataIni" onchange="closeFilters(); renderCards()">
                             <span style="color:#ccc">a</span>
-                            <input type="date" id="fAtivDataFim" onchange="renderCards()">
+                            <input type="date" id="fAtivDataFim" onchange="closeFilters(); renderCards()">
                         </div>
                     </div>
                 </div>
@@ -1593,19 +1595,19 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fMantCat" class="filter-input" onchange="onFilterCategoryChange('Mant')" style="display:none;">
                         <option value="">Categoria: Todas</option>
                     </select>
-                    <select id="fMantItem" class="filter-input" onchange="renderCards()" style="display:none;">
+                    <select id="fMantItem" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
                         <option value="">Item: Todos</option>
                     </select>
-                    <select id="fMantResponsavel" class="filter-input" onchange="renderCards()">
+                    <select id="fMantResponsavel" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Responsável: Todos</option>
                     </select>
                     <select id="fMantTipo" class="filter-input" onchange="renderCards()">
                         <option value="">Tipo: Todos</option>
                     </select>
-                    <select id="fMantStatus" class="filter-input" onchange="renderCards()">
+                    <select id="fMantStatus" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Status: Todos</option>
                     </select>
-                    <select id="fMantMarcador" class="filter-input" onchange="renderCards()" style="display:none;">
+                    <select id="fMantMarcador" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
                         <option value="">Marcador: Todos</option>
                     </select>
                     
@@ -1618,21 +1620,21 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         </select>
 
                         <div id="fMantGroupMonth" style="display:none; gap:4px">
-                            <select id="fMantMonth" onchange="renderCards()">
+                            <select id="fMantMonth" onchange="closeFilters(); renderCards()">
                                 <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
                                 <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
                                 <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
                                 <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
                             </select>
-                            <select id="fMantYearForMonth" onchange="renderCards()"></select>
+                            <select id="fMantYearForMonth" onchange="closeFilters(); renderCards()"></select>
                         </div>
 
-                        <select id="fMantYearOnly" style="display:none" onchange="renderCards()"></select>
+                        <select id="fMantYearOnly" style="display:none" onchange="closeFilters(); renderCards()"></select>
 
                         <div id="fMantGroupCustom" style="display:none; align-items:center; gap:4px">
-                            <input type="date" id="fMantDataIni" onchange="renderCards()">
+                            <input type="date" id="fMantDataIni" onchange="closeFilters(); renderCards()">
                             <span style="color:#ccc">a</span>
-                            <input type="date" id="fMantDataFim" onchange="renderCards()">
+                            <input type="date" id="fMantDataFim" onchange="closeFilters(); renderCards()">
                         </div>
                     </div>
                 </div>
@@ -1644,19 +1646,19 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fDocCat" class="filter-input" onchange="onFilterCategoryChange('Doc')" style="display:none;">
                         <option value="">Categoria: Todas</option>
                     </select>
-                    <select id="fDocSub" class="filter-input" onchange="renderCards()" style="display:none;">
+                    <select id="fDocSub" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
                         <option value="">Subcategoria: Todas</option>
                     </select>
-                    <select id="fDocResponsavel" class="filter-input" onchange="renderCards()">
+                    <select id="fDocResponsavel" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Responsável: Todos</option>
                     </select>
-                    <select id="fDocRevisor" class="filter-input" onchange="renderCards()">
+                    <select id="fDocRevisor" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Revisor: Todos</option>
                     </select>
-                    <select id="fDocStatus" class="filter-input" onchange="renderCards()">
+                    <select id="fDocStatus" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Status: Todos</option>
                     </select>
-                    <select id="fDocMarcador" class="filter-input" onchange="renderCards()" style="display:none;">
+                    <select id="fDocMarcador" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
                         <option value="">Marcador: Todos</option>
                     </select>
                     
@@ -1669,28 +1671,28 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         </select>
 
                         <div id="fDocGroupMonth" style="display:none; gap:4px">
-                            <select id="fDocMonth" onchange="renderCards()">
+                            <select id="fDocMonth" onchange="closeFilters(); renderCards()">
                                 <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
                                 <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
                                 <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
                                 <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
                             </select>
-                            <select id="fDocYearForMonth" onchange="renderCards()"></select>
+                            <select id="fDocYearForMonth" onchange="closeFilters(); renderCards()"></select>
                         </div>
 
-                        <select id="fDocYearOnly" style="display:none" onchange="renderCards()"></select>
+                        <select id="fDocYearOnly" style="display:none" onchange="closeFilters(); renderCards()"></select>
 
                         <div id="fDocGroupCustom" style="display:none; align-items:center; gap:4px">
-                            <input type="date" id="fDocDataIni" onchange="renderCards()">
+                            <input type="date" id="fDocDataIni" onchange="closeFilters(); renderCards()">
                             <span style="color:#ccc">a</span>
-                            <input type="date" id="fDocDataFim" onchange="renderCards()">
+                            <input type="date" id="fDocDataFim" onchange="closeFilters(); renderCards()">
                         </div>
                     </div>
                 </div>
 
                 <div class="filter-actions">
                     <label class="checkbox-wrapper" title="Mostrar itens finalizados">
-                        <input type="checkbox" id="showFinalizedCheckbox" checked onchange="renderCards()">
+                        <input type="checkbox" id="showFinalizedCheckbox" checked onchange="closeFilters(); renderCards()">
                         <span class="checkbox-custom"></span>
                         <span class="checkbox-label">OK</span>
                     </label>
@@ -1931,6 +1933,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             </div>
         </div>
         <div class="modal-actions">
+            <button class="btn-duplicate" onclick="duplicateAudit()">Duplicar</button>
             <button class="btn-cancel" onclick="closeModal('modalAuditoria')">Cancelar</button>
             <button class="btn-save" onclick="saveAudit()">Salvar Registro</button>
         </div>
@@ -2018,6 +2021,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             </div>
         </div>
         <div class="modal-actions">
+            <button class="btn-duplicate" onclick="duplicateTraining()">Duplicar</button>
             <button class="btn-cancel" onclick="closeModal('modalTreinamentos')">Cancelar</button>
             <button class="btn-save" onclick="saveTraining()">Salvar Registro</button>
         </div>
@@ -2107,6 +2111,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             </div>
         </div>
         <div class="modal-actions">
+            <button class="btn-duplicate" onclick="duplicateAtividade()">Duplicar</button>
             <button class="btn-cancel" onclick="closeModal('modalAtividades')">Cancelar</button>
             <button class="btn-save" onclick="saveAtividade()">Salvar Registro</button>
         </div>
@@ -2208,6 +2213,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             </div>
         </div>
         <div class="modal-actions">
+            <button class="btn-duplicate" onclick="duplicateManutencao()">Duplicar</button>
             <button class="btn-cancel" onclick="closeModal('modalManutencao')">Cancelar</button>
             <button class="btn-save" onclick="saveManutencao()">Salvar Registro</button>
         </div>
@@ -2300,6 +2306,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             </div>
         </div>
         <div class="modal-actions">
+            <button class="btn-duplicate" onclick="duplicateDocumento()">Duplicar</button>
             <button class="btn-cancel" onclick="closeModal('modalDocumentos')">Cancelar</button>
             <button class="btn-save" onclick="saveDocumento()">Salvar Registro</button>
         </div>
@@ -2909,6 +2916,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             populateFiltersDropdown();
         }
 
+        closeFilters();
         saveFiltersToLocalStorage();
         renderCards();
     }
@@ -2976,6 +2984,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             populateFiltersDropdownDashboard();
         }
 
+        closeFilters();
         onFilterDashboardChange();
     }
 
@@ -5196,7 +5205,19 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     // NOVO: Filtro de Setor (Setor NÃO afeta a Categoria no cadastro/filtro)
     function onFilterSetorChange(prefix) {
+        closeFilters();
         renderCards();
+    }
+    
+    // Função para fechar a janela de filtros
+    function closeFilters() {
+        // Fechar filtros das abas
+        const dd = document.getElementById('filtersDropdown');
+        if (dd) dd.style.display = 'none';
+        
+        // Fechar filtros do dashboard
+        const ddDash = document.getElementById('filtersDropdownDashboard');
+        if (ddDash) ddDash.style.display = 'none';
     }
     
     // Opções de Subcategoria/Item (FILTROS):
@@ -5582,6 +5603,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         if (!catSelect) return;
 
         updateFilterSubcatOptions(prefix);
+        closeFilters();
         renderCards();
     }
     
@@ -5621,6 +5643,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     // --- TAB CONTROL ---
     function switchTab(tab) {
     currentTab = tab;
+    
+    // Fechar janela de filtros ao mudar de aba
+    closeFilters();
     
     // 1. Gerenciamento visual dos botões da sidebar
     document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
@@ -6257,6 +6282,378 @@ function resetModal(prefix) {
         }
 
         saveAll(); closeModal('modalDocumentos'); renderCards();
+    }
+
+    // DUPLICATE FUNCTIONS
+    function duplicateAudit() {
+        if (!userCanEditCards()) {
+            alert('Você não tem permissão para duplicar cards. Seu acesso está configurado como somente leitura.');
+            return;
+        }
+        
+        // Coleta os dados atuais do formulário
+        const formData = {
+            title: document.getElementById('auditTitle').value,
+            categoria: document.getElementById('auditCategoria').value,
+            setor: document.getElementById('auditSetor').value,
+            status: document.getElementById('auditStatus').value,
+            data: document.getElementById('auditData').value,
+            proximo: document.getElementById('auditProximo').value,
+            responsavel: document.getElementById('auditResponsavel').value,
+            auditor: document.getElementById('auditAuditor').value,
+            flagDias: document.getElementById('auditFlagDias').value,
+            marcador: document.getElementById('auditMarcador').value,
+            descricao: document.getElementById('auditDescricao').value,
+            anexos: []
+        };
+        
+        // Coleta anexos
+        const anexosContainer = document.getElementById('auditAnexos');
+        const anexoInputs = anexosContainer.querySelectorAll('input[type="text"]');
+        anexoInputs.forEach(input => {
+            if (input.value.trim()) {
+                formData.anexos.push(input.value.trim());
+            }
+        });
+        
+        // Fecha o modal com animação
+        const modal = document.getElementById('modalAuditoria');
+        modal.style.opacity = '0';
+        modal.style.transform = 'scale(0.95)';
+        
+        setTimeout(() => {
+            closeModal('modalAuditoria');
+            
+            // Reseta o formulário para novo registro
+            editingAuditId = null;
+            resetModal('audit');
+            
+            // Preenche o formulário com os dados coletados
+            document.getElementById('auditTitle').value = formData.title;
+            document.getElementById('auditCategoria').value = formData.categoria;
+            document.getElementById('auditSetor').value = formData.setor;
+            document.getElementById('auditStatus').value = formData.status;
+            document.getElementById('auditData').value = formData.data;
+            document.getElementById('auditProximo').value = formData.proximo;
+            document.getElementById('auditResponsavel').value = formData.responsavel;
+            document.getElementById('auditAuditor').value = formData.auditor;
+            document.getElementById('auditFlagDias').value = formData.flagDias;
+            document.getElementById('auditMarcador').value = formData.marcador;
+            document.getElementById('auditDescricao').value = formData.descricao;
+            
+            // Recria os anexos
+            formData.anexos.forEach(anexo => {
+                addAnexo('audit', anexo);
+            });
+            
+            // Atualiza as listas dependentes
+            onCategoryChange('audit');
+            
+            // Abre o modal com animação
+            modal.style.display = 'flex';
+            modal.style.opacity = '0';
+            modal.style.transform = 'scale(0.95)';
+            
+            setTimeout(() => {
+                modal.style.transition = 'all 0.3s ease';
+                modal.style.opacity = '1';
+                modal.style.transform = 'scale(1)';
+            }, 50);
+        }, 200);
+    }
+
+    function duplicateTraining() {
+        if (!userCanEditCards()) {
+            alert('Você não tem permissão para duplicar cards. Seu acesso está configurado como somente leitura.');
+            return;
+        }
+        
+        const formData = {
+            title: document.getElementById('trainTitle').value,
+            categoria: document.getElementById('trainCategoria').value,
+            setor: document.getElementById('trainSetor').value,
+            status: document.getElementById('trainStatus').value,
+            data: document.getElementById('trainData').value,
+            proximo: document.getElementById('trainProximo').value,
+            responsavel: document.getElementById('trainResponsavel').value,
+            flagDias: document.getElementById('trainFlagDias').value,
+            marcador: document.getElementById('trainMarcador').value,
+            descricao: document.getElementById('trainDescricao').value,
+            anexos: []
+        };
+        
+        const anexosContainer = document.getElementById('trainAnexos');
+        const anexoInputs = anexosContainer.querySelectorAll('input[type="text"]');
+        anexoInputs.forEach(input => {
+            if (input.value.trim()) {
+                formData.anexos.push(input.value.trim());
+            }
+        });
+        
+        // Fecha o modal com animação
+        const modal = document.getElementById('modalTreinamentos');
+        modal.style.opacity = '0';
+        modal.style.transform = 'scale(0.95)';
+        
+        setTimeout(() => {
+            closeModal('modalTreinamentos');
+            
+            editingTrainId = null;
+            resetModal('train');
+            
+            document.getElementById('trainTitle').value = formData.title;
+            document.getElementById('trainCategoria').value = formData.categoria;
+            document.getElementById('trainSetor').value = formData.setor;
+            document.getElementById('trainStatus').value = formData.status;
+            document.getElementById('trainData').value = formData.data;
+            document.getElementById('trainProximo').value = formData.proximo;
+            document.getElementById('trainResponsavel').value = formData.responsavel;
+            document.getElementById('trainFlagDias').value = formData.flagDias;
+            document.getElementById('trainMarcador').value = formData.marcador;
+            document.getElementById('trainDescricao').value = formData.descricao;
+            
+            formData.anexos.forEach(anexo => {
+                addAnexo('train', anexo);
+            });
+            
+            // Atualiza as listas dependentes
+            onCategoryChange('train');
+            
+            // Abre o modal com animação
+            modal.style.display = 'flex';
+            modal.style.opacity = '0';
+            modal.style.transform = 'scale(0.95)';
+            
+            setTimeout(() => {
+                modal.style.transition = 'all 0.3s ease';
+                modal.style.opacity = '1';
+                modal.style.transform = 'scale(1)';
+            }, 50);
+        }, 200);
+    }
+
+    function duplicateAtividade() {
+        if (!userCanEditCards()) {
+            alert('Você não tem permissão para duplicar cards. Seu acesso está configurado como somente leitura.');
+            return;
+        }
+        
+        const formData = {
+            title: document.getElementById('ativTitle').value,
+            categoria: document.getElementById('ativCategoria').value,
+            setor: document.getElementById('ativSetor').value,
+            status: document.getElementById('ativStatus').value,
+            data: document.getElementById('ativData').value,
+            proximo: document.getElementById('ativProximo').value,
+            responsavel: document.getElementById('ativResponsavel').value,
+            flagDias: document.getElementById('ativFlagDias').value,
+            marcador: document.getElementById('ativMarcador').value,
+            descricao: document.getElementById('ativDescricao').value,
+            anexos: []
+        };
+        
+        const anexosContainer = document.getElementById('ativAnexos');
+        const anexoInputs = anexosContainer.querySelectorAll('input[type="text"]');
+        anexoInputs.forEach(input => {
+            if (input.value.trim()) {
+                formData.anexos.push(input.value.trim());
+            }
+        });
+        
+        // Fecha o modal com animação
+        const modal = document.getElementById('modalAtividades');
+        modal.style.opacity = '0';
+        modal.style.transform = 'scale(0.95)';
+        
+        setTimeout(() => {
+            closeModal('modalAtividades');
+            
+            editingAtivId = null;
+            resetModal('ativ');
+            
+            document.getElementById('ativTitle').value = formData.title;
+            document.getElementById('ativCategoria').value = formData.categoria;
+            document.getElementById('ativSetor').value = formData.setor;
+            document.getElementById('ativStatus').value = formData.status;
+            document.getElementById('ativData').value = formData.data;
+            document.getElementById('ativProximo').value = formData.proximo;
+            document.getElementById('ativResponsavel').value = formData.responsavel;
+            document.getElementById('ativFlagDias').value = formData.flagDias;
+            document.getElementById('ativMarcador').value = formData.marcador;
+            document.getElementById('ativDescricao').value = formData.descricao;
+            
+            formData.anexos.forEach(anexo => {
+                addAnexo('ativ', anexo);
+            });
+            
+            // Atualiza as listas dependentes
+            onCategoryChange('ativ');
+            
+            // Abre o modal com animação
+            modal.style.display = 'flex';
+            modal.style.opacity = '0';
+            modal.style.transform = 'scale(0.95)';
+            
+            setTimeout(() => {
+                modal.style.transition = 'all 0.3s ease';
+                modal.style.opacity = '1';
+                modal.style.transform = 'scale(1)';
+            }, 50);
+        }, 200);
+    }
+
+    function duplicateManutencao() {
+        if (!userCanEditCards()) {
+            alert('Você não tem permissão para duplicar cards. Seu acesso está configurado como somente leitura.');
+            return;
+        }
+        
+        const formData = {
+            title: document.getElementById('mantTitulo').value,
+            categoria: document.getElementById('mantCategoria').value,
+            setor: document.getElementById('mantSetor').value,
+            item: document.getElementById('mantItem').value,
+            tipo: document.getElementById('mantTipo').value,
+            status: document.getElementById('mantStatus').value,
+            ultima: document.getElementById('mantUltima').value,
+            intervalo: document.getElementById('mantIntervalo').value,
+            responsavelTecnico: document.getElementById('mantResponsavelTecnico').value,
+            responsavelManutencao: document.getElementById('mantResponsavelManutencao').value,
+            empresaResponsavel: document.getElementById('mantEmpresaResponsavel').value,
+            flagDias: document.getElementById('mantFlagDias').value,
+            marcador: document.getElementById('mantMarcador').value,
+            descricao: document.getElementById('mantDescricao').value,
+            anexos: []
+        };
+        
+        const anexosContainer = document.getElementById('mantAnexos');
+        const anexoInputs = anexosContainer.querySelectorAll('input[type="text"]');
+        anexoInputs.forEach(input => {
+            if (input.value.trim()) {
+                formData.anexos.push(input.value.trim());
+            }
+        });
+        
+        // Fecha o modal com animação
+        const modal = document.getElementById('modalManutencao');
+        modal.style.opacity = '0';
+        modal.style.transform = 'scale(0.95)';
+        
+        setTimeout(() => {
+            closeModal('modalManutencao');
+            
+            editingMantId = null;
+            resetModal('mant');
+            
+            document.getElementById('mantTitulo').value = formData.title;
+            document.getElementById('mantCategoria').value = formData.categoria;
+            document.getElementById('mantSetor').value = formData.setor;
+            document.getElementById('mantItem').value = formData.item;
+            document.getElementById('mantTipo').value = formData.tipo;
+            document.getElementById('mantStatus').value = formData.status;
+            document.getElementById('mantUltima').value = formData.ultima;
+            document.getElementById('mantIntervalo').value = formData.intervalo;
+            document.getElementById('mantResponsavelTecnico').value = formData.responsavelTecnico;
+            document.getElementById('mantResponsavelManutencao').value = formData.responsavelManutencao;
+            document.getElementById('mantEmpresaResponsavel').value = formData.empresaResponsavel;
+            document.getElementById('mantFlagDias').value = formData.flagDias;
+            document.getElementById('mantMarcador').value = formData.marcador;
+            document.getElementById('mantDescricao').value = formData.descricao;
+            
+            formData.anexos.forEach(anexo => {
+                addAnexo('mant', anexo);
+            });
+            
+            // Atualiza as listas dependentes
+            onCategoryChange('mant');
+            
+            // Abre o modal com animação
+            modal.style.display = 'flex';
+            modal.style.opacity = '0';
+            modal.style.transform = 'scale(0.95)';
+            
+            setTimeout(() => {
+                modal.style.transition = 'all 0.3s ease';
+                modal.style.opacity = '1';
+                modal.style.transform = 'scale(1)';
+            }, 50);
+        }, 200);
+    }
+
+    function duplicateDocumento() {
+        if (!userCanEditCards()) {
+            alert('Você não tem permissão para duplicar cards. Seu acesso está configurado como somente leitura.');
+            return;
+        }
+        
+        const formData = {
+            title: document.getElementById('docTitle').value,
+            categoria: document.getElementById('docCategoria').value,
+            setor: document.getElementById('docSetor').value,
+            status: document.getElementById('docStatus').value,
+            data: document.getElementById('docData').value,
+            dataCriacao: document.getElementById('docDataCriacao').value,
+            intervalo: document.getElementById('docIntervalo').value,
+            proximo: document.getElementById('docProximo').value,
+            responsavel: document.getElementById('docResponsavel').value,
+            revisor: document.getElementById('docRevisor').value,
+            flagDias: document.getElementById('docFlagDias').value,
+            marcador: document.getElementById('docMarcador').value,
+            descricao: document.getElementById('docDescricao').value,
+            anexos: []
+        };
+        
+        const anexosContainer = document.getElementById('docAnexos');
+        const anexoInputs = anexosContainer.querySelectorAll('input[type="text"]');
+        anexoInputs.forEach(input => {
+            if (input.value.trim()) {
+                formData.anexos.push(input.value.trim());
+            }
+        });
+        
+        // Fecha o modal com animação
+        const modal = document.getElementById('modalDocumentos');
+        modal.style.opacity = '0';
+        modal.style.transform = 'scale(0.95)';
+        
+        setTimeout(() => {
+            closeModal('modalDocumentos');
+            
+            editingDocId = null;
+            resetModal('doc');
+            
+            document.getElementById('docTitle').value = formData.title;
+            document.getElementById('docCategoria').value = formData.categoria;
+            document.getElementById('docSetor').value = formData.setor;
+            document.getElementById('docStatus').value = formData.status;
+            document.getElementById('docData').value = formData.data;
+            document.getElementById('docDataCriacao').value = formData.dataCriacao;
+            document.getElementById('docIntervalo').value = formData.intervalo;
+            document.getElementById('docProximo').value = formData.proximo;
+            document.getElementById('docResponsavel').value = formData.responsavel;
+            document.getElementById('docRevisor').value = formData.revisor;
+            document.getElementById('docFlagDias').value = formData.flagDias;
+            document.getElementById('docMarcador').value = formData.marcador;
+            document.getElementById('docDescricao').value = formData.descricao;
+            
+            formData.anexos.forEach(anexo => {
+                addAnexo('doc', anexo);
+            });
+            
+            // Atualiza as listas dependentes
+            onCategoryChange('doc');
+            
+            // Abre o modal com animação
+            modal.style.display = 'flex';
+            modal.style.opacity = '0';
+            modal.style.transform = 'scale(0.95)';
+            
+            setTimeout(() => {
+                modal.style.transition = 'all 0.3s ease';
+                modal.style.opacity = '1';
+                modal.style.transform = 'scale(1)';
+            }, 50);
+        }, 200);
     }
     function editItem(id, tab) {
         if (!userCanEditCards()) {
