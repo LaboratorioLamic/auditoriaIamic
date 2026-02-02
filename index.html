@@ -6979,6 +6979,7 @@ function renderViewContent(id, tab) {
             <div class="view-item"><label>Próxima Manutenção</label><div>${isNA ? 'N/A' : formatBR(item.proxima)}</div></div>
             <div class="view-item"><label>Responsável Técnico</label><div>${item.responsavelTecnico || 'ND'}</div></div>
             <div class="view-item"><label>Responsável pela Manutenção</label><div>${item.responsavelManutencao || 'ND'}</div></div>
+            <div class="view-item"><label>Empresa Responsável</label><div>${item.empresaResponsavel || 'ND'}</div></div>
             <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
         `;
     } else if (finalTab === 'documentos') { 
