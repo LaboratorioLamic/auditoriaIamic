@@ -2609,6 +2609,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
     // Referências do Firebase Realtime Database
     let dataListener = null; // Listener para dados em tempo real
+    let usersListener = null; // Listener para usuários em tempo real
     
     let failedAttempts = 0;
     let lockoutTimer = null;
@@ -3615,7 +3616,6 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 const hasChanges = 
                     JSON.stringify(record.audits) !== JSON.stringify(audits) ||
                     JSON.stringify(record.trainings) !== JSON.stringify(trainings) ||
-                    JSON.stringify(record.users) !== JSON.stringify(users) ||
                     JSON.stringify(record.activities) !== JSON.stringify(activities) ||
                     JSON.stringify(record.maintenances) !== JSON.stringify(maintenances) ||
                     JSON.stringify(record.documents) !== JSON.stringify(documents) ||
@@ -3630,7 +3630,6 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 
                 audits = record.audits || [];
                 trainings = record.trainings || [];
-                users = record.users || [];
                 activities = record.activities || [];
                 maintenances = record.maintenances || [];
                 documents = record.documents || [];
@@ -3641,7 +3640,6 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 // Atualiza cache local com os dados carregados inicialmente
                 saveToLocalStorage('audits', audits);
                 saveToLocalStorage('trainings', trainings);
-                saveToLocalStorage('users', users);
                 saveToLocalStorage('activities', activities);
                 saveToLocalStorage('maintenances', maintenances);
                 saveToLocalStorage('documents', documents);
@@ -3659,6 +3657,48 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 populateSelects();
                 currentTab === 'dashboard' ? renderDashboard() : renderCards();
             });
+
+            // Listener separado para usuários (que estão na referência 'passwords')
+            const usersRef = dbRef(database, 'passwords');
+            if (!usersListener) {
+                usersListener = dbOnValue(usersRef, (snapshot) => {
+                    if (isEditingModalOpen()) return;
+                    
+                    let rawUsers = [];
+                    if (snapshot.exists()) {
+                        rawUsers = snapshot.val();
+                        if (!Array.isArray(rawUsers)) rawUsers = [];
+                    }
+                    
+                    // Mapeia os dados garantindo a consistência das flags
+                    const newUsers = rawUsers.map(u => ({
+                        ...u,
+                        name: u.name || u.Name || u.user || '',
+                        user: u.user || u.User || '',
+                        password: String(u.password || ''),
+                        active: u.active !== false,
+                        canDeleteCards: !!u.canDeleteCards,
+                        canEditCards: u.canEditCards !== false,
+                        canManageLists: !!u.canManageLists,
+                        isAdmin: !!u.isAdmin || u.user === 'admin'
+                    }));
+                    
+                    // Só atualiza se houve mudanças reais
+                    if (JSON.stringify(newUsers) !== JSON.stringify(users)) {
+                        console.log('Usuários atualizados no Firebase');
+                        users = newUsers;
+                        saveToLocalStorage('users', users);
+                        
+                        // Se estamos na aba de configurações, atualiza a tabela
+                        if (currentTab === 'configuracoes') {
+                            renderusersConfigTable();
+                        }
+                        
+                        // Atualiza os usuários no multi-select
+                        initMultiSelectUsers();
+                    }
+                });
+            }
         } catch (error) {
             console.error('Erro no listener:', error);
         }
@@ -3670,9 +3710,17 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 const database = getFirebaseDatabase();
                 const dbRef = getFirebaseRef();
                 const dbOff = getFirebaseOff();
-                const dataRef = dbRef(database, 'data');
+                const dataRef = dbRef(database, "/");
                 dbOff(dataRef, dataListener);
                 dataListener = null;
+            }
+            if (usersListener) {
+                const database = getFirebaseDatabase();
+                const dbRef = getFirebaseRef();
+                const dbOff = getFirebaseOff();
+                const usersRef = dbRef(database, 'passwords');
+                dbOff(usersRef, usersListener);
+                usersListener = null;
             }
         } catch (error) {
             console.error('Erro ao parar listener do Firebase:', error);
@@ -7045,7 +7093,16 @@ function resetModal(prefix) {
     
     function changeHistoryPage(id, tab, direction) {
         currentHistoryPage += direction;
-        renderViewContent(id, tab);
+        
+        // Normaliza o tab para garantir consistência
+        let normalizedTab = tab;
+        if (tab === 'audit') normalizedTab = 'auditoria';
+        else if (tab === 'train') normalizedTab = 'treinamentos';
+        else if (tab === 'ativ') normalizedTab = 'atividades';
+        else if (tab === 'mant' || tab === 'manutencao') normalizedTab = 'manutencao';
+        else if (tab === 'doc' || tab === 'documentos') normalizedTab = 'documentos';
+        
+        renderViewContent(id, normalizedTab);
     }
 
 function renderViewContent(id, tab) {
@@ -7055,8 +7112,8 @@ function renderViewContent(id, tab) {
     if (tab === 'audit') finalTab = 'auditoria';
     else if (tab === 'train') finalTab = 'treinamentos';
     else if (tab === 'ativ') finalTab = 'atividades';
-    else if (tab === 'mant') finalTab = 'manutencao';
-    else if (tab === 'doc') finalTab = 'documentos';
+    else if (tab === 'mant' || tab === 'manutencao') finalTab = 'manutencao';
+    else if (tab === 'doc' || tab === 'documentos') finalTab = 'documentos';
     
     // Tenta encontrar o item no array correto
     if (finalTab === 'auditoria') { 
@@ -7235,7 +7292,7 @@ function renderViewContent(id, tab) {
         const usuario = h.usuario ? ` - ${h.usuario}` : '';
 
         const deleteBtn = isAdmin
-            ? `<button class="history-delete" title="Excluir" onclick="deleteHistoryEntry(${id}, '${tab}', ${globalIndex})" style="border:none; background:transparent; color:var(--ind-red); cursor:pointer; font-size:13px; float:right; margin-left:8px;">
+            ? `<button class="history-delete" title="Excluir" onclick="deleteHistoryEntry(${id}, '${finalTab}', ${globalIndex})" style="border:none; background:transparent; color:var(--ind-red); cursor:pointer; font-size:13px; float:right; margin-left:8px;">
                     <i class="fas fa-trash"></i>
                </button>`
             : '';
@@ -7252,11 +7309,11 @@ function renderViewContent(id, tab) {
     
     const paginationHtml = finalPages > 1 ? `
         <div class="history-pagination">
-            <button ${currentHistoryPage === 1 ? 'disabled' : ''} onclick="changeHistoryPage(${id}, '${tab}', -1)">
+            <button ${currentHistoryPage === 1 ? 'disabled' : ''} onclick="changeHistoryPage(${id}, '${finalTab}', -1)">
                 <i class="fas fa-chevron-left"></i> Anterior
             </button>
             <span>Página ${currentHistoryPage} de ${finalPages}</span>
-            <button ${currentHistoryPage === finalPages ? 'disabled' : ''} onclick="changeHistoryPage(${id}, '${tab}', 1)">
+            <button ${currentHistoryPage === finalPages ? 'disabled' : ''} onclick="changeHistoryPage(${id}, '${finalTab}', 1)">
                 Próxima <i class="fas fa-chevron-right"></i>
             </button>
         </div>
@@ -7304,9 +7361,10 @@ function renderViewContent(id, tab) {
         
         // Normaliza o tab
         if (tab === 'audit') finalTab = 'auditoria';
+        else if (tab === 'train') finalTab = 'treinamentos';
         else if (tab === 'ativ') finalTab = 'atividades';
-        else if (tab === 'mant') finalTab = 'manutencao';
-        else if (tab === 'doc') finalTab = 'documentos';
+        else if (tab === 'mant' || tab === 'manutencao') finalTab = 'manutencao';
+        else if (tab === 'doc' || tab === 'documentos') finalTab = 'documentos';
         
         if (finalTab === 'auditoria') { item = audits.find(i => i.id === id); }
         else if (finalTab === 'atividades') { item = activities.find(i => i.id === id); }
