@@ -3128,9 +3128,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     for (const key in current) {
         if (ignoreKeys.includes(key)) continue;
 
-        // Normalização para comparação (trata null/undefined como string vazia)
-        let valOriginal = original && original[key] !== undefined ? String(original[key]).trim() : '';
-        let valCurrent = current[key] !== undefined ? String(current[key]).trim() : '';
+        // Normalização para comparação (trata null/undefined/'' como string vazia)
+        let valOriginal = original && original[key] !== undefined && original[key] !== null && original[key] !== '' ? String(original[key]).trim() : '';
+        let valCurrent = current[key] !== undefined && current[key] !== null && current[key] !== '' ? String(current[key]).trim() : '';
 
         if (valOriginal !== valCurrent) {
             // Se mudou status ou marcador, consideramos "mudança silenciosa" (salva mas não detalha se for só isso)
@@ -3145,8 +3145,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             let displayCurr = valCurrent;
 
             if (key.toLowerCase().includes('data') || key === 'ultima' || key === 'proxima') {
-                displayOrig = original[key] ? formatBR(original[key]) : 'vazio';
-                displayCurr = current[key] ? formatBR(current[key]) : 'vazio';
+                displayOrig = (original[key] !== undefined && original[key] !== null && original[key] !== '') ? formatBR(original[key]) : 'vazio';
+                displayCurr = (current[key] !== undefined && current[key] !== null && current[key] !== '') ? formatBR(current[key]) : 'vazio';
             }
 
             if (key === 'descricao') {
@@ -6038,6 +6038,8 @@ function resetModal(prefix) {
     // SAVE FUNCTIONS
     function saveAudit() {
     try {
+        originalItem = null; // Reset para garantir que seja recriado para cada edição
+        
         const isNew = !editingAuditId;
         let item = isNew ? { 
             id: Date.now() + Math.floor(Math.random() * 1000), // ID único com salt
@@ -6147,6 +6149,8 @@ function resetModal(prefix) {
 
     function saveTraining() {
     try {
+        originalItem = null; // Reset para garantir que seja recriado para cada edição
+        
         const isNew = !editingTrainId;
         let item = isNew ? { 
             id: Date.now() + Math.floor(Math.random() * 1000), // ID único com salt
@@ -6245,6 +6249,8 @@ function resetModal(prefix) {
 }
 
     function saveAtividade() {
+        originalItem = null; // Reset para garantir que seja recriado para cada edição
+        
         const isNew = !editingAtivId;
         // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
         let item = isNew ? { id: Date.now(), historico: [], type: 'ativ' } : activities.find(a => a.id === editingAtivId);
@@ -6314,6 +6320,8 @@ function resetModal(prefix) {
     }
     
     function saveManutencao() {
+        originalItem = null; // Reset para garantir que seja recriado para cada edição
+        
         const ultima = document.getElementById('mantUltima').value;
         const intervaloStr = (document.getElementById('mantIntervalo').value || '').trim();
         const intervaloNum = intervaloStr === '' ? null : parseInt(intervaloStr);
@@ -6325,7 +6333,7 @@ function resetModal(prefix) {
                 return nextDate.toISOString().split('T')[0];
             })()
             : '';
-        const intervalo = hasPeriodicidade ? intervaloNum : '';
+        const intervalo = hasPeriodicidade ? intervaloNum : null;
         
         const isNew = !editingMantId;
         // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
@@ -6356,6 +6364,11 @@ function resetModal(prefix) {
             // Preserva o histórico explicitamente
             historico: item && Array.isArray(item.historico) ? [...item.historico] : []
         };
+
+        // Para edições, garante que originalItem existe para comparação
+        if (!isNew && !originalItem) {
+            originalItem = JSON.parse(JSON.stringify(item));
+        }
 
         if (isNew) {
             newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema' });
@@ -6399,6 +6412,8 @@ function resetModal(prefix) {
     }
     
     function saveDocumento() { 
+        originalItem = null; // Reset para garantir que seja recriado para cada edição
+        
         const dataCriacao = document.getElementById('docDataCriacao').value;
         const docIntervaloStr = (document.getElementById('docIntervalo').value || '').trim();
         const docIntervaloNum = docIntervaloStr === '' ? null : parseInt(docIntervaloStr);
