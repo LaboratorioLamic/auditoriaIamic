@@ -901,7 +901,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 #viewContent { display: flex; flex-direction: column; gap: 24px; }
 .view-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
 .view-status { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: #fff; }
-.view-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; background: #f9fafb; padding: 20px; border-radius: 16px; }
+.view-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; background: #f9fafb; padding: 20px; border-radius: 16px; overflow: visible; max-height: none; }
 .view-item label { display: block; font-size: 11px; text-transform: uppercase; color: #9ca3af; font-weight: 600; margin-bottom: 4px; }
 .view-item div { font-size: 15px; color: var(--primary); font-weight: 500; }
 .view-desc { background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border); line-height: 1.6; color: #4b5563; white-space: pre-wrap; }
@@ -1491,6 +1491,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <select id="fTrainCat" class="filter-input" onchange="onFilterCategoryChange('Train')" style="display:none;">
                         <option value="">Categoria: Todas</option>
                     </select>
+                    <select id="fTrainSub" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
+                        <option value="">Subcategoria: Todas</option>
+                    </select>
                     <select id="fTrainResponsavel" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Responsável: Todos</option>
                     </select>
@@ -1977,12 +1980,17 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             </div>
             <div class="field-group">
                 <label>Data Publicação</label>
-                <input type="date" id="trainDataPublicacao">
+                <input type="date" id="trainDataPublicacao" onchange="calculateTrainingPrevisao()">
             </div>
             <div class="field-group">
-                <label>Data Previsão</label>
-                <input type="date" id="trainDataPrevisao">
+                <label>Periodicidade (Dias)</label>
+                <input type="number" id="trainPeriodicidade" value="0" onchange="calculateTrainingPrevisao()">
             </div>
+            <div class="field-group full-width" style="background:#f0f9ff; padding:10px; border-radius:8px; border:1px solid #bae6fd">
+                <label style="color:#0369a1">Data Previsão (Calculada)</label>
+                <div id="trainDataPrevisao" style="font-size:16px; font-weight:700; color:#0c4a6e; margin-top:4px">--/--/----</div>
+            </div>
+            <input type="hidden" id="trainDataPrevisaoValue">
             <div class="field-group">
                 <label>Responsável</label>
                 <select id="trainResponsavel">
@@ -2007,7 +2015,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             </div>
             <div class="field-group">
                 <label>Carga Horária</label>
-                <input id="trainCargaHoraria" placeholder="HH:MM" pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="number" id="trainCargaHorariaHoras" min="0" max="23" maxlength="2" placeholder="00" style="width: 60px; text-align: center;">
+                    <span>:</span>
+                    <input type="number" id="trainCargaHorariaMinutos" min="0" max="59" maxlength="2" placeholder="00" style="width: 60px; text-align: center;">
+                    <span style="color: #666; font-size: 12px;">(HH:MM)</span>
+                </div>
             </div>
             <div class="field-group">
                 <label>Marcador</label>
@@ -2436,6 +2449,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     // ===== SISTEMA DE CACHE COM LOCALSTORAGE =====
     const CACHE_KEYS = {
         audits: 'lamic_audits_cache',
+        trainings: 'lamic_trainings_cache',
         activities: 'lamic_activities_cache',
         maintenances: 'lamic_maintenances_cache',
         documents: 'lamic_documents_cache',
@@ -2867,7 +2881,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
 
     function populateFiltersDropdown() {
-        const map = { 'auditoria':'Audit', 'atividades':'Ativ', 'manutencao':'Mant', 'documentos':'Doc' };
+        const map = { 'auditoria':'Audit', 'treinamentos':'Train', 'atividades':'Ativ', 'manutencao':'Mant', 'documentos':'Doc' };
         const prefix = map[currentTab] || 'Audit';
 
         const ids = {
@@ -2893,7 +2907,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
 
     function onDropdownFilterChange(type) {
-        const map = { 'auditoria':'Audit', 'atividades':'Ativ', 'manutencao':'Mant', 'documentos':'Doc' };
+        const map = { 'auditoria':'Audit', 'treinamentos':'Train', 'atividades':'Ativ', 'manutencao':'Mant', 'documentos':'Doc' };
         const prefix = map[currentTab] || 'Audit';
 
         const realIds = {
@@ -3449,15 +3463,17 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 // Se Firebase está vazio, tenta carregar do localStorage
                 const cachedAudits = loadFromLocalStorage('audits');
                 const cachedTrainings = loadFromLocalStorage('trainings');
+                const cachedUsers = loadFromLocalStorage('users');
                 const cachedActivities = loadFromLocalStorage('activities');
                 const cachedMaintenances = loadFromLocalStorage('maintenances');
                 const cachedDocuments = loadFromLocalStorage('documents');
                 const cachedMasterLists = loadFromLocalStorage('masterLists');
                 
-                if (cachedAudits || cachedTrainings || cachedActivities || cachedMaintenances || cachedDocuments) {
+                if (cachedAudits || cachedTrainings || cachedUsers || cachedActivities || cachedMaintenances || cachedDocuments) {
                     console.log('Carregando dados do localStorage (Firebase vazio)');
                     audits = cachedAudits || [];
                     trainings = cachedTrainings || [];
+                    users = cachedUsers || [];
                     activities = cachedActivities || [];
                     maintenances = cachedMaintenances || [];
                     documents = cachedDocuments || [];
@@ -3476,6 +3492,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 // Mapeamento direto das chaves do seu JSON
                 audits = record.audits || [];
                 trainings = record.trainings || [];
+                users = record.users || [];
                 activities = record.activities || [];
                 maintenances = record.maintenances || [];
                 documents = record.documents || []; 
@@ -3597,6 +3614,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 // NOVO: Compara com dados em memória antes de atualizar
                 const hasChanges = 
                     JSON.stringify(record.audits) !== JSON.stringify(audits) ||
+                    JSON.stringify(record.trainings) !== JSON.stringify(trainings) ||
+                    JSON.stringify(record.users) !== JSON.stringify(users) ||
                     JSON.stringify(record.activities) !== JSON.stringify(activities) ||
                     JSON.stringify(record.maintenances) !== JSON.stringify(maintenances) ||
                     JSON.stringify(record.documents) !== JSON.stringify(documents) ||
@@ -3610,6 +3629,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 console.log('Atualizações detectadas no Firebase. Sincronizando...');
                 
                 audits = record.audits || [];
+                trainings = record.trainings || [];
+                users = record.users || [];
                 activities = record.activities || [];
                 maintenances = record.maintenances || [];
                 documents = record.documents || [];
@@ -3617,9 +3638,19 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 if (record.masterLists) {
                     masterLists = { ...defaultMasterLists, ...record.masterLists };
                 }
+                // Atualiza cache local com os dados carregados inicialmente
+                saveToLocalStorage('audits', audits);
+                saveToLocalStorage('trainings', trainings);
+                saveToLocalStorage('users', users);
+                saveToLocalStorage('activities', activities);
+                saveToLocalStorage('maintenances', maintenances);
+                saveToLocalStorage('documents', documents);
+                saveToLocalStorage('masterLists', masterLists);
                 
                 // NOVO: Atualiza o cache local após receber mudanças do Firebase
                 saveToLocalStorage('audits', audits);
+                saveToLocalStorage('trainings', trainings);
+                saveToLocalStorage('users', users);
                 saveToLocalStorage('activities', activities);
                 saveToLocalStorage('maintenances', maintenances);
                 saveToLocalStorage('documents', documents);
@@ -4060,12 +4091,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         }
         const options = years.map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('');
         
-        ['fAuditYearForMonth', 'fAuditYearOnly', 'fAtivYearForMonth', 'fAtivYearOnly', 'fMantYearForMonth', 'fMantYearOnly', 'fDocYearForMonth', 'fDocYearOnly', 'fDashYearForMonth', 'fDashYearOnly'].forEach(id => {
+        ['fAuditYearForMonth', 'fAuditYearOnly', 'fAtivYearForMonth', 'fAtivYearOnly', 'fMantYearForMonth', 'fMantYearOnly', 'fDocYearForMonth', 'fDocYearOnly', 'fTrainYearForMonth', 'fTrainYearOnly', 'fDashYearForMonth', 'fDashYearOnly'].forEach(id => {
             const el = document.getElementById(id);
             if(el) el.innerHTML = options;
         });
     
-        ['fAuditMonth', 'fAtivMonth', 'fMantMonth', 'fDocMonth', 'fDashMonth'].forEach(id => {
+        ['fAuditMonth', 'fAtivMonth', 'fMantMonth', 'fDocMonth', 'fTrainMonth', 'fDashMonth'].forEach(id => {
             document.getElementById(id).value = currentMonth;
         });
     }
@@ -4160,6 +4191,53 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 return true;
             });
             
+        } else if (currentTab === 'treinamentos') {
+            statusList = masterLists.trainStatus || [];
+            dateField = 'dataPrevisao';
+            getSortDate = (it) => it.dataPrevisao;
+            getDeadlineDate = (it) => it.dataPrevisao;
+            filterSetorId = 'fTrainSetor';
+            filterCatId = 'fTrainCat';
+            filterSubcatId = 'fTrainSub';
+
+            const setor = document.getElementById(filterSetorId)?.value || '';
+            const cat = document.getElementById(filterCatId)?.value || '';
+            const sub = document.getElementById(filterSubcatId)?.value || '';
+            const stat = document.getElementById('fTrainStatus')?.value || '';
+            const marcador = document.getElementById('fTrainMarcador')?.value || '';
+            const responsavel = document.getElementById('fTrainResponsavel')?.value || '';
+            const dateType = document.getElementById('fTrainDateType')?.value || 'all';
+
+            data = trainings.filter(item => {
+                if (setor && item.setor !== setor) return false;
+                if (cat && item.categoria !== cat) return false;
+                if (sub && item.subcategoria !== sub) return false;
+                if (stat && item.status !== stat) return false;
+                if (marcador && item.marcador !== marcador) return false;
+
+                if (responsavel) {
+                    const itemResponsavel = normalizeResponsavel(item.responsavel || '');
+                    const filterLower = responsavel.toLowerCase();
+                    if (!itemResponsavel || !itemResponsavel.includes(filterLower)) return false;
+                }
+
+                if (dateType !== 'all') {
+                    const itemDate = new Date(item[dateField]);
+                    if (dateType === 'month') {
+                        if (itemDate.getMonth() !== parseInt(document.getElementById('fTrainMonth').value) ||
+                            itemDate.getFullYear() !== parseInt(document.getElementById('fTrainYearForMonth').value)) return false;
+                    } else if (dateType === 'year') {
+                        if (itemDate.getFullYear() !== parseInt(document.getElementById('fTrainYearOnly').value)) return false;
+                    } else if (dateType === 'custom') {
+                        const ini = document.getElementById('fTrainDataIni').value;
+                        const fim = document.getElementById('fTrainDataFim').value;
+                        if (ini && item[dateField] < ini) return false;
+                        if (fim && item[dateField] > fim) return false;
+                    }
+                }
+                return true;
+            });
+
         } else if (currentTab === 'atividades') {
             statusList = masterLists.ativStatus || [];
             dateField = 'dataConclusao';
@@ -4416,16 +4494,14 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 `;
             } else if (currentTab === 'treinamentos') {
                 const responsaveis = formatResponsavel(item.responsavel || '');
+                const isNA = isBlankPeriodicity(item.periodicidade);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
                     ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
                     ${item.instrutor ? `<div class="card-info-row"><i class="fas fa-chalkboard-teacher"></i> <span>Instrutor: ${item.instrutor}</span></div>` : ''}
-                    ${item.participantes ? `<div class="card-info-row"><i class="fas fa-users"></i> <span>Participantes: ${item.participantes}</span></div>` : ''}
-                    ${item.localEvento ? `<div class="card-info-row"><i class="fas fa-map-marker-alt"></i> <span>Local: ${item.localEvento}</span></div>` : ''}
-                    ${item.cargaHoraria ? `<div class="card-info-row"><i class="fas fa-clock"></i> <span>Carga Horária: ${item.cargaHoraria}</span></div>` : ''}
-                    <div class="card-info-row"><i class="far fa-calendar"></i> <span>Pub: <strong>${formatBR(item.dataPublicacao)}</strong></span></div>
-                    <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>
+                    <div class="card-info-row"><i class="far fa-calendar"></i> <span>Pub: ${formatBR(item.dataPublicacao)}</span></div>
+                    ${!isNA ? `<div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: ${formatBR(item.dataPrevisao)}</span></div>` : ''}
                 `;
             } else if (currentTab === 'atividades') {
                 const responsaveis = formatResponsavel(item.responsavel);
@@ -4839,6 +4915,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // Mapeia a aba atual para o prefixo dos filtros
         const tabPrefix = {
             'auditoria': 'Audit',
+            'treinamentos': 'Train',
             'atividades': 'Ativ',
             'manutencao': 'Mant',
             'documentos': 'Doc'
@@ -5121,7 +5198,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     // Subcategoria/Item são facetados dinamicamente; tenta restaurar seleção e, em seguida, recalcula opções visíveis
     if (typeof updateFilterFacetOptions === 'function') {
-        ['Audit', 'Ativ', 'Mant', 'Doc'].forEach(p => updateFilterFacetOptions(p));
+        ['Audit', 'Train', 'Ativ', 'Mant', 'Doc'].forEach(p => updateFilterFacetOptions(p));
         // restaura sub/itens após recálculo (se ainda existirem)
         const aSub = document.getElementById('fAuditSub'); if (aSub && currentValues.Audit.sub != null) aSub.value = currentValues.Audit.sub;
         const tSub = document.getElementById('fAtivSub'); if (tSub && currentValues.Ativ.sub != null) tSub.value = currentValues.Ativ.sub;
@@ -5252,6 +5329,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     function getDateStrForFilterPrefix(prefix, item) {
         if (prefix === 'Audit') return item?.dataPrevisao;
+        if (prefix === 'Train') return item?.dataPrevisao;
         if (prefix === 'Ativ') return item?.dataConclusao;
         if (prefix === 'Mant') return getMaintenanceCardDate(item); // Data (publicação)
         if (prefix === 'Doc') return getDocumentCardDate(item);      // Data (publicação)
@@ -5397,6 +5475,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
     function getMasterCategorias(prefix) {
         if (prefix === 'Audit') return (masterLists?.auditCategorias || []).slice();
+        if (prefix === 'Train') return (masterLists?.trainCategorias || []).slice();
         if (prefix === 'Ativ') return (masterLists?.ativCategorias || []).slice();
         if (prefix === 'Mant') return (masterLists?.mantCategorias || []).slice();
         if (prefix === 'Doc') return (masterLists?.docCategorias || []).slice();
@@ -5404,6 +5483,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
     function getMasterStatus(prefix) {
         if (prefix === 'Audit') return (masterLists?.auditStatus || []).slice();
+        if (prefix === 'Train') return (masterLists?.trainStatus || []).slice();
         if (prefix === 'Ativ') return (masterLists?.ativStatus || []).slice();
         if (prefix === 'Mant') return (masterLists?.mantStatus || []).slice();
         if (prefix === 'Doc') return (masterLists?.docStatus || []).slice();
@@ -5411,6 +5491,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
     function getMasterMarcadores(prefix) {
         if (prefix === 'Audit') return (masterLists?.auditMarcadores || []).slice();
+        if (prefix === 'Train') return (masterLists?.trainMarcadores || []).slice();
         if (prefix === 'Ativ') return (masterLists?.ativMarcadores || []).slice();
         if (prefix === 'Mant') return (masterLists?.mantMarcadores || []).slice();
         if (prefix === 'Doc') return (masterLists?.docMarcadores || []).slice();
@@ -5810,12 +5891,15 @@ function resetModal(prefix) {
         document.getElementById('auditCategoria').value = defaultAuditCat;
     } else if (prefix === 'train') {
         document.getElementById('trainDataPublicacao').value = today();
-        document.getElementById('trainDataPrevisao').value = today();
+        document.getElementById('trainPeriodicidade').value = 0;
+        document.getElementById('trainDataPrevisao').textContent = '--/--/----';
+        document.getElementById('trainDataPrevisaoValue').value = '';
         document.getElementById('trainFlagDias').value = 7;
         document.getElementById('trainInstrutor').value = '';
         document.getElementById('trainParticipantes').value = '';
         document.getElementById('trainLocalEvento').value = '';
-        document.getElementById('trainCargaHoraria').value = '';
+        document.getElementById('trainCargaHorariaHoras').value = '';
+        document.getElementById('trainCargaHorariaMinutos').value = '';
         const defaultTrainCat = masterLists.trainCategorias[0] || '';
         document.getElementById('trainCategoria').value = defaultTrainCat;
     } else if (prefix === 'ativ') {
@@ -5982,6 +6066,37 @@ function resetModal(prefix) {
     }
 }
 
+    function calculateTrainingPrevisao() {
+        const dataPublicacao = document.getElementById('trainDataPublicacao').value;
+        const periodicidade = parseInt(document.getElementById('trainPeriodicidade').value) || 0;
+        const fieldPrevisaoDiv = document.getElementById('trainDataPrevisao');
+        const fieldPrevisaoValue = document.getElementById('trainDataPrevisaoValue');
+
+        if (!dataPublicacao || periodicidade === 0) {
+            fieldPrevisaoDiv.textContent = '--/--/----';
+            fieldPrevisaoValue.value = '';
+            return;
+        }
+
+        // Calcula a data de previsão adicionando os dias
+        const pubDate = new Date(dataPublicacao);
+        pubDate.setDate(pubDate.getDate() + periodicidade);
+        
+        // Formata como YYYY-MM-DD para salvar
+        const year = pubDate.getFullYear();
+        const month = String(pubDate.getMonth() + 1).padStart(2, '0');
+        const day = String(pubDate.getDate()).padStart(2, '0');
+        const dataFormatada = `${year}-${month}-${day}`;
+        
+        // Formata para exibição DD/MM/YYYY
+        const dayDisplay = String(pubDate.getDate()).padStart(2, '0');
+        const monthDisplay = String(pubDate.getMonth() + 1).padStart(2, '0');
+        const yearDisplay = pubDate.getFullYear();
+        
+        fieldPrevisaoDiv.textContent = `${dayDisplay}/${monthDisplay}/${yearDisplay}`;
+        fieldPrevisaoValue.value = dataFormatada;
+    }
+
     function saveTraining() {
     try {
         const isNew = !editingTrainId;
@@ -5999,6 +6114,16 @@ function resetModal(prefix) {
         const selectedTrainMarkerName = document.getElementById('trainMarcador').value;
         const trainMarkerObj = (masterLists.trainMarcadores || []).find(m => m.name === selectedTrainMarkerName);
 
+        // Combinar carga horária com validação
+        let horas = parseInt(document.getElementById('trainCargaHorariaHoras').value) || 0;
+        let minutos = parseInt(document.getElementById('trainCargaHorariaMinutos').value) || 0;
+        
+        // Validar limites
+        horas = Math.min(Math.max(0, horas), 23);
+        minutos = Math.min(Math.max(0, minutos), 59);
+        
+        const cargaHoraria = `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
+
         const newItem = {
             ...item,
             titulo: document.getElementById('trainTitulo').value,
@@ -6008,12 +6133,13 @@ function resetModal(prefix) {
             subcategoria: document.getElementById('trainSub').value, 
             status: document.getElementById('trainStatus').value,
             dataPublicacao: document.getElementById('trainDataPublicacao').value,
-            dataPrevisao: document.getElementById('trainDataPrevisao').value,
+            periodicidade: parseInt(document.getElementById('trainPeriodicidade').value) || 0,
+            dataPrevisao: document.getElementById('trainDataPrevisaoValue').value,
             responsavel: document.getElementById('trainResponsavel').value || '',
             instrutor: document.getElementById('trainInstrutor').value || '',
             participantes: document.getElementById('trainParticipantes').value || '',
             localEvento: document.getElementById('trainLocalEvento').value || '',
-            cargaHoraria: document.getElementById('trainCargaHoraria').value || '',
+            cargaHoraria: cargaHoraria,
             flagDias: Number(document.getElementById('trainFlagDias').value) || 7,
             marcador: trainMarkerObj ? trainMarkerObj.name : '',
             marcadorCor: trainMarkerObj ? trainMarkerObj.color : 'default',
@@ -6777,12 +6903,28 @@ function resetModal(prefix) {
             document.getElementById('trainSub').value = item.subcategoria || ''; 
             document.getElementById('trainStatus').value = item.status;
             document.getElementById('trainDataPublicacao').value = item.dataPublicacao;
-            document.getElementById('trainDataPrevisao').value = item.dataPrevisao;
+            document.getElementById('trainPeriodicidade').value = item.periodicidade || 0;
+            document.getElementById('trainDataPrevisaoValue').value = item.dataPrevisao || '';
+            // Atualiza o display da data de previsão
+            const prevDiv = document.getElementById('trainDataPrevisao');
+            if (item.dataPrevisao && item.periodicidade > 0) {
+                prevDiv.textContent = formatBR(item.dataPrevisao);
+            } else {
+                prevDiv.textContent = '--/--/----';
+            }
             document.getElementById('trainResponsavel').value = item.responsavel || '';
             document.getElementById('trainInstrutor').value = item.instrutor || '';
             document.getElementById('trainParticipantes').value = item.participantes || '';
             document.getElementById('trainLocalEvento').value = item.localEvento || '';
-            document.getElementById('trainCargaHoraria').value = item.cargaHoraria || '';
+            // Separar carga horária em horas e minutos numéricos
+            if (item.cargaHoraria && item.cargaHoraria.includes(':')) {
+                const [horas, minutos] = item.cargaHoraria.split(':');
+                document.getElementById('trainCargaHorariaHoras').value = parseInt(horas) || 0;
+                document.getElementById('trainCargaHorariaMinutos').value = parseInt(minutos) || 0;
+            } else {
+                document.getElementById('trainCargaHorariaHoras').value = '';
+                document.getElementById('trainCargaHorariaMinutos').value = '';
+            }
             document.getElementById('trainFlagDias').value = item.flagDias;
             document.getElementById('trainMarcador').value = item.marcador || '';
             restoreAnexos('train', item.anexos);
@@ -7009,6 +7151,20 @@ function renderViewContent(id, tab) {
             <div class="view-item"><label>Empresa Responsável</label><div>${item.empresaResponsavel || 'ND'}</div></div>
             <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
         `;
+    } else if (finalTab === 'treinamentos') {
+        const isNA = isBlankPeriodicity(item.periodicidade);
+        detailsGrid = `
+            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
+            <div class="view-item"><label>Categoria</label><div>${item.categoria || '-'}</div></div>
+            <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
+            <div class="view-item"><label>Instrutor</label><div>${item.instrutor || 'ND'}</div></div>
+            <div class="view-item"><label>Local do Evento</label><div>${item.localEvento || 'ND'}</div></div>
+            <div class="view-item"><label>Carga Horária</label><div>${item.cargaHoraria || 'ND'}</div></div>
+            <div class="view-item"><label>Data Publicação</label><div>${formatBR(item.dataPublicacao)}</div></div>
+            <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${item.periodicidade} dias`}</div></div>
+            <div class="view-item"><label>Data Previsão</label><div>${isNA ? 'N/A' : formatBR(item.dataPrevisao)}</div></div>
+            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+        `;
     } else if (finalTab === 'documentos') { 
         const isNA = isBlankPeriodicity(item.docIntervalo);
         detailsGrid = `
@@ -7207,6 +7363,7 @@ function renderViewContent(id, tab) {
             listname = 'SETORES';
         } else if (genericKey === 'categorias') {
             if(currentTab === 'auditoria') currentListKey = 'auditCategorias';
+            else if(currentTab === 'treinamentos') currentListKey = 'trainCategorias';
             else if(currentTab === 'atividades') currentListKey = 'ativCategorias';
             else if(currentTab === 'manutencao') currentListKey = 'mantCategorias';
             else currentListKey = 'docCategorias'; 
@@ -7227,6 +7384,7 @@ function renderViewContent(id, tab) {
             
             let subcatMapKey;
             if(currentTab === 'auditoria') subcatMapKey = 'auditSubcats';
+            else if(currentTab === 'treinamentos') subcatMapKey = 'trainSubcats';
             else if(currentTab === 'atividades') subcatMapKey = 'ativSubcats';
             else if(currentTab === 'manutencao') subcatMapKey = 'mantItens';
             else subcatMapKey = 'docSubcats';
@@ -7236,6 +7394,7 @@ function renderViewContent(id, tab) {
             
         } else if (genericKey === 'status') {
             if(currentTab === 'auditoria') currentListKey = 'auditStatus';
+            else if(currentTab === 'treinamentos') currentListKey = 'trainStatus';
             else if(currentTab === 'atividades') currentListKey = 'ativStatus';
             else if(currentTab === 'manutencao') currentListKey = 'mantStatus';
             else currentListKey = 'docStatus';
@@ -7243,6 +7402,7 @@ function renderViewContent(id, tab) {
             listname = 'STATUS';
         } else if (genericKey === 'marcadores') {
             if(currentTab === 'auditoria') currentListKey = 'auditMarcadores';
+            else if(currentTab === 'treinamentos') currentListKey = 'trainMarcadores';
             else if(currentTab === 'atividades') currentListKey = 'ativMarcadores';
             else if(currentTab === 'manutencao') currentListKey = 'mantMarcadores';
             else currentListKey = 'docMarcadores';
