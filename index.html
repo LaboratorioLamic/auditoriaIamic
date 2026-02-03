@@ -7075,10 +7075,11 @@ function resetModal(prefix) {
             alert('Exclusão cancelada. Você não digitou "EXCLUIR" corretamente.');
             return;
         }
-        if (tab === 'auditoria') audits = audits.filter(a => a.id !== id);
-        else if (tab === 'atividades') activities = activities.filter(a => a.id !== id);
-        else if (tab === 'manutencao') maintenances = maintenances.filter(m => m.id !== id);
-        else if (tab === 'documentos') documents = documents.filter(d => d.id !== id); 
+        if (tab === 'auditoria' || tab === 'audit') audits = audits.filter(a => String(a.id) !== String(id));
+        else if (tab === 'treinamentos' || tab === 'train') trainings = trainings.filter(t => String(t.id) !== String(id));
+        else if (tab === 'atividades' || tab === 'ativ') activities = activities.filter(a => String(a.id) !== String(id));
+        else if (tab === 'manutencao' || tab === 'mant') maintenances = maintenances.filter(m => String(m.id) !== String(id));
+        else if (tab === 'documentos' || tab === 'doc') documents = documents.filter(d => String(d.id) !== String(id)); 
         saveAll();
         renderCards();
     }
