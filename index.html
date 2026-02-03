@@ -3888,6 +3888,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             );
         }
         
+        // Aplicar filtro de permissões de setores
+        const allowedSetores = getAllowedSetores();
+        if (allowedSetores !== null) {
+            rawItems = rawItems.filter(item => allowedSetores.includes(item.setor));
+        }
+        
         // --- FILTRAGEM ---
         let filteredItems = rawItems.filter(item => {
             
@@ -4208,7 +4214,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const revisor = document.getElementById('fAuditRevisor')?.value || ''; // CORREÇÃO: Captura Revisor
             const dateType = document.getElementById('fAuditDateType').value;
             
-            data = audits.filter(item => {
+            data = audits;
+            
+            // Aplicar filtro de permissões de setores
+            const allowedSetores = getAllowedSetores();
+            if (allowedSetores !== null) {
+                data = data.filter(item => allowedSetores.includes(item.setor));
+            }
+            
+            data = data.filter(item => {
                 if (setor && item.setor !== setor) return false; 
                 if (cat && item.categoria !== cat) return false;
                 if (sub && item.subcategoria !== sub) return false;
@@ -4256,7 +4270,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const responsavel = document.getElementById('fTrainResponsavel')?.value || '';
             const dateType = document.getElementById('fTrainDateType')?.value || 'all';
 
-            data = trainings.filter(item => {
+            data = trainings;
+            
+            // Aplicar filtro de permissões de setores
+            const allowedSetores = getAllowedSetores();
+            if (allowedSetores !== null) {
+                data = data.filter(item => allowedSetores.includes(item.setor));
+            }
+            
+            data = data.filter(item => {
                 if (setor && item.setor !== setor) return false;
                 if (cat && item.categoria !== cat) return false;
                 if (sub && item.subcategoria !== sub) return false;
@@ -4304,7 +4326,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const revisor = document.getElementById('fAtivRevisor')?.value || ''; // CORREÇÃO: Captura Revisor
             const dateType = document.getElementById('fAtivDateType').value;
     
-            data = activities.filter(item => {
+            data = activities;
+            
+            // Aplicar filtro de permissões de setores
+            const allowedSetores = getAllowedSetores();
+            if (allowedSetores !== null) {
+                data = data.filter(item => allowedSetores.includes(item.setor));
+            }
+            
+            data = data.filter(item => {
                 if (setor && item.setor !== setor) return false; 
                 if (cat && item.categoria !== cat) return false;
                 if (sub && item.subcategoria !== sub) return false;
@@ -4353,7 +4383,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const responsavel = document.getElementById('fMantResponsavel')?.value || '';
             const dateType = document.getElementById('fMantDateType').value;
             
-            data = maintenances.filter(item => {
+            data = maintenances;
+            
+            // Aplicar filtro de permissões de setores
+            const allowedSetores = getAllowedSetores();
+            if (allowedSetores !== null) {
+                data = data.filter(item => allowedSetores.includes(item.setor));
+            }
+            
+            data = data.filter(item => {
                 if (setor && item.setor !== setor) return false; 
                 if (cat && item.categoria !== cat) return false;
                 if (itemVal && item.item !== itemVal) return false;
@@ -4402,7 +4440,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const revisor = document.getElementById('fDocRevisor')?.value || ''; // CORREÇÃO: Captura Revisor
             const dateType = document.getElementById('fDocDateType').value;
     
-            data = documents.filter(item => {
+            data = documents;
+            
+            // Aplicar filtro de permissões de setores
+            const allowedSetores = getAllowedSetores();
+            if (allowedSetores !== null) {
+                data = data.filter(item => allowedSetores.includes(item.setor));
+            }
+            
+            data = data.filter(item => {
                 if (setor && item.setor !== setor) return false; 
                 if (cat && item.categoria !== cat) return false;
                 if (sub && item.subcategoria !== sub) return false;
@@ -4665,6 +4711,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         }
         if (!allowedTabs || allowedTabs.includes('documentos')) {
             rawItems = rawItems.concat(documents.map(d => ({ ...d, type: 'doc' })));
+        }
+        
+        // Aplicar filtro de permissões de setores
+        const allowedSetores = getAllowedSetores();
+        if (allowedSetores !== null) {
+            rawItems = rawItems.filter(item => allowedSetores.includes(item.setor));
         }
         
         // Obtém valores atuais dos filtros (exceto o que estamos atualizando)
@@ -5362,6 +5414,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         else if (prefix === 'Ativ') items = activities || [];
         else if (prefix === 'Mant') items = maintenances || [];
         else if (prefix === 'Doc') items = documents || [];
+        
+        // Aplicar filtro de permissões de setores
+        const allowedSetores = getAllowedSetores();
+        if (allowedSetores !== null) {
+            items = items.filter(item => allowedSetores.includes(item.setor));
+        }
         
         // Aplica filtro de finalizados se o checkbox estiver desmarcado
         const showFinalized = document.getElementById('showFinalizedCheckbox')?.checked !== false;
@@ -6078,14 +6136,7 @@ function resetModal(prefix) {
         
         // NOVO: Sincroniza referências em outros cards quando há mudança em campos de lista suspensa
         if (!isNew && originalItem) {
-            // Lista de campos que referem a itens de listas suspensas (estrutura da lista mestre)
-            // NOTA: status e marcador sao campos especificos de cada card, nao devem ser sincronizados
-            const fieldsToSync = ['setor', 'categoria', 'subcategoria'];
-            fieldsToSync.forEach(field => {
-                if (originalItem[field] !== newItem[field]) {
-                    syncReferenceAcrossCards('audit', field, originalItem[field], newItem[field]);
-                }
-            });
+            // Sincronização removida para evitar afetar outros cards ao editar
         }
         
         if (isNew) {
@@ -6200,12 +6251,7 @@ function resetModal(prefix) {
 
         // Sincroniza referências em outros cards quando há mudança em campos de lista suspensa
         if (!isNew && originalItem) {
-            const fieldsToSync = ['setor', 'categoria', 'subcategoria'];
-            fieldsToSync.forEach(field => {
-                if (originalItem[field] !== newItem[field]) {
-                    syncReferenceAcrossCards('train', field, originalItem[field], newItem[field]);
-                }
-            });
+            // Sincronização removida para evitar afetar outros cards ao editar
         }
         
         if (isNew) {
@@ -6291,14 +6337,7 @@ function resetModal(prefix) {
                 newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
             }
             
-            // NOVO: Sincroniza referências em outros cards quando há mudança em campos de lista suspensa
-            // NOTA: status e marcador sao campos especificos de cada card, nao devem ser sincronizados
-            const fieldsToSync = ['setor', 'categoria', 'subcategoria'];
-            fieldsToSync.forEach(field => {
-                if (originalItem[field] !== newItem[field]) {
-                    syncReferenceAcrossCards('ativ', field, originalItem[field], newItem[field]);
-                }
-            });
+            // Sincronização removida para evitar afetar outros cards ao editar
             
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0) {
@@ -6382,15 +6421,7 @@ function resetModal(prefix) {
             if (!newItem.historico || !Array.isArray(newItem.historico)) {
                 newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
             }
-            
-            // NOVO: Sincroniza referências em outros cards quando há mudança em campos de lista suspensa
-            // NOTA: status e marcador sao campos especificos de cada card, nao devem ser sincronizados
-            const fieldsToSync = ['setor', 'categoria', 'item', 'tipo'];
-            fieldsToSync.forEach(field => {
-                if (originalItem[field] !== newItem[field]) {
-                    syncReferenceAcrossCards('mant', field, originalItem[field], newItem[field]);
-                }
-            });
+            // Sincronização removida para evitar afetar outros cards ao editar
             
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0) {
@@ -6468,14 +6499,7 @@ function resetModal(prefix) {
                 newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
             }
             
-            // NOVO: Sincroniza referências em outros cards quando há mudança em campos de lista suspensa
-            // NOTA: status e marcador sao campos especificos de cada card, nao devem ser sincronizados
-            const fieldsToSync = ['setor', 'categoria', 'subcategoria'];
-            fieldsToSync.forEach(field => {
-                if (originalItem[field] !== newItem[field]) {
-                    syncReferenceAcrossCards('doc', field, originalItem[field], newItem[field]);
-                }
-            });
+            // Sincronização removida para evitar afetar outros cards ao editar
             
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0) {
@@ -7725,6 +7749,7 @@ function renderViewContent(id, tab) {
         // Identifica qual campo atualizar baseado na chave da lista
         if (key === 'setores') {
             updateCards(audits, 'setor');
+            updateCards(trainings, 'setor');
             updateCards(activities, 'setor');
             updateCards(maintenances, 'setor');
             updateCards(documents, 'setor');
@@ -8026,6 +8051,14 @@ function renderViewContent(id, tab) {
                 { items: documents, type: 'doc', tabName: 'documentos' }
             ];
             
+            // Aplicar filtro de permissões de setores
+            const allowedSetores = getAllowedSetores();
+            if (allowedSetores !== null) {
+                allData.forEach(d => {
+                    d.items = d.items.filter(item => allowedSetores.includes(item.setor));
+                });
+            }
+            
             // Filtra apenas as abas que o usuário tem permissão de acessar
             if (allowedTabs && allowedTabs.length > 0) {
                 allData = allData.filter(d => allowedTabs.includes(d.tabName));
@@ -8050,6 +8083,12 @@ function renderViewContent(id, tab) {
                 }
                 return new Date(a.dateField) - new Date(b.dateField);
             });
+        }
+        
+        // Aplicar filtro de permissões de setores para abas específicas
+        const allowedSetores = getAllowedSetores();
+        if (allowedSetores !== null) {
+            data = data.filter(item => allowedSetores.includes(item.setor));
         }
         
         // Para abas específicas, aplica filtros
