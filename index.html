@@ -4591,7 +4591,6 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
                     ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
-                    ${item.instrutor ? `<div class="card-info-row"><i class="fas fa-chalkboard-teacher"></i> <span>Instrutor: ${item.instrutor}</span></div>` : ''}
                     <div class="card-info-row"><i class="far fa-calendar"></i> <span>Pub: ${formatBR(item.dataPublicacao)}</span></div>
                     ${!isNA ? `<div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: ${formatBR(item.dataPrevisao)}</span></div>` : ''}
                 `;
@@ -5237,7 +5236,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     ['auditResponsavel', 'trainResponsavel', 'ativResponsavel', 'mantResponsavelTecnico', 'docResponsavel', 'auditRevisor', 'ativRevisor', 'docRevisor'].forEach(id => {
         const select = document.getElementById(id);
         if (select) {
+            const currentValue = select.value;
             select.innerHTML = sortedOptions.join('');
+            select.value = currentValue;
         }
     });
 
@@ -6954,9 +6955,24 @@ function resetModal(prefix) {
             document.getElementById('auditStatus').value = item.status;
             document.getElementById('auditDataPublicacao').value = item.dataPublicacao;
             document.getElementById('auditDataPrevisao').value = item.dataPrevisao;
-            document.getElementById('auditResponsavel').value = item.responsavel || '';
-            document.getElementById('auditRevisor').value = item.revisor || '';
-            document.getElementById('auditAuditor').value = item.auditor || '';
+            let auditResp = item.responsavel;
+            if (Array.isArray(auditResp)) auditResp = auditResp[0];
+            else if (typeof auditResp === 'string' && auditResp.startsWith('[')) {
+                try { auditResp = JSON.parse(auditResp)[0]; } catch {}
+            }
+            document.getElementById('auditResponsavel').value = auditResp || '';
+            let auditRev = item.revisor;
+            if (Array.isArray(auditRev)) auditRev = auditRev[0];
+            else if (typeof auditRev === 'string' && auditRev.startsWith('[')) {
+                try { auditRev = JSON.parse(auditRev)[0]; } catch {}
+            }
+            document.getElementById('auditRevisor').value = auditRev || '';
+            let auditAud = item.auditor;
+            if (Array.isArray(auditAud)) auditAud = auditAud[0];
+            else if (typeof auditAud === 'string' && auditAud.startsWith('[')) {
+                try { auditAud = JSON.parse(auditAud)[0]; } catch {}
+            }
+            document.getElementById('auditAuditor').value = auditAud || '';
             document.getElementById('auditFlagDias').value = item.flagDias; // Corrigido
             document.getElementById('auditMarcador').value = item.marcador || '';
             restoreAnexos('audit', item.anexos);
@@ -6972,8 +6988,18 @@ function resetModal(prefix) {
             document.getElementById('ativStatus').value = item.status;
             document.getElementById('ativDataInicio').value = item.dataInicio;
             document.getElementById('ativDataConclusao').value = item.dataConclusao;
-            document.getElementById('ativResponsavel').value = item.responsavel || ''; 
-            document.getElementById('ativRevisor').value = item.revisor || '';
+            let ativResp = item.responsavel;
+            if (Array.isArray(ativResp)) ativResp = ativResp[0];
+            else if (typeof ativResp === 'string' && ativResp.startsWith('[')) {
+                try { ativResp = JSON.parse(ativResp)[0]; } catch {}
+            }
+            document.getElementById('ativResponsavel').value = ativResp || ''; 
+            let ativRev = item.revisor;
+            if (Array.isArray(ativRev)) ativRev = ativRev[0];
+            else if (typeof ativRev === 'string' && ativRev.startsWith('[')) {
+                try { ativRev = JSON.parse(ativRev)[0]; } catch {}
+            }
+            document.getElementById('ativRevisor').value = ativRev || '';
             document.getElementById('ativFlagDias').value = item.flagDias; // Corrigido
             document.getElementById('ativMarcador').value = item.marcador || '';
             restoreAnexos('ativ', item.anexos);
@@ -6997,7 +7023,12 @@ function resetModal(prefix) {
             } else {
                 prevDiv.textContent = '--/--/----';
             }
-            document.getElementById('trainResponsavel').value = item.responsavel || '';
+            let trainResp = item.responsavel;
+            if (Array.isArray(trainResp)) trainResp = trainResp[0];
+            else if (typeof trainResp === 'string' && trainResp.startsWith('[')) {
+                try { trainResp = JSON.parse(trainResp)[0]; } catch {}
+            }
+            document.getElementById('trainResponsavel').value = trainResp || '';
             document.getElementById('trainInstrutor').value = item.instrutor || '';
             document.getElementById('trainParticipantes').value = item.participantes || '';
             document.getElementById('trainLocalEvento').value = item.localEvento || '';
@@ -7028,7 +7059,12 @@ function resetModal(prefix) {
             document.getElementById('mantTipo').value = item.tipo || '';
             document.getElementById('mantUltima').value = item.ultima;
             document.getElementById('mantIntervalo').value = (item.intervalo ?? ''); // permite vazio
-            document.getElementById('mantResponsavelTecnico').value = item.responsavelTecnico || ''; 
+            let mantResp = item.responsavelTecnico;
+            if (Array.isArray(mantResp)) mantResp = mantResp[0];
+            else if (typeof mantResp === 'string' && mantResp.startsWith('[')) {
+                try { mantResp = JSON.parse(mantResp)[0]; } catch {}
+            }
+            document.getElementById('mantResponsavelTecnico').value = mantResp || ''; 
             document.getElementById('mantResponsavelManutencao').value = item.responsavelManutencao || '';
             document.getElementById('mantEmpresaResponsavel').value = item.empresaResponsavel || ''; 
             document.getElementById('mantStatus').value = item.status;
@@ -7048,8 +7084,18 @@ function resetModal(prefix) {
             document.getElementById('docStatus').value = item.status;
             document.getElementById('docDataCriacao').value = item.dataCriacao;
             document.getElementById('docIntervalo').value = (item.docIntervalo ?? ''); // permite vazio
-            document.getElementById('docResponsavel').value = item.responsavel || '';
-            document.getElementById('docRevisor').value = item.revisor || '';
+            let docResp = item.responsavel;
+            if (Array.isArray(docResp)) docResp = docResp[0];
+            else if (typeof docResp === 'string' && docResp.startsWith('[')) {
+                try { docResp = JSON.parse(docResp)[0]; } catch {}
+            }
+            document.getElementById('docResponsavel').value = docResp || '';
+            let docRev = item.revisor;
+            if (Array.isArray(docRev)) docRev = docRev[0];
+            else if (typeof docRev === 'string' && docRev.startsWith('[')) {
+                try { docRev = JSON.parse(docRev)[0]; } catch {}
+            }
+            document.getElementById('docRevisor').value = docRev || '';
             document.getElementById('docFlagDias').value = item.flagDias; // Corrigido
             calculateNextDate('doc');
             restoreAnexos('doc', item.anexos);
@@ -7192,6 +7238,12 @@ function renderViewContent(id, tab) {
                     if (item) {
                         finalTab = 'documentos';
                         statusList = masterLists.docStatus;
+                    } else {
+                        item = trainings.find(i => i.id === id);
+                        if (item) {
+                            finalTab = 'treinamentos';
+                            statusList = masterLists.trainStatus;
+                        }
                     }
                 }
             }
@@ -7408,6 +7460,7 @@ function renderViewContent(id, tab) {
         else if (finalTab === 'atividades') { item = activities.find(i => i.id === id); }
         else if (finalTab === 'manutencao') { item = maintenances.find(i => i.id === id); }
         else if (finalTab === 'documentos') { item = documents.find(i => i.id === id); }
+        else if (finalTab === 'treinamentos') { item = trainings.find(i => i.id === id); }
         
         // Se não encontrou, tenta procurar em todos os arrays
         if (!item) {
@@ -7422,6 +7475,10 @@ function renderViewContent(id, tab) {
                     else {
                         item = documents.find(i => i.id === id);
                         if (item) finalTab = 'documentos';
+                        else {
+                            item = trainings.find(i => i.id === id);
+                            if (item) finalTab = 'treinamentos';
+                        }
                     }
                 }
             }
