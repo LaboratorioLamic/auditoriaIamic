@@ -6603,17 +6603,33 @@ function resetModal(prefix) {
             return;
         }
         
+        // Combinar carga horária com validação
+        let horas = parseInt(document.getElementById('trainCargaHorariaHoras').value) || 0;
+        let minutos = parseInt(document.getElementById('trainCargaHorariaMinutos').value) || 0;
+        
+        // Validar limites
+        horas = Math.min(Math.max(0, horas), 23);
+        minutos = Math.min(Math.max(0, minutos), 59);
+        
+        const cargaHoraria = `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
+
         const formData = {
-            title: document.getElementById('trainTitle').value,
-            categoria: document.getElementById('trainCategoria').value,
-            setor: document.getElementById('trainSetor').value,
-            status: document.getElementById('trainStatus').value,
-            data: document.getElementById('trainData').value,
-            proximo: document.getElementById('trainProximo').value,
-            responsavel: document.getElementById('trainResponsavel').value,
-            flagDias: document.getElementById('trainFlagDias').value,
-            marcador: document.getElementById('trainMarcador').value,
+            titulo: document.getElementById('trainTitulo').value,
             descricao: document.getElementById('trainDescricao').value,
+            setor: document.getElementById('trainSetor').value,
+            categoria: document.getElementById('trainCategoria').value,
+            subcategoria: document.getElementById('trainSub').value,
+            status: document.getElementById('trainStatus').value,
+            dataPublicacao: document.getElementById('trainDataPublicacao').value,
+            periodicidade: parseInt(document.getElementById('trainPeriodicidade').value) || 0,
+            dataPrevisao: document.getElementById('trainDataPrevisaoValue').value,
+            responsavel: document.getElementById('trainResponsavel').value || '',
+            instrutor: document.getElementById('trainInstrutor').value || '',
+            participantes: document.getElementById('trainParticipantes').value || '',
+            localEvento: document.getElementById('trainLocalEvento').value || '',
+            cargaHoraria: cargaHoraria,
+            flagDias: Number(document.getElementById('trainFlagDias').value) || 7,
+            marcador: document.getElementById('trainMarcador').value,
             anexos: []
         };
         
@@ -6636,16 +6652,27 @@ function resetModal(prefix) {
             editingTrainId = null;
             resetModal('train');
             
-            document.getElementById('trainTitle').value = formData.title;
-            document.getElementById('trainCategoria').value = formData.categoria;
+            document.getElementById('trainTitulo').value = formData.titulo;
+            document.getElementById('trainDescricao').value = formData.descricao;
             document.getElementById('trainSetor').value = formData.setor;
+            document.getElementById('trainCategoria').value = formData.categoria;
+            document.getElementById('trainSub').value = formData.subcategoria;
             document.getElementById('trainStatus').value = formData.status;
-            document.getElementById('trainData').value = formData.data;
-            document.getElementById('trainProximo').value = formData.proximo;
+            document.getElementById('trainDataPublicacao').value = formData.dataPublicacao;
+            document.getElementById('trainPeriodicidade').value = formData.periodicidade;
+            document.getElementById('trainDataPrevisaoValue').value = formData.dataPrevisao;
             document.getElementById('trainResponsavel').value = formData.responsavel;
+            document.getElementById('trainInstrutor').value = formData.instrutor;
+            document.getElementById('trainParticipantes').value = formData.participantes;
+            document.getElementById('trainLocalEvento').value = formData.localEvento;
+            
+            // Separar carga horária
+            const [horasStr, minutosStr] = formData.cargaHoraria.split(':');
+            document.getElementById('trainCargaHorariaHoras').value = parseInt(horasStr) || 0;
+            document.getElementById('trainCargaHorariaMinutos').value = parseInt(minutosStr) || 0;
+            
             document.getElementById('trainFlagDias').value = formData.flagDias;
             document.getElementById('trainMarcador').value = formData.marcador;
-            document.getElementById('trainDescricao').value = formData.descricao;
             
             formData.anexos.forEach(anexo => {
                 addAnexo('train', anexo);
@@ -6653,6 +6680,7 @@ function resetModal(prefix) {
             
             // Atualiza as listas dependentes
             onCategoryChange('train');
+            calculateTrainingPrevisao();
             
             // Abre o modal com animação
             modal.style.display = 'flex';
