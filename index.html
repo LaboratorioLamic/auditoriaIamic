@@ -3470,11 +3470,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 const cachedDocuments = loadFromLocalStorage('documents');
                 const cachedMasterLists = loadFromLocalStorage('masterLists');
                 
-                if (cachedAudits || cachedTrainings || cachedUsers || cachedActivities || cachedMaintenances || cachedDocuments) {
+                if (cachedAudits || cachedTrainings || cachedActivities || cachedMaintenances || cachedDocuments) {
                     console.log('Carregando dados do localStorage (Firebase vazio)');
                     audits = cachedAudits || [];
                     trainings = cachedTrainings || [];
-                    users = cachedUsers || [];
                     activities = cachedActivities || [];
                     maintenances = cachedMaintenances || [];
                     documents = cachedDocuments || [];
@@ -3493,7 +3492,6 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 // Mapeamento direto das chaves do seu JSON
                 audits = record.audits || [];
                 trainings = record.trainings || [];
-                users = record.users || [];
                 activities = record.activities || [];
                 maintenances = record.maintenances || [];
                 documents = record.documents || []; 
