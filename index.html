@@ -6242,7 +6242,7 @@ function resetModal(prefix) {
             participantes: document.getElementById('trainParticipantes').value || '',
             localEvento: document.getElementById('trainLocalEvento').value || '',
             cargaHoraria: cargaHoraria,
-            flagDias: Number(document.getElementById('trainFlagDias').value) || 7,
+            flagDias: Number(document.getElementById('trainFlagDias').value) ?? 7,
             marcador: trainMarkerObj ? trainMarkerObj.name : '',
             marcadorCor: trainMarkerObj ? trainMarkerObj.color : 'default',
             anexos: getAnexos('train')
@@ -6628,7 +6628,7 @@ function resetModal(prefix) {
             participantes: document.getElementById('trainParticipantes').value || '',
             localEvento: document.getElementById('trainLocalEvento').value || '',
             cargaHoraria: cargaHoraria,
-            flagDias: Number(document.getElementById('trainFlagDias').value) || 7,
+            flagDias: Number(document.getElementById('trainFlagDias').value) ?? 7,
             marcador: document.getElementById('trainMarcador').value,
             anexos: []
         };
@@ -7298,7 +7298,7 @@ function renderViewContent(id, tab) {
             <div class="view-item"><label>Auditor</label><div>${item.auditor || 'ND'}</div></div>
             <div class="view-item"><label>Publicação</label><div>${formatBR(item.dataPublicacao)}</div></div>
             <div class="view-item"><label>Previsão</label><div>${formatBR(item.dataPrevisao)}</div></div>
-            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+            <div class="view-item"><label>Alerta</label><div>${item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'}</div></div>
         `;
     } else if (finalTab === 'atividades') {
         detailsGrid = `
@@ -7309,7 +7309,7 @@ function renderViewContent(id, tab) {
             <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
             <div class="view-item"><label>Data Início</label><div>${formatBR(item.dataInicio)}</div></div>
             <div class="view-item"><label>Data Conclusão</label><div>${formatBR(item.dataConclusao)}</div></div>
-            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+            <div class="view-item"><label>Alerta</label><div>${item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'}</div></div>
         `;
     } else if (finalTab === 'manutencao') {
         const isNA = isBlankPeriodicity(item.intervalo);
@@ -7324,7 +7324,7 @@ function renderViewContent(id, tab) {
             <div class="view-item"><label>Responsável Técnico</label><div>${item.responsavelTecnico || 'ND'}</div></div>
             <div class="view-item"><label>Responsável pela Manutenção</label><div>${item.responsavelManutencao || 'ND'}</div></div>
             <div class="view-item"><label>Empresa Responsável</label><div>${item.empresaResponsavel || 'ND'}</div></div>
-            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+            <div class="view-item"><label>Alerta</label><div>${item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'}</div></div>
         `;
     } else if (finalTab === 'treinamentos') {
         const isNA = isBlankPeriodicity(item.periodicidade);
@@ -7338,7 +7338,7 @@ function renderViewContent(id, tab) {
             <div class="view-item"><label>Data Publicação</label><div>${formatBR(item.dataPublicacao)}</div></div>
             <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${item.periodicidade} dias`}</div></div>
             <div class="view-item"><label>Data Previsão</label><div>${isNA ? 'N/A' : formatBR(item.dataPrevisao)}</div></div>
-            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+            <div class="view-item"><label>Alerta</label><div>${item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'}</div></div>
         `;
     } else if (finalTab === 'documentos') { 
         const isNA = isBlankPeriodicity(item.docIntervalo);
@@ -7351,7 +7351,7 @@ function renderViewContent(id, tab) {
             <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
             <div class="view-item"><label>Data Criação</label><div>${formatBR(item.dataCriacao)}</div></div>
             <div class="view-item"><label>Próx. Revisão</label><div>${isNA ? 'N/A' : formatBR(item.dataProximaRevisao)}</div></div>
-            <div class="view-item"><label>Alerta</label><div>${item.flagDias} dias antes</div></div>
+            <div class="view-item"><label>Alerta</label><div>${item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'}</div></div>
         `;
     }
 
