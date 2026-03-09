@@ -4519,9 +4519,17 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     }
                 }
 
-                // 3) Dentro do mesmo grupo, ordena por data (mais antiga primeiro)
+                // 2.5) Entre itens "abertos" sem alerta, os com data válida vêm antes dos com "ND"
                 const dateA = new Date(getSortDate ? getSortDate(a) : a[dateField]);
                 const dateB = new Date(getSortDate ? getSortDate(b) : b[dateField]);
+                const isAInvalid = isNaN(dateA.getTime());
+                const isBInvalid = isNaN(dateB.getTime());
+
+                if (isAInvalid !== isBInvalid) {
+                    return isAInvalid ? 1 : -1;  // Datas inválidas ("ND") por último
+                }
+
+                // 3) Dentro do mesmo grupo, ordena por data (mais antiga primeiro)
                 return dateA - dateB;
             });
         }
