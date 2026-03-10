@@ -6536,17 +6536,19 @@ function resetModal(prefix) {
         
         // Coleta os dados atuais do formulário
         const formData = {
-            title: document.getElementById('auditTitle').value,
-            categoria: document.getElementById('auditCategoria').value,
+            titulo: document.getElementById('auditTitulo').value,
+            descricao: document.getElementById('auditDescricao').value,
             setor: document.getElementById('auditSetor').value,
+            categoria: document.getElementById('auditCategoria').value,
+            subcategoria: document.getElementById('auditSub').value,
             status: document.getElementById('auditStatus').value,
-            data: document.getElementById('auditData').value,
-            proximo: document.getElementById('auditProximo').value,
+            dataPublicacao: document.getElementById('auditDataPublicacao').value,
+            dataPrevisao: document.getElementById('auditDataPrevisao').value,
             responsavel: document.getElementById('auditResponsavel').value,
+            revisor: document.getElementById('auditRevisor').value,
             auditor: document.getElementById('auditAuditor').value,
             flagDias: document.getElementById('auditFlagDias').value,
             marcador: document.getElementById('auditMarcador').value,
-            descricao: document.getElementById('auditDescricao').value,
             anexos: []
         };
         
@@ -6572,17 +6574,19 @@ function resetModal(prefix) {
             resetModal('audit');
             
             // Preenche o formulário com os dados coletados
-            document.getElementById('auditTitle').value = formData.title;
-            document.getElementById('auditCategoria').value = formData.categoria;
+            document.getElementById('auditTitulo').value = formData.titulo;
+            document.getElementById('auditDescricao').value = formData.descricao;
             document.getElementById('auditSetor').value = formData.setor;
+            document.getElementById('auditCategoria').value = formData.categoria;
+            document.getElementById('auditSub').value = formData.subcategoria;
             document.getElementById('auditStatus').value = formData.status;
-            document.getElementById('auditData').value = formData.data;
-            document.getElementById('auditProximo').value = formData.proximo;
+            document.getElementById('auditDataPublicacao').value = formData.dataPublicacao;
+            document.getElementById('auditDataPrevisao').value = formData.dataPrevisao;
             document.getElementById('auditResponsavel').value = formData.responsavel;
+            document.getElementById('auditRevisor').value = formData.revisor;
             document.getElementById('auditAuditor').value = formData.auditor;
             document.getElementById('auditFlagDias').value = formData.flagDias;
             document.getElementById('auditMarcador').value = formData.marcador;
-            document.getElementById('auditDescricao').value = formData.descricao;
             
             // Recria os anexos
             formData.anexos.forEach(anexo => {
@@ -6709,17 +6713,20 @@ function resetModal(prefix) {
             return;
         }
         
+        // Collect all fields from the atividade modal using the correct element IDs
         const formData = {
-            title: document.getElementById('ativTitle').value,
-            categoria: document.getElementById('ativCategoria').value,
+            titulo: document.getElementById('ativTitulo').value,
+            descricao: document.getElementById('ativDescricao').value,
             setor: document.getElementById('ativSetor').value,
+            categoria: document.getElementById('ativCategoria').value,
+            subcategoria: document.getElementById('ativSub').value,
             status: document.getElementById('ativStatus').value,
-            data: document.getElementById('ativData').value,
-            proximo: document.getElementById('ativProximo').value,
+            dataInicio: document.getElementById('ativDataInicio').value,
+            dataConclusao: document.getElementById('ativDataConclusao').value,
             responsavel: document.getElementById('ativResponsavel').value,
+            revisor: document.getElementById('ativRevisor').value,
             flagDias: document.getElementById('ativFlagDias').value,
             marcador: document.getElementById('ativMarcador').value,
-            descricao: document.getElementById('ativDescricao').value,
             anexos: []
         };
         
@@ -6742,16 +6749,18 @@ function resetModal(prefix) {
             editingAtivId = null;
             resetModal('ativ');
             
-            document.getElementById('ativTitle').value = formData.title;
-            document.getElementById('ativCategoria').value = formData.categoria;
+            document.getElementById('ativTitulo').value = formData.titulo;
+            document.getElementById('ativDescricao').value = formData.descricao;
             document.getElementById('ativSetor').value = formData.setor;
+            document.getElementById('ativCategoria').value = formData.categoria;
+            document.getElementById('ativSub').value = formData.subcategoria;
             document.getElementById('ativStatus').value = formData.status;
-            document.getElementById('ativData').value = formData.data;
-            document.getElementById('ativProximo').value = formData.proximo;
+            document.getElementById('ativDataInicio').value = formData.dataInicio;
+            document.getElementById('ativDataConclusao').value = formData.dataConclusao;
             document.getElementById('ativResponsavel').value = formData.responsavel;
+            document.getElementById('ativRevisor').value = formData.revisor;
             document.getElementById('ativFlagDias').value = formData.flagDias;
             document.getElementById('ativMarcador').value = formData.marcador;
-            document.getElementById('ativDescricao').value = formData.descricao;
             
             formData.anexos.forEach(anexo => {
                 addAnexo('ativ', anexo);
