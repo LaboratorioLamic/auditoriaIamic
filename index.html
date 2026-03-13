@@ -4631,7 +4631,6 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
                     ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
-                    <div class="card-info-row"><i class="far fa-clock"></i> <span>Data: <strong>${formatBR(item.dataCriacao)}</strong></span></div>
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isNA ? 'N/A' : formatBR(item.dataProximaRevisao)}</strong></span></div>
                 `;
             }
