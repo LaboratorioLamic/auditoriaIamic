@@ -4366,7 +4366,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         } else if (currentTab === 'manutencao') {
             statusList = masterLists.mantStatus || [];
             dateField = 'proxima';
-            getSortDate = (it) => getMaintenanceCardDate(it); // Data (publicação)
+            // ordenar sempre pela "próxima" manutenção (mais próxima primeiro)
+            getSortDate = (it) => getMaintenanceDeadlineDate(it) || ''; // Data de próxima manutenção
             getDeadlineDate = (it) => getMaintenanceDeadlineDate(it);
             filterSetorId = 'fMantSetor'; 
             filterCatId = 'fMantCat';
@@ -4520,8 +4521,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 }
 
                 // 2.5) Entre itens "abertos" sem alerta, os com data válida vêm antes dos com "ND"
-                const dateA = new Date(getSortDate ? getSortDate(a) : a[dateField]);
-                const dateB = new Date(getSortDate ? getSortDate(b) : b[dateField]);
+                const sortA = getSortDate ? (getSortDate(a) || '') : (a[dateField] || '');
+                const sortB = getSortDate ? (getSortDate(b) || '') : (b[dateField] || '');
+                const dateA = new Date(sortA);
+                const dateB = new Date(sortB);
                 const isAInvalid = isNaN(dateA.getTime());
                 const isBInvalid = isNaN(dateB.getTime());
 
@@ -4619,7 +4622,6 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
                     <div class="card-info-row"><i class="fas fa-tag"></i> <span>${item.tipo || 'ND'}</span></div>
                     ${responsavelTec ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsavelTec}</span></div>` : ''}
-                    <div class="card-info-row"><i class="far fa-clock"></i> <span>Data: <strong>${formatBR(item.ultima)}</strong></span></div>
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isNA ? 'N/A' : formatBR(item.proxima)}</strong></span></div>
                 `;
             } else { // Documentos
