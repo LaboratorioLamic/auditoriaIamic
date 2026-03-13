@@ -3290,6 +3290,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     function userAllowedTabs() {
         if (!currentuser) return null;
+        // Admin tem acesso a todas as abas
+        if (userIsAdmin()) {
+            return ['dashboard', 'auditoria', 'treinamentos', 'documentos', 'atividades', 'manutencao', 'backup', 'configuracoes'];
+        }
         // Se não houver configuração de abas, por segurança libera apenas Dashboard e Auditoria
         if (!Array.isArray(currentuser.tabs) || currentuser.tabs.length === 0) {
             return ['dashboard', 'auditoria'];
@@ -3313,8 +3317,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const btn = document.getElementById(btnId);
             if (!btn) return;
             if (key === 'configuracoes') {
-                // Aba Configurações só aparece para admin
-                btn.style.display = userIsAdmin() ? 'block' : 'none';
+                // Aba Configurações só aparece se permitida
+                btn.style.display = allowed && allowed.includes(key) ? 'block' : 'none';
             } else if (!allowed || allowed.includes(key)) {
                 btn.disabled = false;
                 btn.style.opacity = '1';
