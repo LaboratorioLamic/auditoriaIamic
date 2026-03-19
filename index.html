@@ -2490,7 +2490,20 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
     function clearAllCache() {
         try {
-            Object.values(CACHE_KEYS).forEach(key => localStorage.removeItem(key));
+            // PROTEÇÃO: Limpa TODOS os dados cacheados incluindo sincronização
+            // Preserva apenas filtros do usuário para melhor experiência
+            const filtersBackup = localStorage.getItem(CACHE_KEYS.filters);
+            
+            Object.values(CACHE_KEYS).forEach(key => {
+                localStorage.removeItem(key);
+            });
+            
+            // Restaura apenas filtros se existiam
+            if (filtersBackup) {
+                localStorage.setItem(CACHE_KEYS.filters, filtersBackup);
+            }
+            
+            console.log('Cache de dados completamente limpo. Apenas filtros do usuário foram preservados.');
         } catch (error) {
             console.error('Erro ao limpar cache:', error);
         }
@@ -3394,8 +3407,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                     updateCurrentuserUI();
                     applyuserPermissionsToTabs();
                     applyListManagerPermissions();
-                    loading.innerHTML = '<i class="fas fa-check"></i> Login realizado. Carregando dados...';
-                    await loadCloudData();
+                    loading.innerHTML = '<i class="fas fa-check"></i> Login realizado. Sincronizando dados...';
+                    // PROTEÇÃO: Força sincronização completa com Firebase após login
+                    forceFirebaseSync();
                     document.getElementById('loginOverlay').style.display = 'none';
                     // Atualiza tabela de usuários para garantir que todos pré-cadastrados apareçam na aba Configurações
                     renderusersConfigTable();
@@ -3452,6 +3466,35 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         }
     }
     
+    // --- PROTEÇÃO DE SINCRONIZAÇÃO FORÇADA ---
+    function forceFirebaseSync() {
+        console.log('Iniciando sincronização forçada com Firebase...');
+        try {
+            // Limpa todos os dados cacheados exceto filtros
+            Object.keys(CACHE_KEYS).forEach(key => {
+                if (key !== 'filters' && key !== 'lastSync') {
+                    localStorage.removeItem(CACHE_KEYS[key]);
+                }
+            });
+            
+            // Reseta variáveis globais para forçar recarga completa
+            audits = [];
+            trainings = [];
+            activities = [];
+            maintenances = [];
+            documents = [];
+            users = [];
+            masterLists = JSON.parse(JSON.stringify(defaultMasterLists));
+            
+            // Força recarga dos dados do Firebase
+            loadCloudData();
+            
+            console.log('Sincronização forçada iniciada. Dados locais limpos.');
+        } catch (error) {
+            console.error('Erro na sincronização forçada:', error);
+        }
+    }
+
     // --- INTEGRAÇÃO FIREBASE (DATA) ---
     
     async function loadCloudData() {
@@ -3465,31 +3508,15 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const snapshot = await dbGet(dataRef);
             
             if (!snapshot.exists()) {
-                // Se Firebase está vazio, tenta carregar do localStorage
-                const cachedAudits = loadFromLocalStorage('audits');
-                const cachedTrainings = loadFromLocalStorage('trainings');
-                const cachedUsers = loadFromLocalStorage('users');
-                const cachedActivities = loadFromLocalStorage('activities');
-                const cachedMaintenances = loadFromLocalStorage('maintenances');
-                const cachedDocuments = loadFromLocalStorage('documents');
-                const cachedMasterLists = loadFromLocalStorage('masterLists');
-                
-                if (cachedAudits || cachedTrainings || cachedActivities || cachedMaintenances || cachedDocuments) {
-                    console.log('Carregando dados do localStorage (Firebase vazio)');
-                    audits = cachedAudits || [];
-                    trainings = cachedTrainings || [];
-                    activities = cachedActivities || [];
-                    maintenances = cachedMaintenances || [];
-                    documents = cachedDocuments || [];
-                    masterLists = cachedMasterLists ? { ...defaultMasterLists, ...cachedMasterLists } : JSON.parse(JSON.stringify(defaultMasterLists));
-                } else {
-                    audits = [];
-                    trainings = [];
-                    activities = [];
-                    maintenances = [];
-                    documents = [];
-                    masterLists = JSON.parse(JSON.stringify(defaultMasterLists));
-                }
+                // PROTEÇÃO: Firebase vazio - não carrega do localStorage
+                // Inicia com dados vazios para forçar sincronização limpa
+                console.log('Firebase está vazio. Iniciando com dados vazios para sincronização limpa...');
+                audits = [];
+                trainings = [];
+                activities = [];
+                maintenances = [];
+                documents = [];
+                masterLists = JSON.parse(JSON.stringify(defaultMasterLists));
             } else {
                 const record = snapshot.val();
                 
@@ -3542,41 +3569,32 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             startFirebaseListener();
 
         } catch (err) {
-            console.error("Erro ao carregar dados:", err);
+            console.error("Erro ao carregar dados do Firebase:", err);
             
-            // Fallback: Tenta carregar do localStorage em caso de erro
-            console.log('Tentando carregar dados do localStorage como fallback...');
-            const cachedAudits = loadFromLocalStorage('audits');
-            const cachedActivities = loadFromLocalStorage('activities');
-            const cachedMaintenances = loadFromLocalStorage('maintenances');
-            const cachedDocuments = loadFromLocalStorage('documents');
-            const cachedMasterLists = loadFromLocalStorage('masterLists');
+            // PROTEÇÃO: Não usa fallback do localStorage
+            // Inicia com dados vazios e aguarda sincronização
+            console.log('Erro no Firebase. Iniciando com dados vazios até sincronização...');
+            audits = [];
+            trainings = [];
+            activities = [];
+            maintenances = [];
+            documents = [];
+            masterLists = JSON.parse(JSON.stringify(defaultMasterLists));
             
-            if (cachedAudits || cachedActivities || cachedMaintenances || cachedDocuments) {
-                audits = cachedAudits || [];
-                activities = cachedActivities || [];
-                maintenances = cachedMaintenances || [];
-                documents = cachedDocuments || [];
-                masterLists = cachedMasterLists ? { ...defaultMasterLists, ...cachedMasterLists } : JSON.parse(JSON.stringify(defaultMasterLists));
-                
-                // Limpa responsáveis inválidos após carregar do cache
-                cleanInvalidResponsaveis();
-                
-                populateYearSelects();
-                populateSelects();
-                
-                // Restaura os filtros salvos após popular os selects
-                restoreFiltersFromLocalStorage();
-                
-                if (currentTab === 'dashboard') {
-                    renderDashboard();
-                } else {
-                    renderCards();
-                }
-                alert("Dados carregados do cache local. Reconecte-se para sincronizar com o servidor.");
+            cleanInvalidResponsaveis();
+            populateYearSelects();
+            populateSelects();
+            
+            // Restaura os filtros salvos após popular os selects
+            restoreFiltersFromLocalStorage();
+            
+            if (currentTab === 'dashboard') {
+                renderDashboard();
             } else {
-                alert("Falha ao carregar dados. Erro: " + err.message);
+                renderCards();
             }
+            // Não exibe alerta visual para o usuário, apenas log no console
+            console.error("Falha ao carregar dados do Firebase. Aguardando sincronização...");
         }
         switchTab('dashboard');
     }
@@ -3778,20 +3796,14 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     } catch (err) {
         console.error("Erro na sincronização com Firebase:", err);
         
-        // FALLBACK: Se falhar, ainda salva no localStorage para não perder dados
-        console.log('Erro ao sincronizar com Firebase. Salvando dados apenas no localStorage...');
-        try {
-            saveToLocalStorage('audits', audits);
-            saveToLocalStorage('trainings', trainings);
-            saveToLocalStorage('activities', activities);
-            saveToLocalStorage('maintenances', maintenances);
-            saveToLocalStorage('documents', documents);
-            saveToLocalStorage('masterLists', masterLists);
-            
-            if (showAlert) alert("⚠️ Dados salvos localmente. Reconecte-se para sincronizar com o servidor.");
-        } catch (storageErr) {
-            console.error("Erro ao salvar no localStorage:", storageErr);
-            if (showAlert) alert("❌ Erro ao salvar dados: " + err.message);
+        // PROTEÇÃO: Não salva no localStorage em caso de falha
+        // Apenas registra o erro no console, sem salvar localmente
+        console.error('Falha na sincronização com Firebase. Dados não foram salvos localmente para manter consistência.');
+        
+        if (showAlert) {
+            // Não exibe alerta visual para o usuário conforme solicitado
+            // Apenas log no console para debugging
+            console.error("❌ Erro ao sincronizar dados com Firebase:", err.message);
         }
     }
 }
@@ -8502,9 +8514,24 @@ function renderViewContent(id, tab) {
     
     // Inicialização (garante que os selects sejam preenchidos ao carregar a página)
     document.addEventListener('DOMContentLoaded', () => {
+        // PROTEÇÃO: Limpa localStorage ao iniciar para forçar sincronização com Firebase
+        // A preferência sempre será do banco de dados real-time, não do localStorage
+        console.log('Proteção ativada: Limpando cache local para forçar sincronização com Firebase...');
+        try {
+            // Limpa apenas os dados cacheados, preservando filtros do usuário
+            Object.keys(CACHE_KEYS).forEach(key => {
+                if (key !== 'filters' && key !== 'lastSync') {
+                    localStorage.removeItem(CACHE_KEYS[key]);
+                }
+            });
+            console.log('Cache de dados limpo. Forçando sincronização com Firebase na inicialização.');
+        } catch (error) {
+            console.error('Erro ao limpar cache de dados:', error);
+        }
+        
         populateYearSelects();
         populateSelects();
-        // Restaura os filtros salvos do localStorage
+        // Restaura os filtros salvos do localStorage (preserva filtros do usuário)
         setTimeout(() => {
             restoreFiltersFromLocalStorage();
         }, 500); // Pequeno delay para garantir que todos os elementos estejam prontos
