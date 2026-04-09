@@ -119,6 +119,32 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 .btn-primary:hover{background:var(--primary);transform:translateY(-1px)}
 .btn-primary:active{transform:translateY(0)}
 
+.btn-secondary{
+    background:#6b7280;color:#fff;border:none;padding:12px 24px;border-radius:10px;
+    font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;
+    transition:transform 0.1s, background 0.2s;box-shadow:0 4px 12px rgba(107,114,128,0.15);
+    position:relative;
+}
+.btn-secondary:hover{background:#4b5563;transform:translateY(-1px)}
+.btn-secondary:active{transform:translateY(0)}
+
+.trash-badge {
+    background:#ef4444;
+    color:#fff;
+    border-radius:50%;
+    width:24px;
+    height:24px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    font-weight:700;
+    position:absolute;
+    top:-8px;
+    right:-8px;
+    box-shadow:0 2px 4px rgba(0,0,0,0.2);
+}
+
 /* NOTIFICATION ICON */
 .notification-container {
     position: absolute;
@@ -1718,8 +1744,12 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 </div>
             </div>
             
-            <button class="btn-primary" id="addBtn"> <i class="fas fa-plus"></i> Novo Registro
-            </button>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-primary" id="addBtn"> <i class="fas fa-plus"></i> Novo Registro
+                </button>
+                <button class="btn-secondary" id="trashBtn" onclick="openTrashBin()" title="Visualizar itens deletados"><i class="fas fa-trash"></i>
+                </button>
+            </div>
         </div>
 
         <div class="cards-grid" id="cardsGrid" style="display:none;">
@@ -2339,6 +2369,26 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         <div class="modal-actions">
             <button class="btn-cancel" onclick="closeModal('viewModal')">Fechar</button>
             <button class="btn-edit" id="btnViewEdit" onclick="editCurrentViewItem()" style="display:none;">Editar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL LIXEIRA -->
+<div class="modal" id="modalTrashBin">
+    <div class="modal-content" style="width:800px; max-height:600px; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="margin:0; color:var(--primary); font-size:18px;">
+                <i class="fas fa-trash"></i> Lixeira de Itens Deletados
+            </h3>
+            <button class="btn-close" onclick="closeModal('modalTrashBin')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+        </div>
+        
+        <div id="trashContent" style="margin-bottom:16px;">
+            <!-- Conteúdo da lixeira será preenchido dinamicamente -->
+        </div>
+        
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('modalTrashBin')">Fechar</button>
         </div>
     </div>
 </div>
@@ -3902,6 +3952,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             );
         }
         
+        // SOFT DELETE: Filtrar itens deletados do dashboard
+        rawItems = rawItems.filter(item => !item.deleted);
+        
         // Aplicar filtro de permissões de setores
         const allowedSetores = getAllowedSetores();
         if (allowedSetores !== null) {
@@ -4230,6 +4283,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             
             data = audits;
             
+            // SOFT DELETE: Filtrar itens deletados
+            data = data.filter(item => !item.deleted);
+            
             // Aplicar filtro de permissões de setores
             const allowedSetores = getAllowedSetores();
             if (allowedSetores !== null) {
@@ -4286,6 +4342,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
             data = trainings;
             
+            // SOFT DELETE: Filtrar itens deletados
+            data = data.filter(item => !item.deleted);
+            
             // Aplicar filtro de permissões de setores
             const allowedSetores = getAllowedSetores();
             if (allowedSetores !== null) {
@@ -4341,6 +4400,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const dateType = document.getElementById('fAtivDateType').value;
     
             data = activities;
+            
+            // SOFT DELETE: Filtrar itens deletados
+            data = data.filter(item => !item.deleted);
             
             // Aplicar filtro de permissões de setores
             const allowedSetores = getAllowedSetores();
@@ -4400,6 +4462,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             
             data = maintenances;
             
+            // SOFT DELETE: Filtrar itens deletados
+            data = data.filter(item => !item.deleted);
+            
             // Aplicar filtro de permissões de setores
             const allowedSetores = getAllowedSetores();
             if (allowedSetores !== null) {
@@ -4456,6 +4521,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const dateType = document.getElementById('fDocDateType').value;
     
             data = documents;
+            
+            // SOFT DELETE: Filtrar itens deletados
+            data = data.filter(item => !item.deleted);
             
             // Aplicar filtro de permissões de setores
             const allowedSetores = getAllowedSetores();
@@ -4735,6 +4803,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             rawItems = rawItems.concat(documents.map(d => ({ ...d, type: 'doc' })));
         }
         
+        // SOFT DELETE: Filtrar itens deletados do dashboard
+        rawItems = rawItems.filter(item => !item.deleted);
+        
         // Aplicar filtro de permissões de setores
         const allowedSetores = getAllowedSetores();
         if (allowedSetores !== null) {
@@ -4927,53 +4998,37 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const el = document.getElementById('fDashResponsavel');
             if (el) {
                 const currentValue = el.value || '';
-                const availableResponsaveis = new Set();
-                rawItems.forEach(item => {
-                    if (passesOtherFilters(item, 'responsavel')) {
-                        if (item.type === 'mant') {
-                            // Para manutenção, coleta apenas o responsável técnico
-                            if (item.responsavelTecnico) {
-                                try {
-                                    const parsed = JSON.parse(item.responsavelTecnico);
-                                    if (Array.isArray(parsed)) {
-                                        parsed.forEach(r => {
-                                            const normalized = String(r || '').trim();
-                                            if (normalized) availableResponsaveis.add(normalized);
-                                        });
-                                    } else {
-                                        const normalized = String(item.responsavelTecnico || '').trim();
-                                        if (normalized) availableResponsaveis.add(normalized);
-                                    }
-                                } catch {
-                                    const normalized = String(item.responsavelTecnico || '').trim();
-                                    if (normalized) availableResponsaveis.add(normalized);
-                                }
-                            }
-                        } else {
-                            const responsavel = item.responsavel || '';
-                            if (responsavel) {
-                                // Se for multi-select (JSON), parseia e adiciona cada um
-                                try {
-                                    const parsed = JSON.parse(responsavel);
-                                    if (Array.isArray(parsed)) {
-                                        parsed.forEach(r => {
-                                            const normalized = String(r || '').trim();
-                                            if (normalized) availableResponsaveis.add(normalized);
-                                        });
-                                    } else {
-                                        const normalized = String(parsed || '').trim();
-                                        if (normalized) availableResponsaveis.add(normalized);
-                                    }
-                                } catch {
-                                    const normalized = String(responsavel || '').trim();
-                                    if (normalized) availableResponsaveis.add(normalized);
-                                }
-                            }
+                // Popula com TODOS os responsáveis disponíveis (mesma lógica dos modais)
+                const responsaveisOptions = ['<option value="">Responsável: Todos</option>'];
+
+                // Adiciona responsáveis da lista mestre
+                if (masterLists.responsaveis) {
+                    masterLists.responsaveis.forEach(r => {
+                        if (r && r.trim()) {
+                            responsaveisOptions.push(`<option value="${r}">${r}</option>`);
                         }
-                    }
+                    });
+                }
+
+                // Adiciona nomes de usuários cadastrados
+                if (typeof users !== 'undefined') {
+                    users.forEach(user => {
+                        if (user.name && user.name.trim()) {
+                            responsaveisOptions.push(`<option value="${user.name}">${user.name}</option>`);
+                        }
+                    });
+                }
+
+                // Remove duplicatas e ordena
+                const uniqueOptions = [...new Set(responsaveisOptions)];
+                const sortedOptions = uniqueOptions.sort((a, b) => {
+                    const aText = a.match(/>(.*?)</)[1] || '';
+                    const bText = b.match(/>(.*?)</)[1] || '';
+                    return aText.localeCompare(bText);
                 });
-                const sortedResponsaveis = Array.from(availableResponsaveis).sort();
-                setSelectOptions(el, 'Responsável: Todos', sortedResponsaveis, currentValue);
+
+                el.innerHTML = sortedOptions.join('');
+                el.value = currentValue;
             }
         }
         
@@ -4982,31 +5037,37 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             const el = document.getElementById('fDashRevisor');
             if (el) {
                 const currentValue = el.value || '';
-                const availableRevisores = new Set();
-                rawItems.forEach(item => {
-                    if (passesOtherFilters(item, 'revisor')) {
-                        const revisor = item.revisor || '';
-                        if (revisor) {
-                            try {
-                                const parsed = JSON.parse(revisor);
-                                if (Array.isArray(parsed)) {
-                                    parsed.forEach(r => {
-                                        const normalized = String(r || '').trim();
-                                        if (normalized) availableRevisores.add(normalized);
-                                    });
-                                } else {
-                                    const normalized = String(parsed || '').trim();
-                                    if (normalized) availableRevisores.add(normalized);
-                                }
-                            } catch {
-                                const normalized = String(revisor || '').trim();
-                                if (normalized) availableRevisores.add(normalized);
-                            }
+                // Popula com TODOS os revisores disponíveis (mesma lógica dos modais)
+                const revisoresOptions = ['<option value="">Revisor: Todos</option>'];
+
+                // Adiciona revisores da lista mestre (responsáveis também podem ser revisores)
+                if (masterLists.responsaveis) {
+                    masterLists.responsaveis.forEach(r => {
+                        if (r && r.trim()) {
+                            revisoresOptions.push(`<option value="${r}">${r}</option>`);
                         }
-                    }
+                    });
+                }
+
+                // Adiciona nomes de usuários cadastrados
+                if (typeof users !== 'undefined') {
+                    users.forEach(user => {
+                        if (user.name && user.name.trim()) {
+                            revisoresOptions.push(`<option value="${user.name}">${user.name}</option>`);
+                        }
+                    });
+                }
+
+                // Remove duplicatas e ordena
+                const uniqueRevOptions = [...new Set(revisoresOptions)];
+                const sortedRevOptions = uniqueRevOptions.sort((a, b) => {
+                    const aText = a.match(/>(.*?)</)[1] || '';
+                    const bText = b.match(/>(.*?)</)[1] || '';
+                    return aText.localeCompare(bText);
                 });
-                const sortedRevisores = Array.from(availableRevisores).sort();
-                setSelectOptions(el, 'Revisor: Todos', sortedRevisores, currentValue);
+
+                el.innerHTML = sortedRevOptions.join('');
+                el.value = currentValue;
             }
         }
     }
@@ -5162,10 +5223,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     });
     const unifiedStatusnames = [...new Set(allStatusnames)].sort();
 
-    const makeOpts = (list) => (list || []).map(i => `<option value="${i}">${i}</option>`).join('');
-    const makeStatusOpts = (list) => (list || []).map(i => `<option value="${i.name}">${i.name}</option>`).join('');
-    const makeFilterOpts = (list, label) => `<option value="">${label}</option>` + (list || []).map(i => `<option value="${i}">${i}</option>`).join('');
-    const makeStatusFilterOpts = (list, label) => `<option value="">${label}</option>` + (list || []).map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+    const makeOpts = (list) => (list || []).filter(i => !i.deleted).map(i => `<option value="${i}">${i}</option>`).join('');
+    const makeStatusOpts = (list) => (list || []).filter(i => !i.deleted).map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+    const makeFilterOpts = (list, label) => `<option value="">${label}</option>` + (list || []).filter(i => !i.deleted).map(i => `<option value="${i}">${i}</option>`).join('');
+    const makeStatusFilterOpts = (list, label) => `<option value="">${label}</option>` + (list || []).filter(i => !i.deleted).map(i => `<option value="${i.name}">${i.name}</option>`).join('');
     
     // Filtra setores baseado nas permissões do usuário (allowedSetores já declarado acima)
     const filteredSetores = allowedSetores === null ? setores : setores.filter(s => allowedSetores.includes(s));
@@ -5439,6 +5500,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         else if (prefix === 'Mant') items = maintenances || [];
         else if (prefix === 'Doc') items = documents || [];
         
+        // SOFT DELETE: Filtrar itens deletados
+        items = items.filter(item => !item.deleted);
+        
         // Aplicar filtro de permissões de setores
         const allowedSetores = getAllowedSetores();
         if (allowedSetores !== null) {
@@ -5708,32 +5772,37 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const el = document.getElementById(`f${prefix}Responsavel`);
         if (el) {
             const currentValue = el?.value || '';
-            // Ignora o filtro de responsável para permitir trocar entre nomes válidos
-            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { responsavel: true }));
-            
-            const allResponsaveis = new Set();
-            items.forEach(item => {
-                if (prefix === 'Mant') {
-                    if (item.responsavelTecnico) {
-                        try {
-                            const parsed = JSON.parse(item.responsavelTecnico);
-                            if (Array.isArray(parsed)) parsed.forEach(r => allResponsaveis.add(String(r)));
-                            else allResponsaveis.add(String(item.responsavelTecnico));
-                        } catch { allResponsaveis.add(String(item.responsavelTecnico)); }
+            // Popula com TODOS os responsáveis disponíveis (mesma lógica dos modais)
+            const responsaveisOptions = ['<option value="">Responsável: Todos</option>'];
+
+            // Adiciona responsáveis da lista mestre
+            if (masterLists.responsaveis) {
+                masterLists.responsaveis.forEach(r => {
+                    if (r && r.trim()) {
+                        responsaveisOptions.push(`<option value="${r}">${r}</option>`);
                     }
-                } else {
-                    if (item.responsavel) {
-                        try {
-                            const parsed = JSON.parse(item.responsavel);
-                            if (Array.isArray(parsed)) parsed.forEach(r => allResponsaveis.add(String(r)));
-                            else allResponsaveis.add(String(item.responsavel));
-                        } catch { allResponsaveis.add(String(item.responsavel)); }
+                });
+            }
+
+            // Adiciona nomes de usuários cadastrados
+            if (typeof users !== 'undefined') {
+                users.forEach(user => {
+                    if (user.name && user.name.trim()) {
+                        responsaveisOptions.push(`<option value="${user.name}">${user.name}</option>`);
                     }
-                }
+                });
+            }
+
+            // Remove duplicatas e ordena
+            const uniqueOptions = [...new Set(responsaveisOptions)];
+            const sortedOptions = uniqueOptions.sort((a, b) => {
+                const aText = a.match(/>(.*?)</)[1] || '';
+                const bText = b.match(/>(.*?)</)[1] || '';
+                return aText.localeCompare(bText);
             });
-            
-            const sortedResponsaveis = Array.from(allResponsaveis).filter(r => r).sort();
-            setSelectOptions(el, 'Responsável: Todos', sortedResponsaveis, currentValue);
+
+            el.innerHTML = sortedOptions.join('');
+            el.value = currentValue;
             el.style.display = 'block';
         }
     }
@@ -5743,20 +5812,37 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         const revEl = document.getElementById(`f${prefix}Revisor`);
         if (revEl) {
             const currentRevValue = revEl.value || '';
-            // CORREÇÃO: Ignora o próprio filtro de revisor ({ revisor: true }) para que a lista mostre 
-            // todos os revisores possíveis para os cards que já passaram pelos outros filtros.
-            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { revisor: true }));
-            
-            const availableRevisores = new Set();
-            items.forEach(item => {
-                if (item.revisor) {
-                    const normalized = String(item.revisor).trim();
-                    if (normalized) availableRevisores.add(normalized);
-                }
+            // Popula com TODOS os revisores disponíveis (mesma lógica dos modais)
+            const revisoresOptions = ['<option value="">Revisor: Todos</option>'];
+
+            // Adiciona revisores da lista mestre (responsáveis também podem ser revisores)
+            if (masterLists.responsaveis) {
+                masterLists.responsaveis.forEach(r => {
+                    if (r && r.trim()) {
+                        revisoresOptions.push(`<option value="${r}">${r}</option>`);
+                    }
+                });
+            }
+
+            // Adiciona nomes de usuários cadastrados
+            if (typeof users !== 'undefined') {
+                users.forEach(user => {
+                    if (user.name && user.name.trim()) {
+                        revisoresOptions.push(`<option value="${user.name}">${user.name}</option>`);
+                    }
+                });
+            }
+
+            // Remove duplicatas e ordena
+            const uniqueRevOptions = [...new Set(revisoresOptions)];
+            const sortedRevOptions = uniqueRevOptions.sort((a, b) => {
+                const aText = a.match(/>(.*?)</)[1] || '';
+                const bText = b.match(/>(.*?)</)[1] || '';
+                return aText.localeCompare(bText);
             });
-            
-            const sortedRevisores = Array.from(availableRevisores).filter(r => r).sort();
-            setSelectOptions(revEl, 'Revisor: Todos', sortedRevisores, currentRevValue);
+
+            revEl.innerHTML = sortedRevOptions.join('');
+            revEl.value = currentRevValue;
             revEl.style.display = 'block';
         }
     }
@@ -5916,6 +6002,45 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             addBtn.style.display = 'flex';
         } else {
             addBtn.style.display = 'none';
+        }
+    }
+    
+    // --- Controle do botão de LIXEIRA ---
+    const trashBtn = document.getElementById('trashBtn');
+    if (trashBtn) {
+        // O botão de lixeira aparece se NÃO for backup/dash/config
+        if (!isBackup && !isDashboard && !isConfig) {
+            trashBtn.style.display = 'flex';
+            
+            // Contar itens deletados na aba atual
+            let deletedCount = 0;
+            if (tab === 'auditoria') {
+                deletedCount = audits.filter(a => a.deleted).length;
+            } else if (tab === 'treinamentos') {
+                deletedCount = trainings.filter(t => t.deleted).length;
+            } else if (tab === 'atividades') {
+                deletedCount = activities.filter(a => a.deleted).length;
+            } else if (tab === 'manutencao') {
+                deletedCount = maintenances.filter(m => m.deleted).length;
+            } else if (tab === 'documentos') {
+                deletedCount = documents.filter(d => d.deleted).length;
+            }
+            
+            // Atualizar badge do botão
+            let badge = trashBtn.querySelector('.trash-badge');
+            if (deletedCount > 0) {
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'trash-badge';
+                    trashBtn.appendChild(badge);
+                }
+                badge.textContent = deletedCount;
+                badge.style.display = 'inline-block';
+            } else {
+                if (badge) badge.style.display = 'none';
+            }
+        } else {
+            trashBtn.style.display = 'none';
         }
     }
     
@@ -6137,6 +6262,16 @@ function resetModal(prefix) {
         const selectedAuditMarkerName = document.getElementById('auditMarcador').value;
         const auditMarkerObj = (masterLists.auditMarcadores || []).find(m => m.name === selectedAuditMarkerName);
 
+        // Se não for novo, preservar responsável/revisor se o usuário não for admin
+        let responsavel = document.getElementById('auditResponsavel').value || '';
+        let revisor = document.getElementById('auditRevisor').value || '';
+        
+        if (!isNew && !userIsAdmin()) {
+            // Usuário não-admin não pode editar responsável/revisor, preservar original
+            if (!responsavel) responsavel = item.responsavel || '';
+            if (!revisor) revisor = item.revisor || '';
+        }
+
         const newItem = {
             ...item,
             titulo: document.getElementById('auditTitulo').value,
@@ -6147,8 +6282,8 @@ function resetModal(prefix) {
             status: document.getElementById('auditStatus').value,
             dataPublicacao: document.getElementById('auditDataPublicacao').value,
             dataPrevisao: document.getElementById('auditDataPrevisao').value,
-            responsavel: document.getElementById('auditResponsavel').value || '',
-            revisor: document.getElementById('auditRevisor').value || '',
+            responsavel: responsavel,
+            revisor: revisor,
             auditor: document.getElementById('auditAuditor').value,
             flagDias: Number(document.getElementById('auditFlagDias').value) || 7,
             marcador: auditMarkerObj ? auditMarkerObj.name : '',
@@ -6251,6 +6386,15 @@ function resetModal(prefix) {
         
         const cargaHoraria = `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
 
+        let responsavel = document.getElementById('trainResponsavel').value || '';
+        let instrutor = document.getElementById('trainInstrutor').value || '';
+
+        // Preserve original responsavel/instrutor for non-admin users who cannot edit these fields
+        if (!isNew && !userIsAdmin()) {
+            if (!responsavel) responsavel = item.responsavel || '';
+            if (!instrutor) instrutor = item.instrutor || '';
+        }
+
         const newItem = {
             ...item,
             titulo: document.getElementById('trainTitulo').value,
@@ -6262,8 +6406,8 @@ function resetModal(prefix) {
             dataPublicacao: document.getElementById('trainDataPublicacao').value,
             periodicidade: parseInt(document.getElementById('trainPeriodicidade').value) || 0,
             dataPrevisao: document.getElementById('trainDataPrevisaoValue').value,
-            responsavel: document.getElementById('trainResponsavel').value || '',
-            instrutor: document.getElementById('trainInstrutor').value || '',
+            responsavel: responsavel,
+            instrutor: instrutor,
             participantes: document.getElementById('trainParticipantes').value || '',
             localEvento: document.getElementById('trainLocalEvento').value || '',
             cargaHoraria: cargaHoraria,
@@ -6328,6 +6472,15 @@ function resetModal(prefix) {
         const selectedAtivMarkerName = document.getElementById('ativMarcador').value;
         const ativMarkerObj = (masterLists.ativMarcadores || []).find(m => m.name === selectedAtivMarkerName);
 
+        let responsavel = document.getElementById('ativResponsavel').value || '';
+        let revisor = document.getElementById('ativRevisor').value || '';
+
+        // Preserve original responsavel/revisor for non-admin users who cannot edit these fields
+        if (!isNew && !userIsAdmin()) {
+            if (!responsavel) responsavel = item.responsavel || '';
+            if (!revisor) revisor = item.revisor || '';
+        }
+
         const newItem = {
             ...item,
             titulo: document.getElementById('ativTitulo').value,
@@ -6338,8 +6491,8 @@ function resetModal(prefix) {
             status: document.getElementById('ativStatus').value,
             dataInicio: document.getElementById('ativDataInicio').value,
             dataConclusao: document.getElementById('ativDataConclusao').value,
-            responsavel: document.getElementById('ativResponsavel').value || '',
-            revisor: document.getElementById('ativRevisor').value || '',
+            responsavel: responsavel,
+            revisor: revisor,
             flagDias: +document.getElementById('ativFlagDias').value, // Lê o valor como número
             marcador: ativMarkerObj ? ativMarkerObj.name : '',
             marcadorCor: ativMarkerObj ? ativMarkerObj.color : 'default',
@@ -6405,6 +6558,15 @@ function resetModal(prefix) {
         const selectedMantMarkerName = document.getElementById('mantMarcador').value;
         const mantMarkerObj = (masterLists.mantMarcadores || []).find(m => m.name === selectedMantMarkerName);
 
+        let responsavelTecnico = document.getElementById('mantResponsavelTecnico').value || '';
+        let responsavelManutencao = document.getElementById('mantResponsavelManutencao').value || '';
+
+        // Preserve original responsavelTecnico/responsavelManutencao for non-admin users who cannot edit these fields
+        if (!isNew && !userIsAdmin()) {
+            if (!responsavelTecnico) responsavelTecnico = item.responsavelTecnico || '';
+            if (!responsavelManutencao) responsavelManutencao = item.responsavelManutencao || '';
+        }
+
         const newItem = {
             ...item,
             titulo: document.getElementById('mantTitulo').value,
@@ -6416,8 +6578,8 @@ function resetModal(prefix) {
             ultima,
             intervalo, // Salva o novo intervalo
             proxima, // Salva a nova data calculada (ou vazio quando N/A)
-            responsavelTecnico: document.getElementById('mantResponsavelTecnico').value || '',
-            responsavelManutencao: document.getElementById('mantResponsavelManutencao').value || '',
+            responsavelTecnico: responsavelTecnico,
+            responsavelManutencao: responsavelManutencao,
             empresaResponsavel: document.getElementById('mantEmpresaResponsavel').value, 
             status: document.getElementById('mantStatus').value,
             flagDias: +document.getElementById('mantFlagDias').value, // Lê o valor como número
@@ -6489,6 +6651,15 @@ function resetModal(prefix) {
         const selectedDocMarkerName = document.getElementById('docMarcador').value;
         const docMarkerObj = (masterLists.docMarcadores || []).find(m => m.name === selectedDocMarkerName);
 
+        let responsavel = document.getElementById('docResponsavel').value || '';
+        let revisor = document.getElementById('docRevisor').value || '';
+
+        // Preserve original responsavel/revisor for non-admin users who cannot edit these fields
+        if (!isNew && !userIsAdmin()) {
+            if (!responsavel) responsavel = item.responsavel || '';
+            if (!revisor) revisor = item.revisor || '';
+        }
+
         const newItem = {
             ...item,
             titulo: document.getElementById('docTitulo').value,
@@ -6500,8 +6671,8 @@ function resetModal(prefix) {
             dataCriacao,
             docIntervalo, // Salva o novo intervalo
             dataProximaRevisao, // Salva a nova data calculada (ou vazio quando N/A)
-            responsavel: document.getElementById('docResponsavel').value || '',
-            revisor: document.getElementById('docRevisor').value || '',
+            responsavel: responsavel,
+            revisor: revisor,
             flagDias: +document.getElementById('docFlagDias').value, // Lê o valor como número
             marcador: docMarkerObj ? docMarkerObj.name : '',
             marcadorCor: docMarkerObj ? docMarkerObj.color : 'default',
@@ -7181,13 +7352,283 @@ function resetModal(prefix) {
             alert('Exclusão cancelada. Você não digitou "EXCLUIR" corretamente.');
             return;
         }
-        if (tab === 'auditoria' || tab === 'audit') audits = audits.filter(a => String(a.id) !== String(id));
-        else if (tab === 'treinamentos' || tab === 'train') trainings = trainings.filter(t => String(t.id) !== String(id));
-        else if (tab === 'atividades' || tab === 'ativ') activities = activities.filter(a => String(a.id) !== String(id));
-        else if (tab === 'manutencao' || tab === 'mant') maintenances = maintenances.filter(m => String(m.id) !== String(id));
-        else if (tab === 'documentos' || tab === 'doc') documents = documents.filter(d => String(d.id) !== String(id)); 
+
+        // SOFT DELETE: Marcar item como deleted ao invés de remover do array
+        const now = new Date().toISOString();
+        const deletedBy = currentuser.email || currentuser.name || 'unknown';
+
+        let item = null;
+        if (tab === 'auditoria' || tab === 'audit') {
+            item = audits.find(a => String(a.id) === String(id));
+            if (item) {
+                item.deleted = true;
+                item.deletedAt = now;
+                item.deletedBy = deletedBy;
+            }
+        }
+        else if (tab === 'treinamentos' || tab === 'train') {
+            item = trainings.find(t => String(t.id) === String(id));
+            if (item) {
+                item.deleted = true;
+                item.deletedAt = now;
+                item.deletedBy = deletedBy;
+            }
+        }
+        else if (tab === 'atividades' || tab === 'ativ') {
+            item = activities.find(a => String(a.id) === String(id));
+            if (item) {
+                item.deleted = true;
+                item.deletedAt = now;
+                item.deletedBy = deletedBy;
+            }
+        }
+        else if (tab === 'manutencao' || tab === 'mant') {
+            item = maintenances.find(m => String(m.id) === String(id));
+            if (item) {
+                item.deleted = true;
+                item.deletedAt = now;
+                item.deletedBy = deletedBy;
+            }
+        }
+        else if (tab === 'documentos' || tab === 'doc') {
+            item = documents.find(d => String(d.id) === String(id));
+            if (item) {
+                item.deleted = true;
+                item.deletedAt = now;
+                item.deletedBy = deletedBy;
+            }
+        }
+
+        if (item) {
+            alert('Item ocultado com sucesso. Os dados foram preservados no banco de dados.');
+            saveAll();
+            renderCards();
+        }
+    }
+
+    // SOFT DELETE: Função para restaurar itens deletados (apenas admin)
+    function restoreDeletedItem(id, tab) {
+        if (!userIsAdmin()) {
+            alert('Apenas administradores podem restaurar itens deletados.');
+            return;
+        }
+
+        let item = null;
+        if (tab === 'auditoria' || tab === 'audit') {
+            item = audits.find(a => String(a.id) === String(id));
+        }
+        else if (tab === 'treinamentos' || tab === 'train') {
+            item = trainings.find(t => String(t.id) === String(id));
+        }
+        else if (tab === 'atividades' || tab === 'ativ') {
+            item = activities.find(a => String(a.id) === String(id));
+        }
+        else if (tab === 'manutencao' || tab === 'mant') {
+            item = maintenances.find(m => String(m.id) === String(id));
+        }
+        else if (tab === 'documentos' || tab === 'doc') {
+            item = documents.find(d => String(d.id) === String(id));
+        }
+
+        if (item && item.deleted) {
+            item.deleted = false;
+            item.restoredAt = new Date().toISOString();
+            item.restoredBy = currentuser.email || currentuser.name || 'admin';
+            
+            // Adicionar ao histórico a ação de restauração
+            if (!item.historico) item.historico = [];
+            item.historico.push({
+                timestamp: new Date().toISOString(),
+                usuario: item.restoredBy,
+                acao: 'Restaurado',
+                detalhes: [`Item restaurado pelo usuário ${item.restoredBy}`]
+            });
+            
+            alert('Item restaurado com sucesso!');
+            saveAll();
+            renderCards();
+            
+            // Atualizar a lixeira se estiver aberta
+            if (document.getElementById('modalTrashBin').style.display === 'flex') {
+                openTrashBin();
+            }
+        }
+    }
+    
+    // SOFT DELETE: Função para abrir e exibir lixeira (apenas itens da aba atual)
+    function openTrashBin() {
+        const trashContent = document.getElementById('trashContent');
+        trashContent.innerHTML = '';
+        
+        // Coletar apenas os itens deletados da aba atual
+        let deletedItems = [];
+        
+        if (currentTab === 'auditoria') {
+            audits.forEach(a => {
+                if (a.deleted) {
+                    deletedItems.push({ 
+                        id: a.id, 
+                        tab: 'auditoria', 
+                        titulo: a.titulo, 
+                        tipo: 'Auditoria',
+                        setor: a.setor,
+                        deletedAt: a.deletedAt, 
+                        deletedBy: a.deletedBy 
+                    });
+                }
+            });
+        } else if (currentTab === 'treinamentos') {
+            trainings.forEach(t => {
+                if (t.deleted) {
+                    deletedItems.push({ 
+                        id: t.id, 
+                        tab: 'treinamentos', 
+                        titulo: t.titulo, 
+                        tipo: 'Treinamento',
+                        setor: t.setor,
+                        deletedAt: t.deletedAt, 
+                        deletedBy: t.deletedBy 
+                    });
+                }
+            });
+        } else if (currentTab === 'atividades') {
+            activities.forEach(a => {
+                if (a.deleted) {
+                    deletedItems.push({ 
+                        id: a.id, 
+                        tab: 'atividades', 
+                        titulo: a.titulo, 
+                        tipo: 'Atividade',
+                        setor: a.setor,
+                        deletedAt: a.deletedAt, 
+                        deletedBy: a.deletedBy 
+                    });
+                }
+            });
+        } else if (currentTab === 'manutencao') {
+            maintenances.forEach(m => {
+                if (m.deleted) {
+                    deletedItems.push({ 
+                        id: m.id, 
+                        tab: 'manutencao', 
+                        titulo: m.titulo || m.categoria, 
+                        tipo: 'Manutenção',
+                        setor: m.setor,
+                        deletedAt: m.deletedAt, 
+                        deletedBy: m.deletedBy 
+                    });
+                }
+            });
+        } else if (currentTab === 'documentos') {
+            documents.forEach(d => {
+                if (d.deleted) {
+                    deletedItems.push({ 
+                        id: d.id, 
+                        tab: 'documentos', 
+                        titulo: d.titulo, 
+                        tipo: 'Documento',
+                        setor: d.setor,
+                        deletedAt: d.deletedAt, 
+                        deletedBy: d.deletedBy 
+                    });
+                }
+            });
+        }
+        
+        if (deletedItems.length === 0) {
+            trashContent.innerHTML = '<div style="text-align:center; padding:40px; color:#6b7280;"><i class="fas fa-check-circle" style="font-size:48px; margin-bottom:16px; display:block;"></i>Nenhum item na lixeira</div>';
+        } else {
+            // Ordenar por data de deletação (mais recente primeiro)
+            deletedItems.sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+            
+            let html = '<table style="width:100%; border-collapse:collapse; font-size:14px;">';
+            html += '<thead><tr style="border-bottom:2px solid var(--border); background:var(--bg);">';
+            html += '<th style="padding:12px; text-align:left; font-weight:600;">Título</th>';
+            html += '<th style="padding:12px; text-align:left; font-weight:600;">Tipo</th>';
+            html += '<th style="padding:12px; text-align:left; font-weight:600;">Setor</th>';
+            html += '<th style="padding:12px; text-align:left; font-weight:600;">Deletado por</th>';
+            html += '<th style="padding:12px; text-align:left; font-weight:600;">Data</th>';
+            html += '<th style="padding:12px; text-align:center; font-weight:600;">Ações</th>';
+            html += '</tr></thead><tbody>';
+            
+            deletedItems.forEach(item => {
+                const deletedDate = new Date(item.deletedAt).toLocaleDateString('pt-BR') + ' ' + new Date(item.deletedAt).toLocaleTimeString('pt-BR');
+                const isAdmin = userIsAdmin();
+                
+                html += `<tr style="border-bottom:1px solid var(--border); transition:background 0.2s;" onmouseover="this.style.background='rgba(37,99,235,0.05)'" onmouseout="this.style.background='transparent'">
+                    <td style="padding:12px; font-weight:500;">${item.titulo}</td>
+                    <td style="padding:12px;"><span style="background:var(--accent); color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:500;">${item.tipo}</span></td>
+                    <td style="padding:12px;">${item.setor || 'ND'}</td>
+                    <td style="padding:12px;">${item.deletedBy || 'desconhecido'}</td>
+                    <td style="padding:12px; font-size:12px; color:#6b7280;">${deletedDate}</td>
+                    <td style="padding:12px; text-align:center; white-space:nowrap;">
+                        <button onclick="restoreDeletedItem(${item.id}, '${item.tab}')" title="Restaurar" style="background:#22c55e; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:500; margin-right:4px; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                            <i class="fas fa-undo"></i> Restaurar
+                        </button>
+                        ${isAdmin ? `<button onclick="permanentlyDeleteItem(${item.id}, '${item.tab}')" title="Deletar permanentemente" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:500; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                            <i class="fas fa-times"></i> Deletar
+                        </button>` : ''}
+                    </td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table>';
+            trashContent.innerHTML = html;
+        }
+        
+        document.getElementById('modalTrashBin').style.display = 'flex';
+    }
+    
+    // SOFT DELETE: Função para deletar permanentemente (apenas admin)
+    function permanentlyDeleteItem(id, tab) {
+        if (!userIsAdmin()) {
+            alert('Apenas administradores podem deletar permanentemente itens.');
+            return;
+        }
+        
+        if (!confirm('⚠️ AVISO: Isso vai deletar permanentemente o item do banco de dados.\n\nEsta ação é irreversível. Deseja continuar?')) {
+            return;
+        }
+        
+        // Encontrar e remover o item de forma permanente
+        if (tab === 'auditoria' || tab === 'audit') {
+            const index = audits.findIndex(a => String(a.id) === String(id));
+            if (index > -1) {
+                audits.splice(index, 1);
+                alert('Item deletado permanentemente!');
+            }
+        }
+        else if (tab === 'treinamentos' || tab === 'train') {
+            const index = trainings.findIndex(t => String(t.id) === String(id));
+            if (index > -1) {
+                trainings.splice(index, 1);
+                alert('Item deletado permanentemente!');
+            }
+        }
+        else if (tab === 'atividades' || tab === 'ativ') {
+            const index = activities.findIndex(a => String(a.id) === String(id));
+            if (index > -1) {
+                activities.splice(index, 1);
+                alert('Item deletado permanentemente!');
+            }
+        }
+        else if (tab === 'manutencao' || tab === 'mant') {
+            const index = maintenances.findIndex(m => String(m.id) === String(id));
+            if (index > -1) {
+                maintenances.splice(index, 1);
+                alert('Item deletado permanentemente!');
+            }
+        }
+        else if (tab === 'documentos' || tab === 'doc') {
+            const index = documents.findIndex(d => String(d.id) === String(id));
+            if (index > -1) {
+                documents.splice(index, 1);
+                alert('Item deletado permanentemente!');
+            }
+        }
+        
         saveAll();
-        renderCards();
+        openTrashBin(); // Atualiza a lixeira
     }
     
     // Anexos Logic
@@ -7394,9 +7835,13 @@ function renderViewContent(id, tab) {
     ).join('');
 
     // --- LÓGICA DE PAGINAÇÃO E PROCESSAMENTO DE HISTÓRICO ---
-    const allHistory = (item.historico || []).slice().reverse(); 
+    const allHistory = (item.historico || []).slice().reverse();
+    
+    // SOFT DELETE: Filtrar entradas de histórico deletadas
+    const filteredHistory = allHistory.filter(h => !h.deleted);
+    
     const itemsPerPage = 5;
-    const totalItems = allHistory.length;
+    const totalItems = filteredHistory.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const maxPages = 5;
     const finalPages = Math.min(totalPages, maxPages);
@@ -7405,7 +7850,7 @@ function renderViewContent(id, tab) {
     
     const start = (currentHistoryPage - 1) * itemsPerPage;
     const end = start + itemsPerPage;
-    const paginatedHistory = allHistory.slice(start, end);
+    const paginatedHistory = filteredHistory.slice(start, end);
 
     const isAdmin = userIsAdmin();
 
@@ -7552,7 +7997,14 @@ function renderViewContent(id, tab) {
         const originalIndex = item.historico.length - 1 - historyIndex;
         if (originalIndex < 0 || originalIndex >= item.historico.length) return;
 
-        item.historico.splice(originalIndex, 1);
+        // SOFT DELETE: Marcar entrada de histórico como deletada
+        const historyEntry = item.historico[originalIndex];
+        if (historyEntry) {
+            historyEntry.deleted = true;
+            historyEntry.deletedAt = new Date().toISOString();
+            historyEntry.deletedBy = currentuser.email || currentuser.name || 'admin';
+        }
+        
         saveAll();
         renderViewContent(id, tab);
     }
@@ -7660,6 +8112,15 @@ function renderViewContent(id, tab) {
         } else {
             listToRender = masterLists[currentListKey] || [];
         }
+        
+        // SOFT DELETE: Filtrar itens deletados da lista
+        listToRender = listToRender.filter(item => {
+            if (typeof item === 'object') {
+                return !item.deleted;
+            }
+            // Para strings simples (não-objeto)
+            return !item.deleted;
+        });
         
         // Para responsáveis, verifica quais são usuários cadastrados
         const userNames = new Set();
@@ -8025,13 +8486,41 @@ function renderViewContent(id, tab) {
         if (isSubcat) {
             const [baseKey, cat] = key.split('_');
             list = masterLists[baseKey][cat];
-            if (isObjectList) list = list.filter(s => s.name !== val);
-            else list = list.filter(i => i !== val);
+            if (isObjectList) {
+                // SOFT DELETE para objetos de status/marcadores: marcar como deletado
+                const itemToDelete = list.find(s => s.name === val);
+                if (itemToDelete) {
+                    itemToDelete.deleted = true;
+                    itemToDelete.deletedAt = new Date().toISOString();
+                    itemToDelete.deletedBy = currentuser.email || currentuser.name || 'unknown';
+                }
+            } else {
+                // Para strings simples, fazer soft delete também
+                const index = list.indexOf(val);
+                if (index > -1) {
+                    // Converter para objeto e marcar como deletado
+                    list[index] = { value: val, deleted: true, deletedAt: new Date().toISOString() };
+                }
+            }
             masterLists[baseKey][cat] = list; 
         } else {
             list = masterLists[key];
-            if (isObjectList) masterLists[key] = list.filter(s => s.name !== val);
-            else masterLists[key] = list.filter(i => i !== val);
+            if (isObjectList) {
+                // SOFT DELETE para objetos de status/marcadores
+                const itemToDelete = list.find(s => s.name === val);
+                if (itemToDelete) {
+                    itemToDelete.deleted = true;
+                    itemToDelete.deletedAt = new Date().toISOString();
+                    itemToDelete.deletedBy = currentuser.email || currentuser.name || 'unknown';
+                }
+            } else {
+                // Para strings simples
+                const index = list.indexOf(val);
+                if (index > -1) {
+                    // Converter para objeto e marcar como deletado
+                    list[index] = { value: val, deleted: true, deletedAt: new Date().toISOString() };
+                }
+            }
         }
     
         saveAll(); populateSelects();
