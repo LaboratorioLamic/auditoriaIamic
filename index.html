@@ -128,7 +128,8 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 .btn-secondary:hover{background:#4b5563;transform:translateY(-1px)}
 .btn-secondary:active{transform:translateY(0)}
 
-.trash-badge {
+/* TRASH BADGE - REMOVIDO */
+/* .trash-badge {
     background:#ef4444;
     color:#fff;
     border-radius:50%;
@@ -143,7 +144,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     top:-8px;
     right:-8px;
     box-shadow:0 2px 4px rgba(0,0,0,0.2);
-}
+} */
 
 /* NOTIFICATION ICON */
 .notification-container {
@@ -6011,34 +6012,6 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         // O botão de lixeira aparece se NÃO for backup/dash/config
         if (!isBackup && !isDashboard && !isConfig) {
             trashBtn.style.display = 'flex';
-            
-            // Contar itens deletados na aba atual
-            let deletedCount = 0;
-            if (tab === 'auditoria') {
-                deletedCount = audits.filter(a => a.deleted).length;
-            } else if (tab === 'treinamentos') {
-                deletedCount = trainings.filter(t => t.deleted).length;
-            } else if (tab === 'atividades') {
-                deletedCount = activities.filter(a => a.deleted).length;
-            } else if (tab === 'manutencao') {
-                deletedCount = maintenances.filter(m => m.deleted).length;
-            } else if (tab === 'documentos') {
-                deletedCount = documents.filter(d => d.deleted).length;
-            }
-            
-            // Atualizar badge do botão
-            let badge = trashBtn.querySelector('.trash-badge');
-            if (deletedCount > 0) {
-                if (!badge) {
-                    badge = document.createElement('span');
-                    badge.className = 'trash-badge';
-                    trashBtn.appendChild(badge);
-                }
-                badge.textContent = deletedCount;
-                badge.style.display = 'inline-block';
-            } else {
-                if (badge) badge.style.display = 'none';
-            }
         } else {
             trashBtn.style.display = 'none';
         }
@@ -7347,9 +7320,7 @@ function resetModal(prefix) {
             alert('Você não tem permissão para fazer isso');
             return;
         }
-        const texto = prompt('Para confirmar a exclusão, digite EXCLUIR no campo abaixo:');
-        if (!texto || texto.trim().toUpperCase() !== 'EXCLUIR') {
-            alert('Exclusão cancelada. Você não digitou "EXCLUIR" corretamente.');
+        if (!confirm('Deseja mover este item para a lixeira? Os dados serão preservados e podem ser restaurados por um administrador.')) {
             return;
         }
 
@@ -7410,6 +7381,10 @@ function resetModal(prefix) {
     function restoreDeletedItem(id, tab) {
         if (!userIsAdmin()) {
             alert('Apenas administradores podem restaurar itens deletados.');
+            return;
+        }
+
+        if (!confirm('Deseja restaurar este item da lixeira?')) {
             return;
         }
 
@@ -7562,11 +7537,14 @@ function resetModal(prefix) {
                     <td style="padding:12px;">${item.deletedBy || 'desconhecido'}</td>
                     <td style="padding:12px; font-size:12px; color:#6b7280;">${deletedDate}</td>
                     <td style="padding:12px; text-align:center; white-space:nowrap;">
-                        <button onclick="restoreDeletedItem(${item.id}, '${item.tab}')" title="Restaurar" style="background:#22c55e; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:500; margin-right:4px; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-                            <i class="fas fa-undo"></i> Restaurar
+                        <button onclick="closeModal('modalTrashBin'); openView(${item.id}, '${item.tab}')" title="Visualizar" style="background:#3b82f6; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:500; margin-right:4px; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                            <i class="fas fa-eye"></i>
                         </button>
+                        ${isAdmin ? `<button onclick="restoreDeletedItem(${item.id}, '${item.tab}')" title="Restaurar" style="background:#22c55e; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:500; margin-right:4px; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                            <i class="fas fa-undo"></i>
+                        </button>` : ''}
                         ${isAdmin ? `<button onclick="permanentlyDeleteItem(${item.id}, '${item.tab}')" title="Deletar permanentemente" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:500; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-                            <i class="fas fa-times"></i> Deletar
+                            <i class="fas fa-times"></i>
                         </button>` : ''}
                     </td>
                 </tr>`;
@@ -7586,7 +7564,9 @@ function resetModal(prefix) {
             return;
         }
         
-        if (!confirm('⚠️ AVISO: Isso vai deletar permanentemente o item do banco de dados.\n\nEsta ação é irreversível. Deseja continuar?')) {
+        const confirmation = prompt('⚠️ DELEÇÃO PERMANENTE IRREVERSÍVEL ⚠️\n\nDigite "SIM" (em maiúsculo) para confirmar a exclusão permanente do item:');
+        if (confirmation !== 'SIM') {
+            alert('Operação cancelada. A exclusão permanente não foi realizada.');
             return;
         }
         
@@ -7926,7 +7906,7 @@ function renderViewContent(id, tab) {
 
     const html = `
         <div class="view-header">
-            <h2 style="margin:0; color:var(--primary); font-size:20px;">${item.titulo}</h2>
+            <h2 style="margin:0; color:var(--primary); font-size:20px;">${item.titulo}${item.deleted ? ' <span style="color:#ef4444; font-size:14px; font-weight:500;">[DELETADO]</span>' : ''}</h2>
             <span class="view-status" style="background-color:${statusColorVar}">${item.status}</span>
         </div>
         <div class="view-grid">
@@ -7945,7 +7925,7 @@ function renderViewContent(id, tab) {
 
     const btnEdit = document.getElementById('btnViewEdit');
     if (btnEdit) {
-        btnEdit.style.display = userCanEditCards() ? 'inline-flex' : 'none';
+        btnEdit.style.display = (userCanEditCards() && !item.deleted) ? 'inline-flex' : 'none';
     }
 }
     function deleteHistoryEntry(id, tab, historyIndex) {
