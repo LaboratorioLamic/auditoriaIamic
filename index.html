@@ -3278,17 +3278,20 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             }
             
             // Mapeia os dados garantindo a consistência das flags
-            users = rawUsers.map(u => ({
-                ...u,
-                name: u.name || u.Name || u.user || '',
-                user: u.user || u.User || '',
-                password: String(u.password || ''),
-                active: u.active !== false,
-                canDeleteCards: !!u.canDeleteCards,
-                canEditCards: u.canEditCards !== false,
-                canManageLists: !!u.canManageLists,
-                isAdmin: !!u.isAdmin || u.user === 'admin'
-            }));
+            users = rawUsers.map(u => {
+                const normalizedUser = String(u.user || u.User || '').trim().toLowerCase();
+                return {
+                    ...u,
+                    name: u.name || u.Name || u.user || '',
+                    user: u.user || u.User || '',
+                    password: String(u.password || ''),
+                    active: u.active !== false,
+                    canDeleteCards: !!u.canDeleteCards,
+                    canEditCards: u.canEditCards !== false,
+                    canManageLists: !!u.canManageLists,
+                    isAdmin: !!u.isAdmin || normalizedUser === 'admin'
+                };
+            });
             
             // Inicializa os usuários no multi-select após carregar
             initMultiSelectUsers();
@@ -3332,7 +3335,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     }
 
     function userIsAdmin() {
-        return currentuser && (currentuser.user === 'admin' || currentuser.isAdmin === true);
+        if (!currentuser) return false;
+        const normalizedUser = String(currentuser.user || '').trim().toLowerCase();
+        return normalizedUser === 'admin' || currentuser.isAdmin === true;
     }
 
     function userCanDeleteCards() {
@@ -7797,10 +7802,13 @@ function renderViewContent(id, tab) {
     ).join('');
 
     // --- LÓGICA DE PAGINAÇÃO E PROCESSAMENTO DE HISTÓRICO ---
-    const allHistory = (item.historico || []).slice().reverse();
+    const allHistory = (item.historico || []).slice().reverse().map((entry, revIndex) => ({
+        entry,
+        originalIndex: item.historico.length - 1 - revIndex
+    }));
     
     // SOFT DELETE: Filtrar entradas de histórico deletadas
-    const filteredHistory = allHistory.filter(h => !h.deleted);
+    const filteredHistory = allHistory.filter(h => !h.entry.deleted);
     
     const itemsPerPage = 5;
     const totalItems = filteredHistory.length;
@@ -7817,23 +7825,22 @@ function renderViewContent(id, tab) {
     const isAdmin = userIsAdmin();
 
     const historyHtml = paginatedHistory.map((h, idx) => {
-        const globalIndex = start + idx;
-        const date = new Date(h.timestamp);
+        const date = new Date(h.entry.timestamp);
         const dateStr = date.toLocaleDateString('pt-BR');
         const timeStr = date.toLocaleTimeString('pt-BR');
         
         let details = '';
         
         // TRATAMENTO PARA INCOMPATIBILIDADE DE FORMATO (ARRAY VS OBJETO INDEXADO)
-        if (h.detalhes) {
+        if (h.entry.detalhes) {
             let detailsArray = [];
-            if (Array.isArray(h.detalhes)) {
-                detailsArray = h.detalhes;
-            } else if (typeof h.detalhes === 'object') {
+            if (Array.isArray(h.entry.detalhes)) {
+                detailsArray = h.entry.detalhes;
+            } else if (typeof h.entry.detalhes === 'object') {
                 // Converte chaves numéricas do Firebase para Array
-                detailsArray = Object.keys(h.detalhes)
+                detailsArray = Object.keys(h.entry.detalhes)
                     .filter(k => k !== 'silentChanged')
-                    .map(k => h.detalhes[k]);
+                    .map(k => h.entry.detalhes[k]);
             }
 
             if (detailsArray.length > 0) {
@@ -7844,14 +7851,14 @@ function renderViewContent(id, tab) {
         }
 
         // Fallback para mensagens de sistema
-        if (!details && (h.acao.includes('Edição') || h.acao.includes('Atualização'))) {
+        if (!details && (h.entry.acao.includes('Edição') || h.entry.acao.includes('Atualização'))) {
             details = '<small style="display:block; margin-left:10px; color:var(--ind-yellow); font-style:italic;">Detalhamento indisponível para este registro antigo.</small>';
         }
         
-        const usuario = h.usuario ? ` - ${h.usuario}` : '';
+        const usuario = h.entry.usuario ? ` - ${h.entry.usuario}` : '';
 
         const deleteBtn = isAdmin
-            ? `<button class="history-delete" title="Excluir" onclick="deleteHistoryEntry(${id}, '${finalTab}', ${globalIndex})" style="border:none; background:transparent; color:var(--ind-red); cursor:pointer; font-size:13px; float:right; margin-left:8px;">
+            ? `<button class="history-delete" title="Excluir" onclick="deleteHistoryEntry(${id}, '${finalTab}', ${h.originalIndex})" style="border:none; background:transparent; color:var(--ind-red); cursor:pointer; font-size:13px; float:right; margin-left:8px;">
                     <i class="fas fa-trash"></i>
                </button>`
             : '';
@@ -7859,7 +7866,7 @@ function renderViewContent(id, tab) {
         return `
             <div class="history-item" style="padding: 10px 0; border-bottom: 1px dotted #e5e7eb;">
                 ${deleteBtn}
-                <strong style="display:block; color:var(--primary); font-size:13px;">${h.acao}${usuario}</strong>
+                <strong style="display:block; color:var(--primary); font-size:13px;">${h.entry.acao}${usuario}</strong>
                 <small style="color:var(--text-light); font-size:11px;">${dateStr} às ${timeStr}</small>
                 <div style="margin-top:4px;">${details}</div>
             </div>
@@ -7955,12 +7962,10 @@ function renderViewContent(id, tab) {
 
         if (!item || !Array.isArray(item.historico) || item.historico.length === 0) return;
 
-        // historyIndex é baseado na lista invertida (mais recente primeiro)
-        const originalIndex = item.historico.length - 1 - historyIndex;
-        if (originalIndex < 0 || originalIndex >= item.historico.length) return;
+        if (historyIndex < 0 || historyIndex >= item.historico.length) return;
 
         // SOFT DELETE: Marcar entrada de histórico como deletada
-        const historyEntry = item.historico[originalIndex];
+        const historyEntry = item.historico[historyIndex];
         if (historyEntry) {
             historyEntry.deleted = true;
             historyEntry.deletedAt = new Date().toISOString();
