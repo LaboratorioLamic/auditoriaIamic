@@ -2818,9 +2818,10 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         });
         
         // Limpa a lista mestre de responsáveis, mantendo apenas usuários válidos
-        if (masterLists.responsaveis) {
-            masterLists.responsaveis = masterLists.responsaveis.filter(r => validUserNames.has(String(r)));
-        }
+        // COMENTADO: Não filtra responsáveis para garantir que TODOS os usuários apareçam nos modais de edição
+        // if (masterLists.responsaveis) {
+        //     masterLists.responsaveis = masterLists.responsaveis.filter(r => validUserNames.has(String(r)));
+        // }
     }
     const isBlankPeriodicity = val => {
         if (val === null || val === undefined) return true;
@@ -3600,6 +3601,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                 array.forEach(item => item.historico = item.historico || []);
             });
             
+            // Carrega usuários (necessário para populateSelects funcionar corretamente)
+            await loadusers();
+            
             // Limpa responsáveis inválidos após carregar os dados
             cleanInvalidResponsaveis();
 
@@ -3767,6 +3771,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
                         
                         // Atualiza os usuários no multi-select
                         initMultiSelectUsers();
+                        
+                        // IMPORTANTE: Atualiza os selects de responsável e revisor nos modais
+                        populateSelects();
                     }
                 });
             }
@@ -4994,80 +5001,67 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             }
         }
         
-        // Atualiza filtro de Responsável (Dashboard)
+        // Atualiza filtro de Responsável (Dashboard) - mostra apenas dos cards visíveis
         {
             const el = document.getElementById('fDashResponsavel');
             if (el) {
                 const currentValue = el.value || '';
-                // Popula com TODOS os responsáveis disponíveis (mesma lógica dos modais)
-                const responsaveisOptions = ['<option value="">Responsável: Todos</option>'];
-
-                // Adiciona responsáveis da lista mestre
-                if (masterLists.responsaveis) {
-                    masterLists.responsaveis.forEach(r => {
-                        if (r && r.trim()) {
-                            responsaveisOptions.push(`<option value="${r}">${r}</option>`);
+                const availableResponsaveis = new Set();
+                rawItems.forEach(item => {
+                    if (passesOtherFilters(item, 'responsavel')) {
+                        if (item.type === 'mant') {
+                            const respTec = normalizeResponsavel(item.responsavelTecnico);
+                            if (respTec) availableResponsaveis.add(respTec);
+                        } else if (item.responsavel) {
+                            const resp = normalizeResponsavel(item.responsavel);
+                            if (resp) availableResponsaveis.add(resp);
                         }
-                    });
-                }
-
-                // Adiciona nomes de usuários cadastrados
-                if (typeof users !== 'undefined') {
-                    users.forEach(user => {
-                        if (user.name && user.name.trim()) {
-                            responsaveisOptions.push(`<option value="${user.name}">${user.name}</option>`);
-                        }
-                    });
-                }
-
-                // Remove duplicatas e ordena
-                const uniqueOptions = [...new Set(responsaveisOptions)];
-                const sortedOptions = uniqueOptions.sort((a, b) => {
-                    const aText = a.match(/>(.*?)</)[1] || '';
-                    const bText = b.match(/>(.*?)</)[1] || '';
-                    return aText.localeCompare(bText);
+                    }
                 });
-
-                el.innerHTML = sortedOptions.join('');
+                const realNames = new Set();
+                [...availableResponsaveis].forEach(normalized => {
+                    const user = users?.find(u => u.name && u.name.toLowerCase() === normalized);
+                    if (user) {
+                        realNames.add(user.name);
+                    } else {
+                        const resp = masterLists.responsaveis?.find(r => r && r.toLowerCase() === normalized);
+                        if (resp) realNames.add(resp);
+                        else realNames.add(normalized);
+                    }
+                });
+                const sorted = [...realNames].sort((a, b) => a.localeCompare(b));
+                const html = '<option value="">Responsável: Todos</option>' + sorted.map(r => `<option value="${r}">${r}</option>`).join('');
+                el.innerHTML = html;
                 el.value = currentValue;
             }
         }
         
-        // Atualiza filtro de Revisor (Dashboard)
+        // Atualiza filtro de Revisor (Dashboard) - mostra apenas dos cards visíveis
         {
             const el = document.getElementById('fDashRevisor');
             if (el) {
                 const currentValue = el.value || '';
-                // Popula com TODOS os revisores disponíveis (mesma lógica dos modais)
-                const revisoresOptions = ['<option value="">Revisor: Todos</option>'];
-
-                // Adiciona revisores da lista mestre (responsáveis também podem ser revisores)
-                if (masterLists.responsaveis) {
-                    masterLists.responsaveis.forEach(r => {
-                        if (r && r.trim()) {
-                            revisoresOptions.push(`<option value="${r}">${r}</option>`);
-                        }
-                    });
-                }
-
-                // Adiciona nomes de usuários cadastrados
-                if (typeof users !== 'undefined') {
-                    users.forEach(user => {
-                        if (user.name && user.name.trim()) {
-                            revisoresOptions.push(`<option value="${user.name}">${user.name}</option>`);
-                        }
-                    });
-                }
-
-                // Remove duplicatas e ordena
-                const uniqueRevOptions = [...new Set(revisoresOptions)];
-                const sortedRevOptions = uniqueRevOptions.sort((a, b) => {
-                    const aText = a.match(/>(.*?)</)[1] || '';
-                    const bText = b.match(/>(.*?)</)[1] || '';
-                    return aText.localeCompare(bText);
+                const availableRevisores = new Set();
+                rawItems.forEach(item => {
+                    if (passesOtherFilters(item, 'revisor') && item.revisor && item.type !== 'mant') {
+                        const rev = normalizeResponsavel(item.revisor);
+                        if (rev) availableRevisores.add(rev);
+                    }
                 });
-
-                el.innerHTML = sortedRevOptions.join('');
+                const realNames = new Set();
+                [...availableRevisores].forEach(normalized => {
+                    const user = users?.find(u => u.name && u.name.toLowerCase() === normalized);
+                    if (user) {
+                        realNames.add(user.name);
+                    } else {
+                        const resp = masterLists.responsaveis?.find(r => r && r.toLowerCase() === normalized);
+                        if (resp) realNames.add(resp);
+                        else realNames.add(normalized);
+                    }
+                });
+                const sorted = [...realNames].sort((a, b) => a.localeCompare(b));
+                const html = '<option value="">Revisor: Todos</option>' + sorted.map(r => `<option value="${r}">${r}</option>`).join('');
+                el.innerHTML = html;
                 el.value = currentValue;
             }
         }
@@ -5290,23 +5284,24 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     onCategoryChange('mant');
     onCategoryChange('doc');
     
-    // Popula os selects de responsáveis
+    // Popula os selects de responsáveis e revisores
+    // GARANTE que TODOS os usuários disponíveis apareçam, sem nenhuma filtragem
     const responsaveisOptions = ['<option value="">Selecione um responsável...</option>'];
     
-    // Adiciona responsáveis da lista mestre
-    if (masterLists.responsaveis) {
-        masterLists.responsaveis.forEach(r => {
-            if (r && r.trim()) {
-                responsaveisOptions.push(`<option value="${r}">${r}</option>`);
-            }
-        });
-    }
-    
-    // Adiciona nomes de usuários cadastrados
+    // Adiciona TODOS os nomes de usuários cadastrados (sem filtragem)
     if (typeof users !== 'undefined') {
         users.forEach(user => {
             if (user.name && user.name.trim()) {
                 responsaveisOptions.push(`<option value="${user.name}">${user.name}</option>`);
+            }
+        });
+    }
+    
+    // Adiciona responsáveis da lista mestre (se houver)
+    if (masterLists.responsaveis) {
+        masterLists.responsaveis.forEach(r => {
+            if (r && r.trim()) {
+                responsaveisOptions.push(`<option value="${r}">${r}</option>`);
             }
         });
     }
@@ -5319,7 +5314,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         return aText.localeCompare(bText);
     });
     
-    // Popula os selects de responsáveis
+    // Popula os selects de responsáveis e revisores
     ['auditResponsavel', 'trainResponsavel', 'ativResponsavel', 'mantResponsavelTecnico', 'docResponsavel', 'auditRevisor', 'ativRevisor', 'docRevisor'].forEach(id => {
         const select = document.getElementById(id);
         if (select) {
@@ -5768,81 +5763,68 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             setSelectOptions(el, 'Tipo: Todos', [...ordered, ...extras], currentValue);
         }
 
-    // Responsável
+    // Responsável - mostra apenas dos cards visíveis
     {
         const el = document.getElementById(`f${prefix}Responsavel`);
         if (el) {
             const currentValue = el?.value || '';
-            // Popula com TODOS os responsáveis disponíveis (mesma lógica dos modais)
-            const responsaveisOptions = ['<option value="">Responsável: Todos</option>'];
-
-            // Adiciona responsáveis da lista mestre
-            if (masterLists.responsaveis) {
-                masterLists.responsaveis.forEach(r => {
-                    if (r && r.trim()) {
-                        responsaveisOptions.push(`<option value="${r}">${r}</option>`);
-                    }
-                });
-            }
-
-            // Adiciona nomes de usuários cadastrados
-            if (typeof users !== 'undefined') {
-                users.forEach(user => {
-                    if (user.name && user.name.trim()) {
-                        responsaveisOptions.push(`<option value="${user.name}">${user.name}</option>`);
-                    }
-                });
-            }
-
-            // Remove duplicatas e ordena
-            const uniqueOptions = [...new Set(responsaveisOptions)];
-            const sortedOptions = uniqueOptions.sort((a, b) => {
-                const aText = a.match(/>(.*?)</)[1] || '';
-                const bText = b.match(/>(.*?)</)[1] || '';
-                return aText.localeCompare(bText);
+            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { responsavel: true }));
+            const availableResponsaveis = new Set();
+            items.forEach(item => {
+                if (prefix === 'Mant') {
+                    const respTec = normalizeResponsavel(item.responsavelTecnico);
+                    if (respTec) availableResponsaveis.add(respTec);
+                } else if (item.responsavel) {
+                    const resp = normalizeResponsavel(item.responsavel);
+                    if (resp) availableResponsaveis.add(resp);
+                }
             });
-
-            el.innerHTML = sortedOptions.join('');
+            const realNames = new Set();
+            [...availableResponsaveis].forEach(normalized => {
+                const user = users?.find(u => u.name && u.name.toLowerCase() === normalized);
+                if (user) {
+                    realNames.add(user.name);
+                } else {
+                    const resp = masterLists.responsaveis?.find(r => r && r.toLowerCase() === normalized);
+                    if (resp) realNames.add(resp);
+                    else realNames.add(normalized);
+                }
+            });
+            const sorted = [...realNames].sort((a, b) => a.localeCompare(b));
+            const html = '<option value="">Responsável: Todos</option>' + sorted.map(r => `<option value="${r}">${r}</option>`).join('');
+            el.innerHTML = html;
             el.value = currentValue;
             el.style.display = 'block';
         }
     }
 
-    // Revisor (CORRIGIDO)
+    // Revisor - mostra apenas dos cards visíveis (CORRIGIDO)
     if (prefix !== 'Mant') {
         const revEl = document.getElementById(`f${prefix}Revisor`);
         if (revEl) {
             const currentRevValue = revEl.value || '';
-            // Popula com TODOS os revisores disponíveis (mesma lógica dos modais)
-            const revisoresOptions = ['<option value="">Revisor: Todos</option>'];
-
-            // Adiciona revisores da lista mestre (responsáveis também podem ser revisores)
-            if (masterLists.responsaveis) {
-                masterLists.responsaveis.forEach(r => {
-                    if (r && r.trim()) {
-                        revisoresOptions.push(`<option value="${r}">${r}</option>`);
-                    }
-                });
-            }
-
-            // Adiciona nomes de usuários cadastrados
-            if (typeof users !== 'undefined') {
-                users.forEach(user => {
-                    if (user.name && user.name.trim()) {
-                        revisoresOptions.push(`<option value="${user.name}">${user.name}</option>`);
-                    }
-                });
-            }
-
-            // Remove duplicatas e ordena
-            const uniqueRevOptions = [...new Set(revisoresOptions)];
-            const sortedRevOptions = uniqueRevOptions.sort((a, b) => {
-                const aText = a.match(/>(.*?)</)[1] || '';
-                const bText = b.match(/>(.*?)</)[1] || '';
-                return aText.localeCompare(bText);
+            const items = getItemsForFilterPrefix(prefix).filter(it => passesFilters(prefix, it, { revisor: true }));
+            const availableRevisores = new Set();
+            items.forEach(item => {
+                if (item.revisor) {
+                    const rev = normalizeResponsavel(item.revisor);
+                    if (rev) availableRevisores.add(rev);
+                }
             });
-
-            revEl.innerHTML = sortedRevOptions.join('');
+            const realNames = new Set();
+            [...availableRevisores].forEach(normalized => {
+                const user = users?.find(u => u.name && u.name.toLowerCase() === normalized);
+                if (user) {
+                    realNames.add(user.name);
+                } else {
+                    const resp = masterLists.responsaveis?.find(r => r && r.toLowerCase() === normalized);
+                    if (resp) realNames.add(resp);
+                    else realNames.add(normalized);
+                }
+            });
+            const sorted = [...realNames].sort((a, b) => a.localeCompare(b));
+            const html = '<option value="">Revisor: Todos</option>' + sorted.map(r => `<option value="${r}">${r}</option>`).join('');
+            revEl.innerHTML = html;
             revEl.value = currentRevValue;
             revEl.style.display = 'block';
         }
