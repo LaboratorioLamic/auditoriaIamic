@@ -128,23 +128,23 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 .btn-secondary:hover{background:#4b5563;transform:translateY(-1px)}
 .btn-secondary:active{transform:translateY(0)}
 
-/* TRASH BADGE - REMOVIDO */
-/* .trash-badge {
+.trash-badge {
     background:#ef4444;
     color:#fff;
-    border-radius:50%;
-    width:24px;
-    height:24px;
+    border-radius:999px;
+    min-width:18px;
+    height:18px;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:12px;
+    font-size:11px;
     font-weight:700;
     position:absolute;
-    top:-8px;
-    right:-8px;
+    top:4px;
+    right:4px;
+    padding:0 5px;
     box-shadow:0 2px 4px rgba(0,0,0,0.2);
-} */
+}
 
 /* NOTIFICATION ICON */
 .notification-container {
@@ -186,8 +186,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-.notification-badge.hidden {
-    display: none;
+.notification-badge.hidden,
+.hidden {
+    display: none !important;
 }
 
 /* NOTIFICATION MODAL */
@@ -873,7 +874,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 /* MODAL FORM */
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(2px);justify-content:center;align-items:center;z-index:1000}
 .modal-content{background:#fff;padding:32px;border-radius:24px;width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)}
-.modal-header{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
 .modal-header h3{margin:0;color:var(--primary);font-size:20px}
 
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
@@ -1753,7 +1754,9 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             <div style="display: flex; gap: 8px;">
                 <button class="btn-primary" id="addBtn"> <i class="fas fa-plus"></i> Novo Registro
                 </button>
-                <button class="btn-secondary" id="trashBtn" onclick="openTrashBin()" title="Visualizar itens deletados"><i class="fas fa-trash"></i>
+                <button class="btn-secondary" id="trashBtn" onclick="openTrashBin()" title="Visualizar itens deletados">
+                    <i class="fas fa-trash"></i>
+                    <span id="trashBadge" class="trash-badge hidden"></span>
                 </button>
             </div>
         </div>
@@ -6036,6 +6039,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             trashBtn.style.display = 'none';
         }
     }
+    updateTrashBadge();
     
     // 4. Exibição do conteúdo específico das abas
     document.getElementById('backupContent').style.display = isBackup ? 'flex' : 'none';
@@ -7399,6 +7403,7 @@ function resetModal(prefix) {
             alert('Item ocultado com sucesso. Os dados foram preservados no banco de dados.');
             saveAll();
             renderCards();
+            updateTrashBadge();
         }
     }
 
@@ -7452,9 +7457,42 @@ function resetModal(prefix) {
             if (document.getElementById('modalTrashBin').style.display === 'flex') {
                 openTrashBin();
             }
+            updateTrashBadge();
         }
     }
-    
+
+    function getTrashCount() {
+        if (currentTab === 'auditoria') {
+            return audits.filter(item => item && item.deleted).length;
+        }
+        if (currentTab === 'treinamentos') {
+            return trainings.filter(item => item && item.deleted).length;
+        }
+        if (currentTab === 'atividades') {
+            return activities.filter(item => item && item.deleted).length;
+        }
+        if (currentTab === 'manutencao') {
+            return maintenances.filter(item => item && item.deleted).length;
+        }
+        if (currentTab === 'documentos') {
+            return documents.filter(item => item && item.deleted).length;
+        }
+        return 0;
+    }
+
+    function updateTrashBadge() {
+        const badge = document.getElementById('trashBadge');
+        if (!badge) return;
+        const count = getTrashCount();
+        if (count > 0) {
+            badge.textContent = count;
+            badge.classList.remove('hidden');
+        } else {
+            badge.textContent = '';
+            badge.classList.add('hidden');
+        }
+    }
+
     // SOFT DELETE: Função para abrir e exibir lixeira (apenas itens da aba atual)
     function openTrashBin() {
         const trashContent = document.getElementById('trashContent');
@@ -7634,6 +7672,7 @@ function resetModal(prefix) {
         
         saveAll();
         openTrashBin(); // Atualiza a lixeira
+        updateTrashBadge();
     }
     
     // Anexos Logic
@@ -8016,19 +8055,76 @@ function viewHistoryItem(id, tab, historyIndex) {
     const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
     
     const subcatOrItemLabel = finalTab === 'manutencao' ? 'Equipamento' : 'Subcategoria';
+    const subcatOrItemValue = finalTab === 'manutencao' ? historicalItem.item : historicalItem.subcategoria;
     
-    const detailsGrid = `
-        <div class="view-item"><label>Título</label><div>${historicalItem.titulo || 'N/A'}</div></div>
-        <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
-        <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
-        <div class="view-item"><label>${subcatOrItemLabel}</label><div>${historicalItem.subcategoria || historicalItem.item || 'N/A'}</div></div>
-        <div class="view-item"><label>Status</label><div>${historicalItem.status || 'N/A'}</div></div>
-        <div class="view-item"><label>Responsável</label><div>${historicalItem.responsavel || historicalItem.responsavelTecnico || historicalItem.auditor || 'N/A'}</div></div>
-        ${finalTab === 'auditoria' ? `<div class="view-item"><label>Data Previsão</label><div>${historicalItem.dataPrevisao ? formatBR(historicalItem.dataPrevisao) : 'N/A'}</div></div>` : ''}
-        ${finalTab === 'atividades' ? `<div class="view-item"><label>Data Início</label><div>${historicalItem.dataInicio ? formatBR(historicalItem.dataInicio) : 'N/A'}</div></div><div class="view-item"><label>Data Conclusão</label><div>${historicalItem.dataConclusao ? formatBR(historicalItem.dataConclusao) : 'N/A'}</div></div>` : ''}
-        ${finalTab === 'manutencao' ? `<div class="view-item"><label>Última Manutenção</label><div>${historicalItem.ultima ? formatBR(historicalItem.ultima) : 'N/A'}</div></div><div class="view-item"><label>Periodicidade</label><div>${historicalItem.intervalo || 'N/A'}</div></div>` : ''}
-        ${finalTab === 'documentos' ? `<div class="view-item"><label>Data Criação</label><div>${historicalItem.dataCriacao ? formatBR(historicalItem.dataCriacao) : 'N/A'}</div></div><div class="view-item"><label>Periodicidade</label><div>${historicalItem.docIntervalo || 'N/A'}</div></div>` : ''}
-    `;
+    let detailsGrid = '';
+    if (finalTab === 'auditoria') {
+        detailsGrid = `
+            <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
+            <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
+            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'N/A'}</div></div>
+            <div class="view-item"><label>Responsável</label><div>${historicalItem.responsavel || 'N/A'}</div></div>
+            <div class="view-item"><label>Revisor</label><div>${historicalItem.revisor || 'N/A'}</div></div>
+            <div class="view-item"><label>Auditor</label><div>${historicalItem.auditor || 'N/A'}</div></div>
+            <div class="view-item"><label>Data Publicação</label><div>${historicalItem.dataPublicacao ? formatBR(historicalItem.dataPublicacao) : 'N/A'}</div></div>
+            <div class="view-item"><label>Previsão</label><div>${historicalItem.dataPrevisao ? formatBR(historicalItem.dataPrevisao) : 'N/A'}</div></div>
+        `;
+    } else if (finalTab === 'atividades') {
+        detailsGrid = `
+            <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
+            <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
+            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'N/A'}</div></div>
+            <div class="view-item"><label>Responsável</label><div>${historicalItem.responsavel || 'N/A'}</div></div>
+            <div class="view-item"><label>Revisor</label><div>${historicalItem.revisor || 'N/A'}</div></div>
+            <div class="view-item"><label>Data Início</label><div>${historicalItem.dataInicio ? formatBR(historicalItem.dataInicio) : 'N/A'}</div></div>
+            <div class="view-item"><label>Data Conclusão</label><div>${historicalItem.dataConclusao ? formatBR(historicalItem.dataConclusao) : 'N/A'}</div></div>
+        `;
+    } else if (finalTab === 'manutencao') {
+        const isNA = isBlankPeriodicity(historicalItem.intervalo);
+        detailsGrid = `
+            <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
+            <div class="view-item"><label>Tipo</label><div>${historicalItem.tipo || 'N/A'}</div></div>
+            <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
+            <div class="view-item"><label>Equipamento</label><div>${historicalItem.item || 'N/A'}</div></div>
+            <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${historicalItem.intervalo} dias`}</div></div>
+            <div class="view-item"><label>Última Manutenção</label><div>${historicalItem.ultima ? formatBR(historicalItem.ultima) : 'N/A'}</div></div>
+            <div class="view-item"><label>Próxima Manutenção</label><div>${isNA ? 'N/A' : formatBR(historicalItem.proxima)}</div></div>
+            <div class="view-item"><label>Responsável Técnico</label><div>${historicalItem.responsavelTecnico || 'N/A'}</div></div>
+            <div class="view-item"><label>Responsável pela Manutenção</label><div>${historicalItem.responsavelManutencao || 'N/A'}</div></div>
+            <div class="view-item"><label>Empresa Responsável</label><div>${historicalItem.empresaResponsavel || 'N/A'}</div></div>
+        `;
+    } else if (finalTab === 'treinamentos') {
+        const isNA = isBlankPeriodicity(historicalItem.periodicidade);
+        detailsGrid = `
+            <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
+            <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
+            <div class="view-item"><label>Responsável</label><div>${historicalItem.responsavel || 'N/A'}</div></div>
+            <div class="view-item"><label>Instrutor</label><div>${historicalItem.instrutor || 'N/A'}</div></div>
+            <div class="view-item"><label>Local do Evento</label><div>${historicalItem.localEvento || 'N/A'}</div></div>
+            <div class="view-item"><label>Carga Horária</label><div>${historicalItem.cargaHoraria || 'N/A'}</div></div>
+            <div class="view-item"><label>Data Publicação</label><div>${historicalItem.dataPublicacao ? formatBR(historicalItem.dataPublicacao) : 'N/A'}</div></div>
+            <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${historicalItem.periodicidade} dias`}</div></div>
+        `;
+    } else if (finalTab === 'documentos') {
+        const isNA = isBlankPeriodicity(historicalItem.docIntervalo);
+        detailsGrid = `
+            <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
+            <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
+            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'N/A'}</div></div>
+            <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${historicalItem.docIntervalo} dias`}</div></div>
+            <div class="view-item"><label>Responsável</label><div>${historicalItem.responsavel || 'N/A'}</div></div>
+            <div class="view-item"><label>Revisor</label><div>${historicalItem.revisor || 'N/A'}</div></div>
+            <div class="view-item"><label>Data Criação</label><div>${historicalItem.dataCriacao ? formatBR(historicalItem.dataCriacao) : 'N/A'}</div></div>
+            <div class="view-item"><label>Próx. Revisão</label><div>${isNA ? 'N/A' : formatBR(historicalItem.dataProximaRevisao)}</div></div>
+        `;
+    } else {
+        detailsGrid = `
+            <div class="view-item"><label>Título</label><div>${historicalItem.titulo || 'N/A'}</div></div>
+            <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
+            <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
+            <div class="view-item"><label>Status</label><div>${historicalItem.status || 'N/A'}</div></div>
+        `;
+    }
     
     const anexos = historicalItem.anexos || [];
     const anexosHtml = anexos.length > 0 ? anexos.map(a => 
@@ -8780,6 +8876,11 @@ function viewHistoryItem(id, tab, historyIndex) {
                 allData = allData.filter(d => d.type === dashboardFilters.area);
             }
             
+            // SOFT DELETE: remover itens deletados das notificações do dashboard
+            allData.forEach(d => {
+                d.items = d.items.filter(item => !item.deleted);
+            });
+
             // Aplica todos os filtros e coleta notificações
             const allNotifications = [];
             allData.forEach(({ items, type }) => {
@@ -8796,6 +8897,9 @@ function viewHistoryItem(id, tab, historyIndex) {
             });
         }
         
+        // SOFT DELETE: remover itens deletados das notificações
+        data = data.filter(item => !item.deleted);
+
         // Aplicar filtro de permissões de setores para abas específicas
         const allowedSetores = getAllowedSetores();
         if (allowedSetores !== null) {
