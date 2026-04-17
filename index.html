@@ -1125,6 +1125,11 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 .history-item:last-child {
     border-bottom: none;
 }
+.history-item:hover {
+    background: #f9fafb;
+    transform: scale(1.01);
+    transition: 0.2s;
+}
 .history-item strong {
     color: var(--primary);
     font-weight: 600;
@@ -2370,6 +2375,19 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         <div class="modal-actions">
             <button class="btn-cancel" onclick="closeModal('viewModal')">Fechar</button>
             <button class="btn-edit" id="btnViewEdit" onclick="editCurrentViewItem()" style="display:none;">Editar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="historyViewModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="historyViewTitle"></h3>
+            <button onclick="closeModal('historyViewModal')" style="background:none; border:none; font-size:20px; cursor:pointer; color:var(--text-light);">&times;</button>
+        </div>
+        <div id="historyViewContent"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('historyViewModal')">Fechar</button>
         </div>
     </div>
 </div>
@@ -6271,7 +6289,8 @@ function resetModal(prefix) {
                     timestamp: new Date().toISOString(), 
                     acao: 'Edição de Dados', 
                     usuario: currentuser?.name || 'Sistema',
-                    detalhes: changes 
+                    detalhes: changes,
+                    snapshot: JSON.parse(JSON.stringify(originalItem))
                 });
             }
             audits = audits.map(a => a.id === editingAuditId ? newItem : a);
@@ -6399,14 +6418,14 @@ function resetModal(prefix) {
                 newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
             }
             
-            const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0 || changes.silentChanged) {
                 if (changes.length > 0) {
                     newItem.historico.push({ 
                         timestamp: new Date().toISOString(), 
                         acao: 'Edição de Dados', 
                         usuario: currentuser?.name || 'Sistema',
-                        detalhes: changes 
+                        detalhes: changes,
+                        snapshot: JSON.parse(JSON.stringify(originalItem))
                     });
                 }
                 trainings = trainings.map(t => t.id === editingTrainId ? newItem : t);
@@ -6482,7 +6501,8 @@ function resetModal(prefix) {
                     timestamp: new Date().toISOString(), 
                     acao: 'Edição de Dados', 
                     usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
-                    detalhes: changes 
+                    detalhes: changes,
+                    snapshot: JSON.parse(JSON.stringify(originalItem))
                 });
             } else if (!changes.silentChanged) {
                 activities = activities.map(a => a.id === editingAtivId ? item : a);
@@ -6575,7 +6595,8 @@ function resetModal(prefix) {
                     timestamp: new Date().toISOString(), 
                     acao: 'Edição de Dados', 
                     usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
-                    detalhes: changes 
+                    detalhes: changes,
+                    snapshot: JSON.parse(JSON.stringify(originalItem))
                 });
             } else if (!changes.silentChanged) {
                 maintenances = maintenances.map(m => m.id === editingMantId ? item : m);
@@ -6662,7 +6683,8 @@ function resetModal(prefix) {
                     timestamp: new Date().toISOString(),
                     acao: 'Edição de Dados',
                     usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
-                    detalhes: changes
+                    detalhes: changes,
+                    snapshot: JSON.parse(JSON.stringify(originalItem))
                 });
             } else if (!changes.silentChanged) {
                 documents = documents.map(d => d.id === editingDocId ? item : d);
@@ -7810,7 +7832,7 @@ function renderViewContent(id, tab) {
     // SOFT DELETE: Filtrar entradas de histórico deletadas
     const filteredHistory = allHistory.filter(h => !h.entry.deleted);
     
-    const itemsPerPage = 5;
+    const itemsPerPage = 1000;
     const totalItems = filteredHistory.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const maxPages = 5;
@@ -7825,6 +7847,7 @@ function renderViewContent(id, tab) {
     const isAdmin = userIsAdmin();
 
     const historyHtml = paginatedHistory.map((h, idx) => {
+        h.filteredIndex = start + idx;
         const date = new Date(h.entry.timestamp);
         const dateStr = date.toLocaleDateString('pt-BR');
         const timeStr = date.toLocaleTimeString('pt-BR');
@@ -7858,17 +7881,24 @@ function renderViewContent(id, tab) {
         const usuario = h.entry.usuario ? ` - ${h.entry.usuario}` : '';
 
         const deleteBtn = isAdmin
-            ? `<button class="history-delete" title="Excluir" onclick="deleteHistoryEntry(${id}, '${finalTab}', ${h.originalIndex})" style="border:none; background:transparent; color:var(--ind-red); cursor:pointer; font-size:13px; float:right; margin-left:8px;">
+            ? `<button class="history-delete" title="Excluir" onclick="deleteHistoryEntry(${id}, '${finalTab}', ${h.originalIndex})" style="border:none; background:transparent; color:var(--ind-red); cursor:pointer; font-size:13px; padding:2px;">
                     <i class="fas fa-trash"></i>
                </button>`
             : '';
 
         return `
-            <div class="history-item" style="padding: 10px 0; border-bottom: 1px dotted #e5e7eb;">
-                ${deleteBtn}
-                <strong style="display:block; color:var(--primary); font-size:13px;">${h.entry.acao}${usuario}</strong>
-                <small style="color:var(--text-light); font-size:11px;">${dateStr} às ${timeStr}</small>
-                <div style="margin-top:4px;">${details}</div>
+            <div class="history-item" onclick="viewHistoryItem(${id}, '${finalTab}', ${h.filteredIndex})" style="cursor:pointer; padding: 10px 0; border-bottom: 1px dotted #e5e7eb; position:relative;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div style="flex:1;">
+                        <strong style="display:block; color:var(--primary); font-size:13px;">${h.entry.acao}${usuario}</strong>
+                        <small style="color:var(--text-light); font-size:11px;">${dateStr} às ${timeStr}</small>
+                        <div style="margin-top:4px;">${details}</div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px; margin-left:8px;">
+                        <i class="fas fa-eye" style="color:var(--text-light); cursor:pointer; font-size:14px;" onclick="event.stopPropagation(); viewHistoryItem(${id}, '${finalTab}', ${h.filteredIndex})" title="Visualizar registro"></i>
+                        ${deleteBtn}
+                    </div>
+                </div>
             </div>
         `;
     }).join('');
@@ -7917,6 +7947,95 @@ function renderViewContent(id, tab) {
         btnEdit.style.display = (userCanEditCards() && !item.deleted) ? 'inline-flex' : 'none';
     }
 }
+
+function viewHistoryItem(id, tab, historyIndex) {
+    let item;
+    let finalTab = tab;
+    
+    // Normaliza o tab
+    if (tab === 'audit') finalTab = 'auditoria';
+    else if (tab === 'train') finalTab = 'treinamentos';
+    else if (tab === 'ativ') finalTab = 'atividades';
+    else if (tab === 'mant' || tab === 'manutencao') finalTab = 'manutencao';
+    else if (tab === 'doc' || tab === 'documentos') finalTab = 'documentos';
+    
+    if (finalTab === 'auditoria') { item = audits.find(i => i.id === id); }
+    else if (finalTab === 'atividades') { item = activities.find(i => i.id === id); }
+    else if (finalTab === 'manutencao') { item = maintenances.find(i => i.id === id); }
+    else if (finalTab === 'documentos') { item = documents.find(i => i.id === id); }
+    else if (finalTab === 'treinamentos') { item = trainings.find(i => i.id === id); }
+    
+    if (!item) return;
+    
+    const history = item.historico || [];
+    const allHistory = history.slice().reverse().map((entry, revIndex) => ({
+        entry,
+        originalIndex: history.length - 1 - revIndex
+    }));
+    const filteredHistory = allHistory.filter(h => h.entry.acao !== 'Restauração de Backup');
+    
+    if (historyIndex < 0 || historyIndex >= filteredHistory.length) return;
+    
+    const h = filteredHistory[historyIndex];
+    const date = new Date(h.entry.timestamp);
+    const dateStr = date.toLocaleDateString('pt-BR');
+    
+    document.getElementById('historyViewTitle').textContent = `[Registro de ${dateStr}]`;
+    
+    let historicalItem;
+    if (h.entry.snapshot) {
+        historicalItem = JSON.parse(JSON.stringify(h.entry.snapshot));
+    } else {
+        historicalItem = JSON.parse(JSON.stringify(item));
+    }
+    
+    // Copiar a lógica de renderização do view
+    const statusList = finalTab === 'auditoria' ? masterLists.auditStatus :
+                      finalTab === 'treinamentos' ? masterLists.trainStatus :
+                      finalTab === 'atividades' ? masterLists.ativStatus :
+                      finalTab === 'manutencao' ? masterLists.mantStatus :
+                      finalTab === 'documentos' ? masterLists.docStatus : [];
+    
+    const statusObj = statusList.find(s => s.name === historicalItem.status) || { color: 'default' };
+    const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
+    
+    const subcatOrItemLabel = finalTab === 'manutencao' ? 'Equipamento' : 'Subcategoria';
+    
+    const detailsGrid = `
+        <div class="view-item"><label>Título</label><div>${historicalItem.titulo || 'N/A'}</div></div>
+        <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
+        <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
+        <div class="view-item"><label>${subcatOrItemLabel}</label><div>${historicalItem.subcategoria || historicalItem.item || 'N/A'}</div></div>
+        <div class="view-item"><label>Status</label><div>${historicalItem.status || 'N/A'}</div></div>
+        <div class="view-item"><label>Responsável</label><div>${historicalItem.responsavel || historicalItem.responsavelTecnico || historicalItem.auditor || 'N/A'}</div></div>
+        ${finalTab === 'auditoria' ? `<div class="view-item"><label>Data Previsão</label><div>${historicalItem.dataPrevisao ? formatBR(historicalItem.dataPrevisao) : 'N/A'}</div></div>` : ''}
+        ${finalTab === 'atividades' ? `<div class="view-item"><label>Data Início</label><div>${historicalItem.dataInicio ? formatBR(historicalItem.dataInicio) : 'N/A'}</div></div><div class="view-item"><label>Data Conclusão</label><div>${historicalItem.dataConclusao ? formatBR(historicalItem.dataConclusao) : 'N/A'}</div></div>` : ''}
+        ${finalTab === 'manutencao' ? `<div class="view-item"><label>Última Manutenção</label><div>${historicalItem.ultima ? formatBR(historicalItem.ultima) : 'N/A'}</div></div><div class="view-item"><label>Periodicidade</label><div>${historicalItem.intervalo || 'N/A'}</div></div>` : ''}
+        ${finalTab === 'documentos' ? `<div class="view-item"><label>Data Criação</label><div>${historicalItem.dataCriacao ? formatBR(historicalItem.dataCriacao) : 'N/A'}</div></div><div class="view-item"><label>Periodicidade</label><div>${historicalItem.docIntervalo || 'N/A'}</div></div>` : ''}
+    `;
+    
+    const anexos = historicalItem.anexos || [];
+    const anexosHtml = anexos.length > 0 ? anexos.map(a => `<div class="file-chip"><i class="fas fa-paperclip"></i> ${a.name || a}</div>`).join('') : '';
+    
+    const html = `
+        <div class="view-header">
+            <h2 style="margin:0; color:var(--primary); font-size:20px;">${historicalItem.titulo}</h2>
+            <span class="view-status" style="background-color:${statusColorVar}">${historicalItem.status}</span>
+        </div>
+        <div class="view-grid">
+            ${detailsGrid}
+        </div>
+        <div>
+            <h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">Descrição Detalhada</h4>
+            <div class="view-desc">${(historicalItem.descricao || 'Sem descrição.').replace(/\n/g, '<br>')}</div>
+        </div>
+        ${anexosHtml ? `<div class="view-files" style="margin-top:10px;"><h4>Anexos</h4>${anexosHtml}</div>` : ''}
+    `;
+    
+    document.getElementById('historyViewContent').innerHTML = html;
+    document.getElementById('historyViewModal').style.display = 'flex';
+}
+
     function deleteHistoryEntry(id, tab, historyIndex) {
         // Somente admin pode apagar histórico
         if (!(typeof userIsAdmin === 'function') || !userIsAdmin()) return;
