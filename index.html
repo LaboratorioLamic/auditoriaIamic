@@ -7902,7 +7902,7 @@ function renderViewContent(id, tab) {
     // SOFT DELETE: Filtrar entradas de histórico deletadas
     const filteredHistory = allHistory.filter(h => !h.entry.deleted);
     
-    const itemsPerPage = 1000;
+    const itemsPerPage = 20;
     const totalItems = filteredHistory.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const maxPages = 5;
