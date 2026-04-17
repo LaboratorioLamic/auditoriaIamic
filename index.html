@@ -2858,6 +2858,53 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         //     masterLists.responsaveis = masterLists.responsaveis.filter(r => validUserNames.has(String(r)));
         // }
     }
+
+    function cleanMalformedItems() {
+        // Remove itens [object Object] e objetos malformados de todas as listas do masterLists
+        const cleanList = (list) => {
+            if (!Array.isArray(list)) return list;
+            
+            return list.filter(item => {
+                // Rejeita itens que são [object Object] (strings que resultariam nisso)
+                if (item === '[object Object]') return false;
+                
+                // Rejeita objetos sem propriedades de valor úteis
+                if (typeof item === 'object' && item !== null) {
+                    // Se é um objeto de status/marcador, verifica se tem 'name'
+                    if (item.name !== undefined) return true;
+                    // Se é um objeto de soft delete, verifica se tem 'value' e ainda não foi marcado deleted permanentemente
+                    if (item.value !== undefined && !item.deleted) return true;
+                    // Se tem propriedades úteis (não é totalmente vazio), mantém
+                    if (Object.keys(item).length > 0 && !item.deleted) return true;
+                    // Se é vazio ou só tem 'deleted', rejeita
+                    return false;
+                }
+                
+                // Strings vazias são rejeitadas
+                if (typeof item === 'string' && item.trim() === '') return false;
+                
+                // Mantém itens válidos (strings com conteúdo)
+                return true;
+            });
+        };
+        
+        // Limpa todas as listas no masterLists
+        Object.keys(masterLists).forEach(key => {
+            const list = masterLists[key];
+            
+            if (Array.isArray(list)) {
+                // Listas simples
+                masterLists[key] = cleanList(list);
+            } else if (typeof list === 'object' && list !== null) {
+                // Listas aninhadas (como mantItens, auditSubcats, etc)
+                Object.keys(list).forEach(subKey => {
+                    if (Array.isArray(list[subKey])) {
+                        list[subKey] = cleanList(list[subKey]);
+                    }
+                });
+            }
+        });
+    }
     const isBlankPeriodicity = val => {
         if (val === null || val === undefined) return true;
         const s = String(val).trim();
@@ -3868,8 +3915,11 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
 
         // 1. Limpeza de responsáveis inválidos (que não são usuários cadastrados)
         cleanInvalidResponsaveis();
+        
+        // 2. Limpeza de itens malformados [object Object] das listas
+        cleanMalformedItems();
 
-        // 2. Limpeza de Histórico para Performance (Evita lentidão no carregamento)
+        // 3. Limpeza de Histórico para Performance (Evita lentidão no carregamento)
         const maxHistoryItems = 150;
         const dataArrays = [audits, trainings, activities, maintenances, documents];
         dataArrays.forEach(arr => {
@@ -3880,7 +3930,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
             });
         });
 
-        // 2. Preparação do Objeto de Atualização Atômica
+        // 4. Preparação do Objeto de Atualização Atômica
         const updates = {};
         updates['/audits'] = audits;
         updates['/trainings'] = trainings;
@@ -3890,11 +3940,11 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         updates['/masterLists'] = masterLists;
         updates['/lastUpdate'] = new Date().toISOString();
 
-        // 3. Execução do Update na Raiz (Preserva o nó /passwords)
+        // 5. Execução do Update na Raiz (Preserva o nó /passwords)
         const rootRef = dbRef(database, "/");
         await update(rootRef, updates);
         
-        // 4. NOVO: Atualizar localStorage APENAS se o Firebase foi bem-sucedido
+        // 6. NOVO: Atualizar localStorage APENAS se o Firebase foi bem-sucedido
         console.log('Sincronização com Firebase bem-sucedida. Atualizando cache local...');
         saveToLocalStorage('audits', audits);
         saveToLocalStorage('trainings', trainings);
@@ -5273,10 +5323,60 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     });
     const unifiedStatusnames = [...new Set(allStatusnames)].sort();
 
-    const makeOpts = (list) => (list || []).filter(i => !i.deleted).map(i => `<option value="${i}">${i}</option>`).join('');
-    const makeStatusOpts = (list) => (list || []).filter(i => !i.deleted).map(i => `<option value="${i.name}">${i.name}</option>`).join('');
-    const makeFilterOpts = (list, label) => `<option value="">${label}</option>` + (list || []).filter(i => !i.deleted).map(i => `<option value="${i}">${i}</option>`).join('');
-    const makeStatusFilterOpts = (list, label) => `<option value="">${label}</option>` + (list || []).filter(i => !i.deleted).map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+    // Função auxiliar para extrair valor de um item (string ou objeto)
+    const extractValue = (item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object' && item.value) return item.value;
+        if (item && typeof item === 'object' && item.name) return item.name;
+        return String(item);
+    };
+    
+    // Função auxiliar para extrair nome de um item para exibição (string ou objeto)
+    const extractDisplayName = (item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object' && item.name) return item.name;
+        if (item && typeof item === 'object' && item.value) return item.value;
+        return String(item);
+    };
+
+    const makeOpts = (list) => (list || [])
+        .filter(i => {
+            // Filtra itens deletados e objetos malformados
+            if (typeof i === 'object') {
+                return i && !i.deleted && (i.name || i.value);
+            }
+            return i; // Strings simples são mantidas
+        })
+        .map(i => {
+            const val = extractValue(i);
+            const display = extractDisplayName(i);
+            return `<option value="${val}">${display}</option>`;
+        })
+        .join('');
+        
+    const makeStatusOpts = (list) => (list || [])
+        .filter(i => i && !i.deleted && i.name)
+        .map(i => `<option value="${i.name}">${i.name}</option>`)
+        .join('');
+        
+    const makeFilterOpts = (list, label) => `<option value="">${label}</option>` + (list || [])
+        .filter(i => {
+            if (typeof i === 'object') {
+                return i && !i.deleted && (i.name || i.value);
+            }
+            return i;
+        })
+        .map(i => {
+            const val = extractValue(i);
+            const display = extractDisplayName(i);
+            return `<option value="${val}">${display}</option>`;
+        })
+        .join('');
+        
+    const makeStatusFilterOpts = (list, label) => `<option value="">${label}</option>` + (list || [])
+        .filter(i => i && !i.deleted && i.name)
+        .map(i => `<option value="${i.name}">${i.name}</option>`)
+        .join('');
     
     // Filtra setores baseado nas permissões do usuário (allowedSetores já declarado acima)
     const filteredSetores = allowedSetores === null ? setores : setores.filter(s => allowedSetores.includes(s));
@@ -5513,14 +5613,34 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     
     // Debug: Garante que a estrutura de dados exista antes do acesso
     masterLists[listKey] = masterLists[listKey] || {};
-    const subcats = masterLists[listKey][selectedCat] || [];
+    let subcats = masterLists[listKey][selectedCat] || [];
+    
+    // Função auxiliar para extrair valor de um item (string ou objeto)
+    const extractItemValue = (item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object' && item.value) return item.value;
+        if (item && typeof item === 'object' && item.name) return item.name;
+        return String(item);
+    };
+    
+    // Filtra itens deletados e malformados
+    subcats = subcats.filter(i => {
+        if (typeof i === 'object') {
+            return i && !i.deleted && (i.value || i.name);
+        }
+        return i;
+    });
     
     subcatSelect.innerHTML = subcats.length > 0 ? 
-        subcats.map(i => `<option value="${i}">${i}</option>`).join('') :
+        subcats.map(i => {
+            const val = extractItemValue(i);
+            return `<option value="${val}">${val}</option>`;
+        }).join('') :
         `<option value="">Nenhuma opção disponível</option>`;
 
     // Tenta restaurar a seleção anterior se ela ainda existir na nova lista
-    if (subcats.includes(currentSubcat)) subcatSelect.value = currentSubcat;
+    const subcatValues = subcats.map(extractItemValue);
+    if (subcatValues.includes(currentSubcat)) subcatSelect.value = currentSubcat;
 }
 
     // NOVO: Filtro de Setor (Setor NÃO afeta a Categoria no cadastro/filtro)
@@ -8375,10 +8495,22 @@ function viewHistoryItem(id, tab, historyIndex) {
         listToRender.forEach(val => {
             let displayHtml = '', itemVal = '';
             if (typeof val === 'object') {
-                const colorVar = colorMap[val.color] || colorMap['default'];
-                displayHtml = `<span class="color-dot" style="background-color:${colorVar}"></span>${val.name}`;
-                itemVal = val.name; 
+                // Verifica se é um objeto com propriedade 'name' (status/marcador) ou 'value' (soft delete)
+                if (val.name !== undefined) {
+                    // É um status/marcador com nome e cor
+                    const colorVar = colorMap[val.color] || colorMap['default'];
+                    displayHtml = `<span class="color-dot" style="background-color:${colorVar}"></span>${val.name}`;
+                    itemVal = val.name;
+                } else if (val.value !== undefined) {
+                    // É um item marcado para soft delete (conversão de string para objeto)
+                    displayHtml = val.value;
+                    itemVal = val.value;
+                } else {
+                    // Objeto malformado - pular
+                    return;
+                }
             } else {
+                // Deve ser uma string simples
                 displayHtml = val;
                 itemVal = val;
             }
@@ -8477,8 +8609,12 @@ function viewHistoryItem(id, tab, historyIndex) {
             list.push(val);
         }
     
-        // Ordenação
-        list.sort((a,b) => (typeof a === 'object' ? a.name : a).localeCompare(typeof b === 'object' ? b.name : b));
+        // Ordenação - Função robusta para comparar valores que podem ser strings ou objetos
+        list.sort((a, b) => {
+            const aVal = String(typeof a === 'object' ? a.name : a) || '';
+            const bVal = String(typeof b === 'object' ? b.name : b) || '';
+            return aVal.localeCompare(bVal);
+        });
         
         saveAll(); populateSelects();
 
@@ -8632,8 +8768,12 @@ function viewHistoryItem(id, tab, historyIndex) {
             }
         }
         
-        // Ordena a lista
-        list.sort((a,b) => (typeof a === 'object' ? a.name : a).localeCompare(typeof b === 'object' ? b.name : b));
+        // Ordena a lista - Função robusta para comparar valores que podem ser strings ou objetos
+        list.sort((a, b) => {
+            const aVal = String(typeof a === 'object' ? a.name : a) || '';
+            const bVal = String(typeof b === 'object' ? b.name : b) || '';
+            return aVal.localeCompare(bVal);
+        });
         
         // Guarda seleções antes de recarregar
         const prefix = getTabPrefix(currentTab);
