@@ -3260,9 +3260,24 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         }
     }
 
-    // Verificação de anexos (comparação profunda simples via JSON)
-    if (JSON.stringify(original.anexos || []) !== JSON.stringify(current.anexos || [])) {
-        silentChanged = true;
+    // Verificação de anexos
+    const origAnexos = original.anexos || [];
+    const currAnexos = current.anexos || [];
+    if (JSON.stringify(origAnexos) !== JSON.stringify(currAnexos)) {
+        const added = currAnexos.filter(a => !origAnexos.some(o => (o.titulo || o.name || '') === (a.titulo || a.name || '') && (o.url || '') === (a.url || '')));
+        const removed = origAnexos.filter(o => !currAnexos.some(a => (a.titulo || a.name || '') === (o.titulo || o.name || '') && (a.url || '') === (o.url || '')));
+        if (added.length > 0 || removed.length > 0) {
+            let anexoDetails = [];
+            if (added.length > 0) {
+                anexoDetails.push(`<strong>Anexos adicionados:</strong><br>${added.map(a => `<a href="${a.url || '#'}" target="_blank">${a.titulo || a.name || 'Anexo'}</a>`).join('<br>')}`);
+            }
+            if (removed.length > 0) {
+                anexoDetails.push(`<strong>Anexos removidos:</strong><br>${removed.map(a => `${a.titulo || a.name || 'Anexo'}`).join('<br>')}`);
+            }
+            changes.push(anexoDetails.join('<br>'));
+        } else {
+            silentChanged = true; // if only order changed or other differences
+        }
     }
     
     // Adiciona propriedade auxiliar para controle do fluxo de salvamento
@@ -7882,7 +7897,7 @@ function renderViewContent(id, tab) {
         const usuario = h.entry.usuario ? ` - ${h.entry.usuario}` : '';
 
         const deleteBtn = isAdmin
-            ? `<button class="history-delete" title="Excluir" onclick="deleteHistoryEntry(${id}, '${finalTab}', ${h.originalIndex})" style="border:none; background:transparent; color:var(--ind-red); cursor:pointer; font-size:13px; padding:2px;">
+            ? `<button class="history-delete" title="Excluir" onclick="event.stopPropagation(); deleteHistoryEntry(${id}, '${finalTab}', ${h.originalIndex})" style="border:none; background:transparent; color:var(--ind-red); cursor:pointer; font-size:13px; padding:2px;">
                     <i class="fas fa-trash"></i>
                </button>`
             : '';
@@ -8016,7 +8031,9 @@ function viewHistoryItem(id, tab, historyIndex) {
     `;
     
     const anexos = historicalItem.anexos || [];
-    const anexosHtml = anexos.length > 0 ? anexos.map(a => `<div class="file-chip"><i class="fas fa-paperclip"></i> ${a.name || a}</div>`).join('') : '';
+    const anexosHtml = anexos.length > 0 ? anexos.map(a => 
+        `<a href="${a.url}" target="_blank" class="file-chip"><i class="fas fa-external-link-alt"></i> ${a.titulo || 'Anexo'}</a>`
+    ).join('') : '';
     
     const html = `
         <div class="view-header">
