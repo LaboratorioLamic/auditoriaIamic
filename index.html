@@ -6418,6 +6418,7 @@ function resetModal(prefix) {
                 newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
             }
             
+            const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0 || changes.silentChanged) {
                 if (changes.length > 0) {
                     newItem.historico.push({ 
