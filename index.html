@@ -1142,6 +1142,20 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
     margin-top: 2px;
 }
 
+/* Toggle para mostrar/ocultar detalhes de cada entrada de histórico */
+.history-toggle {
+    cursor: pointer;
+    margin-right: 8px;
+    display: inline-block;
+    width: 18px;
+    text-align: center;
+    color: var(--text-light);
+    font-weight: 700;
+}
+.history-details { display: none; margin-top:4px; }
+.history-item.expanded .history-toggle { transform: rotate(90deg); }
+.history-item.expanded .history-details { display: block; }
+
 /* Paginação do Histórico */
 .history-pagination {
     display: flex;
@@ -7854,6 +7868,7 @@ function renderViewContent(id, tab) {
             <div class="view-item"><label>Instrutor</label><div>${item.instrutor || 'ND'}</div></div>
             <div class="view-item"><label>Local do Evento</label><div>${item.localEvento || 'ND'}</div></div>
             <div class="view-item"><label>Carga Horária</label><div>${item.cargaHoraria || 'ND'}</div></div>
+            <div class="view-item"><label>Participantes</label><div>${item.participantes || 'ND'}</div></div>
             <div class="view-item"><label>Data Publicação</label><div>${formatBR(item.dataPublicacao)}</div></div>
             <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${item.periodicidade} dias`}</div></div>
             <div class="view-item"><label>Data Previsão</label><div>${isNA ? 'N/A' : formatBR(item.dataPrevisao)}</div></div>
@@ -7941,13 +7956,15 @@ function renderViewContent(id, tab) {
                </button>`
             : '';
 
+        // Cada item possui um toggle à esquerda para expandir/colapsar os detalhes sem abrir a visualização completa
         return `
             <div class="history-item" onclick="viewHistoryItem(${id}, '${finalTab}', ${h.filteredIndex})" style="cursor:pointer; padding: 10px 0; border-bottom: 1px dotted #e5e7eb; position:relative;">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div style="display:flex; gap:8px; align-items:flex-start;">
+                    <span class="history-toggle" onclick="event.stopPropagation(); toggleHistoryDetails(this);" title="Mostrar/ocultar">&#8250;</span>
                     <div style="flex:1;">
                         <strong style="display:block; color:var(--primary); font-size:13px;">${h.entry.acao}${usuario}</strong>
                         <small style="color:var(--text-light); font-size:11px;">${dateStr} às ${timeStr}</small>
-                        <div style="margin-top:4px;">${details}</div>
+                        <div class="history-details">${details}</div>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:4px; margin-left:8px;">
                         <i class="fas fa-eye" style="color:var(--text-light); cursor:pointer; font-size:14px;" onclick="event.stopPropagation(); viewHistoryItem(${id}, '${finalTab}', ${h.filteredIndex})" title="Visualizar registro"></i>
@@ -7957,6 +7974,13 @@ function renderViewContent(id, tab) {
             </div>
         `;
     }).join('');
+
+    // Função utilitária para alternar a exibição dos detalhes do histórico (não abre a visualização do registro)
+    window.toggleHistoryDetails = function(el) {
+        const item = el.closest('.history-item');
+        if (!item) return;
+        item.classList.toggle('expanded');
+    };
     
     const paginationHtml = finalPages > 1 ? `
         <div class="history-pagination">
@@ -7987,7 +8011,7 @@ function renderViewContent(id, tab) {
             ${detailsGrid}
         </div>
         <div>
-            <h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">Descrição Detalhada</h4>
+            <h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">Descrição</h4>
             <div class="view-desc">${(item.descricao || 'Sem descrição.').replace(/\n/g, '<br>')}</div>
         </div>
         ${anexosHtml ? `<div class="view-files" style="margin-top:10px;"><h4>Anexos</h4>${anexosHtml}</div>` : ''}
@@ -8043,7 +8067,7 @@ function viewHistoryItem(id, tab, historyIndex) {
     } else {
         historicalItem = JSON.parse(JSON.stringify(item));
     }
-    
+
     // Copiar a lógica de renderização do view
     const statusList = finalTab === 'auditoria' ? masterLists.auditStatus :
                       finalTab === 'treinamentos' ? masterLists.trainStatus :
@@ -8102,6 +8126,7 @@ function viewHistoryItem(id, tab, historyIndex) {
             <div class="view-item"><label>Instrutor</label><div>${historicalItem.instrutor || 'N/A'}</div></div>
             <div class="view-item"><label>Local do Evento</label><div>${historicalItem.localEvento || 'N/A'}</div></div>
             <div class="view-item"><label>Carga Horária</label><div>${historicalItem.cargaHoraria || 'N/A'}</div></div>
+            <div class="view-item"><label>Participantes</label><div>${historicalItem.participantes || 'N/A'}</div></div>
             <div class="view-item"><label>Data Publicação</label><div>${historicalItem.dataPublicacao ? formatBR(historicalItem.dataPublicacao) : 'N/A'}</div></div>
             <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${historicalItem.periodicidade} dias`}</div></div>
         `;
@@ -8130,6 +8155,22 @@ function viewHistoryItem(id, tab, historyIndex) {
     const anexosHtml = anexos.length > 0 ? anexos.map(a => 
         `<a href="${a.url}" target="_blank" class="file-chip"><i class="fas fa-external-link-alt"></i> ${a.titulo || 'Anexo'}</a>`
     ).join('') : '';
+
+    const versionDescription = historicalItem.descricao || 'Sem descrição.';
+    let modificationEntries = [];
+    if (h.entry.detalhes) {
+        if (Array.isArray(h.entry.detalhes)) {
+            modificationEntries = h.entry.detalhes;
+        } else if (typeof h.entry.detalhes === 'object') {
+            modificationEntries = Object.keys(h.entry.detalhes)
+                .filter(k => k !== 'silentChanged')
+                .map(k => h.entry.detalhes[k]);
+        }
+    }
+
+    const modificationsHtml = modificationEntries.length > 0
+        ? `<div style="margin-top:16px;"><h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">Modificações</h4><div class="view-desc">${modificationEntries.map(d => String(d).replace(/\n/g, '<br>')).join('<br>')}</div></div>`
+        : '';
     
     const html = `
         <div class="view-header">
@@ -8140,9 +8181,10 @@ function viewHistoryItem(id, tab, historyIndex) {
             ${detailsGrid}
         </div>
         <div>
-            <h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">Descrição Detalhada</h4>
-            <div class="view-desc">${(historicalItem.descricao || 'Sem descrição.').replace(/\n/g, '<br>')}</div>
+            <h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">Descrição</h4>
+            <div class="view-desc">${versionDescription.replace(/\n/g, '<br>')}</div>
         </div>
+        ${modificationsHtml}
         ${anexosHtml ? `<div class="view-files" style="margin-top:10px;"><h4>Anexos</h4>${anexosHtml}</div>` : ''}
     `;
     
