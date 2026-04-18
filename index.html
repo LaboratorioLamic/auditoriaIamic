@@ -8271,10 +8271,12 @@ function viewHistoryItem(id, tab, historyIndex) {
         `;
     }
     
-    const anexos = historicalItem.anexos || [];
-    const anexosHtml = anexos.length > 0 ? anexos.map(a => 
-        `<a href="${a.url}" target="_blank" class="file-chip"><i class="fas fa-external-link-alt"></i> ${a.titulo || 'Anexo'}</a>`
-    ).join('') : '';
+    const anexos = h.entry.snapshot ? (historicalItem.anexos || []) : [];
+    const anexosHtml = anexos.length > 0
+        ? `<div style="margin-top:16px;"><div class="view-files" style="margin-top:0;"><h4>Anexos</h4>${anexos.map(a => 
+            `<a href="${a.url}" target="_blank" class="file-chip"><i class="fas fa-external-link-alt"></i> ${a.titulo || 'Anexo'}</a>`
+        ).join('')}</div></div>`
+        : '';
 
     const versionDescription = historicalItem.descricao || 'Sem descrição.';
     let modificationEntries = [];
@@ -8304,8 +8306,8 @@ function viewHistoryItem(id, tab, historyIndex) {
             <h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">Descrição</h4>
             <div class="view-desc">${versionDescription.replace(/\n/g, '<br>')}</div>
         </div>
+        ${anexosHtml}
         ${modificationsHtml}
-        ${anexosHtml ? `<div class="view-files" style="margin-top:10px;"><h4>Anexos</h4>${anexosHtml}</div>` : ''}
     `;
     
     document.getElementById('historyViewContent').innerHTML = html;
