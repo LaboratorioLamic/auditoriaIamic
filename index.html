@@ -8080,9 +8080,9 @@ function renderViewContent(id, tab) {
                </button>`
             : '';
 
-        // Cada item possui um toggle à esquerda para expandir/colapsar os detalhes sem abrir a visualização completa
+        // Cada item possui um toggle à esquerda; clicar na linha agora alterna os detalhes (olho abre a visualização)
         return `
-            <div class="history-item" onclick="viewHistoryItem(${id}, '${finalTab}', ${h.filteredIndex})" style="cursor:pointer; padding: 10px 0; border-bottom: 1px dotted #e5e7eb; position:relative;">
+            <div class="history-item" onclick="toggleHistoryDetails(this)" style="cursor:pointer; padding: 10px 0; border-bottom: 1px dotted #e5e7eb; position:relative;">
                 <div style="display:flex; gap:8px; align-items:flex-start;">
                     <span class="history-toggle" onclick="event.stopPropagation(); toggleHistoryDetails(this);" title="Mostrar/ocultar">&#8250;</span>
                     <div style="flex:1;">
