@@ -6434,10 +6434,13 @@ function resetModal(prefix) {
         }
         
         if (isNew) {
+            const snap = JSON.parse(JSON.stringify(newItem));
+            snap.historico = [];
             newItem.historico.push({ 
                 timestamp: new Date().toISOString(), 
                 acao: 'Criação do Registro', 
-                usuario: currentuser?.name || 'Sistema' 
+                usuario: currentuser?.name || 'Sistema',
+                snapshot: snap
             });
             audits.push(newItem);
         } else if (changes.length > 0 || changes.silentChanged) {
@@ -6559,10 +6562,13 @@ function resetModal(prefix) {
         }
         
         if (isNew) {
+            const snap = JSON.parse(JSON.stringify(newItem));
+            snap.historico = [];
             newItem.historico.push({ 
                 timestamp: new Date().toISOString(), 
                 acao: 'Criação do Registro', 
-                usuario: currentuser?.name || 'Sistema' 
+                usuario: currentuser?.name || 'Sistema',
+                snapshot: snap
             });
             trainings.push(newItem);
         } else {
@@ -6639,7 +6645,9 @@ function resetModal(prefix) {
         };
         
         if (isNew) {
-            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema' });
+            const snap = JSON.parse(JSON.stringify(newItem));
+            snap.historico = [];
+            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema', snapshot: snap });
             activities.push(newItem);
         } else {
             // Garante que originalItem existe e tem o histórico preservado
@@ -6675,8 +6683,15 @@ function resetModal(prefix) {
     
     function saveManutencao() {
         originalItem = null; // Reset para garantir que seja recriado para cada edição
-        
-        const ultima = document.getElementById('mantUltima').value;
+
+        const isNew = !editingMantId;
+        // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
+        let item = isNew ? { id: Date.now(), historico: [], type: 'mant' } : maintenances.find(m => m.id === editingMantId);
+
+        // Preserva valor de 'ultima' existente quando em edição e o campo estiver vazio
+        const ultimaInput = (document.getElementById('mantUltima') && document.getElementById('mantUltima').value) ? document.getElementById('mantUltima').value : '';
+        const ultima = (!isNew && (!ultimaInput || String(ultimaInput).trim() === '')) ? (item && item.ultima ? item.ultima : '') : ultimaInput;
+
         const intervaloStr = (document.getElementById('mantIntervalo').value || '').trim();
         const intervaloNum = intervaloStr === '' ? null : parseInt(intervaloStr);
         const hasPeriodicidade = Number.isFinite(intervaloNum) && intervaloNum > 0;
@@ -6688,10 +6703,6 @@ function resetModal(prefix) {
             })()
             : '';
         const intervalo = hasPeriodicidade ? intervaloNum : null;
-        
-        const isNew = !editingMantId;
-        // Se for edição, busca o item original para garantir que o 'item' não perca o histórico se não houver mudanças nos campos principais
-        let item = isNew ? { id: Date.now(), historico: [], type: 'mant' } : maintenances.find(m => m.id === editingMantId);
 
         const selectedMantMarkerName = document.getElementById('mantMarcador').value;
         const mantMarkerObj = (masterLists.mantMarcadores || []).find(m => m.name === selectedMantMarkerName);
@@ -6734,7 +6745,9 @@ function resetModal(prefix) {
         }
 
         if (isNew) {
-            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema' });
+            const snap = JSON.parse(JSON.stringify(newItem));
+            snap.historico = [];
+            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema', snapshot: snap });
             maintenances.push(newItem);
         } else {
             // Garante que originalItem existe e tem o histórico preservado
@@ -6821,7 +6834,9 @@ function resetModal(prefix) {
         };
 
         if (isNew) {
-            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema' });
+            const snap = JSON.parse(JSON.stringify(newItem));
+            snap.historico = [];
+            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema', snapshot: snap });
             documents.push(newItem);
         } else {
             // Garante que originalItem existe e tem o histórico preservado
