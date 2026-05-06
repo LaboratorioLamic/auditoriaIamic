@@ -3222,7 +3222,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         
         // Documentos
         docTitulo: 'Título', docDescricao: 'Descrição', docSetor: 'Setor', docCategoria: 'Categoria',
-        docSub: 'Subcategoria', docStatus: 'Status', docDataCriacao: 'Data Criação',
+        docSub: 'Subcategoria', docStatus: 'Status', docDataCriacao: 'Data do Documento',
         docIntervalo: 'Periodicidade (Dias)', docResponsavel: 'Responsável', docRevisor: 'Revisor',
         docFlagDias: 'Alerta (Dias)', docProximaRevisao: 'Próxima Revisão',
         docMarcador: 'Marcador',
@@ -3269,7 +3269,7 @@ body{margin:0;font-family:'Inter',sans-serif;display:flex;height:100vh;backgroun
         tipo: 'Tipo',
         responsavelTecnico: 'Resp. Técnico', 
         responsavelManutencao: 'Resp. Manutenção',
-        dataCriacao: 'Data Criação', 
+        dataCriacao: 'Data do Documento', 
         docIntervalo: 'Periodicidade', 
         revisor: 'Revisor',
         marcador: 'Marcador'
@@ -8020,7 +8020,7 @@ function renderViewContent(id, tab) {
             <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${item.docIntervalo} dias`}</div></div>
             <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
             <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
-            <div class="view-item"><label>Data Criação</label><div>${formatBR(item.dataCriacao)}</div></div>
+            <div class="view-item"><label>Data do Documento</label><div>${formatBR(item.dataCriacao)}</div></div>
             <div class="view-item"><label>Próx. Revisão</label><div>${isNA ? 'N/A' : formatBR(item.dataProximaRevisao)}</div></div>
             <div class="view-item"><label>Alerta</label><div>${item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'}</div></div>
         `;
@@ -8276,7 +8276,7 @@ function viewHistoryItem(id, tab, historyIndex) {
             <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${historicalItem.docIntervalo} dias`}</div></div>
             <div class="view-item"><label>Responsável</label><div>${historicalItem.responsavel || 'N/A'}</div></div>
             <div class="view-item"><label>Revisor</label><div>${historicalItem.revisor || 'N/A'}</div></div>
-            <div class="view-item"><label>Data Criação</label><div>${historicalItem.dataCriacao ? formatBR(historicalItem.dataCriacao) : 'N/A'}</div></div>
+            <div class="view-item"><label>Data do Documento</label><div>${historicalItem.dataCriacao ? formatBR(historicalItem.dataCriacao) : 'N/A'}</div></div>
             <div class="view-item"><label>Próx. Revisão</label><div>${isNA ? 'N/A' : formatBR(historicalItem.dataProximaRevisao)}</div></div>
         `;
     } else {
