@@ -159,3 +159,29 @@
     font-weight: 600;
 }
 .card-marker i { font-size: 9px; }
+
+
+/* Checklist donut on card — posicionado absolutamente no canto direito */
+.card-cl-donut-abs {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    z-index: 2;
+    pointer-events: none;
+}
+.card-cl-donut {
+    display: block;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.12));
+}
+.card-cl-donut-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: #6b7280;
+    white-space: nowrap;
+    line-height: 1;
+}

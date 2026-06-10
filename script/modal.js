@@ -6,7 +6,9 @@ function resetModal(prefix) {
     // 1. Resetar campos comuns
     document.getElementById(`${prefix}Titulo`).value = '';
     document.getElementById(`${prefix}Descricao`).value = '';
-    document.getElementById(`${prefix}Anexos`).innerHTML = '';
+    const _anexosCont = document.getElementById(`${prefix}Anexos`);
+    if (_anexosCont) _anexosCont.innerHTML = '';
+    if (typeof clearAnexosUpload === 'function') clearAnexosUpload(prefix);
 
     // Lida com Responsáveis
     var respEl = document.getElementById(`${prefix}Responsavel`);
@@ -46,11 +48,6 @@ function resetModal(prefix) {
         document.getElementById('trainDataPrevisao').textContent = '--/--/----';
         document.getElementById('trainDataPrevisaoValue').value = '';
         document.getElementById('trainFlagDias').value = 7;
-        document.getElementById('trainInstrutor').value = '';
-        document.getElementById('trainParticipantes').value = '';
-        document.getElementById('trainLocalEvento').value = '';
-        document.getElementById('trainCargaHorariaHoras').value = '';
-        document.getElementById('trainCargaHorariaMinutos').value = '';
         const defaultTrainCat = masterLists.trainCategorias[0] || '';
         document.getElementById('trainCategoria').value = defaultTrainCat;
     } else if (prefix === 'ativ') {
@@ -222,9 +219,10 @@ function resetModal(prefix) {
                 try { auditAud = JSON.parse(auditAud)[0]; } catch {}
             }
             document.getElementById('auditAuditor').value = auditAud || '';
-            document.getElementById('auditFlagDias').value = item.flagDias; // Corrigido
+            document.getElementById('auditFlagDias').value = item.flagDias;
             document.getElementById('auditMarcador').value = item.marcador || '';
             restoreAnexos('audit', item.anexos);
+            if (typeof restoreChecklist === 'function') restoreChecklist('audit', item.checklist);
             openFormDrawer('modalAuditoria');
         } else if (finalTab === 'atividades') {
             editingAtivId = id;
@@ -250,9 +248,10 @@ function resetModal(prefix) {
                 try { ativRev = JSON.parse(ativRev)[0]; } catch {}
             }
             document.getElementById('ativRevisor').value = ativRev || '';
-            document.getElementById('ativFlagDias').value = item.flagDias; // Corrigido
+            document.getElementById('ativFlagDias').value = item.flagDias;
             document.getElementById('ativMarcador').value = item.marcador || '';
             restoreAnexos('ativ', item.anexos);
+            if (typeof restoreChecklist === 'function') restoreChecklist('ativ', item.checklist);
             openFormDrawer('modalAtividades');
         } else if (finalTab === 'treinamentos') {
             editingTrainId = id;
@@ -280,21 +279,10 @@ function resetModal(prefix) {
                 try { trainResp = JSON.parse(trainResp)[0]; } catch {}
             }
             document.getElementById('trainResponsavel').value = trainResp || '';
-            document.getElementById('trainInstrutor').value = item.instrutor || '';
-            document.getElementById('trainParticipantes').value = item.participantes || '';
-            document.getElementById('trainLocalEvento').value = item.localEvento || '';
-            // Separar carga horária em horas e minutos numéricos
-            if (item.cargaHoraria && item.cargaHoraria.includes(':')) {
-                const [horas, minutos] = item.cargaHoraria.split(':');
-                document.getElementById('trainCargaHorariaHoras').value = parseInt(horas) || 0;
-                document.getElementById('trainCargaHorariaMinutos').value = parseInt(minutos) || 0;
-            } else {
-                document.getElementById('trainCargaHorariaHoras').value = '';
-                document.getElementById('trainCargaHorariaMinutos').value = '';
-            }
             document.getElementById('trainFlagDias').value = item.flagDias;
             document.getElementById('trainMarcador').value = item.marcador || '';
             restoreAnexos('train', item.anexos);
+            if (typeof restoreChecklist === 'function') restoreChecklist('train', item.checklist);
             openFormDrawer('modalTreinamentos');
 
             // Armazena o item original no estado atual para calcular as diferenças ao salvar
@@ -348,10 +336,11 @@ function resetModal(prefix) {
                 try { docRev = JSON.parse(docRev)[0]; } catch {}
             }
             document.getElementById('docRevisor').value = docRev || '';
-            document.getElementById('docFlagDias').value = item.flagDias; // Corrigido
+            document.getElementById('docFlagDias').value = item.flagDias;
             calculateNextDate('doc');
             restoreAnexos('doc', item.anexos);
             document.getElementById('docMarcador').value = item.marcador || '';
+            if (typeof restoreChecklist === 'function') restoreChecklist('doc', item.checklist);
             openFormDrawer('modalDocumentos');
         }
 
@@ -692,43 +681,14 @@ function resetModal(prefix) {
         updateTrashBadge();
     }
 
-    // Anexos Logic
-    function addAnexo(prefix) {
-        const container = document.getElementById(prefix + 'Anexos');
-        const div = document.createElement('div');
-        div.className = 'anexo-item';
-        div.innerHTML = `
-            <i class="fas fa-link"></i>
-            <input placeholder="Título do arquivo" class="anexo-title">
-            <input placeholder="Cole a URL aqui..." class="anexo-url">
-            <i class="fas fa-times" style="cursor:pointer; color:var(--ind-red)" onclick="this.parentElement.remove()"></i>
-        `;
-        container.appendChild(div);
-    }
+    // Anexos Logic — delegado ao sistema de upload (upload.js)
     function getAnexos(prefix) {
-    // Seleciona as linhas de anexo específicas do container do modal aberto
-    var container = document.getElementById(prefix + 'Anexos');
-    if (!container) return [];
-
-    return [...container.querySelectorAll('.anexo-item')].map(row => {
-        const titleInput = row.querySelector('.anexo-title');
-        const urlInput = row.querySelector('.anexo-url');
-        return {
-            titulo: titleInput ? titleInput.value : '',
-            url: urlInput ? urlInput.value : ''
-        };
-    }).filter(a => a.url.trim() !== ''); // Só persiste se a URL não estiver vazia
-}
+        if (typeof getAnexosUpload === 'function') return getAnexosUpload(prefix);
+        return [];
+    }
 
     function restoreAnexos(prefix, list) {
-        const container = document.getElementById(prefix + 'Anexos');
-        container.innerHTML = '';
-        (list || []).forEach(a => {
-            addAnexo(prefix);
-            const row = container.lastChild;
-            row.querySelector('.anexo-title').value = a.titulo;
-            row.querySelector('.anexo-url').value = a.url;
-        });
+        if (typeof restoreAnexosUpload === 'function') restoreAnexosUpload(prefix, list);
     }
 
     // View Modal e Histórico com Paginação
@@ -784,30 +744,19 @@ function renderViewContent(id, tab) {
     // Se não encontrou, procura em todos os arrays
     if (!item) {
         item = audits.find(i => i.id === id);
-        if (item) {
-            finalTab = 'auditoria';
-            statusList = masterLists.auditStatus;
-        } else {
+        if (item) { finalTab = 'auditoria'; statusList = masterLists.auditStatus; }
+        else {
             item = activities.find(i => i.id === id);
-            if (item) {
-                finalTab = 'atividades';
-                statusList = masterLists.ativStatus;
-            } else {
+            if (item) { finalTab = 'atividades'; statusList = masterLists.ativStatus; }
+            else {
                 item = maintenances.find(i => i.id === id);
-                if (item) {
-                    finalTab = 'manutencao';
-                    statusList = masterLists.mantStatus;
-                } else {
+                if (item) { finalTab = 'manutencao'; statusList = masterLists.mantStatus; }
+                else {
                     item = documents.find(i => i.id === id);
-                    if (item) {
-                        finalTab = 'documentos';
-                        statusList = masterLists.docStatus;
-                    } else {
+                    if (item) { finalTab = 'documentos'; statusList = masterLists.docStatus; }
+                    else {
                         item = trainings.find(i => i.id === id);
-                        if (item) {
-                            finalTab = 'treinamentos';
-                            statusList = masterLists.trainStatus;
-                        }
+                        if (item) { finalTab = 'treinamentos'; statusList = masterLists.trainStatus; }
                     }
                 }
             }
@@ -816,208 +765,163 @@ function renderViewContent(id, tab) {
 
     if (!item) return;
 
-    var statusObj = (statusList || []).find(s => s.name === item.status) || { color: 'default' };
-    var statusColorVar = colorMap[statusObj.color] || colorMap['default'];
-
-    // Montagem do Grid de Detalhes
-    var detailsGrid = '';
-    if (finalTab === 'auditoria') {
-        detailsGrid = `
-            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-            <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
-            <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
-            <div class="view-item"><label>Auditor</label><div>${item.auditor || 'ND'}</div></div>
-            <div class="view-item"><label>Publicação</label><div>${formatBR(item.dataPublicacao)}</div></div>
-            <div class="view-item"><label>Previsão</label><div>${formatBR(item.dataPrevisao)}</div></div>
-            <div class="view-item"><label>Alerta</label><div>${item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'}</div></div>
-        `;
-    } else if (finalTab === 'atividades') {
-        detailsGrid = `
-            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-            <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
-            <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
-            <div class="view-item"><label>Data Início</label><div>${formatBR(item.dataInicio)}</div></div>
-            <div class="view-item"><label>Data Conclusão</label><div>${formatBR(item.dataConclusao)}</div></div>
-            <div class="view-item"><label>Alerta</label><div>${item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'}</div></div>
-        `;
-    } else if (finalTab === 'manutencao') {
-        const isNA = isBlankPeriodicity(item.intervalo);
-        detailsGrid = `
-            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
-            <div class="view-item"><label>Tipo</label><div>${item.tipo || 'ND'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-            <div class="view-item"><label>Equipamento</label><div>${item.item}</div></div>
-            <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${item.intervalo} dias`}</div></div>
-            <div class="view-item"><label>Última Manutenção</label><div>${formatBR(item.ultima)}</div></div>
-            <div class="view-item"><label>Próxima Manutenção</label><div>${isNA ? 'N/A' : formatBR(item.proxima)}</div></div>
-            <div class="view-item"><label>Responsável Técnico</label><div>${item.responsavelTecnico || 'ND'}</div></div>
-            <div class="view-item"><label>Responsável pela Manutenção</label><div>${item.responsavelManutencao || 'ND'}</div></div>
-            <div class="view-item"><label>Empresa Responsável</label><div>${item.empresaResponsavel || 'ND'}</div></div>
-            <div class="view-item"><label>Alerta</label><div>${item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'}</div></div>
-        `;
-    } else if (finalTab === 'treinamentos') {
-        const isNA = isBlankPeriodicity(item.periodicidade);
-        detailsGrid = `
-            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${item.categoria || '-'}</div></div>
-            <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
-            <div class="view-item"><label>Instrutor</label><div>${item.instrutor || 'ND'}</div></div>
-            <div class="view-item"><label>Local do Evento</label><div>${item.localEvento || 'ND'}</div></div>
-            <div class="view-item"><label>Carga Horária</label><div>${item.cargaHoraria || 'ND'}</div></div>
-            <div class="view-item"><label>Participantes</label><div>${item.participantes || 'ND'}</div></div>
-            <div class="view-item"><label>Data Publicação</label><div>${formatBR(item.dataPublicacao)}</div></div>
-            <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${item.periodicidade} dias`}</div></div>
-            <div class="view-item"><label>Data Previsão</label><div>${isNA ? 'N/A' : formatBR(item.dataPrevisao)}</div></div>
-            <div class="view-item"><label>Alerta</label><div>${item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'}</div></div>
-        `;
-    } else if (finalTab === 'documentos') {
-        const isNA = isBlankPeriodicity(item.docIntervalo);
-        detailsGrid = `
-            <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-            <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${item.docIntervalo} dias`}</div></div>
-            <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
-            <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
-            <div class="view-item"><label>Data do Documento</label><div>${formatBR(item.dataCriacao)}</div></div>
-            <div class="view-item"><label>Próx. Revisão</label><div>${isNA ? 'N/A' : formatBR(item.dataProximaRevisao)}</div></div>
-            <div class="view-item"><label>Alerta</label><div>${item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'}</div></div>
-        `;
-    }
-
-    var anexosHtml = (item.anexos || []).map(a =>
-        `<a href="${a.url}" target="_blank" class="file-chip"><i class="fas fa-external-link-alt"></i> ${a.titulo || 'Anexo'}</a>`
-    ).join('');
-
-    // --- LÓGICA DE PAGINAÇÃO E PROCESSAMENTO DE HISTÓRICO ---
-    var allHistory = (item.historico || []).slice().reverse().map((entry, revIndex) => ({
-        entry,
-        originalIndex: item.historico.length - 1 - revIndex
-    }));
-
-    // SOFT DELETE: Filtrar entradas de histórico deletadas
-    var filteredHistory = allHistory.filter(h => !h.entry.deleted);
-
-    var itemsPerPage = 10;
-    var totalItems = filteredHistory.length;
-    var totalPages = Math.ceil(totalItems / itemsPerPage);
-    var maxPages = 100;
-    var finalPages = Math.min(totalPages, maxPages);
-
-    currentHistoryPage = Math.min(Math.max(1, currentHistoryPage), finalPages || 1);
-
-    var start = (currentHistoryPage - 1) * itemsPerPage;
-    var end = start + itemsPerPage;
-    var paginatedHistory = filteredHistory.slice(start, end);
-
-    var isAdmin = userIsAdmin();
-
-    var historyHtml = paginatedHistory.map((h, idx) => {
-        h.filteredIndex = start + idx;
-        const date = new Date(h.entry.timestamp);
-        const dateStr = date.toLocaleDateString('pt-BR');
-        const timeStr = date.toLocaleTimeString('pt-BR');
-
-        let details = '';
-
-        // TRATAMENTO PARA INCOMPATIBILIDADE DE FORMATO (ARRAY VS OBJETO INDEXADO)
-        if (h.entry.detalhes) {
-            let detailsArray = [];
-            if (Array.isArray(h.entry.detalhes)) {
-                detailsArray = h.entry.detalhes;
-            } else if (typeof h.entry.detalhes === 'object') {
-                // Converte chaves numéricas do Firebase para Array
-                detailsArray = Object.keys(h.entry.detalhes)
-                    .filter(k => k !== 'silentChanged')
-                    .map(k => h.entry.detalhes[k]);
-            }
-
-            if (detailsArray.length > 0) {
-                details = detailsArray.map(d =>
-                    `<small style="display:block; margin-left:10px; color:var(--text-light); line-height:1.4;">${d}</small>`
-                ).join('');
-            }
-        }
-
-        // Fallback para mensagens de sistema
-        if (!details && (h.entry.acao.includes('Edição') || h.entry.acao.includes('Atualização'))) {
-            details = '<small style="display:block; margin-left:10px; color:var(--ind-yellow); font-style:italic;">Detalhamento indisponível para este registro antigo.</small>';
-        }
-
-        const usuario = h.entry.usuario ? ` - ${h.entry.usuario}` : '';
-
-        const deleteBtn = isAdmin
-            ? `<button class="history-delete" title="Excluir" onclick="event.stopPropagation(); deleteHistoryEntry(${id}, '${finalTab}', ${h.originalIndex})" style="border:none; background:transparent; color:var(--ind-red); cursor:pointer; font-size:13px; padding:2px;">
-                    <i class="fas fa-trash"></i>
-               </button>`
-            : '';
-
-        // Cada item possui um toggle à esquerda; clicar na linha agora alterna os detalhes (olho abre a visualização)
-        return `
-            <div class="history-item" onclick="toggleHistoryDetails(this)" style="cursor:pointer; padding: 10px 0; border-bottom: 1px dotted #e5e7eb; position:relative;">
-                <div style="display:flex; gap:8px; align-items:flex-start;">
-                    <span class="history-toggle" onclick="event.stopPropagation(); toggleHistoryDetails(this);" title="Mostrar/ocultar">&#8250;</span>
-                    <div style="flex:1;">
-                        <strong style="display:block; color:var(--primary); font-size:13px;">${h.entry.acao}${usuario}</strong>
-                        <small style="color:var(--text-light); font-size:11px;">${dateStr} às ${timeStr}</small>
-                        <div class="history-details">${details}</div>
-                    </div>
-                    <div style="display:flex; flex-direction:column; gap:4px; margin-left:8px;">
-                        <i class="fas fa-eye" style="color:var(--text-light); cursor:pointer; font-size:14px;" onclick="event.stopPropagation(); viewHistoryItem(${id}, '${finalTab}', ${h.filteredIndex})" title="Visualizar registro"></i>
-                        ${deleteBtn}
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    // Função utilitária para alternar a exibição dos detalhes do histórico (não abre a visualização do registro)
-    window.toggleHistoryDetails = function(el) {
-        const item = el.closest('.history-item');
-        if (!item) return;
-        item.classList.toggle('expanded');
-    };
-
-    var paginationHtml = finalPages > 1 ? `
-        <div class="history-pagination">
-            <button ${currentHistoryPage === 1 ? 'disabled' : ''} onclick="changeHistoryPage(${id}, '${finalTab}', -1)">
-                <i class="fas fa-chevron-left"></i> Anterior
-            </button>
-            <span>Página ${currentHistoryPage} de ${finalPages}</span>
-            <button ${currentHistoryPage === finalPages ? 'disabled' : ''} onclick="changeHistoryPage(${id}, '${finalTab}', 1)">
-                Próxima <i class="fas fa-chevron-right"></i>
-            </button>
-        </div>
-    ` : '';
-
-    // Guarda referência para o drawer de histórico
+    // Guarda referência global
     window._currentViewId = id;
     window._currentViewTab = finalTab;
 
-    var html = `
-        <div class="view-header">
-            <h2 style="margin:0; color:var(--primary); font-size:20px;">${item.titulo}${item.deleted ? ' <span style="color:#ef4444; font-size:14px; font-weight:500;">[DELETADO]</span>' : ''}</h2>
-            <span class="view-status" style="background-color:${statusColorVar}">${item.status}</span>
-        </div>
-        <div class="view-grid">
-            ${detailsGrid}
-        </div>
-        <div>
-            <h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">Descrição</h4>
-            <div class="view-desc">${(item.descricao || 'Sem descrição.').replace(/\n/g, '<br>')}</div>
-        </div>
-        ${anexosHtml ? `<div class="view-files" style="margin-top:10px;"><h4>Anexos</h4>${anexosHtml}</div>` : ''}
-    `;
+    var statusObj = (statusList || []).find(s => s.name === item.status) || { color: 'default' };
+    var statusColorVar = colorMap[statusObj.color] || colorMap['default'];
 
-    document.getElementById('viewContent').innerHTML = html;
-    document.getElementById('viewModal').style.display = 'flex';
+    // ── Ícone e meta ──────────────────────────────────────────
+    const iconMap = {
+        auditoria: 'fa-clipboard-check',
+        atividades: 'fa-tasks',
+        treinamentos: 'fa-graduation-cap',
+        documentos: 'fa-file-alt',
+        manutencao: 'fa-wrench'
+    };
+    const tabLabelMap = {
+        auditoria: 'Auditoria',
+        atividades: 'Atividade',
+        treinamentos: 'Treinamento',
+        documentos: 'Documento',
+        manutencao: 'Manutenção'
+    };
 
+    // ── Atualiza header do modal ──────────────────────────────
+    const titleEl = document.getElementById('viewModalTitle');
+    const metaEl = document.getElementById('viewModalMeta');
+    const iconWrap = document.getElementById('viewModalIconWrap');
+    const statusEl = document.getElementById('viewModalStatus');
+    if (titleEl) titleEl.textContent = item.titulo + (item.deleted ? ' [DELETADO]' : '');
+    if (metaEl) metaEl.textContent = `${tabLabelMap[finalTab] || ''} · ${item.setor || ''} · ${item.categoria || ''}`;
+    if (iconWrap) iconWrap.innerHTML = `<i class="fas ${iconMap[finalTab] || 'fa-file'}"></i>`;
+    if (statusEl) { statusEl.textContent = item.status; statusEl.style.background = statusColorVar; }
+
+    // ── Edit button ───────────────────────────────────────────
     var btnEdit = document.getElementById('btnViewEdit');
-    if (btnEdit) {
-        btnEdit.style.display = (userCanEditCards() && !item.deleted) ? 'inline-flex' : 'none';
+    if (btnEdit) btnEdit.style.display = (userCanEditCards() && !item.deleted) ? 'inline-flex' : 'none';
+
+    // ── Publicar button ───────────────────────────────────────
+    var btnPublicar = document.getElementById('btnPublicar');
+    if (btnPublicar) btnPublicar.style.display = (finalTab !== 'manutencao' && !item.deleted) ? 'inline-flex' : 'none';
+
+    // ── INFO TAB ──────────────────────────────────────────────
+    var detailsCards = '';
+    if (finalTab === 'auditoria') {
+        detailsCards = _viewCards([
+            ['Setor', item.setor], ['Categoria', item.categoria],
+            ['Responsável', item.responsavel], ['Revisor', item.revisor],
+            ['Auditor', item.auditor], ['Publicação', formatBR(item.dataPublicacao)],
+            ['Previsão', formatBR(item.dataPrevisao)],
+            ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
+        ]);
+    } else if (finalTab === 'atividades') {
+        detailsCards = _viewCards([
+            ['Setor', item.setor], ['Categoria', item.categoria],
+            ['Responsável', item.responsavel], ['Revisor', item.revisor],
+            ['Data Início', formatBR(item.dataInicio)], ['Data Conclusão', formatBR(item.dataConclusao)],
+            ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
+        ]);
+    } else if (finalTab === 'manutencao') {
+        const isNA = isBlankPeriodicity(item.intervalo);
+        detailsCards = _viewCards([
+            ['Setor', item.setor], ['Tipo', item.tipo], ['Categoria', item.categoria],
+            ['Equipamento', item.item],
+            ['Periodicidade', isNA ? 'N/A' : item.intervalo + ' dias'],
+            ['Última', formatBR(item.ultima)],
+            ['Próxima', isNA ? 'N/A' : formatBR(item.proxima)],
+            ['Resp. Técnico', item.responsavelTecnico],
+            ['Resp. Manutenção', item.responsavelManutencao],
+            ['Empresa', item.empresaResponsavel],
+            ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
+        ]);
+    } else if (finalTab === 'treinamentos') {
+        const isNA = isBlankPeriodicity(item.periodicidade);
+        detailsCards = _viewCards([
+            ['Setor', item.setor], ['Categoria', item.categoria],
+            ['Responsável', item.responsavel],
+            ['Data Publicação', formatBR(item.dataPublicacao)],
+            ['Periodicidade', isNA ? 'N/A' : item.periodicidade + ' dias'],
+            ['Data Previsão', isNA ? 'N/A' : formatBR(item.dataPrevisao)],
+            ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
+        ]);
+    } else if (finalTab === 'documentos') {
+        const isNA = isBlankPeriodicity(item.docIntervalo);
+        detailsCards = _viewCards([
+            ['Setor', item.setor], ['Categoria', item.categoria],
+            ['Responsável', item.responsavel], ['Revisor', item.revisor],
+            ['Periodicidade', isNA ? 'N/A' : item.docIntervalo + ' dias'],
+            ['Data do Documento', formatBR(item.dataCriacao)],
+            ['Próx. Revisão', isNA ? 'N/A' : formatBR(item.dataProximaRevisao)],
+            ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
+        ]);
     }
+
+    // Checklist mini-progress no info tab
+    const checklist = item.checklist || [];
+    let checklistProgress = '';
+    if (checklist.length > 0) {
+        const done = checklist.filter(c => c.checked).length;
+        const pct = Math.round((done / checklist.length) * 100);
+        checklistProgress = `
+            <div style="margin-bottom:20px;">
+                <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:#64748b;margin-bottom:6px;">
+                    <span><i class="fas fa-check-square" style="color:#22c55e;margin-right:4px;"></i>Checklist</span>
+                    <span>${done}/${checklist.length} (${pct}%)</span>
+                </div>
+                <div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+                    <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:3px;transition:width 0.4s;"></div>
+                </div>
+            </div>`;
+    }
+
+    const infoHtml = `
+        <div class="view-info-grid">${detailsCards}</div>
+        ${checklistProgress}
+        <div>
+            <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Descrição</div>
+            <div class="view-desc-block">${(item.descricao || 'Sem descrição.').replace(/\n/g, '<br>')}</div>
+        </div>`;
+
+    document.getElementById('viewContent').innerHTML = infoHtml;
+
+    // ── Checklist tab ─────────────────────────────────────────
+    if (typeof renderViewChecklist === 'function') renderViewChecklist(item, finalTab);
+
+    // ── Anexos tab ────────────────────────────────────────────
+    if (typeof renderViewAnexos === 'function') renderViewAnexos(item);
+
+    // ── Publicações tab ───────────────────────────────────────
+    if (typeof renderViewPublicacoes === 'function') renderViewPublicacoes(item);
+
+    // Badge
+    const badge = document.getElementById('pubTabBadge');
+    if (badge) {
+        const count = (item.publicacoes || []).length;
+        badge.textContent = count;
+        badge.style.display = count > 0 ? '' : 'none';
+    }
+
+    // Reset to first tab
+    document.querySelectorAll('.view-modal-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+    document.querySelectorAll('.view-tab-panel').forEach((p, i) => p.classList.toggle('active', i === 0));
+
+    document.getElementById('viewModal').style.display = 'flex';
 }
+
+function _viewCards(pairs) {
+    return pairs.map(([label, val]) =>
+        `<div class="view-info-card"><label>${label}</label><div>${val || 'ND'}</div></div>`
+    ).join('');
+}
+
+// Função utilitária para alternar a exibição dos detalhes do histórico
+window.toggleHistoryDetails = function(el) {
+    const item = el.closest('.history-item');
+    if (!item) return;
+    item.classList.toggle('expanded');
+};
 
 // --- DRAWER DE HISTÓRICO ---
 window._historyDrawerPage = 1;

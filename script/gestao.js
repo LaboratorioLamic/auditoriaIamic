@@ -31,6 +31,7 @@
             marcador: ativMarkerObj ? ativMarkerObj.name : '',
             marcadorCor: ativMarkerObj ? ativMarkerObj.color : 'default',
             anexos: getAnexos('ativ'),
+            checklist: (typeof getChecklist === 'function') ? getChecklist('ativ') : (item.checklist || []),
             historico: item && Array.isArray(item.historico) ? [...item.historico] : []
         };
 
@@ -86,16 +87,8 @@
             revisor: document.getElementById('ativRevisor').value,
             flagDias: document.getElementById('ativFlagDias').value,
             marcador: document.getElementById('ativMarcador').value,
-            anexos: []
+            anexos: typeof getAnexos === 'function' ? getAnexos('ativ') : []
         };
-
-        const anexosContainer = document.getElementById('ativAnexos');
-        const anexoInputs = anexosContainer.querySelectorAll('input[type="text"]');
-        anexoInputs.forEach(input => {
-            if (input.value.trim()) {
-                formData.anexos.push(input.value.trim());
-            }
-        });
 
         closeFormDrawer();
 
@@ -115,9 +108,7 @@
             document.getElementById('ativFlagDias').value = formData.flagDias;
             document.getElementById('ativMarcador').value = formData.marcador;
 
-            formData.anexos.forEach(anexo => {
-                addAnexo('ativ', anexo);
-            });
+            if (typeof restoreAnexos === 'function') restoreAnexos('ativ', formData.anexos);
 
             onCategoryChange('ativ');
             openFormDrawer('modalAtividades');

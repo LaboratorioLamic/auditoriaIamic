@@ -45,6 +45,7 @@
             marcador: docMarkerObj ? docMarkerObj.name : '',
             marcadorCor: docMarkerObj ? docMarkerObj.color : 'default',
             anexos: getAnexos('doc'),
+            checklist: (typeof getChecklist === 'function') ? getChecklist('doc') : (item.checklist || []),
             historico: item && Array.isArray(item.historico) ? [...item.historico] : []
         };
 
@@ -99,16 +100,8 @@
             flagDias: document.getElementById('docFlagDias').value,
             marcador: document.getElementById('docMarcador').value,
             descricao: document.getElementById('docDescricao').value,
-            anexos: []
+            anexos: typeof getAnexos === 'function' ? getAnexos('doc') : []
         };
-
-        const anexosContainer = document.getElementById('docAnexos');
-        const anexoInputs = anexosContainer.querySelectorAll('input[type="text"]');
-        anexoInputs.forEach(input => {
-            if (input.value.trim()) {
-                formData.anexos.push(input.value.trim());
-            }
-        });
 
         closeFormDrawer();
 
@@ -128,9 +121,7 @@
             document.getElementById('docMarcador').value = formData.marcador;
             document.getElementById('docDescricao').value = formData.descricao;
 
-            formData.anexos.forEach(anexo => {
-                addAnexo('doc', anexo);
-            });
+            if (typeof restoreAnexos === 'function') restoreAnexos('doc', formData.anexos);
 
             onCategoryChange('doc');
             openFormDrawer('modalDocumentos');

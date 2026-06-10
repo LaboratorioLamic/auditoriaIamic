@@ -612,7 +612,15 @@
         </div>
         <button class="history-drawer-close" onclick="closeFormDrawer()" title="Fechar"><i class="fas fa-times"></i></button>
     </div>
+    <!-- Drawer tabs -->
+    <div class="drawer-tabs">
+        <button class="drawer-tab active" onclick="switchDrawerTab('audit','info',this)"><i class="fas fa-info-circle"></i> Informações</button>
+        <button class="drawer-tab" onclick="switchDrawerTab('audit','checklist',this)"><i class="fas fa-check-square"></i> Checklist</button>
+        <button class="drawer-tab" onclick="switchDrawerTab('audit','anexos',this)"><i class="fas fa-paperclip"></i> Anexos</button>
+    </div>
     <div class="form-drawer-body">
+        <!-- Aba Informações -->
+        <div class="drawer-tab-panel active" id="audit-panel-info">
         <div class="form-grid">
             <div class="field-group full-width">
                 <label>Título</label>
@@ -656,7 +664,7 @@
                 <select id="auditResponsavel">
                     <option value="">Selecione um responsável...</option>
                 </select>
-                </div>
+            </div>
             <div class="field-group">
                 <label>Revisor</label>
                 <select id="auditRevisor">
@@ -677,12 +685,39 @@
                     <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
-            <div class="field-group full-width">
-                <label>Anexos</label>
-                <div id="auditAnexos"></div>
-                <button type="button" class="btn-add-anexo" onclick="addAnexo('audit')">
-                    <i class="fas fa-paperclip"></i> Adicionar Arquivo ou Link
+        </div>
+        </div>
+        <!-- Aba Checklist -->
+        <div class="drawer-tab-panel" id="audit-panel-checklist">
+            <div class="checklist-editor" id="audit-checklist-editor"></div>
+            <div class="checklist-add-row">
+                <input type="text" id="audit-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('audit')">
+                <button class="checklist-add-btn" onclick="addChecklistItem('audit')"><i class="fas fa-plus"></i> Adicionar</button>
+            </div>
+        </div>
+        <!-- Aba Anexos -->
+        <div class="drawer-tab-panel" id="audit-panel-anexos">
+            <div id="audit-anexos-list"></div>
+            <div class="upload-widget">
+                <select id="audit-upload-tipo" class="upload-tipo-select" onchange="_onUploadTipoChange('audit')">
+                    <option value="arquivo">Arquivo</option>
+                    <option value="link">Link</option>
+                </select>
+                <input type="text" id="audit-upload-title" class="upload-title-input" placeholder="Nome do arquivo">
+                <button type="button" class="upload-send-btn" id="audit-upload-btn" onclick="submitAnexoUpload('audit')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Enviar
                 </button>
+            </div>
+            <div id="audit-file-preview" style="display:none;"></div>
+            <div id="audit-upload-zone" class="upload-drop-zone">
+                <input type="file" id="audit-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span class="upload-drop-label">Clique ou arraste o arquivo</span>
+                <span class="upload-drop-hint">PDF, imagem, planilha ou slides</span>
+            </div>
+            <div id="audit-link-wrap" style="display:none;">
+                <input type="url" id="audit-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
             </div>
         </div>
     </div><!-- /form-drawer-body -->
@@ -705,7 +740,15 @@
         </div>
         <button class="history-drawer-close" onclick="closeFormDrawer()" title="Fechar"><i class="fas fa-times"></i></button>
     </div>
+    <!-- Drawer tabs -->
+    <div class="drawer-tabs">
+        <button class="drawer-tab active" onclick="switchDrawerTab('train','info',this)"><i class="fas fa-info-circle"></i> Informações</button>
+        <button class="drawer-tab" onclick="switchDrawerTab('train','checklist',this)"><i class="fas fa-check-square"></i> Checklist</button>
+        <button class="drawer-tab" onclick="switchDrawerTab('train','anexos',this)"><i class="fas fa-paperclip"></i> Anexos</button>
+    </div>
     <div class="form-drawer-body">
+        <!-- Aba Informações -->
+        <div class="drawer-tab-panel active" id="train-panel-info">
         <div class="form-grid">
             <div class="field-group full-width">
                 <label>Título</label>
@@ -756,29 +799,8 @@
                 </select>
             </div>
             <div class="field-group">
-                <label>Instrutor</label>
-                <input id="trainInstrutor" placeholder="Nome do Instrutor">
-            </div>
-            <div class="field-group">
                 <label>Alerta (Dias antes)</label>
                 <input type="number" id="trainFlagDias" value="7">
-            </div>
-            <div class="field-group full-width">
-                <label>Participantes</label>
-                <textarea id="trainParticipantes" rows="2" placeholder="Nomes dos participantes separados por vírgula"></textarea>
-            </div>
-            <div class="field-group full-width">
-                <label>Local do Evento</label>
-                <input id="trainLocalEvento" placeholder="Ex: Sala de Treinamento A">
-            </div>
-            <div class="field-group">
-                <label>Carga Horária</label>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <input type="number" id="trainCargaHorariaHoras" min="0" max="23" maxlength="2" placeholder="00" style="width: 60px; text-align: center;">
-                    <span>:</span>
-                    <input type="number" id="trainCargaHorariaMinutos" min="0" max="59" maxlength="2" placeholder="00" style="width: 60px; text-align: center;">
-                    <span style="color: #666; font-size: 12px;">(HH:MM)</span>
-                </div>
             </div>
             <div class="field-group">
                 <label>Marcador</label>
@@ -787,12 +809,39 @@
                     <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
-            <div class="field-group full-width">
-                <label>Anexos</label>
-                <div id="trainAnexos"></div>
-                <button type="button" class="btn-add-anexo" onclick="addAnexo('train')">
-                    <i class="fas fa-paperclip"></i> Adicionar Arquivo ou Link
+        </div>
+        </div><!-- /train-panel-info -->
+        <!-- Aba Checklist -->
+        <div class="drawer-tab-panel" id="train-panel-checklist">
+            <div class="checklist-editor" id="train-checklist-editor"></div>
+            <div class="checklist-add-row">
+                <input type="text" id="train-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('train')">
+                <button class="checklist-add-btn" onclick="addChecklistItem('train')"><i class="fas fa-plus"></i> Adicionar</button>
+            </div>
+        </div>
+        <!-- Aba Anexos -->
+        <div class="drawer-tab-panel" id="train-panel-anexos">
+            <div id="train-anexos-list"></div>
+            <div class="upload-widget">
+                <select id="train-upload-tipo" class="upload-tipo-select" onchange="_onUploadTipoChange('train')">
+                    <option value="arquivo">Arquivo</option>
+                    <option value="link">Link</option>
+                </select>
+                <input type="text" id="train-upload-title" class="upload-title-input" placeholder="Nome do arquivo">
+                <button type="button" class="upload-send-btn" id="train-upload-btn" onclick="submitAnexoUpload('train')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Enviar
                 </button>
+            </div>
+            <div id="train-file-preview" style="display:none;"></div>
+            <div id="train-upload-zone" class="upload-drop-zone">
+                <input type="file" id="train-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span class="upload-drop-label">Clique ou arraste o arquivo</span>
+                <span class="upload-drop-hint">PDF, imagem, planilha ou slides</span>
+            </div>
+            <div id="train-link-wrap" style="display:none;">
+                <input type="url" id="train-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
             </div>
         </div>
     </div><!-- /form-drawer-body -->
@@ -815,7 +864,15 @@
         </div>
         <button class="history-drawer-close" onclick="closeFormDrawer()" title="Fechar"><i class="fas fa-times"></i></button>
     </div>
+    <!-- Drawer tabs -->
+    <div class="drawer-tabs">
+        <button class="drawer-tab active" onclick="switchDrawerTab('ativ','info',this)"><i class="fas fa-info-circle"></i> Informações</button>
+        <button class="drawer-tab" onclick="switchDrawerTab('ativ','checklist',this)"><i class="fas fa-check-square"></i> Checklist</button>
+        <button class="drawer-tab" onclick="switchDrawerTab('ativ','anexos',this)"><i class="fas fa-paperclip"></i> Anexos</button>
+    </div>
     <div class="form-drawer-body">
+        <!-- Aba Informações -->
+        <div class="drawer-tab-panel active" id="ativ-panel-info">
         <div class="form-grid">
             <div class="field-group full-width">
                 <label>Título</label>
@@ -877,12 +934,39 @@
                     <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
-            <div class="field-group full-width">
-                <label>Anexos</label>
-                <div id="ativAnexos"></div>
-                <button type="button" class="btn-add-anexo" onclick="addAnexo('ativ')">
-                    <i class="fas fa-paperclip"></i> Adicionar Arquivo ou Link
+        </div>
+        </div><!-- /ativ-panel-info -->
+        <!-- Aba Checklist -->
+        <div class="drawer-tab-panel" id="ativ-panel-checklist">
+            <div class="checklist-editor" id="ativ-checklist-editor"></div>
+            <div class="checklist-add-row">
+                <input type="text" id="ativ-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('ativ')">
+                <button class="checklist-add-btn" onclick="addChecklistItem('ativ')"><i class="fas fa-plus"></i> Adicionar</button>
+            </div>
+        </div>
+        <!-- Aba Anexos -->
+        <div class="drawer-tab-panel" id="ativ-panel-anexos">
+            <div id="ativ-anexos-list"></div>
+            <div class="upload-widget">
+                <select id="ativ-upload-tipo" class="upload-tipo-select" onchange="_onUploadTipoChange('ativ')">
+                    <option value="arquivo">Arquivo</option>
+                    <option value="link">Link</option>
+                </select>
+                <input type="text" id="ativ-upload-title" class="upload-title-input" placeholder="Nome do arquivo">
+                <button type="button" class="upload-send-btn" id="ativ-upload-btn" onclick="submitAnexoUpload('ativ')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Enviar
                 </button>
+            </div>
+            <div id="ativ-file-preview" style="display:none;"></div>
+            <div id="ativ-upload-zone" class="upload-drop-zone">
+                <input type="file" id="ativ-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span class="upload-drop-label">Clique ou arraste o arquivo</span>
+                <span class="upload-drop-hint">PDF, imagem, planilha ou slides</span>
+            </div>
+            <div id="ativ-link-wrap" style="display:none;">
+                <input type="url" id="ativ-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
             </div>
         </div>
     </div><!-- /form-drawer-body -->
@@ -905,7 +989,15 @@
         </div>
         <button class="history-drawer-close" onclick="closeFormDrawer()" title="Fechar"><i class="fas fa-times"></i></button>
     </div>
+    <!-- Drawer tabs -->
+    <div class="drawer-tabs">
+        <button class="drawer-tab active" onclick="switchDrawerTab('doc','info',this)"><i class="fas fa-info-circle"></i> Informações</button>
+        <button class="drawer-tab" onclick="switchDrawerTab('doc','checklist',this)"><i class="fas fa-check-square"></i> Checklist</button>
+        <button class="drawer-tab" onclick="switchDrawerTab('doc','anexos',this)"><i class="fas fa-paperclip"></i> Anexos</button>
+    </div>
     <div class="form-drawer-body">
+        <!-- Aba Informações -->
+        <div class="drawer-tab-panel active" id="doc-panel-info">
         <div class="form-grid">
             <div class="field-group full-width">
                 <label>Título/Nome do Documento</label>
@@ -971,12 +1063,39 @@
                     <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
-            <div class="field-group full-width">
-                <label>Anexos (Link para o documento)</label>
-                <div id="docAnexos"></div>
-                <button type="button" class="btn-add-anexo" onclick="addAnexo('doc')">
-                    <i class="fas fa-paperclip"></i> Adicionar Link
+        </div>
+        </div><!-- /doc-panel-info -->
+        <!-- Aba Checklist -->
+        <div class="drawer-tab-panel" id="doc-panel-checklist">
+            <div class="checklist-editor" id="doc-checklist-editor"></div>
+            <div class="checklist-add-row">
+                <input type="text" id="doc-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('doc')">
+                <button class="checklist-add-btn" onclick="addChecklistItem('doc')"><i class="fas fa-plus"></i> Adicionar</button>
+            </div>
+        </div>
+        <!-- Aba Anexos -->
+        <div class="drawer-tab-panel" id="doc-panel-anexos">
+            <div id="doc-anexos-list"></div>
+            <div class="upload-widget">
+                <select id="doc-upload-tipo" class="upload-tipo-select" onchange="_onUploadTipoChange('doc')">
+                    <option value="arquivo">Arquivo</option>
+                    <option value="link">Link</option>
+                </select>
+                <input type="text" id="doc-upload-title" class="upload-title-input" placeholder="Nome do arquivo">
+                <button type="button" class="upload-send-btn" id="doc-upload-btn" onclick="submitAnexoUpload('doc')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Enviar
                 </button>
+            </div>
+            <div id="doc-file-preview" style="display:none;"></div>
+            <div id="doc-upload-zone" class="upload-drop-zone">
+                <input type="file" id="doc-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span class="upload-drop-label">Clique ou arraste o arquivo</span>
+                <span class="upload-drop-hint">PDF, imagem, planilha ou slides</span>
+            </div>
+            <div id="doc-link-wrap" style="display:none;">
+                <input type="url" id="doc-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
             </div>
         </div>
     </div><!-- /form-drawer-body -->
@@ -987,18 +1106,115 @@
     </div>
 </div>
 
+<!-- VIEW MODAL — redesigned with tabs -->
 <div class="modal" id="viewModal">
-    <div class="modal-content">
-        <div style="display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-bottom:16px;">
-            <button class="btn-history-trigger" id="btnOpenHistory" onclick="openHistoryDrawer()" title="Histórico de Alterações">
-                <i class="fas fa-clock-rotate-left"></i>
-            </button>
-            <button class="btn-close" onclick="closeModal('viewModal')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+    <div class="view-modal-content">
+        <!-- Header -->
+        <div class="view-modal-header" id="viewModalHeader">
+            <div class="view-modal-header-inner">
+                <div class="view-modal-title-block">
+                    <div class="view-modal-icon-wrap" id="viewModalIconWrap"><i class="fas fa-clipboard-check"></i></div>
+                    <div>
+                        <div class="view-modal-title" id="viewModalTitle">Título</div>
+                        <div class="view-modal-meta" id="viewModalMeta"></div>
+                    </div>
+                </div>
+                <div class="view-modal-header-actions">
+                    <span class="view-modal-status" id="viewModalStatus"></span>
+                    <button class="view-modal-btn" id="btnOpenHistory" onclick="openHistoryDrawer()" title="Histórico de Alterações"><i class="fas fa-clock-rotate-left"></i></button>
+                    <button class="view-modal-btn view-modal-btn-close" onclick="closeModal('viewModal')" title="Fechar"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <!-- Tabs -->
+            <div class="view-modal-tabs">
+                <button class="view-modal-tab active" onclick="switchViewTab('info',this)"><i class="fas fa-info-circle"></i> Informações</button>
+                <button class="view-modal-tab" onclick="switchViewTab('checklist',this)"><i class="fas fa-check-square"></i> Checklist</button>
+                <button class="view-modal-tab" onclick="switchViewTab('anexos',this)"><i class="fas fa-paperclip"></i> Anexos</button>
+                <button class="view-modal-tab" onclick="switchViewTab('publicacoes',this)"><i class="fas fa-paper-plane"></i> Publicações <span class="view-tab-badge" id="pubTabBadge" style="display:none;"></span></button>
+            </div>
         </div>
-        <div id="viewContent"></div>
+        <!-- Tab panels -->
+        <div class="view-modal-body">
+            <div class="view-tab-panel active" id="view-panel-info">
+                <div id="viewContent"></div>
+            </div>
+            <div class="view-tab-panel" id="view-panel-checklist">
+                <div id="viewChecklistContent"></div>
+            </div>
+            <div class="view-tab-panel" id="view-panel-anexos">
+                <div id="viewAnexosContent"></div>
+            </div>
+            <div class="view-tab-panel" id="view-panel-publicacoes">
+                <div id="viewPublicacoesContent"></div>
+            </div>
+        </div>
+        <div class="view-modal-footer">
+            <button class="view-modal-footer-btn view-modal-footer-btn-edit" id="btnViewEdit" onclick="editCurrentViewItem()" style="display:none;"><i class="fas fa-pen"></i> Editar</button>
+            <button class="view-modal-footer-btn view-modal-footer-btn-publish" id="btnPublicar" onclick="openPublicacaoModal()"><i class="fas fa-paper-plane"></i> Publicar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PUBLICAÇÃO -->
+<div class="modal" id="modalPublicacao">
+    <div class="modal-content pub-modal-content">
+        <div class="modal-header">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div class="pub-modal-icon"><i class="fas fa-paper-plane"></i></div>
+                <div>
+                    <h3 style="margin:0;font-size:16px;">Nova Publicação</h3>
+                    <div style="font-size:11px;color:#94a3b8;" id="pubModalSubtitle">Registre uma publicação para este item</div>
+                </div>
+            </div>
+            <button onclick="closeModal('modalPublicacao')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;">&times;</button>
+        </div>
+        <!-- Campos dinâmicos por tipo -->
+        <div id="pubModalFields">
+            <!-- preenchido por JS -->
+        </div>
+        <!-- Upload -->
+        <div class="field-group full-width" style="margin-top:12px;">
+            <label>Anexos</label>
+            <div id="pub-anexos-list"></div>
+            <div class="upload-widget">
+                <select id="pub-upload-tipo" class="upload-tipo-select" onchange="_onUploadTipoChange('pub')">
+                    <option value="arquivo">Arquivo</option>
+                    <option value="link">Link</option>
+                </select>
+                <input type="text" id="pub-upload-title" class="upload-title-input" placeholder="Nome do arquivo">
+                <button type="button" class="upload-send-btn" id="pub-upload-btn" onclick="submitAnexoUpload('pub')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Enviar
+                </button>
+            </div>
+            <div id="pub-file-preview" style="display:none;"></div>
+            <div id="pub-upload-zone" class="upload-drop-zone">
+                <input type="file" id="pub-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span class="upload-drop-label">Clique ou arraste o arquivo</span>
+                <span class="upload-drop-hint">PDF, imagem, planilha ou slides</span>
+            </div>
+            <div id="pub-link-wrap" style="display:none;">
+                <input type="url" id="pub-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
+            </div>
+        </div>
         <div class="modal-actions">
-            <button class="btn-cancel" onclick="closeModal('viewModal')">Fechar</button>
-            <button class="btn-edit" id="btnViewEdit" onclick="editCurrentViewItem()" style="display:none;">Editar</button>
+            <button class="btn-cancel" onclick="closeModal('modalPublicacao')">Cancelar</button>
+            <button class="btn-save" id="btn-confirmar-publicacao" onclick="confirmarPublicacao()"><i class="fas fa-paper-plane"></i> Publicar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL VISUALIZAÇÃO DE PUBLICAÇÃO -->
+<div class="modal" id="modalVerPublicacao">
+    <div class="modal-content" style="max-width:600px;">
+        <div class="modal-header">
+            <h3 id="verPubTitle" style="margin:0;font-size:16px;"></h3>
+            <button onclick="closeModal('modalVerPublicacao')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;">&times;</button>
+        </div>
+        <div id="verPubContent"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('modalVerPublicacao')">Fechar</button>
         </div>
     </div>
 </div>
@@ -1183,7 +1399,10 @@
 <script src="script/filters.js"></script>
 <script src="script/kanban.js"></script>
 <script src="script/tabs.js"></script>
+<script src="script/upload.js"></script>
+<script src="script/publicacoes.js"></script>
 <script src="script/modal.js"></script>
+<script src="script/autocomplete.js"></script>
 <script src="script/notifications.js"></script>
 <script src="script/init.js"></script>
 <script src="script/multi-select.js"></script>

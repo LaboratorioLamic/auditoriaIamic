@@ -1,5 +1,37 @@
 // === RENDERIZAÇÃO DE CARDS E DASHBOARD ===
 
+function _clDonutHtml(done, total, pct, size, absolute) {
+    size = size || 40;
+    const sw = size <= 32 ? 3 : 4;
+    const r = (size / 2) - sw - 1;
+    const cx = size / 2;
+    const circ = 2 * Math.PI * r;
+    const filled = circ * (pct / 100);
+    const gap = circ - filled;
+    // Inicia no topo (12h): offset = -25% da circunferência
+    const offset = circ * 0.25;
+    // 100% = todo verde; >=50% = azul; <50% = âmbar
+    const trackColor = pct === 100 ? '#86efac' : '#e5e7eb';
+    const fillColor  = pct === 100 ? '#22c55e' : pct >= 50 ? '#2563eb' : '#f59e0b';
+    const textColor  = pct === 100 ? '#15803d' : fillColor;
+    const fs = size <= 32 ? 7 : 9;
+    const ty = cx + fs * 0.38;
+    const wrapClass = absolute ? 'card-cl-donut-abs' : 'card-cl-donut-wrap';
+    return `
+        <div class="${wrapClass}">
+            <svg class="card-cl-donut" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
+                <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="${trackColor}" stroke-width="${sw}"/>
+                <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="${fillColor}" stroke-width="${sw}"
+                    stroke-dasharray="${filled.toFixed(2)} ${gap.toFixed(2)}"
+                    stroke-dashoffset="${offset.toFixed(2)}"
+                    stroke-linecap="round"
+                    transform="rotate(-90 ${cx} ${cx})"/>
+                <text x="${cx}" y="${ty}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="${textColor}">${pct}%</text>
+            </svg>
+            <span class="card-cl-donut-label">${done}/${total}</span>
+        </div>`;
+}
+
     // --- CONFIGURAÇÃO DE DATAS ---
     function populateYearSelects() {
         const years = [];
@@ -527,6 +559,12 @@
                 ? `<i class="fas fa-trash" onclick="deleteItem(${item.id}, '${currentTab}')" title="Excluir"></i>`
                 : '';
 
+            const checklist = item.checklist || [];
+            const clTotal = checklist.length;
+            const clDone = checklist.filter(c => c.checked).length;
+            const clPct = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0;
+            const donutHtml = clTotal > 0 ? _clDonutHtml(clDone, clTotal, clPct, 40, true) : '';
+
             div.innerHTML = `
                 <div class="card-header">
                     <span class="tag" style="background-color:${statusColorVar}">${item.status || 'Novo'}</span>
@@ -542,6 +580,7 @@
                     ${specificContent}
                     ${marcadorText ? `<div class="card-marker" style="background:${marcadorColorVar}"><i class="fas fa-bookmark"></i> ${marcadorText}</div>` : ''}
                 </div>
+                ${donutHtml}
             `;
             grid.appendChild(div);
             } catch (error) {

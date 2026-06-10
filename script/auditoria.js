@@ -41,7 +41,8 @@
             flagDias: Number(document.getElementById('auditFlagDias').value) || 7,
             marcador: auditMarkerObj ? auditMarkerObj.name : '',
             marcadorCor: auditMarkerObj ? auditMarkerObj.color : 'default',
-            anexos: getAnexos('audit')
+            anexos: getAnexos('audit'),
+            checklist: (typeof getChecklist === 'function') ? getChecklist('audit') : (item.checklist || [])
         };
 
         const changes = calculateChanges(originalItem || {}, newItem);
@@ -101,16 +102,8 @@
             auditor: document.getElementById('auditAuditor').value,
             flagDias: document.getElementById('auditFlagDias').value,
             marcador: document.getElementById('auditMarcador').value,
-            anexos: []
+            anexos: typeof getAnexos === 'function' ? getAnexos('audit') : []
         };
-
-        const anexosContainer = document.getElementById('auditAnexos');
-        const anexoInputs = anexosContainer.querySelectorAll('input[type="text"]');
-        anexoInputs.forEach(input => {
-            if (input.value.trim()) {
-                formData.anexos.push(input.value.trim());
-            }
-        });
 
         closeFormDrawer();
 
@@ -131,9 +124,7 @@
             document.getElementById('auditFlagDias').value = formData.flagDias;
             document.getElementById('auditMarcador').value = formData.marcador;
 
-            formData.anexos.forEach(anexo => {
-                addAnexo('audit', anexo);
-            });
+            if (typeof restoreAnexos === 'function') restoreAnexos('audit', formData.anexos);
 
             onCategoryChange('audit');
             openFormDrawer('modalAuditoria');

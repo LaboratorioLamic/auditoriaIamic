@@ -279,6 +279,13 @@ function _kbRenderCard(item) {
     const marcColor = _kbResolveColor(item.marcadorCor || 'default');
     const canEdit   = typeof userCanEditCards === 'function' ? userCanEditCards() : false;
 
+    const clList  = item.checklist || [];
+    const clTotal = clList.length;
+    const clDone  = clList.filter(c => c.checked).length;
+    const clPct   = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0;
+    const donutHtml = clTotal > 0 && typeof _clDonutHtml === 'function'
+        ? _clDonutHtml(clDone, clTotal, clPct, 36, true) : '';
+
     return `
         <div class="kanban-card"
              draggable="${canEdit}"
@@ -287,6 +294,7 @@ function _kbRenderCard(item) {
              ondragend="kbDragEnd(event)"
              onclick="kbCardClick(event,${item.id})">
             <div class="kanban-card-stripe" style="background:${deadline}"></div>
+            ${donutHtml}
             <div class="kanban-card-inner">
                 <div class="kanban-card-title">${_kbHtml(item.titulo || 'Sem título')}</div>
                 <div class="kanban-card-metas">
