@@ -92,23 +92,23 @@ function resetModal(prefix) {
         if (currentTab === 'auditoria') {
             editingAuditId = null;
             resetModal('audit');
-            document.getElementById('modalAuditoria').style.display = 'flex';
+            openFormDrawer('modalAuditoria');
         } else if (currentTab === 'treinamentos') {
             editingTrainId = null;
             resetModal('train');
-            document.getElementById('modalTreinamentos').style.display = 'flex';
+            openFormDrawer('modalTreinamentos');
         } else if (currentTab === 'atividades') {
             editingAtivId = null;
             resetModal('ativ');
-            document.getElementById('modalAtividades').style.display = 'flex';
+            openFormDrawer('modalAtividades');
         } else if (currentTab === 'manutencao') {
             editingMantId = null;
             resetModal('mant');
-            document.getElementById('modalManutencao').style.display = 'flex';
+            openFormDrawer('modalManutencao');
         } else if (currentTab === 'documentos') {
             editingDocId = null;
             resetModal('doc');
-            document.getElementById('modalDocumentos').style.display = 'flex';
+            openFormDrawer('modalDocumentos');
         }
     };
 
@@ -225,7 +225,7 @@ function resetModal(prefix) {
             document.getElementById('auditFlagDias').value = item.flagDias; // Corrigido
             document.getElementById('auditMarcador').value = item.marcador || '';
             restoreAnexos('audit', item.anexos);
-            document.getElementById('modalAuditoria').style.display = 'flex';
+            openFormDrawer('modalAuditoria');
         } else if (finalTab === 'atividades') {
             editingAtivId = id;
             document.getElementById('ativTitulo').value = item.titulo;
@@ -253,7 +253,7 @@ function resetModal(prefix) {
             document.getElementById('ativFlagDias').value = item.flagDias; // Corrigido
             document.getElementById('ativMarcador').value = item.marcador || '';
             restoreAnexos('ativ', item.anexos);
-            document.getElementById('modalAtividades').style.display = 'flex';
+            openFormDrawer('modalAtividades');
         } else if (finalTab === 'treinamentos') {
             editingTrainId = id;
             document.getElementById('trainTitulo').value = item.titulo;
@@ -295,7 +295,7 @@ function resetModal(prefix) {
             document.getElementById('trainFlagDias').value = item.flagDias;
             document.getElementById('trainMarcador').value = item.marcador || '';
             restoreAnexos('train', item.anexos);
-            document.getElementById('modalTreinamentos').style.display = 'flex';
+            openFormDrawer('modalTreinamentos');
 
             // Armazena o item original no estado atual para calcular as diferenças ao salvar
             originalItem = JSON.parse(JSON.stringify(item));
@@ -323,7 +323,7 @@ function resetModal(prefix) {
             calculateNextDate('mant');
             restoreAnexos('mant', item.anexos);
             document.getElementById('mantMarcador').value = item.marcador || '';
-            document.getElementById('modalManutencao').style.display = 'flex';
+            openFormDrawer('modalManutencao');
         } else if (finalTab === 'documentos') {
             editingDocId = id;
             document.getElementById('docTitulo').value = item.titulo;
@@ -352,7 +352,7 @@ function resetModal(prefix) {
             calculateNextDate('doc');
             restoreAnexos('doc', item.anexos);
             document.getElementById('docMarcador').value = item.marcador || '';
-            document.getElementById('modalDocumentos').style.display = 'flex';
+            openFormDrawer('modalDocumentos');
         }
 
     }
@@ -1968,3 +1968,30 @@ function viewHistoryItem(id, tab, historyIndex) {
         }
     }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    const FORM_DRAWER_IDS = ['modalAuditoria', 'modalTreinamentos', 'modalAtividades', 'modalDocumentos', 'modalManutencao'];
+
+    function openFormDrawer(id) {
+        // Fecha qualquer drawer de formulário aberto
+        FORM_DRAWER_IDS.forEach(did => {
+            const el = document.getElementById(did);
+            if (el) el.classList.remove('open');
+        });
+        const drawer = document.getElementById(id);
+        const backdrop = document.getElementById('formDrawerBackdrop');
+        const fab = document.getElementById('addBtn');
+        if (drawer) drawer.classList.add('open');
+        if (backdrop) backdrop.classList.add('open');
+        if (fab) fab.classList.add('open');
+    }
+
+    function closeFormDrawer() {
+        FORM_DRAWER_IDS.forEach(did => {
+            const el = document.getElementById(did);
+            if (el) el.classList.remove('open');
+        });
+        const backdrop = document.getElementById('formDrawerBackdrop');
+        const fab = document.getElementById('addBtn');
+        if (backdrop) backdrop.classList.remove('open');
+        if (fab) fab.classList.remove('open');
+    }

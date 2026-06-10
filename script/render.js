@@ -119,6 +119,7 @@
                         if (fim && item[dateField] > fim) return false;
                     }
                 }
+                if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
                 return true;
             });
 
@@ -174,6 +175,7 @@
                         if (fim && item[dateField] > fim) return false;
                     }
                 }
+                if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
                 return true;
             });
 
@@ -231,6 +233,7 @@
                         if (fim && item[dateField] > fim) return false;
                     }
                 }
+                if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
                 return true;
             });
 
@@ -293,6 +296,7 @@
                         if (fim && dateForFilter > fim) return false;
                     }
                 }
+                if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
                 return true;
             });
         } else if (currentTab === 'documentos') {
@@ -350,6 +354,7 @@
                         if (fim && dateForFilter > fim) return false;
                     }
                 }
+                if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
                 return true;
             });
         }

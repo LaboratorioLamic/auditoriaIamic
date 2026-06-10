@@ -242,6 +242,35 @@
     background: var(--accent-soft);
 }
 
+/* FAB - Floating Action Button */
+.fab-add {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--grad-accent);
+    color: #fff;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 24px rgba(37,99,235,0.40);
+    z-index: 900;
+    transition: transform var(--t-fast), box-shadow var(--t-fast), filter var(--t-fast);
+}
+.fab-add:hover {
+    transform: scale(1.1) translateY(-2px);
+    box-shadow: 0 10px 32px rgba(37,99,235,0.50);
+    filter: brightness(1.08);
+}
+.fab-add:active { transform: scale(0.96); }
+.fab-add i { transition: transform 0.2s var(--ease); }
+.fab-add.open i { transform: rotate(45deg); }
+
 /* Botão login */
 .btn-login {
     width: 100%;

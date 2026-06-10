@@ -6,7 +6,7 @@
           saveAll, renderCards, openView, editItem,
           getAllowedSetores, userCanEditCards, formatBR */
 
-var kanbanActive = false;
+var kanbanActive = true;
 var _kanbanDragItemId = null;
 
 var _kanbanColorMap = {
@@ -86,7 +86,7 @@ function toggleKanbanView(mode) {
     if (kanbanActive) {
         if (grid)  grid.style.display  = 'none';
         if (board) board.style.display = 'flex';
-        if (addBtn)    addBtn.style.display    = 'none';
+        if (addBtn)    addBtn.style.display    = canEdit ? 'flex' : 'none';
         if (addColBtn) addColBtn.style.display = canEdit ? 'flex' : 'none';
         renderKanban();
     } else {
@@ -137,6 +137,32 @@ function _kbGetFilteredItems() {
         if (responsavel) {
             const r = (item.responsavel || '').toLowerCase();
             if (!r.includes(responsavel.toLowerCase())) return false;
+        }
+        // Data filter (use shared implementation)
+        if (typeof passesDateFilter === 'function') {
+            if (!passesDateFilter('Ativ', item)) return false;
+        } else {
+            // Fallback: honor simple fAtivDateType check
+            const dateType = (document.getElementById('fAtivDateType') || {}).value || 'all';
+            if (dateType !== 'all') {
+                const itemDateStr = item.dataConclusao || '';
+                if (!itemDateStr) return false;
+                const itemDate = new Date(itemDateStr);
+                if (isNaN(itemDate.getTime())) return false;
+                if (dateType === 'month') {
+                    const m = parseInt(document.getElementById('fAtivMonth')?.value);
+                    const y = parseInt(document.getElementById('fAtivYearForMonth')?.value);
+                    if (itemDate.getMonth() !== m || itemDate.getFullYear() !== y) return false;
+                } else if (dateType === 'year') {
+                    const y = parseInt(document.getElementById('fAtivYearOnly')?.value);
+                    if (itemDate.getFullYear() !== y) return false;
+                } else if (dateType === 'custom') {
+                    const ini = document.getElementById('fAtivDataIni')?.value || '';
+                    const fim = document.getElementById('fAtivDataFim')?.value || '';
+                    if (ini && itemDateStr < ini) return false;
+                    if (fim && itemDateStr > fim) return false;
+                }
+            }
         }
         if (titleInput) {
             const t = (item.titulo || '').toLowerCase();

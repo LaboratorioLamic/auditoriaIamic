@@ -66,7 +66,7 @@
     var canUserEdit  = userCanEditCards();
     var showActions  = !isBackup && !isDashboard && !isConfig && canUserEdit;
 
-    if (addBtn)    addBtn.style.display    = (showActions && !_isKanbanNow) ? 'flex' : 'none';
+    if (addBtn)    addBtn.style.display    = showActions ? 'flex' : 'none';
     if (addColBtn) addColBtn.style.display = (showActions && _isKanbanNow)  ? 'flex' : 'none';
 
     // --- Controle do botão de LIXEIRA ---
@@ -80,6 +80,9 @@
         }
     }
     updateTrashBadge();
+
+    // Botão filtro de setores
+    if (typeof _syncSetorFilterBtn === 'function') _syncSetorFilterBtn();
 
     // 4. Exibição do conteúdo específico das abas
     document.getElementById('backupContent').style.display = isBackup ? 'flex' : 'none';

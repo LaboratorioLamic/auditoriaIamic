@@ -137,17 +137,17 @@
     }
 
     function isEditingModalOpen() {
-        const ids = [
-            'modalAuditoria',
-            'modalAtividades',
-            'modalManutencao',
-            'modalDocumentos',
-            'modalListManager'
-        ];
-        return ids.some(id => {
+        const drawerIds = ['modalAuditoria', 'modalAtividades', 'modalManutencao', 'modalDocumentos'];
+        const modalIds = ['modalListManager'];
+        const drawerOpen = drawerIds.some(id => {
+            const el = document.getElementById(id);
+            return el && el.classList.contains('open');
+        });
+        const modalOpen = modalIds.some(id => {
             const el = document.getElementById(id);
             return el && getComputedStyle(el).display !== 'none';
         });
+        return drawerOpen || modalOpen;
     }
 
     // Listener em tempo real do Firebase (substitui o buffer)

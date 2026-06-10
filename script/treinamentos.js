@@ -120,7 +120,7 @@
         }
 
         saveAll();
-        closeModal('modalTreinamentos');
+        closeFormDrawer();
         renderCards();
     } catch (error) {
         console.error('Erro ao salvar treinamento:', error);
@@ -170,13 +170,9 @@
             }
         });
 
-        const modal = document.getElementById('modalTreinamentos');
-        modal.style.opacity = '0';
-        modal.style.transform = 'scale(0.95)';
+        closeFormDrawer();
 
         setTimeout(() => {
-            closeModal('modalTreinamentos');
-
             editingTrainId = null;
             resetModal('train');
 
@@ -184,7 +180,6 @@
             document.getElementById('trainDescricao').value = formData.descricao;
             document.getElementById('trainSetor').value = formData.setor;
             document.getElementById('trainCategoria').value = formData.categoria;
-            // subcategoria removida da interface
             document.getElementById('trainStatus').value = formData.status;
             document.getElementById('trainDataPublicacao').value = formData.dataPublicacao;
             document.getElementById('trainPeriodicidade').value = formData.periodicidade;
@@ -207,15 +202,6 @@
 
             onCategoryChange('train');
             calculateTrainingPrevisao();
-
-            modal.style.display = 'flex';
-            modal.style.opacity = '0';
-            modal.style.transform = 'scale(0.95)';
-
-            setTimeout(() => {
-                modal.style.transition = 'all 0.3s ease';
-                modal.style.opacity = '1';
-                modal.style.transform = 'scale(1)';
-            }, 50);
+            openFormDrawer('modalTreinamentos');
         }, 200);
     }

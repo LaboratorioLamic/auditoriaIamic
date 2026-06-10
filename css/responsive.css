@@ -17,6 +17,13 @@
     .header { padding: 0 16px; height: 60px; gap: 8px; }
     .title-area h1 { font-size: 17px; }
     .title-area small { display: none; }
+    .btn-setor-filter span { display: none; }
+    .btn-setor-filter { padding: 0 11px; min-width: 38px; }
+    .form-drawer { width: 100vw; border-radius: 0 !important; }
+    .setor-filter-grid { grid-template-columns: repeat(2, 1fr); }
+    .fab-add { bottom: 20px; right: 20px; width: 50px; height: 50px; font-size: 20px; }
+    .fbar-date-dropdown { left: auto; right: 0; width: 240px; }
+    .fbar-people-btn span { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
     .content { padding: 14px 16px 40px; gap: 14px; }
     .filters-bar { padding: 12px 14px; }
     .filter-input { min-width: 120px; flex: 1; }
@@ -47,13 +54,24 @@
     }
 }
 
+@media (max-width: 600px) {
+    .fbar-people-btn span { display: none; }
+    .fbar-people-btn { padding: 0 10px; }
+    .fbar-mytasks-btn span { display: none; }
+    .fbar-mytasks-btn { padding: 0 10px; }
+    .fbar-adv-dropdown { right: -60px; }
+}
+
 @media (max-width: 480px) {
     .summary-cards { grid-template-columns: 1fr; }
     .modal-actions { flex-direction: column-reverse; }
     .modal-actions button { width: 100%; justify-content: center; }
     .btn-primary span { display: none; }
     .history-drawer { width: 100vw; border-radius: 0; }
+    .setor-filter-modal { width: 100vw !important; max-height: 90vh; border-radius: var(--r-xl) var(--r-xl) 0 0; align-self: flex-end; }
+    .setor-filter-grid { grid-template-columns: 1fr; }
     .kanban-col { flex: 0 0 216px; min-width: 216px; }
     .view-module-tab span { display: none; }
     .view-module-tab { padding: 9px 12px; }
+    .people-filter-modal { width: 100vw !important; border-radius: var(--r-xl) var(--r-xl) 0 0; align-self: flex-end; max-height: 85vh; }
 }

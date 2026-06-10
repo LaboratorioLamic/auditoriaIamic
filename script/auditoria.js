@@ -73,7 +73,7 @@
         }
 
         saveAll();
-        closeModal('modalAuditoria');
+        closeFormDrawer();
         renderCards();
     } catch (error) {
         console.error('Erro ao salvar auditoria:', error);
@@ -112,13 +112,9 @@
             }
         });
 
-        const modal = document.getElementById('modalAuditoria');
-        modal.style.opacity = '0';
-        modal.style.transform = 'scale(0.95)';
+        closeFormDrawer();
 
         setTimeout(() => {
-            closeModal('modalAuditoria');
-
             editingAuditId = null;
             resetModal('audit');
 
@@ -126,7 +122,6 @@
             document.getElementById('auditDescricao').value = formData.descricao;
             document.getElementById('auditSetor').value = formData.setor;
             document.getElementById('auditCategoria').value = formData.categoria;
-            // subcategoria removida da interface
             document.getElementById('auditStatus').value = formData.status;
             document.getElementById('auditDataPublicacao').value = formData.dataPublicacao;
             document.getElementById('auditDataPrevisao').value = formData.dataPrevisao;
@@ -141,15 +136,6 @@
             });
 
             onCategoryChange('audit');
-
-            modal.style.display = 'flex';
-            modal.style.opacity = '0';
-            modal.style.transform = 'scale(0.95)';
-
-            setTimeout(() => {
-                modal.style.transition = 'all 0.3s ease';
-                modal.style.opacity = '1';
-                modal.style.transform = 'scale(1)';
-            }, 50);
+            openFormDrawer('modalAuditoria');
         }, 200);
     }

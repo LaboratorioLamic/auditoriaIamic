@@ -93,6 +93,20 @@
             <h1 id="pageTitle">Dashboard</h1>
             <small id="pageSubtitle">Visão geral e indicadores de desempenho</small>
         </div>
+        <!-- Filtro de Data no header -->
+        <div style="position:relative;" id="fbarDateWrap">
+            <button class="btn-setor-filter" id="fbarDateBtn" onclick="openFbarDateDropdown()" title="Filtrar por Data" style="display:none;">
+                <i class="fas fa-calendar-days"></i>
+                <span id="fbarDateLabel">Data</span>
+            </button>
+            <div class="fbar-date-dropdown" id="fbarDateDropdown" style="display:none;"></div>
+        </div>
+
+        <button class="btn-setor-filter" id="btnSetorFilter" onclick="openSetorFilterModal()" title="Filtrar por Setor" style="display:none;">
+            <i class="fas fa-building"></i>
+            <span id="setorFilterLabel">Setores</span>
+        </button>
+
         <div class="notification-container" id="notificationContainer" onclick="toggleNotificationModal()">
             <i class="notification-icon fas fa-bell"></i>
             <div class="notification-badge hidden" id="notificationBadge">0</div>
@@ -276,246 +290,165 @@
 
         <div id="viewToggleAtivBar" style="display:none;">
             <div class="view-module-tabs">
-                <button id="btnViewList" class="view-module-tab active" onclick="toggleKanbanView('list')">
-                    <i class="fas fa-list"></i> Lista
-                </button>
-                <button id="btnViewKanban" class="view-module-tab" onclick="toggleKanbanView('kanban')">
+                <button id="btnViewKanban" class="view-module-tab active" onclick="toggleKanbanView('kanban')">
                     <i class="fas fa-columns"></i> Kanban
+                </button>
+                <button id="btnViewList" class="view-module-tab" onclick="toggleKanbanView('list')">
+                    <i class="fas fa-list"></i> Lista
                 </button>
             </div>
         </div>
 
+        <!-- SELECTS OCULTOS — mantidos para compatibilidade com filters.js -->
+        <div style="display:none;" aria-hidden="true">
+            <select id="fAuditSetor" onchange="onFilterSetorChange('Audit')"><option value="">Setor: Todos</option></select>
+            <select id="fAuditCat" onchange="onFilterCategoryChange('Audit')"><option value="">Categoria: Todas</option></select>
+            <select id="fAuditResponsavel" onchange="renderCards()"><option value="">Responsável: Todos</option></select>
+            <select id="fAuditRevisor" onchange="renderCards()"><option value="">Revisor: Todos</option></select>
+            <select id="fAuditStatus" onchange="renderCards()"><option value="">Status: Todos</option></select>
+            <select id="fAuditMarcador" onchange="renderCards()"><option value="">Marcador: Todos</option></select>
+            <select id="fAuditDateType" onchange="updateDateInputs('Audit')"><option value="all" selected>Período: Data</option><option value="month">Mês</option><option value="year">Ano</option><option value="custom">Personalizado</option></select>
+            <div id="fAuditGroupMonth"><select id="fAuditMonth" onchange="renderCards()"><option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option><option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option><option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option></select><select id="fAuditYearForMonth" onchange="renderCards()"></select></div>
+            <select id="fAuditYearOnly" onchange="renderCards()"></select>
+            <div id="fAuditGroupCustom"><input type="date" id="fAuditDataIni" onchange="renderCards()"><input type="date" id="fAuditDataFim" onchange="renderCards()"></div>
+
+            <select id="fTrainSetor" onchange="onFilterSetorChange('Train')"><option value="">Setor: Todos</option></select>
+            <select id="fTrainCat" onchange="onFilterCategoryChange('Train')"><option value="">Categoria: Todas</option></select>
+            <select id="fTrainResponsavel" onchange="renderCards()"><option value="">Responsável: Todos</option></select>
+            <select id="fTrainStatus" onchange="renderCards()"><option value="">Status: Todos</option></select>
+            <select id="fTrainMarcador" onchange="renderCards()"><option value="">Marcador: Todos</option></select>
+            <select id="fTrainDateType" onchange="updateDateInputs('Train')"><option value="all" selected>Período: Data</option><option value="month">Mês</option><option value="year">Ano</option><option value="custom">Personalizado</option></select>
+            <div id="fTrainGroupMonth"><select id="fTrainMonth" onchange="renderCards()"><option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option><option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option><option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option></select><select id="fTrainYearForMonth" onchange="renderCards()"></select></div>
+            <select id="fTrainYearOnly" onchange="renderCards()"></select>
+            <div id="fTrainGroupCustom"><input type="date" id="fTrainDataIni" onchange="renderCards()"><input type="date" id="fTrainDataFim" onchange="renderCards()"></div>
+
+            <select id="fAtivSetor" onchange="onFilterSetorChange('Ativ')"><option value="">Setor: Todos</option></select>
+            <select id="fAtivCat" onchange="onFilterCategoryChange('Ativ')"><option value="">Categoria: Todas</option></select>
+            <select id="fAtivResponsavel" onchange="renderCards()"><option value="">Responsável: Todos</option></select>
+            <select id="fAtivRevisor" onchange="renderCards()"><option value="">Revisor: Todos</option></select>
+            <select id="fAtivStatus" onchange="renderCards()"><option value="">Status: Todos</option></select>
+            <select id="fAtivMarcador" onchange="renderCards()"><option value="">Marcador: Todos</option></select>
+            <select id="fAtivDateType" onchange="updateDateInputs('Ativ')"><option value="all" selected>Período: Data</option><option value="month">Mês</option><option value="year">Ano</option><option value="custom">Personalizado</option></select>
+            <div id="fAtivGroupMonth"><select id="fAtivMonth" onchange="renderCards()"><option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option><option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option><option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option></select><select id="fAtivYearForMonth" onchange="renderCards()"></select></div>
+            <select id="fAtivYearOnly" onchange="renderCards()"></select>
+            <div id="fAtivGroupCustom"><input type="date" id="fAtivDataIni" onchange="renderCards()"><input type="date" id="fAtivDataFim" onchange="renderCards()"></div>
+
+            <select id="fDocSetor" onchange="onFilterSetorChange('Doc')"><option value="">Setor: Todos</option></select>
+            <select id="fDocCat" onchange="onFilterCategoryChange('Doc')"><option value="">Categoria: Todas</option></select>
+            <select id="fDocResponsavel" onchange="renderCards()"><option value="">Responsável: Todos</option></select>
+            <select id="fDocRevisor" onchange="renderCards()"><option value="">Revisor: Todos</option></select>
+            <select id="fDocStatus" onchange="renderCards()"><option value="">Status: Todos</option></select>
+            <select id="fDocMarcador" onchange="renderCards()"><option value="">Marcador: Todos</option></select>
+            <select id="fDocDateType" onchange="updateDateInputs('Doc')"><option value="all" selected>Data: Todas</option><option value="month">Mês</option><option value="year">Ano</option><option value="custom">Personalizado</option></select>
+            <div id="fDocGroupMonth"><select id="fDocMonth" onchange="renderCards()"><option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option><option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option><option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option></select><select id="fDocYearForMonth" onchange="renderCards()"></select></div>
+            <select id="fDocYearOnly" onchange="renderCards()"></select>
+            <div id="fDocGroupCustom"><input type="date" id="fDocDataIni" onchange="renderCards()"><input type="date" id="fDocDataFim" onchange="renderCards()"></div>
+
+            <!-- grupos de aba (usados pelo tabs.js para mostrar/ocultar) -->
+            <div id="filtersAuditoria"></div>
+            <div id="filtersTreinamentos"></div>
+            <div id="filtersAtividades"></div>
+            <div id="filtersDocumentos"></div>
+
+            <input type="checkbox" id="showFinalizedCheckbox" checked onchange="renderCards()">
+        </div>
+
+        <!-- NOVA BARRA DE FILTROS -->
         <div class="filters-bar" id="filtersBar" style="display:none;">
-            <div class="filter-controls">
-                <div style="font-weight:600; color:var(--primary); font-size:14px;"><i class="fa-solid fa-filter"></i> Filtros:</div>
 
-                <div id="filtersAuditoria" class="filter-group" style="display:flex;">
-                    <select id="fAuditSetor" class="filter-input" onchange="onFilterSetorChange('Audit')" style="display:none;">
-                        <option value="">Setor: Todos</option>
-                    </select>
-                    <select id="fAuditCat" class="filter-input" onchange="onFilterCategoryChange('Audit')" style="display:none;">
-                        <option value="">Categoria: Todas</option>
-                    </select>
-                    <select id="fAuditResponsavel" class="filter-input" onchange="closeFilters(); renderCards()">
-                        <option value="">Responsável: Todos</option>
-                    </select>
-                    <select id="fAuditRevisor" class="filter-input" onchange="closeFilters(); renderCards()">
-                        <option value="">Revisor: Todos</option>
-                    </select>
-                    <select id="fAuditStatus" class="filter-input" onchange="closeFilters(); renderCards()">
-                        <option value="">Status: Todos</option>
-                    </select>
-                    <select id="fAuditMarcador" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
-                        <option value="">Marcador: Todos</option>
-                    </select>
-                    
-                    <div class="date-controls">
-                        <select id="fAuditDateType" onchange="updateDateInputs('Audit')">
-                            <option value="all" selected>Período: Data</option>
-                            <option value="month">Mês</option>
-                            <option value="year">Ano</option>
-                            <option value="custom">Personalizado</option>
-                        </select>
-                        
-                        <div id="fAuditGroupMonth" style="display:none; gap:4px">
-                            <select id="fAuditMonth" onchange="closeFilters(); renderCards()">
-                                <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
-                                <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
-                                <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
-                                <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
-                            </select>
-                            <select id="fAuditYearForMonth" onchange="closeFilters(); renderCards()"></select>
-                        </div>
+            <!-- Esquerda: lupa + pesquisa + filtros responsável/revisor + Minhas Tarefas -->
+            <div class="fbar-left">
 
-                        <select id="fAuditYearOnly" style="display:none" onchange="closeFilters(); renderCards()"></select>
-
-                        <div id="fAuditGroupCustom" style="display:none; align-items:center; gap:4px">
-                            <input type="date" id="fAuditDataIni" onchange="closeFilters(); renderCards()">
-                            <span style="color:#ccc">a</span>
-                            <input type="date" id="fAuditDataFim" onchange="closeFilters(); renderCards()">
-                        </div>
+                <!-- Lupa toggle pesquisa -->
+                <div class="fbar-search-wrap" id="fbarSearchWrap">
+                    <button class="fbar-icon-btn" id="fbarSearchToggle" onclick="toggleFbarSearch()" title="Pesquisar por título">
+                        <i class="fas fa-magnifying-glass"></i>
+                    </button>
+                    <div class="fbar-search-expand" id="fbarSearchExpand">
+                        <input id="titleSearchInput" class="fbar-search-input" placeholder="Pesquisar por título..." oninput="onTitleSearchInput('cards')" autocomplete="off">
+                        <button class="fbar-search-clear" id="fbarSearchClear" onclick="clearFbarSearch()" title="Limpar"><i class="fas fa-times"></i></button>
                     </div>
+                    <div class="title-search-dropdown" id="titleSearchDropdown" style="display:none;"></div>
+                </div>
+
+                <!-- Filtrar por Responsável -->
+                <button class="fbar-people-btn" id="fbarRespBtn" onclick="openPeopleFilter('responsavel')" title="Filtrar por Responsável">
+                    <i class="fas fa-user"></i>
+                    <span id="fbarRespLabel">Filtrar por Responsável</span>
+                    <span class="fbar-people-badge" id="fbarRespBadge" style="display:none;"></span>
+                </button>
+
+                <!-- Filtrar por Revisor -->
+                <button class="fbar-people-btn" id="fbarRevBtn" onclick="openPeopleFilter('revisor')" title="Filtrar por Revisor">
+                    <i class="fas fa-user-check"></i>
+                    <span id="fbarRevLabel">Filtrar por Revisor</span>
+                    <span class="fbar-people-badge" id="fbarRevBadge" style="display:none;"></span>
+                </button>
             </div>
-            
-                <div id="filtersTreinamentos" class="filter-group" style="display:none;">
-                    <select id="fTrainSetor" class="filter-input" onchange="onFilterSetorChange('Train')" style="display:none;">
-                        <option value="">Setor: Todos</option>
-                    </select>
-                    <select id="fTrainCat" class="filter-input" onchange="onFilterCategoryChange('Train')" style="display:none;">
-                        <option value="">Categoria: Todas</option>
-                    </select>
-                    <select id="fTrainResponsavel" class="filter-input" onchange="closeFilters(); renderCards()">
-                        <option value="">Responsável: Todos</option>
-                    </select>
-                    <select id="fTrainStatus" class="filter-input" onchange="closeFilters(); renderCards()">
-                        <option value="">Status: Todos</option>
-                    </select>
-                    <select id="fTrainMarcador" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
-                        <option value="">Marcador: Todos</option>
-                    </select>
-                    
-                    <div class="date-controls">
-                        <select id="fTrainDateType" onchange="updateDateInputs('Train')">
-                            <option value="all" selected>Período: Data</option>
-                            <option value="month">Mês</option>
-                            <option value="year">Ano</option>
-                            <option value="custom">Personalizado</option>
-                        </select>
-                        
-                        <div id="fTrainGroupMonth" style="display:none; gap:4px">
-                            <select id="fTrainMonth" onchange="closeFilters(); renderCards()">
-                                <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
-                                <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
-                                <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
-                                <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
-                            </select>
-                            <select id="fTrainYearForMonth" onchange="closeFilters(); renderCards()"></select>
-                        </div>
 
-                        <select id="fTrainYearOnly" style="display:none" onchange="closeFilters(); renderCards()"></select>
-
-                        <div id="fTrainGroupCustom" style="display:none; align-items:center; gap:4px">
-                            <input type="date" id="fTrainDataIni" onchange="closeFilters(); renderCards()">
-                            <span>até</span>
-                            <input type="date" id="fTrainDataFim" onchange="closeFilters(); renderCards()">
-                        </div>
-                    </div>
-                </div>
-
-                <div id="filtersAtividades" class="filter-group" style="display:none;">
-                    <select id="fAtivSetor" class="filter-input" onchange="onFilterSetorChange('Ativ')" style="display:none;">
-                        <option value="">Setor: Todos</option>
-                    </select>
-                    <select id="fAtivCat" class="filter-input" onchange="onFilterCategoryChange('Ativ')" style="display:none;">
-                        <option value="">Categoria: Todas</option>
-                    </select>
-                    <select id="fAtivResponsavel" class="filter-input" onchange="closeFilters(); renderCards()">
-                        <option value="">Responsável: Todos</option>
-                    </select>
-                    <select id="fAtivRevisor" class="filter-input" onchange="closeFilters(); renderCards()">
-                        <option value="">Revisor: Todos</option>
-                    </select>
-                    <select id="fAtivStatus" class="filter-input" onchange="closeFilters(); renderCards()">
-                        <option value="">Status: Todos</option>
-                    </select>
-                    <select id="fAtivMarcador" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
-                        <option value="">Marcador: Todos</option>
-                    </select>
-                    
-                    <div class="date-controls">
-                        <select id="fAtivDateType" onchange="updateDateInputs('Ativ')">
-                            <option value="all" selected>Período: Data</option>
-                            <option value="month">Mês</option>
-                            <option value="year">Ano</option>
-                            <option value="custom">Personalizado</option>
-                        </select>
-                        
-                        <div id="fAtivGroupMonth" style="display:none; gap:4px">
-                            <select id="fAtivMonth" onchange="closeFilters(); renderCards()">
-                                <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
-                                <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
-                                <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
-                                <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
-                            </select>
-                            <select id="fAtivYearForMonth" onchange="closeFilters(); renderCards()"></select>
-                        </div>
-
-                        <select id="fAtivYearOnly" style="display:none" onchange="closeFilters(); renderCards()"></select>
-
-                        <div id="fAtivGroupCustom" style="display:none; align-items:center; gap:4px">
-                            <input type="date" id="fAtivDataIni" onchange="closeFilters(); renderCards()">
-                            <span style="color:#ccc">a</span>
-                            <input type="date" id="fAtivDataFim" onchange="closeFilters(); renderCards()">
-                        </div>
-                    </div>
-                </div>
-
-
-                <div id="filtersDocumentos" class="filter-group" style="display:none;"> 
-                    <select id="fDocSetor" class="filter-input" onchange="onFilterSetorChange('Doc')" style="display:none;">
-                        <option value="">Setor: Todos</option>
-                    </select>
-                    <select id="fDocCat" class="filter-input" onchange="onFilterCategoryChange('Doc')" style="display:none;">
-                        <option value="">Categoria: Todas</option>
-                    </select>
-                    <select id="fDocResponsavel" class="filter-input" onchange="closeFilters(); renderCards()">
-                        <option value="">Responsável: Todos</option>
-                    </select>
-                    <select id="fDocRevisor" class="filter-input" onchange="closeFilters(); renderCards()">
-                        <option value="">Revisor: Todos</option>
-                    </select>
-                    <select id="fDocStatus" class="filter-input" onchange="closeFilters(); renderCards()">
-                        <option value="">Status: Todos</option>
-                    </select>
-                    <select id="fDocMarcador" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
-                        <option value="">Marcador: Todos</option>
-                    </select>
-                    
-                    <div class="date-controls">
-                        <select id="fDocDateType" onchange="updateDateInputs('Doc')">
-                            <option value="all" selected>Data: Todas</option>
-                            <option value="month">Mês</option>
-                            <option value="year">Ano</option>
-                            <option value="custom">Personalizado</option>
-                        </select>
-
-                        <div id="fDocGroupMonth" style="display:none; gap:4px">
-                            <select id="fDocMonth" onchange="closeFilters(); renderCards()">
-                                <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
-                                <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
-                                <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
-                                <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
-                            </select>
-                            <select id="fDocYearForMonth" onchange="closeFilters(); renderCards()"></select>
-                        </div>
-
-                        <select id="fDocYearOnly" style="display:none" onchange="closeFilters(); renderCards()"></select>
-
-                        <div id="fDocGroupCustom" style="display:none; align-items:center; gap:4px">
-                            <input type="date" id="fDocDataIni" onchange="closeFilters(); renderCards()">
-                            <span style="color:#ccc">a</span>
-                            <input type="date" id="fDocDataFim" onchange="closeFilters(); renderCards()">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="filter-actions">
-                    <label class="checkbox-wrapper" title="Mostrar itens finalizados">
-                        <input type="checkbox" id="showFinalizedCheckbox" checked onchange="closeFilters(); renderCards()">
-                        <span class="checkbox-custom"></span>
-                        <span class="checkbox-label">OK</span>
-                    </label>
-                    <div class="title-search">
-                        <button class="btn-clear" id="filtersToggleBtn" onclick="toggleFiltersDropdown()" title="Filtros"><i class="fa-solid fa-filter"></i></button>
-                        <button class="btn-clear" onclick="toggleTitleSearch('cards')" title="Pesquisar por título"><i class="fa-solid fa-magnifying-glass"></i></button>
-
-                        <div class="filters-dropdown title-search-dropdown" id="filtersDropdown" style="display:none;">
-                            <div style="padding:10px; width:290px; max-width:calc(100vw - 32px); box-sizing:border-box;">
-                                <div style="display:flex;flex-direction:column;gap:8px">
-                                    <label style="font-size:12px;color:var(--text-light);margin:0">Setor</label>
-                                    <select id="dropSetor" class="filter-input" onchange="onDropdownFilterChange('setor')"></select>
-
-                                    <label style="font-size:12px;color:var(--text-light);margin:0">Categoria</label>
-                                    <select id="dropCat" class="filter-input" onchange="onDropdownFilterChange('categoria')"></select>
-
-                                </div>
+            <!-- Direita: Minhas Tarefas + filtros avançados + limpar + lixeira -->
+            <div class="fbar-right">
+                <!-- Ícone filtro avançado (status, categoria, marcador, data, setor) -->
+                <div class="fbar-adv-wrap" style="position:relative;">
+                    <button class="fbar-icon-btn" id="filtersToggleBtn" onclick="toggleFiltersDropdown()" title="Filtros avançados">
+                        <i class="fas fa-sliders"></i>
+                    </button>
+                    <!-- Dropdown filtros avançados -->
+                    <div class="filters-dropdown fbar-adv-dropdown" id="filtersDropdown" style="display:none;">
+                        <div class="fbar-adv-inner">
+                            <div class="fbar-adv-row">
+                                <span class="fbar-adv-label">Categoria</span>
+                                <select class="filter-input fbar-adv-select" id="dropCat" onchange="onFbarAdvChange('categoria')"><option value="">Todas</option></select>
+                            </div>
+                            <div class="fbar-adv-row">
+                                <span class="fbar-adv-label">Setor</span>
+                                <select class="filter-input fbar-adv-select" id="dropSetor" onchange="onFbarAdvChange('setor')"><option value="">Todos</option></select>
+                            </div>
+                            <div class="fbar-adv-row">
+                                <span class="fbar-adv-label">Marcador</span>
+                                <select class="filter-input fbar-adv-select" id="dropMarcador" onchange="onFbarAdvChange('marcador')"><option value="">Todos</option></select>
+                            </div>
+                            <div id="fbarDateGroup" style="display:none;"></div>
+                            <div class="fbar-adv-row" id="fbarShowFinalizedRow">
+                                <label class="checkbox-wrapper" title="Mostrar itens finalizados">
+                                    <input type="checkbox" id="showFinalizedCheckboxVisible" checked onchange="onFbarFinalizedChange()">
+                                    <span class="checkbox-custom"></span>
+                                    <span class="checkbox-label" style="font-size:12px;">Mostrar concluídos/cancelados</span>
+                                </label>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="title-search-dropdown" id="titleSearchDropdown" style="display:none;">
-                            <input id="titleSearchInput" class="filter-input" placeholder="Pesquisar títulos..." oninput="onTitleSearchInput('cards')">
+                <!-- Botão Minhas Tarefas -->
+                <div style="position:relative; display:inline-block;">
+                    <button class="fbar-mytasks-btn active" id="fbarMyTasks" onclick="toggleMyTasks()">
+                        <i class="fas fa-user-circle"></i>
+                        <span>Minhas Tarefas</span>
+                        <i class="fas fa-caret-down" style="margin-left:6px;font-size:12px;"></i>
+                    </button>
+                    <!-- Dropdown de modos Minhas Tarefas -->
+                    <div class="filters-dropdown fbar-adv-dropdown" id="fbarMyTasksDropdown" style="display:none; position:absolute; right:0; z-index:60;">
+                        <div style="padding:8px; display:flex; flex-direction:column; gap:6px; min-width:180px;">
+                            <button class="btn-clear" onclick="setMyTasksMode('responsavel')">Como Responsável</button>
+                            <button class="btn-clear" onclick="setMyTasksMode('revisor')">Como Revisor</button>
+                            <button class="btn-clear" onclick="setMyTasksMode('all')">Visualizar todos</button>
                         </div>
                     </div>
-                    <button class="btn-clear" onclick="clearFilters()" title="Limpar filtros"><i class="fa-solid fa-rotate-left"></i></button>
                 </div>
-            </div>
-            
-            <div style="display: flex; gap: 8px;">
-                <button class="btn-primary" id="addBtn"><i class="fas fa-plus"></i> Novo Registro</button>
+
+                <!-- Limpar filtros -->
+                <button class="fbar-icon-btn" onclick="clearFilters()" title="Limpar filtros">
+                    <i class="fas fa-rotate-left"></i>
+                </button>
+
+                <!-- Nova Coluna (kanban) -->
                 <button class="btn-primary" id="addColBtn" style="display:none;" onclick="openKanbanAddCol()">
                     <i class="fas fa-columns"></i> Nova Coluna
                 </button>
-                <button class="btn-secondary" id="trashBtn" onclick="openTrashBin()" title="Visualizar itens deletados">
+
+                <!-- Lixeira -->
+                <button class="btn-secondary fbar-trash" id="trashBtn" onclick="openTrashBin()" title="Visualizar itens deletados">
                     <i class="fas fa-trash"></i>
                     <span id="trashBadge" class="trash-badge hidden"></span>
                 </button>
@@ -642,12 +575,25 @@
     </div>
 </div>
 
-<div class="modal" id="modalAuditoria">
-    <div class="modal-content">
-        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
-            <h3>Nova Auditoria</h3>
-            <button class="btn-close" onclick="closeModal('modalAuditoria')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+<!-- FAB NOVO REGISTRO -->
+<button class="fab-add" id="addBtn" title="Novo Registro" style="display:none;">
+    <i class="fas fa-plus"></i>
+</button>
+<div class="form-drawer-backdrop" id="formDrawerBackdrop" onclick="closeFormDrawer()"></div>
+
+<!-- DRAWER AUDITORIA -->
+<div class="form-drawer" id="modalAuditoria">
+    <div class="form-drawer-header">
+        <div class="form-drawer-header-left">
+            <div class="form-drawer-icon"><i class="fas fa-clipboard-check"></i></div>
+            <div>
+                <div class="form-drawer-title">Nova Auditoria</div>
+                <div class="form-drawer-subtitle" id="drawerSubtitleAuditoria">Preencha os dados abaixo</div>
+            </div>
         </div>
+        <button class="history-drawer-close" onclick="closeFormDrawer()" title="Fechar"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="form-drawer-body">
         <div class="form-grid">
             <div class="field-group full-width">
                 <label>Título</label>
@@ -720,20 +666,27 @@
                 </button>
             </div>
         </div>
-        <div class="modal-actions">
-            <button class="btn-duplicate" onclick="duplicateAudit()">Duplicar</button>
-            <button class="btn-cancel" onclick="closeModal('modalAuditoria')">Cancelar</button>
-            <button class="btn-save" onclick="saveAudit()">Salvar Registro</button>
-        </div>
+    </div><!-- /form-drawer-body -->
+    <div class="form-drawer-footer">
+        <button class="btn-duplicate" onclick="duplicateAudit()">Duplicar</button>
+        <button class="btn-cancel" onclick="closeFormDrawer()">Cancelar</button>
+        <button class="btn-save" onclick="saveAudit()">Salvar Registro</button>
     </div>
 </div>
 
-<div class="modal" id="modalTreinamentos">
-    <div class="modal-content">
-        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
-            <h3>Novo Treinamento</h3>
-            <button class="btn-close" onclick="closeModal('modalTreinamentos')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+<!-- DRAWER TREINAMENTOS -->
+<div class="form-drawer" id="modalTreinamentos">
+    <div class="form-drawer-header">
+        <div class="form-drawer-header-left">
+            <div class="form-drawer-icon"><i class="fas fa-chalkboard-teacher"></i></div>
+            <div>
+                <div class="form-drawer-title">Novo Treinamento</div>
+                <div class="form-drawer-subtitle" id="drawerSubtitleTreinamentos">Preencha os dados abaixo</div>
+            </div>
         </div>
+        <button class="history-drawer-close" onclick="closeFormDrawer()" title="Fechar"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="form-drawer-body">
         <div class="form-grid">
             <div class="field-group full-width">
                 <label>Título</label>
@@ -823,20 +776,27 @@
                 </button>
             </div>
         </div>
-        <div class="modal-actions">
-            <button class="btn-duplicate" onclick="duplicateTraining()">Duplicar</button>
-            <button class="btn-cancel" onclick="closeModal('modalTreinamentos')">Cancelar</button>
-            <button class="btn-save" onclick="saveTraining()">Salvar Registro</button>
-        </div>
+    </div><!-- /form-drawer-body -->
+    <div class="form-drawer-footer">
+        <button class="btn-duplicate" onclick="duplicateTraining()">Duplicar</button>
+        <button class="btn-cancel" onclick="closeFormDrawer()">Cancelar</button>
+        <button class="btn-save" onclick="saveTraining()">Salvar Registro</button>
     </div>
 </div>
 
-<div class="modal" id="modalAtividades">
-    <div class="modal-content">
-        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
-            <h3>Nova Atividade</h3>
-            <button class="btn-close" onclick="closeModal('modalAtividades')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+<!-- DRAWER ATIVIDADES -->
+<div class="form-drawer" id="modalAtividades">
+    <div class="form-drawer-header">
+        <div class="form-drawer-header-left">
+            <div class="form-drawer-icon"><i class="fas fa-tasks"></i></div>
+            <div>
+                <div class="form-drawer-title">Nova Atividade</div>
+                <div class="form-drawer-subtitle" id="drawerSubtitleAtividades">Preencha os dados abaixo</div>
+            </div>
         </div>
+        <button class="history-drawer-close" onclick="closeFormDrawer()" title="Fechar"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="form-drawer-body">
         <div class="form-grid">
             <div class="field-group full-width">
                 <label>Título</label>
@@ -906,20 +866,27 @@
                 </button>
             </div>
         </div>
-        <div class="modal-actions">
-            <button class="btn-duplicate" onclick="duplicateAtividade()">Duplicar</button>
-            <button class="btn-cancel" onclick="closeModal('modalAtividades')">Cancelar</button>
-            <button class="btn-save" onclick="saveAtividade()">Salvar Registro</button>
-        </div>
+    </div><!-- /form-drawer-body -->
+    <div class="form-drawer-footer">
+        <button class="btn-duplicate" onclick="duplicateAtividade()">Duplicar</button>
+        <button class="btn-cancel" onclick="closeFormDrawer()">Cancelar</button>
+        <button class="btn-save" onclick="saveAtividade()">Salvar Registro</button>
     </div>
 </div>
 
-
-<div class="modal" id="modalDocumentos"> <div class="modal-content">
-        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
-            <h3>Novo Documento</h3>
-            <button class="btn-close" onclick="closeModal('modalDocumentos')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+<!-- DRAWER DOCUMENTOS -->
+<div class="form-drawer" id="modalDocumentos">
+    <div class="form-drawer-header">
+        <div class="form-drawer-header-left">
+            <div class="form-drawer-icon"><i class="fas fa-file-alt"></i></div>
+            <div>
+                <div class="form-drawer-title">Novo Documento</div>
+                <div class="form-drawer-subtitle" id="drawerSubtitleDocumentos">Preencha os dados abaixo</div>
+            </div>
         </div>
+        <button class="history-drawer-close" onclick="closeFormDrawer()" title="Fechar"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="form-drawer-body">
         <div class="form-grid">
             <div class="field-group full-width">
                 <label>Título/Nome do Documento</label>
@@ -993,11 +960,11 @@
                 </button>
             </div>
         </div>
-        <div class="modal-actions">
-            <button class="btn-duplicate" onclick="duplicateDocumento()">Duplicar</button>
-            <button class="btn-cancel" onclick="closeModal('modalDocumentos')">Cancelar</button>
-            <button class="btn-save" onclick="saveDocumento()">Salvar Registro</button>
-        </div>
+    </div><!-- /form-drawer-body -->
+    <div class="form-drawer-footer">
+        <button class="btn-duplicate" onclick="duplicateDocumento()">Duplicar</button>
+        <button class="btn-cancel" onclick="closeFormDrawer()">Cancelar</button>
+        <button class="btn-save" onclick="saveDocumento()">Salvar Registro</button>
     </div>
 </div>
 
@@ -1132,6 +1099,61 @@
     </div>
 </div>
 
+<!-- MODAL FILTRO DE PESSOAS (Responsável / Revisor) -->
+<div class="modal" id="modalPeopleFilter">
+    <div class="modal-content people-filter-modal">
+        <div class="setor-filter-header">
+            <div class="setor-filter-header-left">
+                <div class="setor-filter-icon" id="peopleFilterIcon"><i class="fas fa-user"></i></div>
+                <div>
+                    <div class="setor-filter-title" id="peopleFilterTitle">Selecionar Responsável</div>
+                    <div class="setor-filter-subtitle">Busque e selecione para filtrar</div>
+                </div>
+            </div>
+            <button class="btn-close" onclick="closePeopleFilter()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="people-filter-search">
+            <i class="fas fa-magnifying-glass"></i>
+            <input id="peopleFilterSearch" class="people-filter-search-input" placeholder="Pesquisar por nome..." oninput="renderPeopleFilterList()" autocomplete="off">
+        </div>
+        <div class="people-filter-list" id="peopleFilterList">
+            <!-- itens renderizados dinamicamente -->
+        </div>
+        <div class="setor-filter-footer">
+            <button class="btn-cancel" onclick="closePeopleFilter()">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL FILTRO DE SETORES -->
+<div class="modal" id="modalSetorFilter">
+    <div class="modal-content setor-filter-modal">
+        <div class="setor-filter-header">
+            <div class="setor-filter-header-left">
+                <div class="setor-filter-icon"><i class="fas fa-building"></i></div>
+                <div>
+                    <div class="setor-filter-title">Selecionar Setores</div>
+                    <div class="setor-filter-subtitle" id="setorFilterSubtitle">Selecione ao menos 1 setor</div>
+                </div>
+            </div>
+            <button class="btn-close" onclick="closeSetorFilterModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="setor-filter-controls">
+            <span class="setor-filter-count" id="setorFilterCount">0 selecionados</span>
+            <button class="setor-filter-deselect" onclick="setorFilterDeselectAll()">
+                <i class="fas fa-times"></i> Desmarcar todos
+            </button>
+        </div>
+        <div class="setor-filter-grid" id="setorFilterGrid">
+            <!-- chips dos setores -->
+        </div>
+        <div class="setor-filter-footer">
+            <button class="btn-cancel" onclick="closeSetorFilterModal()">Cancelar</button>
+            <button class="btn-save" onclick="confirmSetorFilter()"><i class="fas fa-check"></i> Confirmar</button>
+        </div>
+    </div>
+</div>
+
 <script src="script/firebase.js"></script>
 <script src="script/cache.js"></script>
 <script src="script/state.js"></script>
@@ -1151,5 +1173,7 @@
 <script src="script/documentos.js"></script>
 <script src="script/kanban.js"></script>
 <script src="script/key.js"></script>
+<script src="script/setor-filter.js"></script>
+<script src="script/fbar-filters.js"></script>
 </body>
 </html>

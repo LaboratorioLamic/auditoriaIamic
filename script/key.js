@@ -66,6 +66,20 @@
         if (currentuser) {
             label.textContent = currentuser.name || currentuser.user || '-';
             box.style.display = 'flex';
+            // Se o filtro "Minhas Tarefas" estiver ativo, aplica filtro por responsável automaticamente
+            if (typeof fbarMyTasksActive !== 'undefined' && fbarMyTasksActive && currentuser && currentuser.name) {
+                try {
+                    if (typeof setMyTasksMode === 'function') setMyTasksMode('responsavel');
+                    else {
+                        fbarRespFilter = currentuser.name;
+                        if (typeof _updatePeopleBtnUI === 'function') _updatePeopleBtnUI('responsavel');
+                        if (typeof _syncHiddenSelects === 'function') _syncHiddenSelects();
+                        if (typeof renderCards === 'function') renderCards();
+                    }
+                } catch (e) {
+                    console.warn('fbar: não foi possível aplicar filtro automático de Minhas Tarefas', e);
+                }
+            }
         } else {
             box.style.display = 'none';
         }

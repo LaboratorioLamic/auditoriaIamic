@@ -321,11 +321,9 @@
         const filterPrefix = `f${tabPrefix}`;
 
         // Limpa apenas os filtros da aba atual
-        document.querySelectorAll('.filters-bar select').forEach(s => {
-            // Só limpa se for filtro da aba atual
-            if (s.id.startsWith(filterPrefix) && !s.id.includes('DateType') && !s.id.includes('Month') && !s.id.includes('Year')) {
-                s.value = "";
-            }
+        ['Responsavel','Revisor','Status','Cat','Setor','Marcador'].forEach(suffix => {
+            const el = document.getElementById(`${filterPrefix}${suffix}`);
+            if (el) el.value = '';
         });
 
         // Limpa apenas a data type da aba atual
@@ -855,17 +853,21 @@
             if (stat && (item.status || '') !== stat) return false;
         }
 
-    // 5. Responsável (Adicionado/Corrigido para suportar Multi-select)
+    // 5. Responsável (suporta multi-select: JSON array ou string simples)
     if (!excluded.responsavel) {
-        const filterResp = document.getElementById(`f${prefix}Responsavel`)?.value || '';
+        const filterResp = (document.getElementById(`f${prefix}Responsavel`)?.value || '').toLowerCase().trim();
         if (filterResp) {
-            // Obtém o campo de responsável dependendo da aba
             const itemRespRaw = (prefix === 'Mant') ? (item.responsavelTecnico || '') : (item.responsavel || '');
-            // Usa sua função existente para normalizar (trata string ou JSON array)
-            const normalizedItemResp = normalizeResponsavel(itemRespRaw);
-
-            // Verifica se o responsável selecionado no filtro está contido no(s) responsável(eis) do item
-            if (!normalizedItemResp.includes(filterResp.toLowerCase())) return false;
+            let respNames = [];
+            try {
+                const parsed = JSON.parse(itemRespRaw);
+                respNames = Array.isArray(parsed)
+                    ? parsed.map(n => String(n).toLowerCase().trim())
+                    : [String(parsed).toLowerCase().trim()];
+            } catch {
+                respNames = [String(itemRespRaw).toLowerCase().trim()];
+            }
+            if (!respNames.some(n => n === filterResp)) return false;
         }
     }
 
@@ -880,10 +882,9 @@
 
     // 7. Revisor (Exceto para Manutenção e Treinamentos)
     if (prefix !== 'Mant' && prefix !== 'Train' && !excluded.revisor) {
-        const filterRev = document.getElementById(`f${prefix}Revisor`)?.value || '';
+        const filterRev = (document.getElementById(`f${prefix}Revisor`)?.value || '').toLowerCase().trim();
         if (filterRev) {
-            const itemRev = (item.revisor || '');
-            // Comparação exata para evitar nomes parciais (ex: "Ana" não pegar "Mariana")
+            const itemRev = (item.revisor || '').toLowerCase().trim();
             if (itemRev !== filterRev) return false;
         }
     }

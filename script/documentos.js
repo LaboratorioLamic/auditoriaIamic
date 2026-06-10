@@ -72,13 +72,13 @@
                 });
             } else if (!changes.silentChanged) {
                 documents = documents.map(d => d.id === editingDocId ? item : d);
-                closeModal('modalDocumentos');
+                closeFormDrawer();
                 return;
             }
             documents = documents.map(d => d.id === editingDocId ? newItem : d);
         }
 
-        saveAll(); closeModal('modalDocumentos'); renderCards();
+        saveAll(); closeFormDrawer(); renderCards();
     }
 
     function duplicateDocumento() {
@@ -110,13 +110,9 @@
             }
         });
 
-        const modal = document.getElementById('modalDocumentos');
-        modal.style.opacity = '0';
-        modal.style.transform = 'scale(0.95)';
+        closeFormDrawer();
 
         setTimeout(() => {
-            closeModal('modalDocumentos');
-
             editingDocId = null;
             resetModal('doc');
 
@@ -137,15 +133,6 @@
             });
 
             onCategoryChange('doc');
-
-            modal.style.display = 'flex';
-            modal.style.opacity = '0';
-            modal.style.transform = 'scale(0.95)';
-
-            setTimeout(() => {
-                modal.style.transition = 'all 0.3s ease';
-                modal.style.opacity = '1';
-                modal.style.transform = 'scale(1)';
-            }, 50);
+            openFormDrawer('modalDocumentos');
         }, 200);
     }
