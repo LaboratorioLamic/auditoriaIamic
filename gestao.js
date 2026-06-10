@@ -21,7 +21,7 @@
             descricao: document.getElementById('ativDescricao').value,
             setor: document.getElementById('ativSetor').value,
             categoria: document.getElementById('ativCategoria').value,
-            subcategoria: document.getElementById('ativSub').value,
+            subcategoria: '',
             status: document.getElementById('ativStatus').value,
             dataInicio: document.getElementById('ativDataInicio').value,
             dataConclusao: document.getElementById('ativDataConclusao').value,
@@ -78,7 +78,7 @@
             descricao: document.getElementById('ativDescricao').value,
             setor: document.getElementById('ativSetor').value,
             categoria: document.getElementById('ativCategoria').value,
-            subcategoria: document.getElementById('ativSub').value,
+            subcategoria: '',
             status: document.getElementById('ativStatus').value,
             dataInicio: document.getElementById('ativDataInicio').value,
             dataConclusao: document.getElementById('ativDataConclusao').value,
@@ -111,7 +111,7 @@
             document.getElementById('ativDescricao').value = formData.descricao;
             document.getElementById('ativSetor').value = formData.setor;
             document.getElementById('ativCategoria').value = formData.categoria;
-            document.getElementById('ativSub').value = formData.subcategoria;
+            // subcategoria removida da interface
             document.getElementById('ativStatus').value = formData.status;
             document.getElementById('ativDataInicio').value = formData.dataInicio;
             document.getElementById('ativDataConclusao').value = formData.dataConclusao;

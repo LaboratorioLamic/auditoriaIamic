@@ -44,14 +44,12 @@
 
 <div id="loginOverlay">
     <div class="login-box" id="loginBox">
-        <i class="fa-solid fa-lock fa-3x" style="color:var(--primary); margin-bottom:16px;"></i>
+        <i class="fa-solid fa-lock" style="color:#fff; display:flex; align-items:center; justify-content:center; width:56px; height:56px; background:linear-gradient(135deg,#2563eb,#1d4ed8); border-radius:16px; margin:0 auto 20px; font-size:22px; box-shadow:0 8px 24px rgba(37,99,235,0.35);"></i>
         <h2>Acesso Restrito</h2>
-        <p>Digite seu usuário e senha para acessar o sistema.</p>
-        
+        <p>Insira suas credenciais para acessar o sistema.</p>
         <input type="text" id="userInput" class="login-input" placeholder="Usuário" autofocus>
         <input type="password" id="passwordInput" class="login-input" placeholder="Senha">
-        <button class="btn-login" id="btnLogin" onclick="checkLogin()">Entrar</button>
-        
+        <button class="btn-login" id="btnLogin" onclick="checkLogin()"><i class="fas fa-arrow-right-to-bracket"></i> Entrar</button>
         <div id="timerDisplay"></div>
         <div id="loadingText"><i class="fas fa-spinner fa-spin"></i> Conectando ao servidor...</div>
     </div>
@@ -59,21 +57,28 @@
 
 <div class="sidebar-backdrop" onclick="toggleSidebar()"></div>
 <aside class="sidebar">
-    <div class="sidebar-logo"><i class="fa-solid fa-layer-group"></i> Auditoria LAMIC</div>
-    <div class="sidebar-divider"></div>
-    <button id="tabDashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</button> 
-    <div class="sidebar-divider"></div>
-    <button id="tabAtividades"><i class="fa-solid fa-list-check"></i> Gestão de Atividades</button>
-    <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Auditoria</button>
-    <button id="tabTreinamentos"><i class="fa-solid fa-graduation-cap"></i> Treinamentos</button>
-    <button id="tabDocumentos"><i class="fa-solid fa-file-alt"></i> Documentos</button> 
-    <div class="sidebar-divider"></div>
-    <button id="tabBackup"><i class="fa-solid fa-database"></i> Backup</button>
-    <button id="tabConfiguracoes" style="display:none;"><i class="fa-solid fa-gear"></i> Configurações</button>
+    <div class="sidebar-logo">
+        <i class="fa-solid fa-layer-group"></i>
+        Auditoria LAMIC
+    </div>
+    <nav>
+        <div class="sidebar-group-label">Visão Geral</div>
+        <button id="tabDashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</button>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-group-label">Módulos</div>
+        <button id="tabAtividades"><i class="fa-solid fa-list-check"></i> Atividades</button>
+        <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Auditoria</button>
+        <button id="tabTreinamentos"><i class="fa-solid fa-graduation-cap"></i> Treinamentos</button>
+        <button id="tabDocumentos"><i class="fa-solid fa-file-alt"></i> Documentos</button>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-group-label">Sistema</div>
+        <button id="tabBackup"><i class="fa-solid fa-database"></i> Backup</button>
+        <button id="tabConfiguracoes" style="display:none;"><i class="fa-solid fa-gear"></i> Configurações</button>
+    </nav>
     <div id="currentuserBox" class="sidebar-user" style="display:none;">
         <i class="fa-solid fa-user-circle"></i>
         <span id="currentuserLabel"></span>
-        <button id="btnLogout" title="Sair" style="margin-left:auto; background:transparent; border:none; color:#e5e7eb; cursor:pointer; padding:4px; border-radius:6px;">
+        <button id="btnLogout" title="Sair">
             <i class="fa-solid fa-power-off"></i>
         </button>
     </div>
@@ -127,15 +132,12 @@
                         <option value="">Status: Todos</option>
                     </select>
 
-                    <!-- Selects ocultos para Setor, Categoria e Subcategoria -->
+                    <!-- Selects ocultos para Setor e Categoria -->
                     <select id="fDashSetor" class="filter-input" style="display:none;" onchange="onFilterDashboardChange()">
                         <option value="">Setor: Todos</option>
                     </select>
                     <select id="fDashCat" class="filter-input" style="display:none;" onchange="onFilterDashboardChange()">
                         <option value="">Categoria: Todas</option>
-                    </select>
-                    <select id="fDashSub" class="filter-input" style="display:none;" onchange="onFilterDashboardChange()">
-                        <option value="">Subcategoria: Todas</option>
                     </select>
                     
                     <div class="date-controls">
@@ -177,8 +179,6 @@
                                     <label style="font-size:12px;color:var(--text-light);margin:0">Categoria</label>
                                     <select id="dropDashCat" class="filter-input" onchange="onDropdownFilterChangeDashboard('categoria')"></select>
 
-                                    <label style="font-size:12px;color:var(--text-light);margin:0">Subcategoria</label>
-                                    <select id="dropDashSub" class="filter-input" onchange="onDropdownFilterChangeDashboard('subcategoria')"></select>
                                 </div>
                             </div>
                         </div>
@@ -296,9 +296,6 @@
                     <select id="fAuditCat" class="filter-input" onchange="onFilterCategoryChange('Audit')" style="display:none;">
                         <option value="">Categoria: Todas</option>
                     </select>
-                    <select id="fAuditSub" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
-                        <option value="">Subcategoria: Todas</option>
-                    </select>
                     <select id="fAuditResponsavel" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Responsável: Todos</option>
                     </select>
@@ -347,9 +344,6 @@
                     <select id="fTrainCat" class="filter-input" onchange="onFilterCategoryChange('Train')" style="display:none;">
                         <option value="">Categoria: Todas</option>
                     </select>
-                    <select id="fTrainSub" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
-                        <option value="">Subcategoria: Todas</option>
-                    </select>
                     <select id="fTrainResponsavel" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Responsável: Todos</option>
                     </select>
@@ -394,9 +388,6 @@
                     </select>
                     <select id="fAtivCat" class="filter-input" onchange="onFilterCategoryChange('Ativ')" style="display:none;">
                         <option value="">Categoria: Todas</option>
-                    </select>
-                    <select id="fAtivSub" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
-                        <option value="">Subcategoria: Todas</option>
                     </select>
                     <select id="fAtivResponsavel" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Responsável: Todos</option>
@@ -446,9 +437,6 @@
                     </select>
                     <select id="fDocCat" class="filter-input" onchange="onFilterCategoryChange('Doc')" style="display:none;">
                         <option value="">Categoria: Todas</option>
-                    </select>
-                    <select id="fDocSub" class="filter-input" onchange="closeFilters(); renderCards()" style="display:none;">
-                        <option value="">Subcategoria: Todas</option>
                     </select>
                     <select id="fDocResponsavel" class="filter-input" onchange="closeFilters(); renderCards()">
                         <option value="">Responsável: Todos</option>
@@ -510,8 +498,6 @@
                                     <label style="font-size:12px;color:var(--text-light);margin:0">Categoria</label>
                                     <select id="dropCat" class="filter-input" onchange="onDropdownFilterChange('categoria')"></select>
 
-                                    <label style="font-size:12px;color:var(--text-light);margin:0">Subcategoria</label>
-                                    <select id="dropSub" class="filter-input" onchange="onDropdownFilterChange('subcategoria')"></select>
                                 </div>
                             </div>
                         </div>
@@ -686,13 +672,6 @@
                 </div>
             </div>
             <div class="field-group">
-                <label>Subcategoria</label>
-                <div class="select-wrapper">
-                    <select id="auditSub"></select>
-                    <button onclick="openListManager('subcategorias')"><i class="fas fa-plus"></i></button>
-                </div>
-            </div>
-            <div class="field-group">
                 <label>Status</label>
                 <div class="select-wrapper">
                     <select id="auditStatus"></select>
@@ -776,13 +755,6 @@
                 <div class="select-wrapper">
                     <select id="trainCategoria" onchange="onCategoryChange('train')"></select>
                     <button onclick="openListManager('categorias')"><i class="fas fa-plus"></i></button>
-                </div>
-            </div>
-            <div class="field-group">
-                <label>Subcategoria</label>
-                <div class="select-wrapper">
-                    <select id="trainSub"></select>
-                    <button onclick="openListManager('subcategorias')"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
             <div class="field-group">
@@ -889,13 +861,6 @@
                 </div>
             </div>
             <div class="field-group">
-                <label>Subcategoria</label>
-                <div class="select-wrapper">
-                    <select id="ativSub"></select>
-                    <button onclick="openListManager('subcategorias')"><i class="fas fa-plus"></i></button>
-                </div>
-            </div>
-            <div class="field-group">
                 <label>Status</label>
                 <div class="select-wrapper">
                     <select id="ativStatus"></select>
@@ -979,13 +944,6 @@
                 </div>
             </div>
             <div class="field-group">
-                <label>Subcategoria</label>
-                <div class="select-wrapper">
-                    <select id="docSub"></select>
-                    <button onclick="openListManager('subcategorias')"><i class="fas fa-plus"></i></button>
-                </div>
-            </div>
-            <div class="field-group">
                 <label>Status</label>
                 <div class="select-wrapper">
                     <select id="docStatus"></select>
@@ -1045,7 +1003,10 @@
 
 <div class="modal" id="viewModal">
     <div class="modal-content">
-        <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+        <div style="display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-bottom:16px;">
+            <button class="btn-history-trigger" id="btnOpenHistory" onclick="openHistoryDrawer()" title="Histórico de Alterações">
+                <i class="fas fa-clock-rotate-left"></i>
+            </button>
             <button class="btn-close" onclick="closeModal('viewModal')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
         </div>
         <div id="viewContent"></div>
@@ -1054,6 +1015,31 @@
             <button class="btn-edit" id="btnViewEdit" onclick="editCurrentViewItem()" style="display:none;">Editar</button>
         </div>
     </div>
+</div>
+
+<!-- DRAWER HISTÓRICO -->
+<div class="history-drawer-backdrop" id="historyDrawerBackdrop" onclick="closeHistoryDrawer()"></div>
+<div class="history-drawer" id="historyDrawer">
+    <div class="history-drawer-header">
+        <div class="history-drawer-header-left">
+            <div class="history-drawer-icon"><i class="fas fa-clock-rotate-left"></i></div>
+            <div>
+                <div class="history-drawer-title">Histórico de Alterações</div>
+                <div class="history-drawer-subtitle">Rastreabilidade Geral</div>
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <button class="history-drawer-cal" title="Filtrar por data" id="btnHistoryCalendar" onclick="toggleHistoryDateFilter()"><i class="fas fa-calendar-alt"></i></button>
+            <button class="history-drawer-close" onclick="closeHistoryDrawer()"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+    <div class="history-drawer-date-filter" id="historyDateFilter" style="display:none;">
+        <input type="date" id="histFilterDateIni" onchange="renderHistoryDrawer()">
+        <span style="color:#94a3b8; font-size:12px;">até</span>
+        <input type="date" id="histFilterDateFim" onchange="renderHistoryDrawer()">
+    </div>
+    <div class="history-drawer-body" id="historyDrawerBody"></div>
+    <div class="history-drawer-pagination" id="historyDrawerPagination"></div>
 </div>
 
 <div class="modal" id="historyViewModal">

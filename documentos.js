@@ -34,7 +34,7 @@
             descricao: document.getElementById('docDescricao').value,
             setor: document.getElementById('docSetor').value,
             categoria: document.getElementById('docCategoria').value,
-            subcategoria: document.getElementById('docSub').value,
+            subcategoria: '',
             status: document.getElementById('docStatus').value,
             dataCriacao,
             docIntervalo,

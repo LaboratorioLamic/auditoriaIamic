@@ -67,7 +67,7 @@
             descricao: document.getElementById('trainDescricao').value,
             setor: document.getElementById('trainSetor').value,
             categoria: document.getElementById('trainCategoria').value,
-            subcategoria: document.getElementById('trainSub').value,
+            subcategoria: '',
             status: document.getElementById('trainStatus').value,
             dataPublicacao: document.getElementById('trainDataPublicacao').value,
             periodicidade: parseInt(document.getElementById('trainPeriodicidade').value) || 0,
@@ -147,7 +147,7 @@
             descricao: document.getElementById('trainDescricao').value,
             setor: document.getElementById('trainSetor').value,
             categoria: document.getElementById('trainCategoria').value,
-            subcategoria: document.getElementById('trainSub').value,
+            subcategoria: '',
             status: document.getElementById('trainStatus').value,
             dataPublicacao: document.getElementById('trainDataPublicacao').value,
             periodicidade: parseInt(document.getElementById('trainPeriodicidade').value) || 0,
@@ -184,7 +184,7 @@
             document.getElementById('trainDescricao').value = formData.descricao;
             document.getElementById('trainSetor').value = formData.setor;
             document.getElementById('trainCategoria').value = formData.categoria;
-            document.getElementById('trainSub').value = formData.subcategoria;
+            // subcategoria removida da interface
             document.getElementById('trainStatus').value = formData.status;
             document.getElementById('trainDataPublicacao').value = formData.dataPublicacao;
             document.getElementById('trainPeriodicidade').value = formData.periodicidade;

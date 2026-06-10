@@ -119,7 +119,6 @@ function _kbGetFilteredItems() {
 
     const setor      = val('fAtivSetor');
     const cat        = val('fAtivCat');
-    const sub        = val('fAtivSub');
     const stat       = val('fAtivStatus');
     const marcador   = val('fAtivMarcador');
     const responsavel = val('fAtivResponsavel');
@@ -132,7 +131,6 @@ function _kbGetFilteredItems() {
     data = data.filter(item => {
         if (setor    && item.setor      !== setor)    return false;
         if (cat      && item.categoria  !== cat)      return false;
-        if (sub      && item.subcategoria !== sub)    return false;
         if (stat     && item.status     !== stat)     return false;
         if (marcador && item.marcador   !== marcador) return false;
         if (revisor  && item.revisor    !== revisor)  return false;
@@ -176,13 +174,22 @@ function renderKanban() {
     statuses.forEach((status, colIdx) => {
         const isFinal     = _kbIsFinalStatus(status.name);
         const color       = _kbResolveColor(status.color);
-        const colItems    = data.filter(i => i.status === status.name);
+        const colItems    = data.filter(i => i.status === status.name)
+            .sort((a, b) => {
+                const da = a.dataConclusao ? new Date(a.dataConclusao) : new Date(8640000000000000);
+                const db = b.dataConclusao ? new Date(b.dataConclusao) : new Date(8640000000000000);
+                return da - db;
+            });
         const isFirst     = colIdx === 0 && !isFinal;
         const nextIsFinal = !isFinal && _kbNextIsFinalOrEnd(statuses, colIdx);
 
         const col = document.createElement('div');
         col.className = 'kanban-col';
         col.dataset.status = status.name;
+
+        const colKey = 'kb_col_collapsed_' + status.name;
+        const isCollapsed = localStorage.getItem(colKey) === '1';
+        if (isCollapsed) col.classList.add('kanban-col-collapsed');
 
         col.innerHTML = `
             <div class="kanban-col-header" style="--col-color:${color}">
@@ -191,34 +198,40 @@ function renderKanban() {
                     <span class="kanban-col-name">${_kbHtml(status.name)}</span>
                     <span class="kanban-col-count">${colItems.length}</span>
                 </div>
-                <div class="kanban-col-ctrl">
-                    ${!isFinal ? `
-                        <button class="kanban-ctrl-btn" title="Mover esquerda"
-                            onclick="moveKanbanColumn('${_kbHtml(status.name)}', -1)"
-                            ${isFirst ? 'disabled' : ''}>
-                            <i class="fas fa-arrow-left"></i>
+                <div class="kanban-col-bottom">
+                    <div class="kanban-col-ctrl">
+                        ${!isFinal ? `
+                            <button class="kanban-ctrl-btn" title="Mover esquerda"
+                                onclick="moveKanbanColumn('${_kbHtml(status.name)}', -1)"
+                                ${isFirst ? 'disabled' : ''}>
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <button class="kanban-ctrl-btn" title="Mover direita"
+                                onclick="moveKanbanColumn('${_kbHtml(status.name)}', 1)"
+                                ${nextIsFinal ? 'disabled' : ''}>
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        ` : '<span class="kanban-locked-badge"><i class="fas fa-lock"></i></span>'}
+                        <button class="kanban-ctrl-btn" title="Editar coluna" onclick="startKanbanRename('${_kbHtml(status.name)}')">
+                            <i class="fas fa-pen"></i>
                         </button>
-                        <button class="kanban-ctrl-btn" title="Mover direita"
-                            onclick="moveKanbanColumn('${_kbHtml(status.name)}', 1)"
-                            ${nextIsFinal ? 'disabled' : ''}>
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                    ` : '<span class="kanban-locked-badge"><i class="fas fa-lock"></i></span>'}
-                    <button class="kanban-ctrl-btn" title="Editar coluna" onclick="startKanbanRename('${_kbHtml(status.name)}')">
-                        <i class="fas fa-pen"></i>
+                        ${canEdit ? `
+                        <button class="kanban-ctrl-btn kanban-ctrl-delete" title="Excluir coluna"
+                            onclick="openKanbanDeleteCol('${_kbHtml(status.name)}')">
+                            <i class="fas fa-trash"></i>
+                        </button>` : ''}
+                    </div>
+                    <button class="kanban-ctrl-btn kanban-collapse-btn" title="Expandir/Recolher"
+                        onclick="toggleKanbanCol(this, '${_kbHtml(status.name)}')">
+                        <i class="fas fa-chevron-${isCollapsed ? 'down' : 'up'}"></i>
                     </button>
-                    ${canEdit ? `
-                    <button class="kanban-ctrl-btn kanban-ctrl-delete" title="Excluir coluna"
-                        onclick="openKanbanDeleteCol('${_kbHtml(status.name)}')">
-                        <i class="fas fa-trash"></i>
-                    </button>` : ''}
                 </div>
             </div>
             <div class="kanban-col-body"
                  ondragover="kbDragOver(event)"
                  ondrop="kbDrop(event,'${_kbHtml(status.name)}')"
                  ondragleave="kbDragLeave(event)">
-                ${colItems.length === 0 ? '<div class="kanban-drop-hint"><i class="fas fa-inbox"></i><span>Arraste um card aqui</span></div>' : ''}
+                <div class="kanban-drop-hint"${colItems.length > 0 ? ' style="display:none"' : ''}><i class="fas fa-inbox"></i><span>Arraste um card aqui</span></div>
                 ${colItems.map(i => _kbRenderCard(i)).join('')}
             </div>`;
 
@@ -625,4 +638,16 @@ function confirmKanbanDeleteCol(statusName) {
 
     saveAll();
     renderKanban();
+}
+
+function toggleKanbanCol(btn, statusName) {
+    const col = btn.closest('.kanban-col');
+    if (!col) return;
+    const colKey = 'kb_col_collapsed_' + statusName;
+    const collapsed = col.classList.toggle('kanban-col-collapsed');
+    localStorage.setItem(colKey, collapsed ? '1' : '0');
+    const icon = btn.querySelector('i');
+    if (icon) {
+        icon.className = collapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+    }
 }

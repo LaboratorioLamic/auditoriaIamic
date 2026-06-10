@@ -31,7 +31,7 @@
             descricao: document.getElementById('auditDescricao').value,
             setor: document.getElementById('auditSetor').value,
             categoria: document.getElementById('auditCategoria').value,
-            subcategoria: document.getElementById('auditSub').value,
+            subcategoria: '',
             status: document.getElementById('auditStatus').value,
             dataPublicacao: document.getElementById('auditDataPublicacao').value,
             dataPrevisao: document.getElementById('auditDataPrevisao').value,
@@ -92,7 +92,7 @@
             descricao: document.getElementById('auditDescricao').value,
             setor: document.getElementById('auditSetor').value,
             categoria: document.getElementById('auditCategoria').value,
-            subcategoria: document.getElementById('auditSub').value,
+            subcategoria: '',
             status: document.getElementById('auditStatus').value,
             dataPublicacao: document.getElementById('auditDataPublicacao').value,
             dataPrevisao: document.getElementById('auditDataPrevisao').value,
@@ -126,7 +126,7 @@
             document.getElementById('auditDescricao').value = formData.descricao;
             document.getElementById('auditSetor').value = formData.setor;
             document.getElementById('auditCategoria').value = formData.categoria;
-            document.getElementById('auditSub').value = formData.subcategoria;
+            // subcategoria removida da interface
             document.getElementById('auditStatus').value = formData.status;
             document.getElementById('auditDataPublicacao').value = formData.dataPublicacao;
             document.getElementById('auditDataPrevisao').value = formData.dataPrevisao;

@@ -613,14 +613,12 @@
     function populateFiltersDropdownDashboard() {
         const ids = {
             setor: 'fDashSetor',
-            categoria: 'fDashCat',
-            subcategoria: 'fDashSub'
+            categoria: 'fDashCat'
         };
 
         const dropIds = {
             setor: 'dropDashSetor',
-            categoria: 'dropDashCat',
-            subcategoria: 'dropDashSub'
+            categoria: 'dropDashCat'
         };
 
         // Copia opções e valor dos selects reais para os selects do dropdown
@@ -641,23 +639,17 @@
     function onDropdownFilterChangeDashboard(type) {
         const realIds = {
             setor: 'fDashSetor',
-            categoria: 'fDashCat',
-            subcategoria: 'fDashSub'
+            categoria: 'fDashCat'
         };
 
-        const dropIdMap = { setor: 'dropDashSetor', categoria: 'dropDashCat', subcategoria: 'dropDashSub' };
+        const dropIdMap = { setor: 'dropDashSetor', categoria: 'dropDashCat' };
         const dropEl = document.getElementById(dropIdMap[type]);
         const realEl = document.getElementById(realIds[type]);
         if (!dropEl || !realEl) return;
 
-        // Atualiza o select real e re-renderiza
         try { realEl.value = dropEl.value; } catch(_) { realEl.selectedIndex = 0; }
 
-        // Se a categoria mudou, atualiza subcategorias reais antes de repopular o dropdown
         if (type === 'categoria') {
-            // Atualiza as opções de subcategoria baseado na categoria selecionada
-            updateDashboardSubcategorias();
-            // Re-popula o dropdown para refletir novas opções de sub
             populateFiltersDropdownDashboard();
         }
 
@@ -1628,18 +1620,16 @@
             dateField = 'dataPrevisao';
             getSortDate = (it) => it.dataPrevisao;
             getDeadlineDate = (it) => it.dataPrevisao;
-            filterSetorId = 'fAuditSetor'; 
+            filterSetorId = 'fAuditSetor';
             filterCatId = 'fAuditCat';
-            filterSubcatId = 'fAuditSub';
-            
-            const setor = document.getElementById(filterSetorId).value; 
-            const cat = document.getElementById(filterCatId).value;
-            const sub = document.getElementById(filterSubcatId).value;
-            const stat = document.getElementById('fAuditStatus').value;
+
+            const setor = document.getElementById(filterSetorId)?.value || '';
+            const cat = document.getElementById(filterCatId)?.value || '';
+            const stat = document.getElementById('fAuditStatus')?.value || '';
             const marcador = document.getElementById('fAuditMarcador')?.value || '';
             const responsavel = document.getElementById('fAuditResponsavel')?.value || '';
-            const revisor = document.getElementById('fAuditRevisor')?.value || ''; // CORREÇÃO: Captura Revisor
-            const dateType = document.getElementById('fAuditDateType').value;
+            const revisor = document.getElementById('fAuditRevisor')?.value || '';
+            const dateType = document.getElementById('fAuditDateType')?.value || 'all';
             
             data = audits;
             
@@ -1690,11 +1680,9 @@
             getDeadlineDate = (it) => it.dataPrevisao;
             filterSetorId = 'fTrainSetor';
             filterCatId = 'fTrainCat';
-            filterSubcatId = 'fTrainSub';
 
             const setor = document.getElementById(filterSetorId)?.value || '';
             const cat = document.getElementById(filterCatId)?.value || '';
-            const sub = document.getElementById(filterSubcatId)?.value || '';
             const stat = document.getElementById('fTrainStatus')?.value || '';
             const marcador = document.getElementById('fTrainMarcador')?.value || '';
             const responsavel = document.getElementById('fTrainResponsavel')?.value || '';
@@ -1714,7 +1702,6 @@
             data = data.filter(item => {
                 if (setor && item.setor !== setor) return false;
                 if (cat && item.categoria !== cat) return false;
-                if (sub && item.subcategoria !== sub) return false;
                 if (stat && item.status !== stat) return false;
                 if (marcador && item.marcador !== marcador) return false;
 
@@ -1746,18 +1733,16 @@
             dateField = 'dataConclusao';
             getSortDate = (it) => it.dataConclusao;
             getDeadlineDate = (it) => it.dataConclusao;
-            filterSetorId = 'fAtivSetor'; 
+            filterSetorId = 'fAtivSetor';
             filterCatId = 'fAtivCat';
-            filterSubcatId = 'fAtivSub';
-    
-            const setor = document.getElementById(filterSetorId).value; 
-            const cat = document.getElementById(filterCatId).value;
-            const sub = document.getElementById(filterSubcatId).value;
-            const stat = document.getElementById('fAtivStatus').value;
+
+            const setor = document.getElementById(filterSetorId)?.value || '';
+            const cat = document.getElementById(filterCatId)?.value || '';
+            const stat = document.getElementById('fAtivStatus')?.value || '';
             const marcador = document.getElementById('fAtivMarcador')?.value || '';
             const responsavel = document.getElementById('fAtivResponsavel')?.value || '';
-            const revisor = document.getElementById('fAtivRevisor')?.value || ''; // CORREÇÃO: Captura Revisor
-            const dateType = document.getElementById('fAtivDateType').value;
+            const revisor = document.getElementById('fAtivRevisor')?.value || '';
+            const dateType = document.getElementById('fAtivDateType')?.value || 'all';
     
             data = activities;
             
@@ -1771,23 +1756,22 @@
             }
             
             data = data.filter(item => {
-                if (setor && item.setor !== setor) return false; 
+                if (setor && item.setor !== setor) return false;
                 if (cat && item.categoria !== cat) return false;
-                if (sub && item.subcategoria !== sub) return false;
                 if (stat && item.status !== stat) return false;
                 if (marcador && item.marcador !== marcador) return false;
-                if (revisor && item.revisor !== revisor) return false; // CORREÇÃO: Filtro Revisor
-                
+                if (revisor && item.revisor !== revisor) return false;
+
                 if (responsavel) {
                     const itemResponsavel = normalizeResponsavel(item.responsavel);
                     const filterLower = responsavel.toLowerCase();
                     if (!itemResponsavel || !itemResponsavel.includes(filterLower)) return false;
                 }
-    
+
                 if (dateType !== 'all') {
                     const itemDate = new Date(item[dateField]);
                     if (dateType === 'month') {
-                        if (itemDate.getMonth() !== parseInt(document.getElementById('fAtivMonth').value) || 
+                        if (itemDate.getMonth() !== parseInt(document.getElementById('fAtivMonth').value) ||
                             itemDate.getFullYear() !== parseInt(document.getElementById('fAtivYearForMonth').value)) return false;
                     } else if (dateType === 'year') {
                         if (itemDate.getFullYear() !== parseInt(document.getElementById('fAtivYearOnly').value)) return false;
@@ -1867,18 +1851,16 @@
             dateField = 'dataProximaRevisao'; 
             getSortDate = (it) => getDocumentCardDate(it); // Data (publicação)
             getDeadlineDate = (it) => getDocumentDeadlineDate(it);
-            filterSetorId = 'fDocSetor'; 
+            filterSetorId = 'fDocSetor';
             filterCatId = 'fDocCat';
-            filterSubcatId = 'fDocSub';
-    
-            const setor = document.getElementById(filterSetorId).value; 
-            const cat = document.getElementById(filterCatId).value;
-            const sub = document.getElementById(filterSubcatId).value;
-            const stat = document.getElementById('fDocStatus').value;
+
+            const setor = document.getElementById(filterSetorId)?.value || '';
+            const cat = document.getElementById(filterCatId)?.value || '';
+            const stat = document.getElementById('fDocStatus')?.value || '';
             const marcador = document.getElementById('fDocMarcador')?.value || '';
             const responsavel = document.getElementById('fDocResponsavel')?.value || '';
-            const revisor = document.getElementById('fDocRevisor')?.value || ''; // CORREÇÃO: Captura Revisor
-            const dateType = document.getElementById('fDocDateType').value;
+            const revisor = document.getElementById('fDocRevisor')?.value || '';
+            const dateType = document.getElementById('fDocDateType')?.value || 'all';
     
             data = documents;
             
@@ -1892,21 +1874,20 @@
             }
             
             data = data.filter(item => {
-                if (setor && item.setor !== setor) return false; 
+                if (setor && item.setor !== setor) return false;
                 if (cat && item.categoria !== cat) return false;
-                if (sub && item.subcategoria !== sub) return false;
                 if (stat && item.status !== stat) return false;
                 if (marcador && item.marcador !== marcador) return false;
-                if (revisor && item.revisor !== revisor) return false; // CORREÇÃO: Filtro Revisor
-                
+                if (revisor && item.revisor !== revisor) return false;
+
                 if (responsavel) {
                     const itemResponsavel = normalizeResponsavel(item.responsavel);
                     const filterLower = responsavel.toLowerCase();
                     if (!itemResponsavel || !itemResponsavel.includes(filterLower)) return false;
                 }
-    
+
                 if (dateType !== 'all') {
-                    const dateForFilter = getDocumentCardDate(item); // Data (publicação)
+                    const dateForFilter = getDocumentCardDate(item);
                     const itemDate = new Date(dateForFilter);
                     if (dateType === 'month') {
                         if (itemDate.getMonth() !== parseInt(document.getElementById('fDocMonth').value) || 
@@ -2021,20 +2002,18 @@
             };
     
             let specificContent = '';
-            const subcatOrItemValue = currentTab === 'manutencao' ? item.item : item.subcategoria;
-            const subcategoryDisplay = subcatOrItemValue ? ` (${subcatOrItemValue})` : '';
-    
+
                 // Função para formatar responsável para exibição
                 const formatResponsavel = (responsavel) => {
                     if (!responsavel) return '';
                     return String(responsavel).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                 };
-    
+
             if (currentTab === 'auditoria') {
                 const responsaveis = formatResponsavel(item.responsavel);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
-                    <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
+                    <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
                     ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
                     <div class="card-info-row"><i class="far fa-calendar"></i> <span>Pub: <strong>${formatBR(item.dataPublicacao)}</strong></span></div>
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>
@@ -2053,7 +2032,7 @@
                 const responsaveis = formatResponsavel(item.responsavel);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
-                    <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
+                    <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
                     ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
                     <div class="card-info-row"><i class="far fa-calendar"></i> <span>Inicio: <strong>${formatBR(item.dataInicio)}</strong></span></div>
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Fim: <strong>${formatBR(item.dataConclusao)}</strong></span></div>
@@ -2073,7 +2052,7 @@
                 const responsaveis = formatResponsavel(item.responsavel);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
-                    <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'} ${subcategoryDisplay}</span></div>
+                    <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
                     ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isNA ? 'N/A' : formatBR(item.dataProximaRevisao)}</strong></span></div>
                 `;
@@ -2424,7 +2403,7 @@
         document.getElementById('fDashArea').value = "";
         document.getElementById('fDashSetor').value = "";
         document.getElementById('fDashCat').value = "";
-        document.getElementById('fDashSub').value = "";
+        // subcategoria removida
         document.getElementById('fDashStatus').value = "";
         document.getElementById('fDashResponsavel').value = "";
         document.getElementById('fDashRevisor').value = "";
@@ -2632,12 +2611,12 @@
     document.getElementById('fDashSetor').innerHTML = makeFilterOpts(filteredSetores, "Setor: Todos");
     // Categoria será populada dinamicamente por updateDashboardFilterOptions
     document.getElementById('fDashCat').innerHTML = '<option value="">Categoria: Todas</option>';
-    document.getElementById('fDashSub').innerHTML = '<option value="">Subcategoria: Todas</option>';
+    // subcategoria removida
     document.getElementById('fDashStatus').innerHTML = makeFilterOpts(unifiedStatusnames, "Status: Todos");
     if (currentValues.dash.area != null) document.getElementById('fDashArea').value = currentValues.dash.area;
     if (currentValues.dash.setor != null) document.getElementById('fDashSetor').value = currentValues.dash.setor;
     if (currentValues.dash.cat != null) document.getElementById('fDashCat').value = currentValues.dash.cat;
-    if (currentValues.dash.sub != null) document.getElementById('fDashSub').value = currentValues.dash.sub;
+    // subcategoria removida da interface
     if (currentValues.dash.status != null) document.getElementById('fDashStatus').value = currentValues.dash.status;
     // Restaura filtros de Data e Responsável/Revisor do Dashboard (serão atualizados dinamicamente em updateDashboardFilterOptions)
     if (currentValues.dash.dateType != null) document.getElementById('fDashDateType').value = currentValues.dash.dateType;
@@ -2827,9 +2806,9 @@
         return;
     }
     
-    // Mostra o campo de subcategoria se uma categoria foi selecionada
+    // Subcategoria removida da interface — mantém sempre oculto
     if (subcatFieldGroup) {
-        subcatFieldGroup.style.display = 'block';
+        subcatFieldGroup.style.display = 'none';
     }
     
     if (!subcatSelect) return; 
@@ -3665,7 +3644,8 @@ function resetModal(prefix) {
             document.getElementById('auditSetor').value = item.setor || ''; 
             document.getElementById('auditCategoria').value = item.categoria;
             onCategoryChange('audit'); 
-            document.getElementById('auditSub').value = item.subcategoria || ''; 
+            var auditSubEl = document.getElementById('auditSub');
+            if (auditSubEl) auditSubEl.value = item.subcategoria || '';
             document.getElementById('auditStatus').value = item.status;
             document.getElementById('auditDataPublicacao').value = item.dataPublicacao;
             document.getElementById('auditDataPrevisao').value = item.dataPrevisao;
@@ -3697,8 +3677,9 @@ function resetModal(prefix) {
             document.getElementById('ativDescricao').value = item.descricao;
             document.getElementById('ativSetor').value = item.setor || ''; 
             document.getElementById('ativCategoria').value = item.categoria;
-            onCategoryChange('ativ'); 
-            document.getElementById('ativSub').value = item.subcategoria || ''; 
+            onCategoryChange('ativ');
+            var ativSubEl = document.getElementById('ativSub');
+            if (ativSubEl) ativSubEl.value = item.subcategoria || '';
             document.getElementById('ativStatus').value = item.status;
             document.getElementById('ativDataInicio').value = item.dataInicio;
             document.getElementById('ativDataConclusao').value = item.dataConclusao;
@@ -3725,7 +3706,8 @@ function resetModal(prefix) {
             document.getElementById('trainSetor').value = item.setor || ''; 
             document.getElementById('trainCategoria').value = item.categoria;
             onCategoryChange('train'); 
-            document.getElementById('trainSub').value = item.subcategoria || ''; 
+            var trainSubEl = document.getElementById('trainSub');
+            if (trainSubEl) trainSubEl.value = item.subcategoria || '';
             document.getElementById('trainStatus').value = item.status;
             document.getElementById('trainDataPublicacao').value = item.dataPublicacao;
             document.getElementById('trainPeriodicidade').value = item.periodicidade || 0;
@@ -3794,7 +3776,8 @@ function resetModal(prefix) {
             document.getElementById('docSetor').value = item.setor || ''; 
             document.getElementById('docCategoria').value = item.categoria;
             onCategoryChange('doc'); 
-            document.getElementById('docSub').value = item.subcategoria || ''; 
+            var docSubEl = document.getElementById('docSub');
+            if (docSubEl) docSubEl.value = item.subcategoria || '';
             document.getElementById('docStatus').value = item.status;
             document.getElementById('docDataCriacao').value = item.dataCriacao;
             document.getElementById('docIntervalo').value = (item.docIntervalo ?? ''); // permite vazio
@@ -4281,16 +4264,12 @@ function renderViewContent(id, tab) {
     var statusObj = (statusList || []).find(s => s.name === item.status) || { color: 'default' };
     var statusColorVar = colorMap[statusObj.color] || colorMap['default'];
     
-    var subcatOrItemLabel = finalTab === 'manutencao' ? 'Equipamento' : 'Subcategoria';
-    var subcatOrItemValue = finalTab === 'manutencao' ? item.item : item.subcategoria;
-
     // Montagem do Grid de Detalhes
     var detailsGrid = '';
     if (finalTab === 'auditoria') {
         detailsGrid = `
             <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
             <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
             <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
             <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
             <div class="view-item"><label>Auditor</label><div>${item.auditor || 'ND'}</div></div>
@@ -4302,7 +4281,6 @@ function renderViewContent(id, tab) {
         detailsGrid = `
             <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
             <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
             <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
             <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
             <div class="view-item"><label>Data Início</label><div>${formatBR(item.dataInicio)}</div></div>
@@ -4344,7 +4322,6 @@ function renderViewContent(id, tab) {
         detailsGrid = `
             <div class="view-item"><label>Setor</label><div>${item.setor || 'ND'}</div></div>
             <div class="view-item"><label>Categoria</label><div>${item.categoria}</div></div>
-            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'ND'}</div></div>
             <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${item.docIntervalo} dias`}</div></div>
             <div class="view-item"><label>Responsável</label><div>${item.responsavel || 'ND'}</div></div>
             <div class="view-item"><label>Revisor</label><div>${item.revisor || 'ND'}</div></div>
@@ -4459,13 +4436,9 @@ function renderViewContent(id, tab) {
         </div>
     ` : '';
 
-    var historySection = `
-        <div class="view-history">
-            <h4><i class="fas fa-history"></i> Histórico de Edições (${totalItems})</h4>
-            ${historyHtml || '<div style="color:var(--text-light); font-size:13px; padding:10px 0;">Nenhuma alteração registrada.</div>'}
-            ${paginationHtml}
-        </div>
-    `;
+    // Guarda referência para o drawer de histórico
+    window._currentViewId = id;
+    window._currentViewTab = finalTab;
 
     var html = `
         <div class="view-header">
@@ -4480,7 +4453,6 @@ function renderViewContent(id, tab) {
             <div class="view-desc">${(item.descricao || 'Sem descrição.').replace(/\n/g, '<br>')}</div>
         </div>
         ${anexosHtml ? `<div class="view-files" style="margin-top:10px;"><h4>Anexos</h4>${anexosHtml}</div>` : ''}
-        ${historySection}
     `;
     
     document.getElementById('viewContent').innerHTML = html;
@@ -4491,6 +4463,166 @@ function renderViewContent(id, tab) {
         btnEdit.style.display = (userCanEditCards() && !item.deleted) ? 'inline-flex' : 'none';
     }
 }
+
+// --- DRAWER DE HISTÓRICO ---
+window._historyDrawerPage = 1;
+
+window.openHistoryDrawer = function() {
+    var drawer = document.getElementById('historyDrawer');
+    var backdrop = document.getElementById('historyDrawerBackdrop');
+    if (!drawer) return;
+    window._historyDrawerPage = 1;
+    drawer.classList.add('open');
+    backdrop.classList.add('open');
+    renderHistoryDrawer();
+};
+
+window.closeHistoryDrawer = function() {
+    var drawer = document.getElementById('historyDrawer');
+    var backdrop = document.getElementById('historyDrawerBackdrop');
+    if (!drawer) return;
+    drawer.classList.remove('open');
+    backdrop.classList.remove('open');
+};
+
+window.toggleHistoryDateFilter = function() {
+    var el = document.getElementById('historyDateFilter');
+    if (!el) return;
+    el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+};
+
+window.renderHistoryDrawer = function() {
+    var id = window._currentViewId;
+    var finalTab = window._currentViewTab;
+    if (id === undefined || !finalTab) return;
+
+    var item;
+    if (finalTab === 'auditoria') item = audits.find(i => i.id === id);
+    else if (finalTab === 'atividades') item = activities.find(i => i.id === id);
+    else if (finalTab === 'manutencao') item = maintenances.find(i => i.id === id);
+    else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
+    else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
+    if (!item) return;
+
+    var dateIni = document.getElementById('histFilterDateIni') ? document.getElementById('histFilterDateIni').value : '';
+    var dateFim = document.getElementById('histFilterDateFim') ? document.getElementById('histFilterDateFim').value : '';
+
+    var allHistory = (item.historico || []).slice().reverse().map((entry, revIndex) => ({
+        entry,
+        originalIndex: (item.historico.length - 1) - revIndex
+    })).filter(h => !h.entry.deleted);
+
+    if (dateIni) allHistory = allHistory.filter(h => new Date(h.entry.timestamp) >= new Date(dateIni));
+    if (dateFim) allHistory = allHistory.filter(h => new Date(h.entry.timestamp) <= new Date(dateFim + 'T23:59:59'));
+
+    var itemsPerPage = 10;
+    var totalItems = allHistory.length;
+    var totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+    window._historyDrawerPage = Math.min(Math.max(1, window._historyDrawerPage), totalPages);
+    var start = (window._historyDrawerPage - 1) * itemsPerPage;
+    var paginated = allHistory.slice(start, start + itemsPerPage);
+
+    var isAdmin = userIsAdmin();
+
+    var typeColors = {
+        'Criação': '#22c55e',
+        'Criado': '#22c55e',
+        'Edição': '#3b82f6',
+        'Editado': '#3b82f6',
+        'Atualização': '#3b82f6',
+        'Restauração': '#f59e0b',
+    };
+
+    function getTypeColor(acao) {
+        for (var k in typeColors) { if (acao && acao.toLowerCase().includes(k.toLowerCase())) return typeColors[k]; }
+        return '#6b7280';
+    }
+    function getTypeLabel(acao) {
+        if (!acao) return 'AÇÃO';
+        if (acao.toLowerCase().includes('cria')) return 'CRIADO';
+        if (acao.toLowerCase().includes('edit') || acao.toLowerCase().includes('atualiz')) return 'EDITADO';
+        if (acao.toLowerCase().includes('restaur')) return 'RESTAURADO';
+        return 'AÇÃO';
+    }
+
+    var bodyHtml = paginated.length === 0
+        ? '<div class="history-drawer-empty"><i class="fas fa-inbox"></i><p>Nenhuma alteração registrada.</p></div>'
+        : paginated.map((h, idx) => {
+            var date = new Date(h.entry.timestamp);
+            var dateStr = date.toLocaleDateString('pt-BR');
+            var timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            var color = getTypeColor(h.entry.acao);
+            var label = getTypeLabel(h.entry.acao);
+            var usuario = h.entry.usuario || '';
+
+            var detailsArray = [];
+            if (h.entry.detalhes) {
+                if (Array.isArray(h.entry.detalhes)) detailsArray = h.entry.detalhes;
+                else if (typeof h.entry.detalhes === 'object') {
+                    detailsArray = Object.keys(h.entry.detalhes).filter(k => k !== 'silentChanged').map(k => h.entry.detalhes[k]);
+                }
+            }
+
+            var changesHtml = detailsArray.length > 0
+                ? detailsArray.map(d => {
+                    var parts = String(d).match(/^(.+?):\s*(.+?)\s*→\s*(.+)$/);
+                    if (parts) {
+                        return `<div class="hd-change-row">
+                            <span class="hd-change-field">${parts[1]}</span>
+                            <span class="hd-change-from">${parts[2]}</span>
+                            <i class="fas fa-arrow-right hd-change-arrow"></i>
+                            <span class="hd-change-to">${parts[3]}</span>
+                        </div>`;
+                    }
+                    return `<div class="hd-change-row"><span class="hd-change-field" style="color:#6b7280;">${d}</span></div>`;
+                }).join('')
+                : '';
+
+            var deleteBtn = isAdmin
+                ? `<button class="hd-delete-btn" title="Excluir" onclick="event.stopPropagation(); deleteHistoryEntry(${id}, '${finalTab}', ${h.originalIndex})"><i class="fas fa-trash"></i> Excluir Registro</button>`
+                : '';
+
+            var filteredIndex = start + idx;
+            return `
+            <div class="hd-item" onclick="toggleHdItem(this)">
+                <div class="hd-item-top">
+                    <div class="hd-item-dot" style="background:${color}"></div>
+                    <div class="hd-item-content">
+                        <div class="hd-item-meta">
+                            ${usuario ? `<span class="hd-user"><i class="fas fa-user"></i> ${usuario}</span>` : ''}
+                            <span class="hd-badge" style="background:${color}20; color:${color}; border-color:${color}40;">${label}</span>
+                            <span class="hd-date">${dateStr} às ${timeStr}</span>
+                        </div>
+                        <div class="hd-item-title">${h.entry.acao}</div>
+                    </div>
+                    <div class="hd-item-actions">
+                        <button class="hd-view-btn" title="Ver snapshot" onclick="event.stopPropagation(); viewHistoryItem(${id}, '${finalTab}', ${filteredIndex})"><i class="fas fa-eye"></i></button>
+                        <span class="hd-toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                </div>
+                <div class="hd-item-body">
+                    ${changesHtml || '<span style="color:#94a3b8; font-size:12px; font-style:italic;">Sem detalhes adicionais.</span>'}
+                    ${deleteBtn}
+                </div>
+            </div>`;
+        }).join('');
+
+    document.getElementById('historyDrawerBody').innerHTML = bodyHtml;
+
+    var paginationHtml = totalPages > 1 ? `
+        <span style="color:#94a3b8; font-size:12px;">${start + 1}–${Math.min(start + itemsPerPage, totalItems)} de ${totalItems}</span>
+        <div style="display:flex; gap:6px;">
+            <button ${window._historyDrawerPage === 1 ? 'disabled' : ''} onclick="window._historyDrawerPage--; renderHistoryDrawer()"><i class="fas fa-chevron-left"></i> Anterior</button>
+            <button ${window._historyDrawerPage === totalPages ? 'disabled' : ''} onclick="window._historyDrawerPage++; renderHistoryDrawer()">Próximo <i class="fas fa-chevron-right"></i></button>
+        </div>
+    ` : `<span style="color:#94a3b8; font-size:12px;">${totalItems} registro${totalItems !== 1 ? 's' : ''}</span>`;
+
+    document.getElementById('historyDrawerPagination').innerHTML = paginationHtml;
+};
+
+window.toggleHdItem = function(el) {
+    el.classList.toggle('open');
+};
 
 function viewHistoryItem(id, tab, historyIndex) {
     var item;
@@ -4543,15 +4675,11 @@ function viewHistoryItem(id, tab, historyIndex) {
     var statusObj = statusList.find(s => s.name === historicalItem.status) || { color: 'default' };
     var statusColorVar = colorMap[statusObj.color] || colorMap['default'];
     
-    var subcatOrItemLabel = finalTab === 'manutencao' ? 'Equipamento' : 'Subcategoria';
-    var subcatOrItemValue = finalTab === 'manutencao' ? historicalItem.item : historicalItem.subcategoria;
-    
     var detailsGrid = '';
     if (finalTab === 'auditoria') {
         detailsGrid = `
             <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
             <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
-            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'N/A'}</div></div>
             <div class="view-item"><label>Responsável</label><div>${historicalItem.responsavel || 'N/A'}</div></div>
             <div class="view-item"><label>Revisor</label><div>${historicalItem.revisor || 'N/A'}</div></div>
             <div class="view-item"><label>Auditor</label><div>${historicalItem.auditor || 'N/A'}</div></div>
@@ -4562,7 +4690,6 @@ function viewHistoryItem(id, tab, historyIndex) {
         detailsGrid = `
             <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
             <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
-            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'N/A'}</div></div>
             <div class="view-item"><label>Responsável</label><div>${historicalItem.responsavel || 'N/A'}</div></div>
             <div class="view-item"><label>Revisor</label><div>${historicalItem.revisor || 'N/A'}</div></div>
             <div class="view-item"><label>Data Início</label><div>${historicalItem.dataInicio ? formatBR(historicalItem.dataInicio) : 'N/A'}</div></div>
@@ -4600,7 +4727,6 @@ function viewHistoryItem(id, tab, historyIndex) {
         detailsGrid = `
             <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
             <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
-            <div class="view-item"><label>${subcatOrItemLabel}</label><div>${subcatOrItemValue || 'N/A'}</div></div>
             <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${historicalItem.docIntervalo} dias`}</div></div>
             <div class="view-item"><label>Responsável</label><div>${historicalItem.responsavel || 'N/A'}</div></div>
             <div class="view-item"><label>Revisor</label><div>${historicalItem.revisor || 'N/A'}</div></div>
