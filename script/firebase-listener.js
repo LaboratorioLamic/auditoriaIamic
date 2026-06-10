@@ -386,6 +386,7 @@
         else if (category === 'ativ') list = masterLists.ativStatus;
         else if (category === 'mant') list = masterLists.mantStatus;
         else if (category === 'doc') list = masterLists.docStatus;
+        else if (category === 'train') list = masterLists.trainStatus;
 
         const statusObj = (list || []).find(s => s.name === statusname);
         return statusObj ? statusObj.color : 'default';

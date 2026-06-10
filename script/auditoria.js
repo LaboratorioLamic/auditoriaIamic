@@ -45,6 +45,11 @@
             checklist: (typeof getChecklist === 'function') ? getChecklist('audit') : (item.checklist || [])
         };
 
+        if (/conclu/i.test(newItem.status) && !canSetConcluido(newItem.checklist)) {
+            if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de marcar como Concluído.', 'error');
+            return;
+        }
+
         const changes = calculateChanges(originalItem || {}, newItem);
 
         if (!isNew && originalItem) {

@@ -18,6 +18,9 @@
         } else if (currentTab === 'documentos') {
             data = documents;
             tabType = 'doc';
+        } else if (currentTab === 'treinamentos') {
+            data = trainings;
+            tabType = 'train';
         } else if (currentTab === 'dashboard') {
             // Dashboard mostra notificações de todos, respeitando filtros
             const dashboardFilters = getDashboardFilters();
@@ -27,7 +30,8 @@
                 { items: audits, type: 'audit', tabName: 'auditoria' },
                 { items: activities, type: 'ativ', tabName: 'atividades' },
                 { items: maintenances, type: 'mant', tabName: 'manutencao' },
-                { items: documents, type: 'doc', tabName: 'documentos' }
+                { items: documents, type: 'doc', tabName: 'documentos' },
+                { items: trainings, type: 'train', tabName: 'treinamentos' }
             ];
 
             // Aplicar filtro de permissões de setores
@@ -193,6 +197,7 @@
         if (tab === 'atividades') return 'Ativ';
         if (tab === 'manutencao') return 'Mant';
         if (tab === 'documentos') return 'Doc';
+        if (tab === 'treinamentos') return 'Train';
         return '';
     }
 
@@ -200,9 +205,9 @@
         const notifications = [];
 
         data.forEach(item => {
-        // 1. Excluir itens finalizados (Concluído ou Cancelado)
+        // 1. Excluir itens finalizados — exceto recorrentes (train/doc com periodicidade)
             if (item.status === 'Concluído' || item.status === 'Cancelado') {
-                return;
+                if (!isConcludedRecurring(item, tabType)) return;
             }
 
             const deadlineField = getDeadlineFieldForTab(tabType, item);
@@ -260,6 +265,7 @@
         if (tabType === 'audit') return item.dataPrevisao;
         if (tabType === 'ativ') return item.dataConclusao;
         if (tabType === 'mant') return isBlankPeriodicity(item.intervalo) ? null : item.proxima;
+        if (tabType === 'train') return isBlankPeriodicity(item.periodicidade) ? item.dataPrevisao : item.dataPrevisao;
         if (tabType === 'doc') return isBlankPeriodicity(item.docIntervalo) ? null : item.dataProximaRevisao;
         return null;
     }

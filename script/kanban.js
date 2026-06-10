@@ -275,7 +275,7 @@ function _kbNextIsFinalOrEnd(statuses, colIdx) {
 function _kbRenderCard(item) {
     const cfg = _kbGetConfig();
     const dateVal = cfg ? (item[cfg.sortDateField] || '') : (item.dataConclusao || '');
-    const deadline = _kbDeadlineColor(dateVal, item.flagDias || 3, item.status);
+    const deadline = _kbDeadlineColor(dateVal, item.flagDias || 3, item.status, item);
     const marcColor = _kbResolveColor(item.marcadorCor || 'default');
     const canEdit   = typeof userCanEditCards === 'function' ? userCanEditCards() : false;
 
@@ -313,8 +313,11 @@ function _kbRenderCard(item) {
         </div>`;
 }
 
-function _kbDeadlineColor(dateStr, flagDays, status) {
-    if (_kbIsFinalStatus(status)) return 'var(--ind-green)';
+function _kbDeadlineColor(dateStr, flagDays, status, item) {
+    // Concluído recorrente (train/doc com periodicidade) continua monitorando prazo
+    const skipFlag = _kbIsFinalStatus(status) &&
+        !(typeof isConcludedRecurring === 'function' && item && isConcludedRecurring(item, currentTab));
+    if (skipFlag) return 'var(--ind-green)';
     if (!dateStr) return 'var(--c-default)';
     const today    = new Date(); today.setHours(0,0,0,0);
     const deadline = new Date(dateStr + 'T00:00:00');
@@ -367,6 +370,11 @@ function kbDrop(event, targetStatus) {
     if (!cfg) return;
     const item = (cfg.getItems() || []).find(a => a.id === _kanbanDragItemId);
     if (!item || item.status === targetStatus) return;
+
+    if (/conclu/i.test(targetStatus) && !canSetConcluido(item.checklist)) {
+        if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de mover para Concluído.', 'error');
+        return;
+    }
 
     const snapshot = JSON.parse(JSON.stringify(item));
     item.status = targetStatus;

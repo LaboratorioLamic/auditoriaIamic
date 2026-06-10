@@ -317,6 +317,36 @@
     for (const key in current) {
         if (ignoreKeys.includes(key)) continue;
 
+        // Tratamento especial para checklist (array de objetos)
+        if (key === 'checklist') {
+            const origList = (original && Array.isArray(original.checklist)) ? original.checklist : [];
+            const currList = Array.isArray(current.checklist) ? current.checklist : [];
+            if (JSON.stringify(origList) !== JSON.stringify(currList)) {
+                const clLines = [];
+                const maxLen = Math.max(origList.length, currList.length);
+                for (let i = 0; i < maxLen; i++) {
+                    const o = origList[i];
+                    const c = currList[i];
+                    if (!o && c) {
+                        clLines.push(`Checklist: item adicionado — <strong>${c.texto || '(sem nome)'}</strong>`);
+                    } else if (o && !c) {
+                        clLines.push(`Checklist: item removido — <strong>${o.texto || '(sem nome)'}</strong>`);
+                    } else if (o && c) {
+                        const nome = c.texto || o.texto || `Item ${i + 1}`;
+                        if (o.texto !== c.texto) {
+                            clLines.push(`Checklist: renomeado — <strong>${o.texto || '(vazio)'}</strong> &rarr; <strong>${c.texto || '(vazio)'}</strong>`);
+                        }
+                        if (!!o.checked !== !!c.checked) {
+                            clLines.push(`Checklist: <strong>${nome}</strong> — ${c.checked ? 'marcado como concluído' : 'desmarcado'}`);
+                        }
+                    }
+                }
+                if (clLines.length > 0) clLines.forEach(l => changes.push(l));
+                else silentChanged = true;
+            }
+            continue;
+        }
+
         // Normalização para comparação (trata null/undefined/'' como string vazia)
         let valOriginal = original && original[key] !== undefined && original[key] !== null && original[key] !== '' ? String(original[key]).trim() : '';
         let valCurrent = current[key] !== undefined && current[key] !== null && current[key] !== '' ? String(current[key]).trim() : '';
@@ -391,6 +421,26 @@
     return changes;
 }
 
+
+// Retorna true se o item é recorrente e concluído — trein/doc com periodicidade > 0.
+// Esses itens continuam sendo monitorados pelo prazo mesmo após conclusão.
+function isConcludedRecurring(item, tabType) {
+    if (!/conclu/i.test(item.status || '')) return false;
+    if (tabType === 'treinamentos' || tabType === 'train') {
+        return !isBlankPeriodicity(item.periodicidade);
+    }
+    if (tabType === 'documentos' || tabType === 'doc') {
+        return !isBlankPeriodicity(item.docIntervalo);
+    }
+    return false;
+}
+
+// Retorna true se o status "Concluído" é permitido para o item dado seu checklist.
+// checklist: array de {texto, checked} — pode ser undefined/null (sem checklist = permitido).
+function canSetConcluido(checklist) {
+    if (!checklist || checklist.length === 0) return true;
+    return checklist.every(function(item) { return !!item.checked; });
+}
 
     var colorMap = {
         'blue': 'var(--c-blue)',

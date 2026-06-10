@@ -1213,7 +1213,7 @@
             <button onclick="closeModal('modalVerPublicacao')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;">&times;</button>
         </div>
         <div id="verPubContent"></div>
-        <div class="modal-actions">
+        <div class="modal-actions" id="verPubFooter">
             <button class="btn-cancel" onclick="closeModal('modalVerPublicacao')">Fechar</button>
         </div>
     </div>
@@ -1245,14 +1245,28 @@
 </div>
 
 <div class="modal" id="historyViewModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="historyViewTitle"></h3>
-            <button onclick="closeModal('historyViewModal')" style="background:none; border:none; font-size:20px; cursor:pointer; color:var(--text-light);">&times;</button>
+    <div class="view-modal-content" style="max-width:660px;">
+        <div class="view-modal-header">
+            <div class="view-modal-header-inner">
+                <div class="view-modal-title-block">
+                    <div class="view-modal-icon-wrap" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);">
+                        <i class="fas fa-clock-rotate-left" style="color:#fff;font-size:15px;"></i>
+                    </div>
+                    <div>
+                        <div class="view-modal-title" id="historyViewTitle">Registro do Histórico</div>
+                        <div class="view-modal-meta" id="historyViewMeta"></div>
+                    </div>
+                </div>
+                <div class="view-modal-header-actions">
+                    <button class="view-modal-btn view-modal-btn-close" onclick="closeModal('historyViewModal')"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
         </div>
-        <div id="historyViewContent"></div>
-        <div class="modal-actions">
-            <button class="btn-cancel" onclick="closeModal('historyViewModal')">Fechar</button>
+        <div class="view-modal-body">
+            <div style="padding:20px;" id="historyViewContent"></div>
+        </div>
+        <div class="view-modal-footer" style="justify-content:flex-end;">
+            <button class="view-modal-footer-btn view-modal-footer-btn-edit" onclick="closeModal('historyViewModal')">Fechar</button>
         </div>
     </div>
 </div>

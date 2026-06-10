@@ -91,6 +91,11 @@
                 newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
             }
 
+            if (/conclu/i.test(newItem.status) && !canSetConcluido(newItem.checklist)) {
+                if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de marcar como Concluído.', 'error');
+                return;
+            }
+
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0 || changes.silentChanged) {
                 if (changes.length > 0) {

@@ -54,6 +54,7 @@ function renderChecklistEditor(prefix) {
     }
     container.innerHTML = items.map((item, i) => {
         const requiresComment = !!item.requiresComment;
+        const commentVal = (item.comment || '').replace(/"/g, '&quot;');
         return `
         <div class="checklist-editor-item">
             <div class="checklist-editor-item-top">
@@ -68,6 +69,13 @@ function renderChecklistEditor(prefix) {
                 </button>
                 <button class="checklist-item-del-btn" onclick="removeChecklistItem('${prefix}',${i})" title="Remover">&times;</button>
             </div>
+            ${requiresComment ? `
+            <div class="checklist-editor-comment-area">
+                <textarea class="checklist-editor-comment-input"
+                    placeholder="Comentário pré-preenchido (opcional)…"
+                    onchange="updateChecklistItemComment('${prefix}', ${i}, this.value)"
+                    rows="2">${commentVal}</textarea>
+            </div>` : ''}
         </div>`;
     }).join('');
 }
@@ -286,8 +294,12 @@ window.renderViewAnexos = function(item) {
 };
 
 // ─── PUBLICAÇÕES ─────────────────────────────────────────────
+// Índice da publicação sendo editada (null = nova publicação)
+window._editingPubIndex = null;
+
 // Abre modal de publicação para o item atualmente em view
-window.openPublicacaoModal = function() {
+// editIndex: número = editar publicação existente; undefined/null = nova publicação
+window.openPublicacaoModal = function(editIndex) {
     const id = window._currentViewId;
     const tab = window._currentViewTab;
     if (id === undefined || !tab) return;
@@ -300,20 +312,36 @@ window.openPublicacaoModal = function() {
     else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
     if (!item) return;
 
-    // Limpa upload
-    if (typeof restoreAnexosUpload === 'function') restoreAnexosUpload('pub', []);
+    const isEditing = editIndex !== undefined && editIndex !== null;
+    window._editingPubIndex = isEditing ? editIndex : null;
+    const existingPub = isEditing ? (item.publicacoes || [])[editIndex] : null;
 
-    // Renderiza campos dinâmicos por tipo
-    const fieldsEl = document.getElementById('pubModalFields');
+    // Carrega anexos existentes ou limpa
+    if (typeof restoreAnexosUpload === 'function') {
+        restoreAnexosUpload('pub', existingPub ? (existingPub.anexos || []) : []);
+    }
+
+    // Título e subtítulo do modal
+    const modalTitle = document.querySelector('#modalPublicacao .modal-header h3');
+    if (modalTitle) modalTitle.textContent = isEditing ? 'Editar Publicação' : 'Nova Publicação';
     document.getElementById('pubModalSubtitle').textContent = item.titulo || '';
 
-    let fieldsHtml = '';
-    const now = new Date();
-    const dateVal = now.toISOString().split('T')[0];
-    const timeVal = now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    const btnConfirmar = document.getElementById('btn-confirmar-publicacao');
+    if (btnConfirmar) {
+        btnConfirmar.innerHTML = isEditing
+            ? '<i class="fas fa-save"></i> Salvar'
+            : '<i class="fas fa-paper-plane"></i> Publicar';
+    }
 
+    const fieldsEl = document.getElementById('pubModalFields');
+    const now = new Date();
+    const dateVal = existingPub ? (existingPub.data || now.toISOString().split('T')[0]) : now.toISOString().split('T')[0];
+    const timeVal = existingPub ? (existingPub.hora || _nowTimeStr()) : now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    const descVal = existingPub ? (existingPub.descricao || '') : '';
+
+    let fieldsHtml = '';
     if (finalTab === 'treinamentos') {
-        // Treinamento: Instrutor, Participantes, Local, Carga Horária, Descrição
+        const chParts = existingPub && existingPub.cargaHoraria ? existingPub.cargaHoraria.split(':') : ['00','00'];
         fieldsHtml = `
         <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;">
             <div class="field-group">
@@ -326,36 +354,35 @@ window.openPublicacaoModal = function() {
             </div>
             <div class="field-group">
                 <label>Instrutor</label>
-                <input type="text" id="pubInstrutor" placeholder="Nome do instrutor">
+                <input type="text" id="pubInstrutor" placeholder="Nome do instrutor" value="${existingPub ? (existingPub.instrutor || '') : ''}">
             </div>
             <div class="field-group">
                 <label>Carga Horária (HH:MM)</label>
                 <div style="display:flex;gap:6px;align-items:center;">
-                    <input type="number" id="pubCHoras" min="0" max="23" placeholder="00" style="width:60px;text-align:center;">
+                    <input type="number" id="pubCHoras" min="0" max="23" placeholder="00" style="width:60px;text-align:center;" value="${chParts[0] || '00'}">
                     <span>:</span>
-                    <input type="number" id="pubCMinutos" min="0" max="59" placeholder="00" style="width:60px;text-align:center;">
+                    <input type="number" id="pubCMinutos" min="0" max="59" placeholder="00" style="width:60px;text-align:center;" value="${chParts[1] || '00'}">
                 </div>
             </div>
             <div class="field-group full-width">
                 <label>Participantes</label>
-                <textarea id="pubParticipantes" rows="2" placeholder="Nomes dos participantes..."></textarea>
+                <textarea id="pubParticipantes" rows="2" placeholder="Nomes dos participantes...">${existingPub ? (existingPub.participantes || '') : ''}</textarea>
             </div>
             <div class="field-group full-width">
                 <label>Local do Evento</label>
-                <input type="text" id="pubLocal" placeholder="Ex: Sala de Treinamento A">
+                <input type="text" id="pubLocal" placeholder="Ex: Sala de Treinamento A" value="${existingPub ? (existingPub.localEvento || '') : ''}">
             </div>
             <div class="field-group full-width">
                 <label>Descrição</label>
-                <textarea id="pubDescricao" rows="3" placeholder="Descreva o treinamento realizado..."></textarea>
+                <textarea id="pubDescricao" rows="3" placeholder="Descreva o treinamento realizado...">${descVal}</textarea>
             </div>
         </div>`;
     } else if (finalTab === 'documentos') {
-        // Documentos: Título, Data, Hora, Descrição, Anexo (obrigatório)
         fieldsHtml = `
         <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;">
             <div class="field-group full-width">
                 <label>Título da Publicação</label>
-                <input type="text" id="pubTitulo" placeholder="Título desta revisão/publicação">
+                <input type="text" id="pubTitulo" placeholder="Título desta revisão/publicação" value="${existingPub ? (existingPub.titulo || '') : ''}">
             </div>
             <div class="field-group">
                 <label>Data</label>
@@ -367,22 +394,22 @@ window.openPublicacaoModal = function() {
             </div>
             <div class="field-group full-width">
                 <label>Descrição</label>
-                <textarea id="pubDescricao" rows="3" placeholder="Descreva as alterações ou o conteúdo..."></textarea>
+                <textarea id="pubDescricao" rows="3" placeholder="Descreva as alterações ou o conteúdo...">${descVal}</textarea>
             </div>
         </div>
-        <div style="padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e;margin-top:4px;">
+        ${!isEditing ? `<div style="padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e;margin-top:4px;">
             <i class="fas fa-info-circle"></i> O anexo é obrigatório para documentos.
-        </div>`;
+        </div>` : ''}`;
     } else {
-        // Auditoria / Atividades: Tipo, Data, Hora, Descrição
+        const tipoVal = existingPub ? (existingPub.tipo || 'Comentário') : 'Comentário';
         fieldsHtml = `
         <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;">
             <div class="field-group">
                 <label>Tipo</label>
                 <select id="pubTipo">
-                    <option value="Comentário">Comentário</option>
-                    <option value="Atualização">Atualização</option>
-                    <option value="Evidência">Evidência</option>
+                    <option value="Comentário"${tipoVal==='Comentário'?' selected':''}>Comentário</option>
+                    <option value="Atualização"${tipoVal==='Atualização'?' selected':''}>Atualização</option>
+                    <option value="Evidência"${tipoVal==='Evidência'?' selected':''}>Evidência</option>
                 </select>
             </div>
             <div class="field-group">
@@ -395,12 +422,13 @@ window.openPublicacaoModal = function() {
             </div>
             <div class="field-group full-width">
                 <label>Descrição</label>
-                <textarea id="pubDescricao" rows="3" placeholder="Descreva o comentário, atualização ou evidência..."></textarea>
+                <textarea id="pubDescricao" rows="3" placeholder="Descreva o comentário, atualização ou evidência...">${descVal}</textarea>
             </div>
         </div>`;
     }
 
     fieldsEl.innerHTML = fieldsHtml;
+    closeModal('modalVerPublicacao');
     document.getElementById('modalPublicacao').style.display = 'flex';
 };
 
@@ -415,28 +443,32 @@ window.confirmarPublicacao = function() {
     else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
     if (!item) return;
 
-    const dataEl = document.getElementById('pubData');
-    const horaEl = document.getElementById('pubHora');
-    const descEl = document.getElementById('pubDescricao');
-    const dataVal = dataEl ? dataEl.value : _nowDateStr();
-    const horaVal = horaEl ? horaEl.value : _nowTimeStr();
-    const descVal = descEl ? descEl.value.trim() : '';
+    const isEditing = window._editingPubIndex !== null && window._editingPubIndex !== undefined;
+    const editIndex = window._editingPubIndex;
 
-    // Anexos
+    const dataVal = document.getElementById('pubData')?.value || _nowDateStr();
+    const horaVal = document.getElementById('pubHora')?.value || _nowTimeStr();
+    const descVal = document.getElementById('pubDescricao')?.value.trim() || '';
+
     const anexos = (typeof getAnexosUpload === 'function') ? getAnexosUpload('pub') : [];
 
-    // Validação doc: anexo obrigatório
-    if (finalTab === 'documentos' && anexos.length === 0) {
+    // Validação doc: anexo obrigatório apenas para novas publicações
+    if (!isEditing && finalTab === 'documentos' && anexos.length === 0) {
         if (typeof showToast === 'function') showToast('Anexo obrigatório para publicações de documentos.', 'error');
         return;
     }
 
+    if (!item.publicacoes) item.publicacoes = [];
+
+    // Preserva id original ao editar
+    const existingId = isEditing ? (item.publicacoes[editIndex]?.id || Date.now()) : Date.now();
+
     let pub = {
-        id: Date.now(),
+        id: existingId,
         data: dataVal,
         hora: horaVal,
         descricao: descVal,
-        usuario: window.currentuser ? (window.currentuser.name || window.currentuser.user || '') : '',
+        usuario: isEditing ? (item.publicacoes[editIndex]?.usuario || '') : (window.currentuser ? (window.currentuser.name || window.currentuser.user || '') : ''),
         anexos: anexos
     };
 
@@ -455,25 +487,24 @@ window.confirmarPublicacao = function() {
         pub.tipo = document.getElementById('pubTipo')?.value || 'Comentário';
     }
 
-    // Adiciona publicação ao item
-    if (!item.publicacoes) item.publicacoes = [];
-    item.publicacoes.unshift(pub);
+    if (isEditing) {
+        item.publicacoes[editIndex] = pub;
+    } else {
+        item.publicacoes.unshift(pub);
+        _updateItemDatesAfterPublicacao(item, finalTab, dataVal);
+    }
 
-    // Atualiza data de publicação e recalcula próxima data
-    _updateItemDatesAfterPublicacao(item, finalTab, dataVal);
-
+    window._editingPubIndex = null;
     saveAll();
     closeModal('modalPublicacao');
 
-    // Refresca view
     if (typeof renderViewContent === 'function') renderViewContent(id, finalTab);
-    // Vai para aba de publicações
     const pubTab = document.querySelector('.view-modal-tab:last-child');
     if (pubTab) switchViewTab('publicacoes', pubTab);
     renderViewPublicacoes(item);
     _updatePubTabBadge(item);
     renderCards();
-    if (typeof showToast === 'function') showToast('Publicação registrada com sucesso!', 'success');
+    if (typeof showToast === 'function') showToast(isEditing ? 'Publicação atualizada com sucesso!' : 'Publicação registrada com sucesso!', 'success');
 };
 
 function _updateItemDatesAfterPublicacao(item, tab, newDate) {
@@ -526,13 +557,17 @@ window.renderViewPublicacoes = function(item) {
             <td>${dateStr} ${p.hora || ''}</td>
             <td>${p.usuario || '–'}</td>
             <td>${nAnexos > 0 ? `<i class="fas fa-paperclip" style="color:#94a3b8"></i> ${nAnexos}` : '–'}</td>
+            <td onclick="event.stopPropagation();" style="white-space:nowrap;">
+                <button class="pub-action-btn" title="Editar" onclick="openPublicacaoModal(${i})"><i class="fas fa-pencil-alt"></i></button>
+                <button class="pub-action-btn pub-action-btn-del" title="Excluir" onclick="excluirPublicacao(${item.id},'${window._currentViewTab}',${i})"><i class="fas fa-trash"></i></button>
+            </td>
         </tr>`;
     }).join('');
     container.innerHTML = `
         <div class="pub-table-wrap">
             <table class="pub-table">
                 <thead><tr>
-                    <th>Tipo</th><th>Descrição</th><th>Data/Hora</th><th>Usuário</th><th>Anexos</th>
+                    <th>Tipo</th><th>Descrição</th><th>Data/Hora</th><th>Usuário</th><th>Anexos</th><th></th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>
@@ -588,7 +623,45 @@ window.verPublicacao = function(id, tab, index) {
     }
 
     document.getElementById('verPubContent').innerHTML = fields;
+
+    // Guarda referência para editar/excluir
+    window._verPubId = id;
+    window._verPubTab = tab;
+    window._verPubIndex = index;
+
+    // Atualiza botões do footer
+    const footerEl = document.getElementById('verPubFooter');
+    if (footerEl) {
+        footerEl.innerHTML = `
+            <button class="btn-cancel" onclick="closeModal('modalVerPublicacao')">Fechar</button>
+            <button class="btn-secondary" onclick="openPublicacaoModal(window._verPubIndex)">
+                <i class="fas fa-pencil-alt"></i> Editar
+            </button>
+            <button class="btn-danger" onclick="excluirPublicacao(window._verPubId, window._verPubTab, window._verPubIndex)">
+                <i class="fas fa-trash"></i> Excluir
+            </button>`;
+    }
+
     document.getElementById('modalVerPublicacao').style.display = 'flex';
+};
+
+window.excluirPublicacao = function(id, tab, index) {
+    if (!confirm('Tem certeza que deseja excluir esta publicação?')) return;
+    const finalTab = _normalizeTab(tab);
+    let item;
+    if (finalTab === 'auditoria') item = audits.find(i => i.id === id);
+    else if (finalTab === 'atividades') item = activities.find(i => i.id === id);
+    else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
+    else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
+    if (!item || !item.publicacoes) return;
+
+    item.publicacoes.splice(index, 1);
+    saveAll();
+    closeModal('modalVerPublicacao');
+    renderViewPublicacoes(item);
+    _updatePubTabBadge(item);
+    renderCards();
+    if (typeof showToast === 'function') showToast('Publicação excluída.', 'success');
 };
 
 function _updatePubTabBadge(item) {

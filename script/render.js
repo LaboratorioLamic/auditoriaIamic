@@ -410,16 +410,15 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         // ORDENAÇÃO
         if (dateField) {
             data.sort((a, b) => {
-                // 1) Itens com status "Concluído" ou "Cancelado" vão para o final
-                const isAClosed = a.status === 'Concluído' || a.status === 'Cancelado';
-                const isBClosed = b.status === 'Concluído' || b.status === 'Cancelado';
+                // 1) Concluído/Cancelado vão para o final — exceto recorrentes com prazo iminente
+                const isAClosed = (a.status === 'Concluído' || a.status === 'Cancelado') && !isConcludedRecurring(a, currentTab);
+                const isBClosed = (b.status === 'Concluído' || b.status === 'Cancelado') && !isConcludedRecurring(b, currentTab);
 
                 if (isAClosed !== isBClosed) {
-                    // false (0) vem antes de true (1)
                     return isAClosed ? 1 : -1;
                 }
 
-                // 2) Entre itens "abertos", os que estão no prazo de alerta vêm primeiro
+                // 2) Entre itens "abertos" (e recorrentes), os que estão no prazo de alerta vêm primeiro
                 if (!isAClosed && !isBClosed) {
                     const flagA = a.flagDias || 7;
                     const flagB = b.flagDias || 7;
@@ -469,8 +468,9 @@ function _clDonutHtml(done, total, pct, size, absolute) {
             const d = daysDiff(targetDate);
 
             let indicatorClass = 'ind-green';
-            // Cards com status "Concluído" permanecem verdes mesmo se atrasados
-            if (item.status !== 'Concluído' && d !== Infinity) {
+            // Concluído recorrente (train/doc com periodicidade) continua monitorando prazo
+            const _skipFlag = item.status === 'Concluído' && !isConcludedRecurring(item, currentTab);
+            if (!_skipFlag && d !== Infinity) {
                 if (d < 0) indicatorClass = 'ind-red';
                 else if (d <= flagDays) indicatorClass = 'ind-yellow';
             }

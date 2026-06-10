@@ -1024,16 +1024,36 @@ window.renderHistoryDrawer = function() {
 
             var changesHtml = detailsArray.length > 0
                 ? detailsArray.map(d => {
-                    var parts = String(d).match(/^(.+?):\s*(.+?)\s*→\s*(.+)$/);
+                    if (typeof d === 'object' && d !== null) {
+                        if (d.campo) {
+                            var from = d.de != null ? String(d.de) : 'vazio';
+                            var to   = d.para != null ? String(d.para) : 'vazio';
+                            return `<div class="hd-change-row">
+                                <span class="hd-change-field">${d.campo}</span>
+                                <span class="hd-change-from">${from.length > 50 ? from.slice(0,50)+'…' : from}</span>
+                                <i class="fas fa-arrow-right hd-change-arrow"></i>
+                                <span class="hd-change-to">${to.length > 50 ? to.slice(0,50)+'…' : to}</span>
+                            </div>`;
+                        }
+                        return `<div class="hd-change-row"><span class="hd-change-field" style="color:#6b7280;">${JSON.stringify(d)}</span></div>`;
+                    }
+                    var str = String(d);
+                    // Strings com HTML (checklist, descrição) — renderiza direto
+                    if (str.includes('<') && str.includes('>')) {
+                        return `<div class="hd-change-row" style="display:block;">${str}</div>`;
+                    }
+                    var parts = str.match(/^(.+?):\s*(.*?)\s*(?:→|&rarr;)\s*(.+)$/);
                     if (parts) {
+                        var from = parts[2].length > 50 ? parts[2].slice(0,50)+'…' : parts[2];
+                        var to   = parts[3].length > 50 ? parts[3].slice(0,50)+'…' : parts[3];
                         return `<div class="hd-change-row">
                             <span class="hd-change-field">${parts[1]}</span>
-                            <span class="hd-change-from">${parts[2]}</span>
+                            <span class="hd-change-from">${from || 'vazio'}</span>
                             <i class="fas fa-arrow-right hd-change-arrow"></i>
-                            <span class="hd-change-to">${parts[3]}</span>
+                            <span class="hd-change-to">${to}</span>
                         </div>`;
                     }
-                    return `<div class="hd-change-row"><span class="hd-change-field" style="color:#6b7280;">${d}</span></div>`;
+                    return `<div class="hd-change-row"><span class="hd-change-field" style="color:#6b7280;">${str.length > 120 ? str.slice(0,120)+'…' : str}</span></div>`;
                 }).join('')
                 : '';
 
@@ -1084,163 +1104,181 @@ window.toggleHdItem = function(el) {
 };
 
 function viewHistoryItem(id, tab, historyIndex) {
-    var item;
     var finalTab = tab;
-
-    // Normaliza o tab
     if (tab === 'audit') finalTab = 'auditoria';
     else if (tab === 'train') finalTab = 'treinamentos';
     else if (tab === 'ativ') finalTab = 'atividades';
     else if (tab === 'mant' || tab === 'manutencao') finalTab = 'manutencao';
     else if (tab === 'doc' || tab === 'documentos') finalTab = 'documentos';
 
-    if (finalTab === 'auditoria') { item = audits.find(i => i.id === id); }
-    else if (finalTab === 'atividades') { item = activities.find(i => i.id === id); }
-    else if (finalTab === 'manutencao') { item = maintenances.find(i => i.id === id); }
-    else if (finalTab === 'documentos') { item = documents.find(i => i.id === id); }
-    else if (finalTab === 'treinamentos') { item = trainings.find(i => i.id === id); }
-
+    var item;
+    if (finalTab === 'auditoria') item = audits.find(i => i.id === id);
+    else if (finalTab === 'atividades') item = activities.find(i => i.id === id);
+    else if (finalTab === 'manutencao') item = maintenances.find(i => i.id === id);
+    else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
+    else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
     if (!item) return;
 
     var history = item.historico || [];
     var allHistory = history.slice().reverse().map((entry, revIndex) => ({
-        entry,
-        originalIndex: history.length - 1 - revIndex
-    }));
-    var filteredHistory = allHistory.filter(h => h.entry.acao !== 'Restauração de Backup');
+        entry, originalIndex: history.length - 1 - revIndex
+    })).filter(h => h.entry.acao !== 'Restauração de Backup');
 
-    if (historyIndex < 0 || historyIndex >= filteredHistory.length) return;
+    if (historyIndex < 0 || historyIndex >= allHistory.length) return;
+    var h = allHistory[historyIndex];
 
-    var h = filteredHistory[historyIndex];
     var date = new Date(h.entry.timestamp);
     var dateStr = date.toLocaleDateString('pt-BR');
+    var timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-    document.getElementById('historyViewTitle').textContent = `[Registro de ${dateStr}]`;
+    var snap = h.entry.snapshot ? JSON.parse(JSON.stringify(h.entry.snapshot)) : JSON.parse(JSON.stringify(item));
 
-    var historicalItem;
-    if (h.entry.snapshot) {
-        historicalItem = JSON.parse(JSON.stringify(h.entry.snapshot));
-    } else {
-        historicalItem = JSON.parse(JSON.stringify(item));
+    // Helper: converte valor para string legível, truncando se necessário
+    function _val(v, maxLen) {
+        maxLen = maxLen || 60;
+        if (v === null || v === undefined || v === '') return 'N/A';
+        if (typeof v === 'object') {
+            if (Array.isArray(v)) {
+                var s = v.map(x => typeof x === 'object' ? (x.name || x.titulo || x.texto || JSON.stringify(x)) : String(x)).join(', ');
+                return s.length > maxLen ? s.slice(0, maxLen) + '…' : s || 'N/A';
+            }
+            var s2 = v.name || v.titulo || v.texto || v.value || JSON.stringify(v);
+            return String(s2).length > maxLen ? String(s2).slice(0, maxLen) + '…' : String(s2);
+        }
+        var str = String(v);
+        return str.length > maxLen ? str.slice(0, maxLen) + '…' : str;
     }
+    function _date(v) { return v ? formatBR(v) : 'N/A'; }
 
-    // Copiar a lógica de renderização do view
-    var statusList = finalTab === 'auditoria' ? masterLists.auditStatus :
-                      finalTab === 'treinamentos' ? masterLists.trainStatus :
-                      finalTab === 'atividades' ? masterLists.ativStatus :
-                      finalTab === 'manutencao' ? masterLists.mantStatus :
-                      finalTab === 'documentos' ? masterLists.docStatus : [];
-
-    var statusObj = statusList.find(s => s.name === historicalItem.status) || { color: 'default' };
-    var statusColorVar = colorMap[statusObj.color] || colorMap['default'];
-
-    var detailsGrid = '';
+    // Monta pares [label, valor] por tipo
+    var pairs = [];
     if (finalTab === 'auditoria') {
-        detailsGrid = `
-            <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
-            <div class="view-item"><label>Responsável</label><div>${historicalItem.responsavel || 'N/A'}</div></div>
-            <div class="view-item"><label>Revisor</label><div>${historicalItem.revisor || 'N/A'}</div></div>
-            <div class="view-item"><label>Auditor</label><div>${historicalItem.auditor || 'N/A'}</div></div>
-            <div class="view-item"><label>Data Publicação</label><div>${historicalItem.dataPublicacao ? formatBR(historicalItem.dataPublicacao) : 'N/A'}</div></div>
-            <div class="view-item"><label>Previsão</label><div>${historicalItem.dataPrevisao ? formatBR(historicalItem.dataPrevisao) : 'N/A'}</div></div>
-        `;
+        pairs = [
+            ['Setor', _val(snap.setor)], ['Categoria', _val(snap.categoria)],
+            ['Responsável', _val(snap.responsavel)], ['Revisor', _val(snap.revisor)],
+            ['Auditor', _val(snap.auditor)], ['Status', _val(snap.status)],
+            ['Data Publicação', _date(snap.dataPublicacao)], ['Previsão', _date(snap.dataPrevisao)]
+        ];
     } else if (finalTab === 'atividades') {
-        detailsGrid = `
-            <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
-            <div class="view-item"><label>Responsável</label><div>${historicalItem.responsavel || 'N/A'}</div></div>
-            <div class="view-item"><label>Revisor</label><div>${historicalItem.revisor || 'N/A'}</div></div>
-            <div class="view-item"><label>Data Início</label><div>${historicalItem.dataInicio ? formatBR(historicalItem.dataInicio) : 'N/A'}</div></div>
-            <div class="view-item"><label>Data Conclusão</label><div>${historicalItem.dataConclusao ? formatBR(historicalItem.dataConclusao) : 'N/A'}</div></div>
-        `;
+        pairs = [
+            ['Setor', _val(snap.setor)], ['Categoria', _val(snap.categoria)],
+            ['Responsável', _val(snap.responsavel)], ['Revisor', _val(snap.revisor)],
+            ['Status', _val(snap.status)],
+            ['Data Início', _date(snap.dataInicio)], ['Data Conclusão', _date(snap.dataConclusao)]
+        ];
     } else if (finalTab === 'manutencao') {
-        const isNA = isBlankPeriodicity(historicalItem.intervalo);
-        detailsGrid = `
-            <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
-            <div class="view-item"><label>Tipo</label><div>${historicalItem.tipo || 'N/A'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
-            <div class="view-item"><label>Equipamento</label><div>${historicalItem.item || 'N/A'}</div></div>
-            <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${historicalItem.intervalo} dias`}</div></div>
-            <div class="view-item"><label>Última Manutenção</label><div>${historicalItem.ultima ? formatBR(historicalItem.ultima) : 'N/A'}</div></div>
-            <div class="view-item"><label>Próxima Manutenção</label><div>${isNA ? 'N/A' : formatBR(historicalItem.proxima)}</div></div>
-            <div class="view-item"><label>Responsável Técnico</label><div>${historicalItem.responsavelTecnico || 'N/A'}</div></div>
-            <div class="view-item"><label>Responsável pela Manutenção</label><div>${historicalItem.responsavelManutencao || 'N/A'}</div></div>
-            <div class="view-item"><label>Empresa Responsável</label><div>${historicalItem.empresaResponsavel || 'N/A'}</div></div>
-        `;
+        const isNA = isBlankPeriodicity(snap.intervalo);
+        pairs = [
+            ['Setor', _val(snap.setor)], ['Tipo', _val(snap.tipo)],
+            ['Categoria', _val(snap.categoria)], ['Equipamento', _val(snap.item)],
+            ['Status', _val(snap.status)],
+            ['Periodicidade', isNA ? 'N/A' : `${snap.intervalo} dias`],
+            ['Última Manutenção', _date(snap.ultima)], ['Próxima Manutenção', isNA ? 'N/A' : _date(snap.proxima)],
+            ['Resp. Técnico', _val(snap.responsavelTecnico)], ['Empresa', _val(snap.empresaResponsavel)]
+        ];
     } else if (finalTab === 'treinamentos') {
-        const isNA = isBlankPeriodicity(historicalItem.periodicidade);
-        detailsGrid = `
-            <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
-            <div class="view-item"><label>Responsável</label><div>${historicalItem.responsavel || 'N/A'}</div></div>
-            <div class="view-item"><label>Instrutor</label><div>${historicalItem.instrutor || 'N/A'}</div></div>
-            <div class="view-item"><label>Local do Evento</label><div>${historicalItem.localEvento || 'N/A'}</div></div>
-            <div class="view-item"><label>Carga Horária</label><div>${historicalItem.cargaHoraria || 'N/A'}</div></div>
-            <div class="view-item"><label>Participantes</label><div>${historicalItem.participantes || 'N/A'}</div></div>
-            <div class="view-item"><label>Data Publicação</label><div>${historicalItem.dataPublicacao ? formatBR(historicalItem.dataPublicacao) : 'N/A'}</div></div>
-            <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${historicalItem.periodicidade} dias`}</div></div>
-        `;
+        const isNA = isBlankPeriodicity(snap.periodicidade);
+        pairs = [
+            ['Setor', _val(snap.setor)], ['Categoria', _val(snap.categoria)],
+            ['Responsável', _val(snap.responsavel)], ['Status', _val(snap.status)],
+            ['Data Publicação', _date(snap.dataPublicacao)],
+            ['Periodicidade', isNA ? 'N/A' : `${snap.periodicidade} dias`]
+        ];
     } else if (finalTab === 'documentos') {
-        const isNA = isBlankPeriodicity(historicalItem.docIntervalo);
-        detailsGrid = `
-            <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
-            <div class="view-item"><label>Periodicidade</label><div>${isNA ? 'N/A' : `${historicalItem.docIntervalo} dias`}</div></div>
-            <div class="view-item"><label>Responsável</label><div>${historicalItem.responsavel || 'N/A'}</div></div>
-            <div class="view-item"><label>Revisor</label><div>${historicalItem.revisor || 'N/A'}</div></div>
-            <div class="view-item"><label>Data do Documento</label><div>${historicalItem.dataCriacao ? formatBR(historicalItem.dataCriacao) : 'N/A'}</div></div>
-            <div class="view-item"><label>Próx. Revisão</label><div>${isNA ? 'N/A' : formatBR(historicalItem.dataProximaRevisao)}</div></div>
-        `;
-    } else {
-        detailsGrid = `
-            <div class="view-item"><label>Título</label><div>${historicalItem.titulo || 'N/A'}</div></div>
-            <div class="view-item"><label>Setor</label><div>${historicalItem.setor || 'N/A'}</div></div>
-            <div class="view-item"><label>Categoria</label><div>${historicalItem.categoria || 'N/A'}</div></div>
-            <div class="view-item"><label>Status</label><div>${historicalItem.status || 'N/A'}</div></div>
-        `;
+        const isNA = isBlankPeriodicity(snap.docIntervalo);
+        pairs = [
+            ['Setor', _val(snap.setor)], ['Categoria', _val(snap.categoria)],
+            ['Responsável', _val(snap.responsavel)], ['Revisor', _val(snap.revisor)],
+            ['Status', _val(snap.status)],
+            ['Data do Documento', _date(snap.dataCriacao)],
+            ['Periodicidade', isNA ? 'N/A' : `${snap.docIntervalo} dias`],
+            ['Próx. Revisão', isNA ? 'N/A' : _date(snap.dataProximaRevisao)]
+        ];
     }
 
-    var anexos = h.entry.snapshot ? (historicalItem.anexos || []) : [];
-    var anexosHtml = anexos.length > 0
-        ? `<div style="margin-top:16px;"><div class="view-files" style="margin-top:0;"><h4>Anexos</h4>${anexos.map(a =>
-            `<a href="${a.url}" target="_blank" class="file-chip"><i class="fas fa-external-link-alt"></i> ${a.titulo || 'Anexo'}</a>`
-        ).join('')}</div></div>`
-        : '';
+    // Cards grid igual ao view modal
+    var cardsHtml = `<div class="view-info-grid">${pairs.map(([label, val]) =>
+        `<div class="view-info-card">
+            <label>${label}</label>
+            <div>${val}</div>
+        </div>`
+    ).join('')}</div>`;
 
-    var versionDescription = historicalItem.descricao || 'Sem descrição.';
-    var modificationEntries = [];
+    // Descrição
+    var desc = _val(snap.descricao, 300);
+    var descHtml = `<div class="view-desc-block" style="margin-bottom:16px;">${desc !== 'N/A' ? desc.replace(/\n/g,'<br>') : '<span style="color:#94a3b8;font-style:italic;">Sem descrição.</span>'}</div>`;
+
+    // Modificações — corrige [object Object]
+    var modEntries = [];
     if (h.entry.detalhes) {
-        if (Array.isArray(h.entry.detalhes)) {
-            modificationEntries = h.entry.detalhes;
-        } else if (typeof h.entry.detalhes === 'object') {
-            modificationEntries = Object.keys(h.entry.detalhes)
+        if (Array.isArray(h.entry.detalhes)) modEntries = h.entry.detalhes;
+        else if (typeof h.entry.detalhes === 'object') {
+            modEntries = Object.keys(h.entry.detalhes)
                 .filter(k => k !== 'silentChanged')
                 .map(k => h.entry.detalhes[k]);
         }
     }
+    var modHtml = modEntries.length > 0 ? `
+        <div style="margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Modificações</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+                ${modEntries.map(d => {
+                    // Objeto estruturado {campo, de, para}
+                    if (typeof d === 'object' && d !== null) {
+                        if (d.campo) {
+                            var from = _val(d.de, 50), to = _val(d.para, 50);
+                            return `<div class="hd-change-row">
+                                <span class="hd-change-field">${d.campo}</span>
+                                <span class="hd-change-from">${from}</span>
+                                <i class="fas fa-arrow-right hd-change-arrow"></i>
+                                <span class="hd-change-to">${to}</span>
+                            </div>`;
+                        }
+                        return `<div class="hd-change-row"><span class="hd-change-field" style="color:#475569;">${_val(d, 100)}</span></div>`;
+                    }
+                    var str = String(d);
+                    // Strings que já contêm HTML (checklist, descrição, anexos) — renderiza direto
+                    if (str.includes('<') && str.includes('>')) {
+                        return `<div class="hd-change-row" style="display:block;">${str}</div>`;
+                    }
+                    // Formato "Campo: de → para" ou "Campo: de &rarr; para"
+                    var parts = str.match(/^(.+?):\s*(.*?)\s*(?:→|&rarr;)\s*(.+)$/);
+                    if (parts) {
+                        var from = parts[2].length > 50 ? parts[2].slice(0,50)+'…' : parts[2];
+                        var to   = parts[3].length > 50 ? parts[3].slice(0,50)+'…' : parts[3];
+                        return `<div class="hd-change-row">
+                            <span class="hd-change-field">${parts[1]}</span>
+                            <span class="hd-change-from">${from || 'vazio'}</span>
+                            <i class="fas fa-arrow-right hd-change-arrow"></i>
+                            <span class="hd-change-to">${to}</span>
+                        </div>`;
+                    }
+                    var truncated = str.length > 120 ? str.slice(0,120)+'…' : str;
+                    return `<div class="hd-change-row"><span class="hd-change-field" style="color:#475569;">${truncated}</span></div>`;
+                }).join('')}
+            </div>
+        </div>` : '';
 
-    var modificationsHtml = modificationEntries.length > 0
-        ? `<div style="margin-top:16px;"><h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">Modificações</h4><div class="view-desc">${modificationEntries.map(d => String(d).replace(/\n/g, '<br>')).join('<br>')}</div></div>`
-        : '';
-
-    var html = `
-        <div class="view-header">
-            <h2 style="margin:0; color:var(--primary); font-size:20px;">${historicalItem.titulo}</h2>
-            <span class="view-status" style="background-color:${statusColorVar}">${historicalItem.status}</span>
-        </div>
-        <div class="view-grid">
-            ${detailsGrid}
-        </div>
+    // Anexos
+    var anexos = snap.anexos || [];
+    var anexosHtml = anexos.length > 0 ? `
         <div>
-            <h4 style="margin:0 0 8px; color:#6b7280; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">Descrição</h4>
-            <div class="view-desc">${versionDescription.replace(/\n/g, '<br>')}</div>
-        </div>
-        ${anexosHtml}
-        ${modificationsHtml}
-    `;
+            <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Anexos</div>
+            <div class="view-anexos-grid">${anexos.map(a => {
+                var name = a.titulo || a.url || 'Arquivo';
+                return `<a href="${a.url}" target="_blank" class="view-anexo-card">
+                    <i class="fas fa-file anexo-icon"></i>
+                    <span class="anexo-name">${name.length > 30 ? name.slice(0,30)+'…' : name}</span>
+                </a>`;
+            }).join('')}</div>
+        </div>` : '';
 
-    document.getElementById('historyViewContent').innerHTML = html;
+    // Atualiza título e meta no header
+    document.getElementById('historyViewTitle').textContent = snap.titulo || 'Registro';
+    var metaEl = document.getElementById('historyViewMeta');
+    if (metaEl) metaEl.textContent = `${h.entry.acao} • ${dateStr} às ${timeStr}${h.entry.usuario ? ' • ' + h.entry.usuario : ''}`;
+
+    document.getElementById('historyViewContent').innerHTML = cardsHtml + descHtml + modHtml + anexosHtml;
     document.getElementById('historyViewModal').style.display = 'flex';
 }
 
