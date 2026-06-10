@@ -1,0 +1,22 @@
+/* =========================================================================
+   BACKUP
+   ========================================================================= */
+#backupContent {
+    display: none;
+    flex-direction: column;
+    gap: 30px;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+}
+.backup-card {
+    background: #fff;
+    padding: 48px 44px;
+    border-radius: var(--r-2xl);
+    box-shadow: var(--shadow-md);
+    border: 1.5px solid var(--border);
+    width: 100%;
+    max-width: 500px;
+}
+.backup-actions { display: flex; gap: 16px; justify-content: center; margin-top: 24px; }

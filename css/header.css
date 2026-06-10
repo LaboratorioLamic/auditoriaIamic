@@ -1,0 +1,64 @@
+/* =========================================================================
+   HEADER
+   ========================================================================= */
+.header {
+    background: var(--grad-header);
+    backdrop-filter: saturate(200%) blur(12px);
+    -webkit-backdrop-filter: saturate(200%) blur(12px);
+    padding: 0 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 68px;
+    flex-shrink: 0;
+    z-index: 500;
+    position: relative;
+}
+
+.title-area {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+    min-width: 0;
+}
+.title-area h1 {
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.title-area small {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-top: 2px;
+    white-space: nowrap;
+}
+
+.btn-toggle-menu {
+    background: none;
+    border: 1.5px solid var(--border);
+    color: var(--primary);
+    font-size: 17px;
+    cursor: pointer;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--r-md);
+    margin-right: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+    flex-shrink: 0;
+}
+.btn-toggle-menu:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+    transform: scale(1.04);
+}

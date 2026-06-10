@@ -1,0 +1,154 @@
+/* =========================================================================
+   DASHBOARD
+   ========================================================================= */
+#dashboardContent {
+    display: none;
+    flex-direction: column;
+    gap: 22px;
+    padding-bottom: 40px;
+}
+
+/* KPI Cards */
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 16px;
+}
+
+.summary-card {
+    background: var(--card-bg);
+    padding: 22px 22px 20px;
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-xs);
+    border: 1.5px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+    transition: transform var(--t-base), box-shadow var(--t-base), border-color var(--t-base);
+    cursor: default;
+}
+.summary-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--grad-accent);
+    opacity: 0;
+    transition: opacity var(--t-base);
+}
+.summary-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-strong);
+}
+.summary-card:hover::before { opacity: 1; }
+
+.summary-card .icon-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.summary-card .icon-header i {
+    font-size: 19px;
+    padding: 10px;
+    border-radius: var(--r-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+}
+.summary-card p {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.summary-card h2 {
+    margin: 0;
+    font-size: 36px;
+    font-weight: 900;
+    color: var(--primary);
+    letter-spacing: -2px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Chart cards */
+.dashboard-charts {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 18px;
+}
+
+.chart-card {
+    background: var(--card-bg);
+    padding: 22px 24px;
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-xs);
+    border: 1.5px solid var(--border);
+    min-height: 360px;
+    transition: box-shadow var(--t-base), border-color var(--t-base);
+    display: flex;
+    flex-direction: column;
+}
+.chart-card:hover { box-shadow: var(--shadow-sm); border-color: var(--border-strong); }
+.chart-card h3 {
+    margin: 0 0 18px;
+    color: var(--primary);
+    font-size: 14.5px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: -0.2px;
+    flex-shrink: 0;
+}
+.chart-card h3 i { color: var(--accent); font-size: 15px; }
+
+.chart-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    font-size: 14px;
+    color: var(--text-light);
+    justify-content: center;
+    align-items: center;
+}
+.chart-list { width: 100%; list-style: none; padding: 0; margin: 0; align-self: flex-start; }
+.chart-list li {
+    display: flex;
+    flex-direction: column;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    transition: background var(--t-fast);
+}
+.chart-list li:last-child { border-bottom: none; }
+.chart-list li:hover { background: var(--surface-muted); border-radius: var(--r-sm); padding-left: 4px; }
+.chart-list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; z-index: 10; position: relative; }
+.chart-list .status-info { display: flex; align-items: center; font-weight: 600; color: var(--text); font-size: 13.5px; }
+.chart-list .value { font-weight: 800; color: var(--primary); font-size: 14px; }
+.chart-list .percent { font-weight: 500; color: var(--text-muted); margin-left: 6px; font-size: 12px; }
+.chart-list .deadline-info { font-size: 14px; font-weight: 700; }
+.chart-bar {
+    height: 8px;
+    background: var(--bg-elevated);
+    border-radius: var(--r-full);
+    overflow: hidden;
+    margin-top: 6px;
+}
+.chart-bar-fill {
+    height: 100%;
+    background: var(--grad-accent);
+    border-radius: var(--r-full);
+    transition: width 0.7s var(--ease);
+}

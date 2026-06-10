@@ -1,0 +1,59 @@
+/* =========================================================================
+   RESPONSIVO
+   ========================================================================= */
+@media (max-width: 1024px) {
+    .dashboard-charts { grid-template-columns: 1fr; }
+    .chart-card { min-height: auto; }
+}
+
+@media (max-width: 900px) {
+    #kanbanBoard { overflow-x: auto; flex-wrap: nowrap; }
+    .kanban-col { flex: 0 0 240px; min-width: 240px; }
+    .view-module-tab { padding: 8px 14px; font-size: 13px; }
+}
+
+@media (max-width: 768px) {
+    :root { --sidebar-w: 280px; }
+    .header { padding: 0 16px; height: 60px; gap: 8px; }
+    .title-area h1 { font-size: 17px; }
+    .title-area small { display: none; }
+    .content { padding: 14px 16px 40px; gap: 14px; }
+    .filters-bar { padding: 12px 14px; }
+    .filter-input { min-width: 120px; flex: 1; }
+    .summary-cards { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .summary-card { padding: 16px 18px; }
+    .summary-card h2 { font-size: 30px; }
+    .form-grid { grid-template-columns: 1fr; gap: 12px; }
+    .config-grid-2 { grid-template-columns: 1fr; }
+    .modal { padding: 10px; }
+    .modal-content { padding: 20px; border-radius: var(--r-xl); }
+    .view-grid { grid-template-columns: 1fr; padding: 14px; }
+    .backup-card { padding: 28px 24px; }
+    .backup-actions { flex-direction: column; }
+    .cards-grid { grid-template-columns: 1fr; }
+    .title-search-dropdown { position: fixed; left: 16px; right: 16px; top: 130px; width: auto; max-width: none; }
+    .checkbox-label { display: none; }
+    .checkbox-wrapper { padding: 7px; }
+    .notification-modal {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        width: 100%;
+        max-height: 72vh;
+        border-radius: var(--r-xl) var(--r-xl) 0 0;
+        max-width: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .summary-cards { grid-template-columns: 1fr; }
+    .modal-actions { flex-direction: column-reverse; }
+    .modal-actions button { width: 100%; justify-content: center; }
+    .btn-primary span { display: none; }
+    .history-drawer { width: 100vw; border-radius: 0; }
+    .kanban-col { flex: 0 0 216px; min-width: 216px; }
+    .view-module-tab span { display: none; }
+    .view-module-tab { padding: 9px 12px; }
+}
