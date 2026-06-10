@@ -38,6 +38,7 @@
         if (typeof KANBAN_TABS !== 'undefined' && KANBAN_TABS.includes(currentTab) &&
             typeof isKanbanActive === 'function' && isKanbanActive()) {
             if (typeof renderKanban === 'function') renderKanban();
+            updateNotificationCount();
             return;
         }
 
@@ -574,15 +575,17 @@
         const fSetor = document.getElementById('fDashSetor').value;
         const fCat = document.getElementById('fDashCat')?.value || '';
         const fStatus = document.getElementById('fDashStatus').value;
-        const fResponsavel = document.getElementById('fDashResponsavel').value;
-        const fRevisor = document.getElementById('fDashRevisor').value;
-        const fDateType = document.getElementById('fDashDateType').value;
-        const fMonth = parseInt(document.getElementById('fDashMonth').value);
-        const fYearForMonth = parseInt(document.getElementById('fDashYearForMonth').value);
-        const fYearOnly = parseInt(document.getElementById('fDashYearOnly').value);
-        const fYear = (fDateType === 'year') ? fYearOnly : fYearForMonth;
-        const fDataIni = document.getElementById('fDashDataIni').value;
-        const fDataFim = document.getElementById('fDashDataFim').value;
+        // Usa filtros de pessoas do dashboard (dashRespFilter/dashRevFilter/dashMyTasksActive)
+        const fResponsavel = (typeof dashRespFilter !== 'undefined') ? dashRespFilter : document.getElementById('fDashResponsavel').value;
+        const fRevisor = (typeof dashRevFilter !== 'undefined') ? dashRevFilter : document.getElementById('fDashRevisor').value;
+        const fDashMy = (typeof dashMyTasksActive !== 'undefined') ? dashMyTasksActive : false;
+        const fDashMyMode = (typeof dashMyTasksMode !== 'undefined') ? dashMyTasksMode : 'all';
+        // Usa o filtro de data global do header (fbarDateMode/fbarDateYear/fbarDateMonth)
+        const fDateType = (typeof fbarDateMode !== 'undefined') ? fbarDateMode : 'all';
+        const fMonth = (typeof fbarDateMonth !== 'undefined') ? fbarDateMonth : new Date().getMonth();
+        const fYear = (typeof fbarDateYear !== 'undefined') ? fbarDateYear : new Date().getFullYear();
+        const fDataIni = '';
+        const fDataFim = '';
         const fTitleQuery = titleSearchDashEnabled ? titleSearchDashQuery : '';
 
         // Obtém as abas que o usuário tem permissão
@@ -661,6 +664,26 @@
                 if (!itemRevisor || !itemRevisor.includes(fRevisor)) return false;
             }
 
+            // 3.4 Filtro "Minhas Tarefas" do dashboard
+            if (fDashMy && currentuser) {
+                const me = (currentuser.name || '').toLowerCase().trim();
+                if (me) {
+                    if (fDashMyMode === 'responsavel') {
+                        const raw = item.responsavelTecnico || item.responsavel || '';
+                        const names = (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map(n=>String(n).toLowerCase().trim()) : [String(p).toLowerCase().trim()]; } catch { return [String(raw).toLowerCase().trim()]; } })().filter(Boolean);
+                        if (!names.some(n => n === me)) return false;
+                    } else if (fDashMyMode === 'revisor') {
+                        if ((item.revisor || '').toLowerCase().trim() !== me) return false;
+                    } else {
+                        const raw = item.responsavelTecnico || item.responsavel || '';
+                        const names = (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map(n=>String(n).toLowerCase().trim()) : [String(p).toLowerCase().trim()]; } catch { return [String(raw).toLowerCase().trim()]; } })().filter(Boolean);
+                        const isResp = names.some(n => n === me);
+                        const isRev  = (item.revisor || '').toLowerCase().trim() === me;
+                        if (!isResp && !isRev) return false;
+                    }
+                }
+            }
+
             // 3.1 Filtro por Título (lupa)
             if (fTitleQuery) {
                 const t = normalizeText(item.titulo || '');
@@ -671,13 +694,16 @@
             if (fDateType !== 'all') {
                 const date = item.dateField;
                 if (!date) return false;
-
                 const itemDate = new Date(date);
-
                 if (fDateType === 'month') {
                     if (itemDate.getMonth() !== fMonth || itemDate.getFullYear() !== fYear) return false;
                 } else if (fDateType === 'year') {
                     if (itemDate.getFullYear() !== fYear) return false;
+                } else if (fDateType === 'week') {
+                    const now = new Date();
+                    const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate() - now.getDay()); startOfWeek.setHours(0,0,0,0);
+                    const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(startOfWeek.getDate() + 6); endOfWeek.setHours(23,59,59,999);
+                    if (itemDate < startOfWeek || itemDate > endOfWeek) return false;
                 } else if (fDateType === 'custom') {
                     if (fDataIni && date < fDataIni) return false;
                     if (fDataFim && date > fDataFim) return false;

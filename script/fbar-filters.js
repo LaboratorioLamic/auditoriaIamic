@@ -59,7 +59,12 @@ function setMyTasksMode(mode) {
     _updatePeopleBtnUI('revisor');
     _syncPeopleBtnsVisibility();
     _syncHiddenSelects();
-    renderCards();
+    if (typeof currentTab !== 'undefined' && currentTab === 'dashboard' && typeof renderDashboard === 'function') {
+        renderDashboard();
+    } else {
+        renderCards();
+    }
+    if (typeof updateNotificationCount === 'function') updateNotificationCount();
 }
 
 function _syncPeopleBtnsVisibility() {
@@ -89,15 +94,13 @@ function passesFbarMyTasks(item) {
     const me = (currentuser.name || '').toLowerCase().trim();
     if (!me) return true;
 
-    // Responsável — compara exatamente contra cada nome do array
     const respNames = _parseAllNames(item.responsavelTecnico || item.responsavel || '');
-    if (respNames.some(n => n === me)) return true;
+    const isResp = respNames.some(n => n === me);
+    const isRev  = (item.revisor || '').toLowerCase().trim() === me;
 
-    // Revisor — compara exatamente
-    const rev = (item.revisor || '').toLowerCase().trim();
-    if (rev === me) return true;
-
-    return false;
+    if (fbarMyTasksMode === 'responsavel') return isResp;
+    if (fbarMyTasksMode === 'revisor')     return isRev;
+    return isResp || isRev; // 'all'
 }
 
 // ── FILTROS POR PESSOA ───────────────────────────────────────────────────────
@@ -118,6 +121,7 @@ function openPeopleFilter(type) {
 function closePeopleFilter() {
     const modal = document.getElementById('modalPeopleFilter');
     if (modal) modal.style.display = 'none';
+    _dashPeopleMode = false;
 }
 
 function renderPeopleFilterList() {
@@ -482,25 +486,21 @@ function _buildFbarDateDropdown() {
             <button class="fbar-date-dd-mode ${fbarDateMode==='week'?'active':''}" onclick="setFbarDateMode('week')"><i class="fas fa-calendar-week"></i> Semana Atual</button>
         </div>
         ${fbarDateMode === 'month' ? `
-        <div class="fbar-date-dd-picker">
-            <div class="fbar-date-dd-picker-row">
-                <span class="fbar-adv-label">Mês</span>
-                <select class="fbar-adv-select filter-input" onchange="fbarDateMonth=parseInt(this.value); _syncDateHiddenSelects(_tabPrefix()); renderCards(); _buildFbarDateDropdown(); _updateFbarDateBtn();">
-                    ${months.map((m,i) => `<option value="${i}" ${i===fbarDateMonth?'selected':''}>${m}</option>`).join('')}
-                </select>
+        <div class="fbar-month-cal">
+            <div class="fbar-month-cal-header">
+                <button class="fbar-month-cal-nav" onclick="fbarDateYear--; _buildFbarDateDropdown();" title="Ano anterior"><i class="fas fa-chevron-left"></i></button>
+                <span class="fbar-month-cal-year">${fbarDateYear}</span>
+                <button class="fbar-month-cal-nav" onclick="fbarDateYear++; _buildFbarDateDropdown();" title="Próximo ano"><i class="fas fa-chevron-right"></i></button>
             </div>
-            <div class="fbar-date-dd-picker-row">
-                <span class="fbar-adv-label">Ano</span>
-                <select class="fbar-adv-select filter-input" onchange="fbarDateYear=parseInt(this.value); _syncDateHiddenSelects(_tabPrefix()); renderCards(); _buildFbarDateDropdown(); _updateFbarDateBtn();">
-                    ${yOpts.map(y => `<option value="${y}" ${y===fbarDateYear?'selected':''}>${y}</option>`).join('')}
-                </select>
+            <div class="fbar-month-cal-grid">
+                ${months.map((m,i) => `<button class="fbar-month-cal-cell${i===fbarDateMonth?' selected':''}" onclick="fbarDateMonth=${i}; _syncDateHiddenSelects(_tabPrefix()); _buildFbarDateDropdown(); _updateFbarDateBtn(); (currentTab==='dashboard'&&typeof renderDashboard==='function'?renderDashboard():renderCards());">${m.slice(0,3)}</button>`).join('')}
             </div>
         </div>` : ''}
         ${fbarDateMode === 'year' ? `
         <div class="fbar-date-dd-picker">
             <div class="fbar-date-dd-picker-row">
                 <span class="fbar-adv-label">Ano</span>
-                <select class="fbar-adv-select filter-input" onchange="fbarDateYear=parseInt(this.value); _syncDateHiddenSelects(_tabPrefix()); renderCards(); _buildFbarDateDropdown(); _updateFbarDateBtn();">
+                <select class="fbar-adv-select filter-input" onchange="fbarDateYear=parseInt(this.value); _syncDateHiddenSelects(_tabPrefix()); _buildFbarDateDropdown(); _updateFbarDateBtn(); (currentTab==='dashboard'&&typeof renderDashboard==='function'?renderDashboard():renderCards());">
                     ${yOpts.map(y => `<option value="${y}" ${y===fbarDateYear?'selected':''}>${y}</option>`).join('')}
                 </select>
             </div>
@@ -513,7 +513,11 @@ function setFbarDateMode(mode) {
     _syncDateHiddenSelects(_tabPrefix());
     _buildFbarDateDropdown();
     _updateFbarDateBtn();
-    renderCards();
+    if (typeof currentTab !== 'undefined' && currentTab === 'dashboard' && typeof renderDashboard === 'function') {
+        renderDashboard();
+    } else {
+        renderCards();
+    }
 }
 
 function _updateFbarDateBtn() {
@@ -544,6 +548,12 @@ function fbarOnTabSwitch() {
     // Sincroniza data
     _syncDateHiddenSelects(_tabPrefix());
     _updateFbarDateBtn();
+    // Sincroniza botões do dashboard
+    if (typeof _updateDashPeopleBtnUI === 'function') {
+        _updateDashPeopleBtnUI('responsavel');
+        _updateDashPeopleBtnUI('revisor');
+        _syncDashPeopleBtnsVisibility();
+    }
     // Atualiza indicador filtros avançados
     _populateFbarAdv();
 }
@@ -610,6 +620,163 @@ function fbarOnTabSwitch() {
     };
     _ready();
 })();
+
+// ── DASHBOARD: MINHAS TAREFAS + FILTRO DE PESSOAS ───────────────────────────
+var dashMyTasksActive = true;
+var dashMyTasksMode   = 'responsavel';
+var dashRespFilter    = '';
+var dashRevFilter     = '';
+var _peopleDashType   = 'responsavel';
+
+function toggleMyTasksDash() {
+    const dd = document.getElementById('fbarMyTasksDropdownDash');
+    if (!dd) return;
+    const open = dd.style.display === 'block';
+    dd.style.display = open ? 'none' : 'block';
+}
+
+function setMyTasksModeDash(mode) {
+    dashMyTasksMode = mode;
+    const dd = document.getElementById('fbarMyTasksDropdownDash'); if (dd) dd.style.display = 'none';
+    if (mode === 'responsavel') {
+        dashMyTasksActive = true;
+        dashRespFilter = currentuser && currentuser.name ? currentuser.name : '';
+        dashRevFilter  = '';
+    } else if (mode === 'revisor') {
+        dashMyTasksActive = true;
+        dashRevFilter  = currentuser && currentuser.name ? currentuser.name : '';
+        dashRespFilter = '';
+    } else {
+        dashMyTasksActive = false;
+        dashRespFilter = '';
+        dashRevFilter  = '';
+    }
+    _updateDashPeopleBtnUI('responsavel');
+    _updateDashPeopleBtnUI('revisor');
+    _syncDashPeopleBtnsVisibility();
+    _syncDashHiddenSelects();
+    if (typeof renderDashboard === 'function') renderDashboard();
+}
+
+function openPeopleFilterDash(type) {
+    _peopleDashType = type;
+    // Reutiliza o modal de pessoas mas sobrescreve o contexto
+    _peopleFilterType = type;
+    _dashPeopleMode = true;
+    const modal = document.getElementById('modalPeopleFilter');
+    const title = document.getElementById('peopleFilterTitle');
+    const icon  = document.getElementById('peopleFilterIcon');
+    const search = document.getElementById('peopleFilterSearch');
+    if (!modal) return;
+    if (title) title.textContent = type === 'responsavel' ? 'Selecionar Responsável' : 'Selecionar Revisor';
+    if (icon)  icon.innerHTML = type === 'responsavel' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-user-check"></i>';
+    if (search) search.value = '';
+    _renderDashPeopleList();
+    modal.style.display = 'flex';
+}
+
+var _dashPeopleMode = false;
+
+function _renderDashPeopleList() {
+    const list   = document.getElementById('peopleFilterList');
+    const search = document.getElementById('peopleFilterSearch');
+    if (!list) return;
+    const query   = (search?.value || '').toLowerCase().trim();
+    const type    = _peopleDashType;
+    const current = type === 'responsavel' ? dashRespFilter : dashRevFilter;
+
+    // Coleta nomes de todos os itens do dashboard
+    let items = [
+        ...(audits||[]).map(a => ({...a, _dtype:'audit'})),
+        ...(activities||[]).map(a => ({...a, _dtype:'ativ'})),
+        ...(maintenances||[]).map(m => ({...m, _dtype:'mant'})),
+        ...(documents||[]).map(d => ({...d, _dtype:'doc'}))
+    ].filter(i => !i.deleted);
+
+    const names = new Set();
+    items.forEach(item => {
+        if (type === 'responsavel') {
+            const raw = item.responsavelTecnico || item.responsavel || '';
+            const n = normalizeResponsavel ? normalizeResponsavel(raw) : raw.trim().toLowerCase();
+            if (n) names.add(n);
+        } else {
+            const rev = (item.revisor || '').trim();
+            if (rev) names.add(rev.toLowerCase());
+        }
+    });
+
+    let realNames = [...names].map(normalized => {
+        const user = (users||[]).find(u => u.name && u.name.toLowerCase() === normalized);
+        if (user) return user.name;
+        return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+    });
+    realNames = [...new Set(realNames)].sort((a,b) => a.localeCompare(b));
+    const filtered = query ? realNames.filter(n => n.toLowerCase().includes(query)) : realNames;
+
+    if (!filtered.length) {
+        list.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:24px;font-size:13px;">Nenhum resultado encontrado</div>`;
+        return;
+    }
+    list.innerHTML = filtered.map(name => {
+        const sel = (name.toLowerCase() === current.toLowerCase()) && current !== '';
+        return `<div class="people-filter-item ${sel?'selected':''}" onclick="selectPeopleFilterDash('${_escPeople(name)}')">
+            <div class="people-filter-item-check"><i class="fas fa-check"></i></div>
+            <div class="people-filter-item-info"><div class="people-filter-item-name">${_escHtmlF(name)}</div></div>
+        </div>`;
+    }).join('');
+}
+
+function selectPeopleFilterDash(name) {
+    const type = _peopleDashType;
+    if (type === 'responsavel') {
+        dashRespFilter = (dashRespFilter.toLowerCase() === name.toLowerCase()) ? '' : name;
+    } else {
+        dashRevFilter = (dashRevFilter.toLowerCase() === name.toLowerCase()) ? '' : name;
+    }
+    _updateDashPeopleBtnUI(type);
+    _renderDashPeopleList();
+    _syncDashHiddenSelects();
+    const modal = document.getElementById('modalPeopleFilter');
+    if (modal) modal.style.display = 'none';
+    _dashPeopleMode = false;
+    if (typeof renderDashboard === 'function') renderDashboard();
+}
+
+function _updateDashPeopleBtnUI(type) {
+    if (type === 'responsavel') {
+        const btn   = document.getElementById('fbarRespBtnDash');
+        const label = document.getElementById('fbarRespLabelDash');
+        const badge = document.getElementById('fbarRespBadgeDash');
+        const active = !!dashRespFilter;
+        if (btn) btn.classList.toggle('active', active);
+        if (label) label.textContent = active ? dashRespFilter : 'Filtrar por Responsável';
+        if (badge) { badge.style.display = active ? 'inline-flex' : 'none'; if (active) badge.textContent = '1'; }
+    } else {
+        const btn   = document.getElementById('fbarRevBtnDash');
+        const label = document.getElementById('fbarRevLabelDash');
+        const badge = document.getElementById('fbarRevBadgeDash');
+        const active = !!dashRevFilter;
+        if (btn) btn.classList.toggle('active', active);
+        if (label) label.textContent = active ? dashRevFilter : 'Filtrar por Revisor';
+        if (badge) { badge.style.display = active ? 'inline-flex' : 'none'; if (active) badge.textContent = '1'; }
+    }
+}
+
+function _syncDashPeopleBtnsVisibility() {
+    const rBtn = document.getElementById('fbarRespBtnDash');
+    const vBtn = document.getElementById('fbarRevBtnDash');
+    const hide = dashMyTasksActive;
+    if (rBtn) rBtn.style.display = hide ? 'none' : 'inline-flex';
+    if (vBtn) vBtn.style.display = hide ? 'none' : 'inline-flex';
+}
+
+function _syncDashHiddenSelects() {
+    const respEl = document.getElementById('fDashResponsavel');
+    const revEl  = document.getElementById('fDashRevisor');
+    if (respEl) respEl.value = dashRespFilter || '';
+    if (revEl)  revEl.value  = dashRevFilter  || '';
+}
+
 
 // ── UTILITÁRIOS ──────────────────────────────────────────────────────────────
 function _escHtmlF(s) {

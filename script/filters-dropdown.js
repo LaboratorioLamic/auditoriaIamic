@@ -85,48 +85,36 @@
     }
 
     function populateFiltersDropdownDashboard() {
-        const ids = {
-            setor: 'fDashSetor',
-            categoria: 'fDashCat'
+        // Sincroniza selects do dropdown avançado com os selects ocultos
+        const map = {
+            area:     { real: 'fDashArea',   drop: 'dropDashArea'      },
+            setor:    { real: 'fDashSetor',  drop: 'dropDashSetorAdv'  },
+            categoria:{ real: 'fDashCat',    drop: 'dropDashCatAdv'    },
+            status:   { real: 'fDashStatus', drop: 'dropDashStatusAdv' }
         };
-
-        const dropIds = {
-            setor: 'dropDashSetor',
-            categoria: 'dropDashCat'
-        };
-
-        // Copia opções e valor dos selects reais para os selects do dropdown
-        Object.entries(ids).forEach(([key, realId]) => {
-            const realEl = document.getElementById(realId);
-            const dropEl = document.getElementById(dropIds[key]);
-            if (!dropEl) return;
-            if (realEl) {
-                dropEl.innerHTML = realEl.innerHTML;
-                try { dropEl.value = realEl.value; } catch(_) { dropEl.selectedIndex = 0; }
-            } else {
-                dropEl.innerHTML = '<option value="">Nenhuma opção</option>';
-                dropEl.value = '';
-            }
+        Object.values(map).forEach(({ real, drop }) => {
+            const realEl = document.getElementById(real);
+            const dropEl = document.getElementById(drop);
+            if (!dropEl || !realEl) return;
+            dropEl.innerHTML = realEl.innerHTML;
+            try { dropEl.value = realEl.value; } catch(_) { dropEl.selectedIndex = 0; }
         });
     }
 
     function onDropdownFilterChangeDashboard(type) {
-        const realIds = {
-            setor: 'fDashSetor',
-            categoria: 'fDashCat'
+        const map = {
+            area:     { real: 'fDashArea',   drop: 'dropDashArea'      },
+            setor:    { real: 'fDashSetor',  drop: 'dropDashSetorAdv'  },
+            categoria:{ real: 'fDashCat',    drop: 'dropDashCatAdv'    },
+            status:   { real: 'fDashStatus', drop: 'dropDashStatusAdv' }
         };
-
-        const dropIdMap = { setor: 'dropDashSetor', categoria: 'dropDashCat' };
-        const dropEl = document.getElementById(dropIdMap[type]);
-        const realEl = document.getElementById(realIds[type]);
+        const entry = map[type];
+        if (!entry) return;
+        const dropEl = document.getElementById(entry.drop);
+        const realEl = document.getElementById(entry.real);
         if (!dropEl || !realEl) return;
-
         try { realEl.value = dropEl.value; } catch(_) { realEl.selectedIndex = 0; }
-
-        if (type === 'categoria') {
-            populateFiltersDropdownDashboard();
-        }
-
+        if (type === 'categoria') populateFiltersDropdownDashboard();
         closeFilters();
         onFilterDashboardChange();
     }

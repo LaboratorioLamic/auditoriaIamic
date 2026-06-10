@@ -291,14 +291,32 @@
         document.getElementById('fDashArea').value = "";
         document.getElementById('fDashSetor').value = "";
         document.getElementById('fDashCat').value = "";
-        // subcategoria removida
         document.getElementById('fDashStatus').value = "";
         document.getElementById('fDashResponsavel').value = "";
         document.getElementById('fDashRevisor').value = "";
-
         document.getElementById('fDashDateType').value = 'all';
         document.getElementById('fDashDataIni').value = "";
         document.getElementById('fDashDataFim').value = "";
+
+        // Limpa selects do dropdown avançado
+        ['dropDashArea','dropDashSetorAdv','dropDashCatAdv','dropDashStatusAdv'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.value = '';
+        });
+
+        // Reseta Minhas Tarefas e filtros de pessoa do dashboard
+        if (typeof dashMyTasksActive !== 'undefined') {
+            dashMyTasksActive = true;
+            dashMyTasksMode   = 'responsavel';
+            dashRespFilter    = '';
+            dashRevFilter     = '';
+            if (typeof _updateDashPeopleBtnUI === 'function') {
+                _updateDashPeopleBtnUI('responsavel');
+                _updateDashPeopleBtnUI('revisor');
+            }
+            if (typeof _syncDashPeopleBtnsVisibility === 'function') _syncDashPeopleBtnsVisibility();
+            const myBtn = document.getElementById('fbarMyTasksDash');
+            if (myBtn) myBtn.classList.add('active');
+        }
 
         setTitleSearchEnabled('dash', false);
         updateDateInputs('Dash');

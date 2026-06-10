@@ -15,6 +15,7 @@
     animation: fadeIn 0.18s var(--ease);
 }
 .modal[style*="flex"] { display: flex !important; }
+#modalListManager { z-index: 1200; }
 
 .modal-content {
     background: #fff;

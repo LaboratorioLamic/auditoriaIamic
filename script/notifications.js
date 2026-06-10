@@ -90,18 +90,19 @@
 
     function getDashboardFilters() {
         return {
-            area: document.getElementById('fDashArea')?.value || '',
-            setor: document.getElementById('fDashSetor')?.value || '',
-            categoria: document.getElementById('fDashCat')?.value || '',
-            status: document.getElementById('fDashStatus')?.value || '',
-            responsavel: document.getElementById('fDashResponsavel')?.value || '',
-            revisor: document.getElementById('fDashRevisor')?.value || '',
-            dateType: document.getElementById('fDashDateType')?.value || 'all',
-            month: parseInt(document.getElementById('fDashMonth')?.value || currentMonth),
-            yearForMonth: parseInt(document.getElementById('fDashYearForMonth')?.value || currentYear),
-            yearOnly: parseInt(document.getElementById('fDashYearOnly')?.value || currentYear),
-            dataIni: document.getElementById('fDashDataIni')?.value || '',
-            dataFim: document.getElementById('fDashDataFim')?.value || ''
+            area:          document.getElementById('fDashArea')?.value || '',
+            setor:         document.getElementById('fDashSetor')?.value || '',
+            categoria:     document.getElementById('fDashCat')?.value || '',
+            status:        document.getElementById('fDashStatus')?.value || '',
+            // Usa filtros de pessoa do dashboard (variáveis globais do fbar)
+            responsavel:   (typeof dashRespFilter !== 'undefined') ? dashRespFilter : '',
+            revisor:       (typeof dashRevFilter  !== 'undefined') ? dashRevFilter  : '',
+            myTasksActive: (typeof dashMyTasksActive !== 'undefined') ? dashMyTasksActive : false,
+            myTasksMode:   (typeof dashMyTasksMode   !== 'undefined') ? dashMyTasksMode   : 'all',
+            // Usa filtro de data global do header
+            dateType:      (typeof fbarDateMode  !== 'undefined') ? fbarDateMode  : 'all',
+            month:         (typeof fbarDateMonth !== 'undefined') ? fbarDateMonth : new Date().getMonth(),
+            year:          (typeof fbarDateYear  !== 'undefined') ? fbarDateYear  : new Date().getFullYear(),
         };
     }
 
@@ -119,41 +120,58 @@
             // Filtro por Status
             if (filters.status && item.status !== filters.status) return false;
 
-            // Filtro por Responsável
+            // Filtro por Responsável (direto, quando não é Minhas Tarefas)
             if (filters.responsavel) {
-                let itemResponsavel = '';
-                if (type === 'mant') {
-                    itemResponsavel = item.responsavelTecnico || item.responsavelManutencao || '';
-                } else {
-                    itemResponsavel = item.responsavel || '';
-                }
-                if (!itemResponsavel || !itemResponsavel.includes(filters.responsavel)) return false;
+                const raw = type === 'mant'
+                    ? (item.responsavelTecnico || item.responsavelManutencao || '')
+                    : (item.responsavel || '');
+                if (!raw || !raw.includes(filters.responsavel)) return false;
             }
 
-            // Filtro por Revisor
+            // Filtro por Revisor (direto)
             if (filters.revisor) {
-                const itemRevisor = item.revisor || '';
-                if (!itemRevisor || !itemRevisor.includes(filters.revisor)) return false;
+                if (!(item.revisor || '').includes(filters.revisor)) return false;
             }
 
-            // Filtro por Período
+            // Filtro "Minhas Tarefas"
+            if (filters.myTasksActive && currentuser) {
+                const me = (currentuser.name || '').toLowerCase().trim();
+                if (me) {
+                    const parseNames = raw => {
+                        try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map(n => String(n).toLowerCase().trim()) : [String(p).toLowerCase().trim()]; }
+                        catch { return [String(raw).toLowerCase().trim()]; }
+                    };
+                    const raw = type === 'mant'
+                        ? (item.responsavelTecnico || item.responsavelManutencao || '')
+                        : (item.responsavel || '');
+                    const respNames = parseNames(raw).filter(Boolean);
+                    const isResp = respNames.some(n => n === me);
+                    const isRev  = (item.revisor || '').toLowerCase().trim() === me;
+
+                    if (filters.myTasksMode === 'responsavel' && !isResp) return false;
+                    if (filters.myTasksMode === 'revisor'     && !isRev)  return false;
+                    if (filters.myTasksMode !== 'responsavel' && filters.myTasksMode !== 'revisor' && !isResp && !isRev) return false;
+                }
+            }
+
+            // Filtro por Período (usa fbarDateMode do header)
             if (filters.dateType !== 'all') {
                 const dateField = type === 'audit' ? item.dataPublicacao :
-                                 type === 'ativ' ? item.dataInicio :
-                                 type === 'mant' ? item.ultima :
-                                 item.dataCriacao;
+                                  type === 'ativ'  ? item.dataInicio :
+                                  type === 'mant'  ? item.ultima :
+                                  item.dataCriacao;
                 if (!dateField) return false;
-
                 const itemDate = new Date(dateField);
-                const year = (filters.dateType === 'year') ? filters.yearOnly : filters.yearForMonth;
 
                 if (filters.dateType === 'month') {
-                    if (itemDate.getMonth() !== filters.month || itemDate.getFullYear() !== year) return false;
+                    if (itemDate.getMonth() !== filters.month || itemDate.getFullYear() !== filters.year) return false;
                 } else if (filters.dateType === 'year') {
-                    if (itemDate.getFullYear() !== year) return false;
-                } else if (filters.dateType === 'custom') {
-                    if (filters.dataIni && dateField < filters.dataIni) return false;
-                    if (filters.dataFim && dateField > filters.dataFim) return false;
+                    if (itemDate.getFullYear() !== filters.year) return false;
+                } else if (filters.dateType === 'week') {
+                    const now = new Date();
+                    const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate() - now.getDay()); startOfWeek.setHours(0,0,0,0);
+                    const endOfWeek   = new Date(startOfWeek); endOfWeek.setDate(startOfWeek.getDate() + 6); endOfWeek.setHours(23,59,59,999);
+                    if (itemDate < startOfWeek || itemDate > endOfWeek) return false;
                 }
             }
 
@@ -163,37 +181,11 @@
 
     function applyCurrentTabFilters(data, tabType) {
         if (currentTab === 'dashboard') return data;
-
-        let filtered = data;
         const prefix = getFilterPrefixForTab(currentTab);
-
-        // Setor
-        const sectorFilter = document.getElementById(`f${prefix}Setor`)?.value || '';
-        if (sectorFilter) {
-            filtered = filtered.filter(item => item.setor === sectorFilter);
-        }
-
-        // Categoria
-        const catFilter = document.getElementById(`f${prefix}Cat`)?.value || '';
-        if (catFilter) {
-            filtered = filtered.filter(item => item.categoria === catFilter);
-        }
-
-        // Subcategoria/Item
-        const subId = tabType === 'mant' ? `f${prefix}Item` : `f${prefix}Sub`;
-        const subFilter = document.getElementById(subId)?.value || '';
-        if (subFilter) {
-            const subField = tabType === 'mant' ? 'item' : 'subcategoria';
-            filtered = filtered.filter(item => item[subField] === subFilter);
-        }
-
-        // Status
-        const statusFilter = document.getElementById(`f${prefix}Status`)?.value || '';
-        if (statusFilter) {
-            filtered = filtered.filter(item => item.status === statusFilter);
-        }
-
-        return filtered;
+        if (!prefix || typeof passesFilters !== 'function') return data;
+        // Usa passesFilters diretamente — inclui todos os filtros ativos (setor, categoria,
+        // subcategoria, status, responsável, revisor, marcador, data, Minhas Tarefas, etc.)
+        return data.filter(item => passesFilters(prefix, item));
     }
 
     function getFilterPrefixForTab(tab) {
@@ -207,32 +199,10 @@
     function getFilteredNotifications(data, tabType) {
         const notifications = [];
 
-    // CAPTURA OS FILTROS ATIVOS NA ABA ATUAL
-    var prefix = getFilterPrefixForTab(currentTab);
-    var filterResponsavel = document.getElementById(`f${prefix}Responsavel`)?.value || '';
-    var filterRevisor = document.getElementById(`f${prefix}Revisor`)?.value || '';
-
         data.forEach(item => {
         // 1. Excluir itens finalizados (Concluído ou Cancelado)
             if (item.status === 'Concluído' || item.status === 'Cancelado') {
                 return;
-            }
-
-        // 2. FILTRO DE RESPONSÁVEL (Respeita a seleção da tela)
-        if (filterResponsavel) {
-            const itemRespRaw = tabType === 'mant' ? (item.responsavelTecnico || '') : (item.responsavel || '');
-            const normalizedItemResp = normalizeResponsavel(itemRespRaw); // Usa sua função de limpeza de JSON/String
-            if (!normalizedItemResp.includes(filterResponsavel.toLowerCase())) {
-                return;
-            }
-        }
-
-        // 3. FILTRO DE REVISOR (Respeita a seleção da tela - Ignora se for Manutenção pois não possui o campo)
-        if (filterRevisor && tabType !== 'mant') {
-            const itemRev = normalizeText(item.revisor || '');
-            if (!itemRev.includes(normalizeText(filterRevisor))) {
-                return;
-            }
             }
 
             const deadlineField = getDeadlineFieldForTab(tabType, item);

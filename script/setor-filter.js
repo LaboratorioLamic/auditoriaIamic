@@ -46,6 +46,22 @@ function setorFilterDeselectAll() {
     _updateSetorFilterCount();
 }
 
+function setorFilterSelectAll() {
+    _tempSetorSelection = _getVisibleSetores().slice();
+    _renderSetorFilterGrid(_getVisibleSetores());
+    _updateSetorFilterCount();
+}
+
+function setorFilterToggleAll() {
+    const total = _getVisibleSetores().length;
+    const allSelected = _tempSetorSelection && _tempSetorSelection.length === total;
+    if (allSelected) {
+        setorFilterDeselectAll();
+    } else {
+        setorFilterSelectAll();
+    }
+}
+
 // Retorna setores baseados apenas nas permissões do usuário, SEM aplicar o filtro ativo
 // (usado dentro do modal para exibir todos os setores disponíveis para seleção)
 var _getAllowedSetoresBase = null;
@@ -90,10 +106,16 @@ function _toggleSetorChip(el, setor) {
 
 function _updateSetorFilterCount() {
     const el = document.getElementById('setorFilterCount');
-    if (!el) return;
+    const btn = document.getElementById('setorFilterToggleAllBtn');
     const total = _getVisibleSetores().length;
     const sel = _tempSetorSelection ? _tempSetorSelection.length : total;
-    el.textContent = `${sel} de ${total} selecionados`;
+    if (el) el.textContent = `${sel} de ${total} selecionados`;
+    if (btn) {
+        const allSelected = sel === total;
+        btn.innerHTML = allSelected
+            ? '<i class="fas fa-times"></i> Desmarcar todos'
+            : '<i class="fas fa-check"></i> Marcar todos';
+    }
 }
 
 function _updateSetorFilterBtn() {
@@ -135,7 +157,7 @@ function _updateSetorFilterBtn() {
 
 // Mostra/oculta o botão no header conforme aba ativa
 function _syncSetorFilterBtn() {
-    const hide = (currentTab === 'dashboard' || currentTab === 'backup' || currentTab === 'configuracoes');
+    const hide = (currentTab === 'backup' || currentTab === 'configuracoes');
     const btn = document.getElementById('btnSetorFilter');
     if (btn) btn.style.display = hide ? 'none' : 'inline-flex';
     const dateBtn = document.getElementById('fbarDateBtn');

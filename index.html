@@ -93,23 +93,26 @@
             <h1 id="pageTitle">Dashboard</h1>
             <small id="pageSubtitle">Visão geral e indicadores de desempenho</small>
         </div>
-        <!-- Filtro de Data no header -->
-        <div style="position:relative;" id="fbarDateWrap">
-            <button class="btn-setor-filter" id="fbarDateBtn" onclick="openFbarDateDropdown()" title="Filtrar por Data" style="display:none;">
-                <i class="fas fa-calendar-days"></i>
-                <span id="fbarDateLabel">Data</span>
+        <!-- Filtros + Notificação -->
+        <div class="header-actions">
+            <!-- Filtro de Data no header -->
+            <div style="position:relative;" id="fbarDateWrap">
+                <button class="btn-setor-filter" id="fbarDateBtn" onclick="openFbarDateDropdown()" title="Filtrar por Data" style="display:none;">
+                    <i class="fas fa-calendar-days"></i>
+                    <span id="fbarDateLabel">Data</span>
+                </button>
+                <div class="fbar-date-dropdown" id="fbarDateDropdown" style="display:none;"></div>
+            </div>
+
+            <button class="btn-setor-filter" id="btnSetorFilter" onclick="openSetorFilterModal()" title="Filtrar por Setor" style="display:none;">
+                <i class="fas fa-building"></i>
+                <span id="setorFilterLabel">Setores</span>
             </button>
-            <div class="fbar-date-dropdown" id="fbarDateDropdown" style="display:none;"></div>
-        </div>
 
-        <button class="btn-setor-filter" id="btnSetorFilter" onclick="openSetorFilterModal()" title="Filtrar por Setor" style="display:none;">
-            <i class="fas fa-building"></i>
-            <span id="setorFilterLabel">Setores</span>
-        </button>
-
-        <div class="notification-container" id="notificationContainer" onclick="toggleNotificationModal()">
-            <i class="notification-icon fas fa-bell"></i>
-            <div class="notification-badge hidden" id="notificationBadge">0</div>
+            <div class="notification-container" id="notificationContainer" onclick="toggleNotificationModal()">
+                <i class="notification-icon fas fa-bell"></i>
+                <div class="notification-badge hidden" id="notificationBadge">0</div>
+            </div>
         </div>
         <div class="notification-modal" id="notificationModal">
             <div class="notification-modal-header">
@@ -126,81 +129,96 @@
     <div class="content">
         
         <div class="filters-bar" id="filtersBarDashboard" style="display:flex; position:relative;">
-            <div class="filter-controls">
-                <div style="font-weight:600; color:var(--primary); font-size:14px;"><i class="fa-solid fa-filter"></i> Filtros:</div>
-                
-                <div id="filtersDashboard" class="filter-group">
-                    <select id="fDashArea" class="filter-input" onchange="onFilterDashboardChange()">
-                        <option value="">Área: Todas</option>
-                        <option value="audit">Auditoria</option>
-                        <option value="ativ">Gestão de Atividades</option>
-                        <option value="doc">Documentos</option>
-                    </select>
-                    <select id="fDashResponsavel" class="filter-input" onchange="onFilterDashboardChange()">
-                        <option value="">Responsável: Todos</option>
-                    </select>
-                    <select id="fDashRevisor" class="filter-input" onchange="onFilterDashboardChange()">
-                        <option value="">Revisor: Todos</option>
-                    </select>
-                    <select id="fDashStatus" class="filter-input" onchange="onFilterDashboardChange()">
-                        <option value="">Status: Todos</option>
-                    </select>
 
-                    <!-- Selects ocultos para Setor e Categoria -->
-                    <select id="fDashSetor" class="filter-input" style="display:none;" onchange="onFilterDashboardChange()">
-                        <option value="">Setor: Todos</option>
-                    </select>
-                    <select id="fDashCat" class="filter-input" style="display:none;" onchange="onFilterDashboardChange()">
-                        <option value="">Categoria: Todas</option>
-                    </select>
-                    
-                    <div class="date-controls">
-                        <select id="fDashDateType" onchange="updateDateInputs('Dash')">
-                            <option value="all" selected>Período: Todas</option>
-                            <option value="month">Mês</option>
-                            <option value="year">Ano</option>
-                            <option value="custom">Personalizado</option>
-                        </select>
-                        
-                        <div id="fDashGroupMonth" style="display:none; gap:4px">
-                            <select id="fDashMonth" onchange="onFilterDashboardChange()">
-                                <option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option>
-                                <option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option>
-                                <option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option>
-                                <option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option>
-                            </select>
-                            <select id="fDashYearForMonth" onchange="onFilterDashboardChange()"></select>
-                        </div>
+            <!-- Selects ocultos mantidos para compatibilidade com o JS existente -->
+            <select id="fDashArea" style="display:none;" onchange="onFilterDashboardChange()">
+                <option value="">Área: Todas</option>
+                <option value="audit">Auditoria</option>
+                <option value="ativ">Gestão de Atividades</option>
+                <option value="doc">Documentos</option>
+            </select>
+            <select id="fDashResponsavel" style="display:none;" onchange="onFilterDashboardChange()"><option value="">Responsável: Todos</option></select>
+            <select id="fDashRevisor" style="display:none;" onchange="onFilterDashboardChange()"><option value="">Revisor: Todos</option></select>
+            <select id="fDashStatus" style="display:none;" onchange="onFilterDashboardChange()"><option value="">Status: Todos</option></select>
+            <select id="fDashSetor" style="display:none;" onchange="onFilterDashboardChange()"><option value="">Setor: Todos</option></select>
+            <select id="fDashCat" style="display:none;" onchange="onFilterDashboardChange()"><option value="">Categoria: Todas</option></select>
+            <select id="fDashDateType" style="display:none;" onchange="updateDateInputs('Dash')"><option value="all" selected>Período: Todas</option><option value="month">Mês</option><option value="year">Ano</option><option value="custom">Personalizado</option></select>
+            <div id="fDashGroupMonth" style="display:none;"><select id="fDashMonth" onchange="onFilterDashboardChange()"><option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option><option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option><option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option></select><select id="fDashYearForMonth" onchange="onFilterDashboardChange()"></select></div>
+            <select id="fDashYearOnly" style="display:none" onchange="onFilterDashboardChange()"></select>
+            <div id="fDashGroupCustom" style="display:none;"><input type="date" id="fDashDataIni" onchange="onFilterDashboardChange()"><input type="date" id="fDashDataFim" onchange="onFilterDashboardChange()"></div>
+            <select id="dropDashSetor" style="display:none;" onchange="onDropdownFilterChangeDashboard('setor')"></select>
+            <select id="dropDashCat" style="display:none;" onchange="onDropdownFilterChangeDashboard('categoria')"></select>
 
-                        <select id="fDashYearOnly" style="display:none" onchange="onFilterDashboardChange()"></select>
+            <!-- Esquerda: filtros responsável/revisor -->
+            <div class="fbar-left">
+                <button class="fbar-people-btn" id="fbarRespBtnDash" onclick="openPeopleFilterDash('responsavel')" title="Filtrar por Responsável">
+                    <i class="fas fa-user"></i>
+                    <span id="fbarRespLabelDash">Filtrar por Responsável</span>
+                    <span class="fbar-people-badge" id="fbarRespBadgeDash" style="display:none;"></span>
+                </button>
+                <button class="fbar-people-btn" id="fbarRevBtnDash" onclick="openPeopleFilterDash('revisor')" title="Filtrar por Revisor">
+                    <i class="fas fa-user-check"></i>
+                    <span id="fbarRevLabelDash">Filtrar por Revisor</span>
+                    <span class="fbar-people-badge" id="fbarRevBadgeDash" style="display:none;"></span>
+                </button>
+            </div>
 
-                        <div id="fDashGroupCustom" style="display:none; align-items:center; gap:4px">
-                            <input type="date" id="fDashDataIni" onchange="onFilterDashboardChange()">
-                            <span style="color:#ccc">a</span>
-                            <input type="date" id="fDashDataFim" onchange="onFilterDashboardChange()">
-                        </div>
-                    </div>
-                </div>
-                <div class="filter-actions">
-                    <div style="position:relative;">
-                        <button class="btn-clear" id="filtersToggleBtnDash" onclick="toggleFiltersDropdownDashboard()" title="Filtros"><i class="fa-solid fa-filter"></i></button>
-                        <div class="filters-dropdown title-search-dropdown" id="filtersDropdownDashboard" style="display:none;">
-                            <div style="padding:10px; width:290px; max-width:calc(100vw - 32px); box-sizing:border-box;">
-                                <div style="display:flex;flex-direction:column;gap:8px">
-                                    <label style="font-size:12px;color:var(--text-light);margin:0">Setor</label>
-                                    <select id="dropDashSetor" class="filter-input" onchange="onDropdownFilterChangeDashboard('setor')"></select>
-
-                                    <label style="font-size:12px;color:var(--text-light);margin:0">Categoria</label>
-                                    <select id="dropDashCat" class="filter-input" onchange="onDropdownFilterChangeDashboard('categoria')"></select>
-
-                                </div>
+            <!-- Direita: filtros avançados + Minhas Tarefas + limpar -->
+            <div class="fbar-right">
+                <!-- Filtros avançados -->
+                <div class="fbar-adv-wrap" style="position:relative;">
+                    <button class="fbar-icon-btn" id="filtersToggleBtnDash" onclick="toggleFiltersDropdownDashboard()" title="Filtros avançados">
+                        <i class="fas fa-sliders"></i>
+                    </button>
+                    <div class="filters-dropdown fbar-adv-dropdown" id="filtersDropdownDashboard" style="display:none;">
+                        <div class="fbar-adv-inner">
+                            <div class="fbar-adv-row">
+                                <span class="fbar-adv-label">Área</span>
+                                <select class="filter-input fbar-adv-select" id="dropDashArea" onchange="onDropdownFilterChangeDashboard('area')">
+                                    <option value="">Todas</option>
+                                    <option value="audit">Auditoria</option>
+                                    <option value="ativ">Gestão de Atividades</option>
+                                    <option value="doc">Documentos</option>
+                                </select>
+                            </div>
+                            <div class="fbar-adv-row">
+                                <span class="fbar-adv-label">Setor</span>
+                                <select class="filter-input fbar-adv-select" id="dropDashSetorAdv" onchange="onDropdownFilterChangeDashboard('setor')"></select>
+                            </div>
+                            <div class="fbar-adv-row">
+                                <span class="fbar-adv-label">Categoria</span>
+                                <select class="filter-input fbar-adv-select" id="dropDashCatAdv" onchange="onDropdownFilterChangeDashboard('categoria')"></select>
+                            </div>
+                            <div class="fbar-adv-row">
+                                <span class="fbar-adv-label">Status</span>
+                                <select class="filter-input fbar-adv-select" id="dropDashStatusAdv" onchange="onDropdownFilterChangeDashboard('status')"><option value="">Todos</option></select>
                             </div>
                         </div>
                     </div>
-                    <button class="btn-clear" onclick="clearDashboardFilters()" title="Limpar filtros"><i class="fa-solid fa-rotate-left"></i></button>
                 </div>
+
+                <!-- Botão Minhas Tarefas -->
+                <div style="position:relative; display:inline-block;">
+                    <button class="fbar-mytasks-btn active" id="fbarMyTasksDash" onclick="toggleMyTasksDash()">
+                        <i class="fas fa-user-circle"></i>
+                        <span>Minhas Tarefas</span>
+                        <i class="fas fa-caret-down" style="margin-left:6px;font-size:12px;"></i>
+                    </button>
+                    <div class="filters-dropdown fbar-adv-dropdown" id="fbarMyTasksDropdownDash" style="display:none; position:absolute; right:0; z-index:60;">
+                        <div style="padding:8px; display:flex; flex-direction:column; gap:6px; min-width:180px;">
+                            <button class="btn-clear" onclick="setMyTasksModeDash('responsavel')">Como Responsável</button>
+                            <button class="btn-clear" onclick="setMyTasksModeDash('revisor')">Como Revisor</button>
+                            <button class="btn-clear" onclick="setMyTasksModeDash('all')">Visualizar todos</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Limpar filtros -->
+                <button class="fbar-icon-btn" onclick="clearDashboardFilters()" title="Limpar filtros">
+                    <i class="fas fa-rotate-left"></i>
+                </button>
             </div>
-            </div>
+        </div>
 
         <div id="dashboardContent" style="display:flex;">
             <div class="summary-cards">
@@ -1115,7 +1133,7 @@
         </div>
         <div class="people-filter-search">
             <i class="fas fa-magnifying-glass"></i>
-            <input id="peopleFilterSearch" class="people-filter-search-input" placeholder="Pesquisar por nome..." oninput="renderPeopleFilterList()" autocomplete="off">
+            <input id="peopleFilterSearch" class="people-filter-search-input" placeholder="Pesquisar por nome..." oninput="_dashPeopleMode?_renderDashPeopleList():renderPeopleFilterList()" autocomplete="off">
         </div>
         <div class="people-filter-list" id="peopleFilterList">
             <!-- itens renderizados dinamicamente -->
@@ -1141,7 +1159,7 @@
         </div>
         <div class="setor-filter-controls">
             <span class="setor-filter-count" id="setorFilterCount">0 selecionados</span>
-            <button class="setor-filter-deselect" onclick="setorFilterDeselectAll()">
+            <button class="setor-filter-deselect" id="setorFilterToggleAllBtn" onclick="setorFilterToggleAll()">
                 <i class="fas fa-times"></i> Desmarcar todos
             </button>
         </div>

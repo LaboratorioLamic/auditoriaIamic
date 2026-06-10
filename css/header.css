@@ -16,6 +16,13 @@
     position: relative;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: 100px;
+}
+
 .title-area {
     display: flex;
     flex-direction: column;
@@ -331,3 +338,68 @@
     transition: border-color var(--t-fast);
 }
 .fbar-date-dd-picker-row select:focus { border-color: var(--accent); }
+
+/* ── Calendário de mês ─────────────────────────────────────────── */
+.fbar-month-cal {
+    padding: 12px 14px 14px;
+    border-top: 1px solid var(--border);
+    background: #f8fafc;
+}
+.fbar-month-cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.fbar-month-cal-year {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary);
+}
+.fbar-month-cal-nav {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-light);
+    font-size: 11px;
+    transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+.fbar-month-cal-nav:hover {
+    background: var(--surface-hover);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.fbar-month-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+.fbar-month-cal-cell {
+    padding: 7px 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    background: white;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    text-align: center;
+    transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+.fbar-month-cal-cell:hover {
+    background: var(--surface-hover);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.fbar-month-cal-cell.selected {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+    font-weight: 700;
+}
