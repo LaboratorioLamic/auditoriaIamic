@@ -288,13 +288,19 @@
             </div>
         </div>
 
-        <div id="viewToggleAtivBar" style="display:none;">
+        <div id="viewToggleModuleBar" class="view-toggle-bar" style="display:none;">
             <div class="view-module-tabs">
                 <button id="btnViewKanban" class="view-module-tab active" onclick="toggleKanbanView('kanban')">
                     <i class="fas fa-columns"></i> Kanban
                 </button>
                 <button id="btnViewList" class="view-module-tab" onclick="toggleKanbanView('list')">
                     <i class="fas fa-list"></i> Lista
+                </button>
+            </div>
+            <div class="view-toggle-actions" id="fbarAddcolRow" style="display:none;">
+                <button class="fbar-addcol-btn" id="addColBtn" onclick="openKanbanAddCol()" title="Adicionar coluna">
+                    <i class="fas fa-columns"></i>
+                    <span>Adicionar coluna</span>
                 </button>
             </div>
         </div>
@@ -354,7 +360,7 @@
         </div>
 
         <!-- NOVA BARRA DE FILTROS -->
-        <div class="filters-bar" id="filtersBar" style="display:none;">
+        <div class="filters-bar" id="filtersBarWrap" style="display:none;">
 
             <!-- Esquerda: lupa + pesquisa + filtros responsável/revisor + Minhas Tarefas -->
             <div class="fbar-left">
@@ -388,7 +394,7 @@
 
             <!-- Direita: Minhas Tarefas + filtros avançados + limpar + lixeira -->
             <div class="fbar-right">
-                <!-- Ícone filtro avançado (status, categoria, marcador, data, setor) -->
+                <!-- Ícone filtro avançado (categoria, marcador, status na lista) -->
                 <div class="fbar-adv-wrap" style="position:relative;">
                     <button class="fbar-icon-btn" id="filtersToggleBtn" onclick="toggleFiltersDropdown()" title="Filtros avançados">
                         <i class="fas fa-sliders"></i>
@@ -401,12 +407,12 @@
                                 <select class="filter-input fbar-adv-select" id="dropCat" onchange="onFbarAdvChange('categoria')"><option value="">Todas</option></select>
                             </div>
                             <div class="fbar-adv-row">
-                                <span class="fbar-adv-label">Setor</span>
-                                <select class="filter-input fbar-adv-select" id="dropSetor" onchange="onFbarAdvChange('setor')"><option value="">Todos</option></select>
-                            </div>
-                            <div class="fbar-adv-row">
                                 <span class="fbar-adv-label">Marcador</span>
                                 <select class="filter-input fbar-adv-select" id="dropMarcador" onchange="onFbarAdvChange('marcador')"><option value="">Todos</option></select>
+                            </div>
+                            <div class="fbar-adv-row" id="fbarStatusRow">
+                                <span class="fbar-adv-label">Status</span>
+                                <select class="filter-input fbar-adv-select" id="dropStatus" onchange="onFbarAdvChange('status')"><option value="">Todos</option></select>
                             </div>
                             <div id="fbarDateGroup" style="display:none;"></div>
                             <div class="fbar-adv-row" id="fbarShowFinalizedRow">
@@ -440,11 +446,6 @@
                 <!-- Limpar filtros -->
                 <button class="fbar-icon-btn" onclick="clearFilters()" title="Limpar filtros">
                     <i class="fas fa-rotate-left"></i>
-                </button>
-
-                <!-- Nova Coluna (kanban) -->
-                <button class="btn-primary" id="addColBtn" style="display:none;" onclick="openKanbanAddCol()">
-                    <i class="fas fa-columns"></i> Nova Coluna
                 </button>
 
                 <!-- Lixeira -->
@@ -1162,6 +1163,7 @@
 <script src="script/firebase-listener.js"></script>
 <script src="script/render.js"></script>
 <script src="script/filters.js"></script>
+<script src="script/kanban.js"></script>
 <script src="script/tabs.js"></script>
 <script src="script/modal.js"></script>
 <script src="script/notifications.js"></script>
@@ -1171,7 +1173,6 @@
 <script src="script/gestao.js"></script>
 <script src="script/treinamentos.js"></script>
 <script src="script/documentos.js"></script>
-<script src="script/kanban.js"></script>
 <script src="script/key.js"></script>
 <script src="script/setor-filter.js"></script>
 <script src="script/fbar-filters.js"></script>

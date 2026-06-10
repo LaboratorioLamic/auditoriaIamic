@@ -35,8 +35,9 @@
     // --- RENDERIZAÇÃO DE CARDS E FILTROS ---
     function renderCards() {
         if(currentTab === 'backup' || currentTab === 'dashboard') return;
-        if(currentTab === 'atividades' && typeof kanbanActive !== 'undefined' && kanbanActive) {
-            if(typeof renderKanban === 'function') renderKanban();
+        if (typeof KANBAN_TABS !== 'undefined' && KANBAN_TABS.includes(currentTab) &&
+            typeof isKanbanActive === 'function' && isKanbanActive()) {
+            if (typeof renderKanban === 'function') renderKanban();
             return;
         }
 

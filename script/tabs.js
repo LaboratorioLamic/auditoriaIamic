@@ -45,29 +45,32 @@
     if (isDashboard) setTitleSearchEnabled('cards', false);
     else setTitleSearchEnabled('dash', false);
 
-    document.getElementById('filtersBar').style.display = (isBackup || isDashboard || isConfig) ? 'none' : 'flex';
+    document.getElementById('filtersBarWrap').style.display = (isBackup || isDashboard || isConfig) ? 'none' : 'flex';
     document.getElementById('filtersBarDashboard').style.display = isDashboard ? 'flex' : 'none';
 
     // Kanban: controla grid vs board kanban
-    var _isKanbanMode = tab === 'atividades' && typeof kanbanActive !== 'undefined' && kanbanActive;
+    var _hasKanban = typeof KANBAN_TABS !== 'undefined' && KANBAN_TABS.includes(tab);
+    var _isKanbanMode = _hasKanban && typeof isKanbanActive === 'function' && isKanbanActive(tab);
     var _hideGrid = isBackup || isDashboard || isConfig || _isKanbanMode;
     document.getElementById('cardsGrid').style.display = _hideGrid ? 'none' : 'grid';
     var _kbBoard = document.getElementById('kanbanBoard');
     if (_kbBoard) _kbBoard.style.display = _isKanbanMode ? 'flex' : 'none';
 
-    // Toggle Lista/Kanban — só aparece na aba atividades
-    var _kbToggle = document.getElementById('viewToggleAtivBar');
-    if (_kbToggle) _kbToggle.style.display = (tab === 'atividades') ? 'block' : 'none';
+    // Toggle Lista/Kanban — módulos com visualização kanban
+    var _kbToggle = document.getElementById('viewToggleModuleBar');
+    if (_kbToggle) _kbToggle.style.display = _hasKanban ? 'flex' : 'none';
+    if (typeof _kbUpdateToggleBtns === 'function') _kbUpdateToggleBtns();
 
     // --- Controle do botão "Novo Registro" e "Nova Coluna" ---
-    var addBtn    = document.getElementById('addBtn');
-    var addColBtn = document.getElementById('addColBtn');
-    var _isKanbanNow = tab === 'atividades' && typeof kanbanActive !== 'undefined' && kanbanActive;
+    var addBtn     = document.getElementById('addBtn');
+    var addColRow  = document.getElementById('fbarAddcolRow');
+    var _isKanbanNow = _isKanbanMode;
     var canUserEdit  = userCanEditCards();
     var showActions  = !isBackup && !isDashboard && !isConfig && canUserEdit;
+    var showAddCol   = showActions && _isKanbanNow;
 
-    if (addBtn)    addBtn.style.display    = showActions ? 'flex' : 'none';
-    if (addColBtn) addColBtn.style.display = (showActions && _isKanbanNow)  ? 'flex' : 'none';
+    if (addBtn)    addBtn.style.display   = showActions ? 'flex' : 'none';
+    if (addColRow) addColRow.style.display = showAddCol ? 'flex' : 'none';
 
     // --- Controle do botão de LIXEIRA ---
     var trashBtn = document.getElementById('trashBtn');

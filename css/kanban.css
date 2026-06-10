@@ -1,9 +1,21 @@
 /* =========================================================================
    TABS LISTA / KANBAN
    ========================================================================= */
-#viewToggleAtivBar { padding-bottom: 0; }
+.view-toggle-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 0;
+}
 
-.view-module-tabs { display: inline-flex; gap: 6px; }
+.view-module-tabs { display: inline-flex; gap: 6px; flex-shrink: 0; }
+
+.view-toggle-actions {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
 
 .view-module-tab {
     display: inline-flex;

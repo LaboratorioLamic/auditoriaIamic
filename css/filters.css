@@ -12,6 +12,7 @@
     justify-content: space-between;
     gap: 10px;
     flex-wrap: wrap;
+    overflow: visible;
 }
 
 /* --- Lados --- */
@@ -167,6 +168,32 @@
     color: #fff;
 }
 .fbar-mytasks-btn.active i { color: #fff; }
+
+.fbar-addcol-btn {
+    height: 36px;
+    padding: 0 14px;
+    gap: 7px;
+    border: none;
+    border-radius: var(--r-sm);
+    background: var(--grad-accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.28);
+    transition: transform var(--t-fast), box-shadow var(--t-fast), filter var(--t-fast);
+}
+.fbar-addcol-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(37,99,235,0.36);
+    filter: brightness(1.07);
+}
+.fbar-addcol-btn:active { transform: translateY(0); }
 
 /* Lixeira no fbar */
 .fbar-trash { position: relative; }

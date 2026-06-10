@@ -251,11 +251,10 @@ function toggleFbarSearch() {
     wrap.classList.toggle('open', opening);
     const btn = document.getElementById('fbarSearchToggle');
     if (btn) btn.classList.toggle('active', opening);
-    if (opening && input) { setTimeout(() => input.focus(), 280); }
-    if (!opening) {
-        if (input) input.value = '';
-        onTitleSearchInput('cards');
+    if (typeof setTitleSearchEnabled === 'function') {
+        setTitleSearchEnabled('cards', opening);
     }
+    if (opening && input) { setTimeout(() => input.focus(), 280); }
 }
 
 function clearFbarSearch() {
@@ -279,12 +278,14 @@ function toggleFiltersDropdown() {
 function _populateFbarAdv() {
     const prefix = _tabPrefix();
     _syncDropSelect('dropCat',      `f${prefix}Cat`,      'Categoria: Todas');
-    _syncDropSelect('dropSetor',    `f${prefix}Setor`,    'Setor: Todos');
     _syncDropSelect('dropMarcador', `f${prefix}Marcador`, 'Marcador: Todos');
+    _syncDropSelect('dropStatus',   `f${prefix}Status`,   'Status: Todos');
 
-    // Checkbox "mostrar concluídos" — oculto no kanban (colunas já representam status)
+    // Status e "mostrar concluídos" — ocultos no kanban (colunas já representam status)
+    const statusRow    = document.getElementById('fbarStatusRow');
     const finalizedRow = document.getElementById('fbarShowFinalizedRow');
-    const isKanban = (currentTab === 'atividades' && typeof kanbanActive !== 'undefined' && kanbanActive);
+    const isKanban = typeof isKanbanActive === 'function' && isKanbanActive();
+    if (statusRow)    statusRow.style.display    = isKanban ? 'none' : '';
     if (finalizedRow) finalizedRow.style.display = isKanban ? 'none' : '';
     const cb  = document.getElementById('showFinalizedCheckbox');
     const cbv = document.getElementById('showFinalizedCheckboxVisible');
@@ -295,8 +296,8 @@ function _populateFbarAdv() {
     if (btn) {
         const hasAdv = (
             document.getElementById(`f${prefix}Cat`)?.value ||
-            document.getElementById(`f${prefix}Setor`)?.value ||
-            document.getElementById(`f${prefix}Marcador`)?.value
+            document.getElementById(`f${prefix}Marcador`)?.value ||
+            (!isKanban && document.getElementById(`f${prefix}Status`)?.value)
         );
         btn.classList.toggle('has-filters', !!hasAdv);
     }
@@ -319,8 +320,8 @@ function _syncDropSelect(dropId, realId, placeholder) {
 
 function onFbarAdvChange(type) {
     const prefix = _tabPrefix();
-    const map = { categoria: `f${prefix}Cat`, setor: `f${prefix}Setor`, marcador: `f${prefix}Marcador` };
-    const dropMap = { categoria: 'dropCat', setor: 'dropSetor', marcador: 'dropMarcador' };
+    const map = { categoria: `f${prefix}Cat`, marcador: `f${prefix}Marcador`, status: `f${prefix}Status` };
+    const dropMap = { categoria: 'dropCat', marcador: 'dropMarcador', status: 'dropStatus' };
     const real = document.getElementById(map[type]);
     const drop = document.getElementById(dropMap[type]);
     if (real && drop) real.value = drop.value;

@@ -231,6 +231,8 @@
             if (titleSearchDashEnabled) renderDashboard();
         } else {
             titleSearchCardsQuery = q;
+            const searchOpen = document.getElementById('fbarSearchWrap')?.classList.contains('open');
+            if (searchOpen) titleSearchCardsEnabled = true;
             if (titleSearchCardsEnabled) renderCards();
         }
     }

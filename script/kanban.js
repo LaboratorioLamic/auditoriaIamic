@@ -1,19 +1,51 @@
 // ============================================================
-// KANBAN — Gestão de Atividades
+// KANBAN — Módulos com visualização em colunas
 // ============================================================
 
-/* global masterLists, activities, currentuser, currentHistoryPage,
+/* global masterLists, activities, audits, trainings, documents,
+          currentuser, currentTab, currentHistoryPage,
           saveAll, renderCards, openView, editItem,
-          getAllowedSetores, userCanEditCards, formatBR */
+          getAllowedSetores, userCanEditCards, formatBR,
+          passesFilters, passesFbarMyTasks, normalizeText */
 
-var kanbanActive = true;
+var KANBAN_TABS = ['auditoria', 'treinamentos', 'atividades', 'documentos'];
+
+var kanbanActiveByTab = {
+    auditoria: true,
+    treinamentos: true,
+    atividades: true,
+    documentos: true
+};
+
 var _kanbanDragItemId = null;
+
+var _KB_MODULES = {
+    auditoria:    { prefix: 'Audit', statusKey: 'auditStatus',  colOrderKey: 'kanban_audit_col_order',  sortDateField: 'dataPrevisao',       getItems: () => audits },
+    treinamentos: { prefix: 'Train', statusKey: 'trainStatus',  colOrderKey: 'kanban_train_col_order',  sortDateField: 'dataPrevisao',       getItems: () => trainings },
+    atividades:   { prefix: 'Ativ',  statusKey: 'ativStatus',   colOrderKey: 'kanban_ativ_col_order',   sortDateField: 'dataConclusao',      getItems: () => activities },
+    documentos:   { prefix: 'Doc',   statusKey: 'docStatus',    colOrderKey: 'kanban_doc_col_order',    sortDateField: 'dataProximaRevisao', getItems: () => documents }
+};
 
 var _kanbanColorMap = {
     blue: 'var(--c-blue)', green: 'var(--c-green)', red: 'var(--c-red)',
     orange: 'var(--c-orange)', yellow: 'var(--c-yellow)', purple: 'var(--c-purple)',
     default: 'var(--c-default)'
 };
+
+function isKanbanActive(tab) {
+    tab = tab || (typeof currentTab !== 'undefined' ? currentTab : '');
+    return KANBAN_TABS.includes(tab) && !!kanbanActiveByTab[tab];
+}
+
+function _kbGetConfig(tab) {
+    tab = tab || (typeof currentTab !== 'undefined' ? currentTab : '');
+    return _KB_MODULES[tab] || null;
+}
+
+function _kbGetStatusList(cfg) {
+    if (!cfg || !masterLists) return [];
+    return masterLists[cfg.statusKey] ? [...masterLists[cfg.statusKey]] : [];
+}
 
 // ---- Utilitários ----
 
@@ -22,12 +54,16 @@ function _kbIsFinalStatus(name) {
     return n.includes('conclu') || n.includes('cancel');
 }
 
-function _kbGetColOrder() {
-    try { return JSON.parse(localStorage.getItem('kanban_ativ_col_order') || 'null'); } catch { return null; }
+function _kbGetColOrder(cfg) {
+    cfg = cfg || _kbGetConfig();
+    if (!cfg) return null;
+    try { return JSON.parse(localStorage.getItem(cfg.colOrderKey) || 'null'); } catch { return null; }
 }
 
-function _kbSaveColOrder(order) {
-    try { localStorage.setItem('kanban_ativ_col_order', JSON.stringify(order)); } catch {}
+function _kbSaveColOrder(order, cfg) {
+    cfg = cfg || _kbGetConfig();
+    if (!cfg) return;
+    try { localStorage.setItem(cfg.colOrderKey, JSON.stringify(order)); } catch {}
 }
 
 function _kbHtml(str) {
@@ -48,15 +84,15 @@ function _kbIsCancelado(name) {
     return (name || '').toLowerCase().includes('cancel');
 }
 
-function _kbGetSortedStatuses() {
-    const all = (masterLists && masterLists.ativStatus) ? [...masterLists.ativStatus] : [];
+function _kbGetSortedStatuses(cfg) {
+    cfg = cfg || _kbGetConfig();
+    const all = _kbGetStatusList(cfg);
 
-    // Separar em três grupos: regulares, concluídos, cancelados
     const concluidos = all.filter(s =>  _kbIsConcluido(s.name));
     const cancelados = all.filter(s =>  _kbIsCancelado(s.name) && !_kbIsConcluido(s.name));
     const regulars   = all.filter(s => !_kbIsFinalStatus(s.name));
 
-    const savedOrder = _kbGetColOrder();
+    const savedOrder = _kbGetColOrder(cfg);
     if (savedOrder && savedOrder.length) {
         regulars.sort((a, b) => {
             const ia = savedOrder.indexOf(a.name);
@@ -68,107 +104,69 @@ function _kbGetSortedStatuses() {
         });
     }
 
-    // Ordem: regulares → concluídos → cancelados
     return [...regulars, ...concluidos, ...cancelados];
 }
 
 // ---- Toggle de visualização ----
 
 function toggleKanbanView(mode) {
-    kanbanActive = (mode === 'kanban');
+    if (!KANBAN_TABS.includes(currentTab)) return;
+    kanbanActiveByTab[currentTab] = (mode === 'kanban');
 
-    const grid     = document.getElementById('cardsGrid');
-    const board    = document.getElementById('kanbanBoard');
-    const addBtn   = document.getElementById('addBtn');
-    const addColBtn= document.getElementById('addColBtn');
-    const canEdit  = typeof userCanEditCards === 'function' ? userCanEditCards() : false;
+    const grid      = document.getElementById('cardsGrid');
+    const board     = document.getElementById('kanbanBoard');
+    const addBtn    = document.getElementById('addBtn');
+    const addColRow = document.getElementById('fbarAddcolRow');
+    const canEdit   = typeof userCanEditCards === 'function' ? userCanEditCards() : false;
+    const kbOn      = isKanbanActive();
 
-    if (kanbanActive) {
+    if (kbOn) {
         if (grid)  grid.style.display  = 'none';
         if (board) board.style.display = 'flex';
         if (addBtn)    addBtn.style.display    = canEdit ? 'flex' : 'none';
-        if (addColBtn) addColBtn.style.display = canEdit ? 'flex' : 'none';
+        if (addColRow) addColRow.style.display = canEdit ? 'flex' : 'none';
         renderKanban();
     } else {
         if (board) board.style.display = 'none';
         if (grid)  grid.style.display  = 'grid';
         if (addBtn)    addBtn.style.display    = canEdit ? 'flex' : 'none';
-        if (addColBtn) addColBtn.style.display = 'none';
+        if (addColRow) addColRow.style.display = 'none';
         renderCards();
     }
 
     _kbUpdateToggleBtns();
+    if (typeof _populateFbarAdv === 'function') _populateFbarAdv();
 }
 
 function _kbUpdateToggleBtns() {
     const btnList   = document.getElementById('btnViewList');
     const btnKanban = document.getElementById('btnViewKanban');
-    if (btnList)   { btnList.classList.toggle('active', !kanbanActive);  btnList.classList.toggle('inactive', kanbanActive); }
-    if (btnKanban) { btnKanban.classList.toggle('active',  kanbanActive); btnKanban.classList.toggle('inactive', !kanbanActive); }
+    const kbOn      = isKanbanActive();
+    if (btnList)   { btnList.classList.toggle('active', !kbOn);  btnList.classList.toggle('inactive', kbOn); }
+    if (btnKanban) { btnKanban.classList.toggle('active',  kbOn); btnKanban.classList.toggle('inactive', !kbOn); }
 }
 
 // ---- Filtragem ----
 
 function _kbGetFilteredItems() {
-    let data = (activities || []).filter(item => !item.deleted);
+    const cfg = _kbGetConfig();
+    if (!cfg) return [];
+
+    let data = (cfg.getItems() || []).filter(item => !item.deleted);
 
     const allowedSetores = (typeof getAllowedSetores === 'function') ? getAllowedSetores() : null;
     if (allowedSetores !== null) data = data.filter(i => allowedSetores.includes(i.setor));
 
-    const val = (id) => (document.getElementById(id) || {}).value || '';
-
-    const setor      = val('fAtivSetor');
-    const cat        = val('fAtivCat');
-    const stat       = val('fAtivStatus');
-    const marcador   = val('fAtivMarcador');
-    const responsavel = val('fAtivResponsavel');
-    const revisor    = val('fAtivRevisor');
-    const showOK     = (document.getElementById('showFinalizedCheckbox') || {}).checked !== false;
-
-    // Filtro de título
-    const titleInput = (document.getElementById('titleSearchInput') || {}).value || '';
+    const titleRaw = (document.getElementById('titleSearchInput') || {}).value || '';
+    const titleQ = typeof normalizeText === 'function' ? normalizeText(titleRaw) : titleRaw.toLowerCase().trim();
 
     data = data.filter(item => {
-        if (setor    && item.setor      !== setor)    return false;
-        if (cat      && item.categoria  !== cat)      return false;
-        if (stat     && item.status     !== stat)     return false;
-        if (marcador && item.marcador   !== marcador) return false;
-        if (revisor  && item.revisor    !== revisor)  return false;
-        if (responsavel) {
-            const r = (item.responsavel || '').toLowerCase();
-            if (!r.includes(responsavel.toLowerCase())) return false;
+        if (typeof passesFilters === 'function' && !passesFilters(cfg.prefix, item, { status: true })) return false;
+        if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
+        if (titleQ) {
+            const t = typeof normalizeText === 'function' ? normalizeText(item.titulo || '') : (item.titulo || '').toLowerCase();
+            if (!t.includes(titleQ)) return false;
         }
-        // Data filter (use shared implementation)
-        if (typeof passesDateFilter === 'function') {
-            if (!passesDateFilter('Ativ', item)) return false;
-        } else {
-            // Fallback: honor simple fAtivDateType check
-            const dateType = (document.getElementById('fAtivDateType') || {}).value || 'all';
-            if (dateType !== 'all') {
-                const itemDateStr = item.dataConclusao || '';
-                if (!itemDateStr) return false;
-                const itemDate = new Date(itemDateStr);
-                if (isNaN(itemDate.getTime())) return false;
-                if (dateType === 'month') {
-                    const m = parseInt(document.getElementById('fAtivMonth')?.value);
-                    const y = parseInt(document.getElementById('fAtivYearForMonth')?.value);
-                    if (itemDate.getMonth() !== m || itemDate.getFullYear() !== y) return false;
-                } else if (dateType === 'year') {
-                    const y = parseInt(document.getElementById('fAtivYearOnly')?.value);
-                    if (itemDate.getFullYear() !== y) return false;
-                } else if (dateType === 'custom') {
-                    const ini = document.getElementById('fAtivDataIni')?.value || '';
-                    const fim = document.getElementById('fAtivDataFim')?.value || '';
-                    if (ini && itemDateStr < ini) return false;
-                    if (fim && itemDateStr > fim) return false;
-                }
-            }
-        }
-        if (titleInput) {
-            const t = (item.titulo || '').toLowerCase();
-            if (!t.includes(titleInput.toLowerCase())) return false;
-        }
-        if (!showOK && _kbIsFinalStatus(item.status)) return false;
         return true;
     });
 
@@ -179,11 +177,13 @@ function _kbGetFilteredItems() {
 
 function renderKanban() {
     const board = document.getElementById('kanbanBoard');
-    if (!board) return;
+    const cfg   = _kbGetConfig();
+    if (!board || !cfg) return;
 
-    const statuses = _kbGetSortedStatuses();
+    const statuses = _kbGetSortedStatuses(cfg);
     const data     = _kbGetFilteredItems();
     const canEdit  = typeof userCanEditCards === 'function' ? userCanEditCards() : false;
+    const dateFld  = cfg.sortDateField;
 
     board.innerHTML = '';
 
@@ -192,7 +192,7 @@ function renderKanban() {
             <div class="kanban-empty-board">
                 <i class="fas fa-columns"></i>
                 <p>Nenhum status cadastrado.</p>
-                <small>Clique em "+ Nova Coluna" para começar.</small>
+                <small>Clique em "Adicionar coluna" para começar.</small>
             </div>`;
         return;
     }
@@ -202,8 +202,8 @@ function renderKanban() {
         const color       = _kbResolveColor(status.color);
         const colItems    = data.filter(i => i.status === status.name)
             .sort((a, b) => {
-                const da = a.dataConclusao ? new Date(a.dataConclusao) : new Date(8640000000000000);
-                const db = b.dataConclusao ? new Date(b.dataConclusao) : new Date(8640000000000000);
+                const da = a[dateFld] ? new Date(a[dateFld]) : new Date(8640000000000000);
+                const db = b[dateFld] ? new Date(b[dateFld]) : new Date(8640000000000000);
                 return da - db;
             });
         const isFirst     = colIdx === 0 && !isFinal;
@@ -213,7 +213,7 @@ function renderKanban() {
         col.className = 'kanban-col';
         col.dataset.status = status.name;
 
-        const colKey = 'kb_col_collapsed_' + status.name;
+        const colKey = `kb_col_collapsed_${currentTab}_${status.name}`;
         const isCollapsed = localStorage.getItem(colKey) === '1';
         if (isCollapsed) col.classList.add('kanban-col-collapsed');
 
@@ -273,7 +273,9 @@ function _kbNextIsFinalOrEnd(statuses, colIdx) {
 // ---- Card ----
 
 function _kbRenderCard(item) {
-    const deadline = _kbDeadlineColor(item.dataConclusao, item.flagDias || 3, item.status);
+    const cfg = _kbGetConfig();
+    const dateVal = cfg ? (item[cfg.sortDateField] || '') : (item.dataConclusao || '');
+    const deadline = _kbDeadlineColor(dateVal, item.flagDias || 3, item.status);
     const marcColor = _kbResolveColor(item.marcadorCor || 'default');
     const canEdit   = typeof userCanEditCards === 'function' ? userCanEditCards() : false;
 
@@ -289,7 +291,7 @@ function _kbRenderCard(item) {
                 <div class="kanban-card-title">${_kbHtml(item.titulo || 'Sem título')}</div>
                 <div class="kanban-card-metas">
                     ${item.responsavel ? `<span class="kanban-card-meta"><i class="fas fa-user"></i>${_kbHtml(item.responsavel)}</span>` : ''}
-                    ${item.dataConclusao ? `<span class="kanban-card-meta"><i class="fas fa-calendar-alt"></i>${_kbFormatBR(item.dataConclusao)}</span>` : ''}
+                    ${dateVal ? `<span class="kanban-card-meta"><i class="fas fa-calendar-alt"></i>${_kbFormatBR(dateVal)}</span>` : ''}
                     ${item.setor ? `<span class="kanban-card-meta"><i class="fas fa-building"></i>${_kbHtml(item.setor)}</span>` : ''}
                 </div>
                 <div class="kanban-card-foot">
@@ -353,7 +355,9 @@ function kbDrop(event, targetStatus) {
 
     if (!_kanbanDragItemId) return;
 
-    const item = (activities || []).find(a => a.id === _kanbanDragItemId);
+    const cfg = _kbGetConfig();
+    if (!cfg) return;
+    const item = (cfg.getItems() || []).find(a => a.id === _kanbanDragItemId);
     if (!item || item.status === targetStatus) return;
 
     const snapshot = JSON.parse(JSON.stringify(item));
@@ -382,12 +386,12 @@ function kbCardClick(event, itemId) {
 function kbViewCard(itemId) {
     if (typeof openView === 'function') {
         currentHistoryPage = 1;
-        openView(itemId, 'atividades');
+        openView(itemId, currentTab);
     }
 }
 
 function kbEditCard(itemId) {
-    if (typeof editItem === 'function') editItem(itemId, 'atividades');
+    if (typeof editItem === 'function') editItem(itemId, currentTab);
 }
 
 // ---- Editar coluna (nome + cor) ----
@@ -396,7 +400,9 @@ function startKanbanRename(statusName) {
     const existing = document.getElementById('kbEditColModal');
     if (existing) existing.remove();
 
-    const list      = masterLists.ativStatus || [];
+    const cfg       = _kbGetConfig();
+    if (!cfg) return;
+    const list      = _kbGetStatusList(cfg);
     const statusObj = list.find(s => s.name === statusName) || { name: statusName, color: 'default' };
     const colors    = ['blue','green','red','orange','yellow','purple','default'];
     const colorLabels = { blue:'Azul', green:'Verde', red:'Vermelho', orange:'Laranja', yellow:'Amarelo', purple:'Roxo', default:'Cinza' };
@@ -450,12 +456,14 @@ function startKanbanRename(statusName) {
 }
 
 function confirmKanbanEditCol(oldName) {
+    const cfg = _kbGetConfig();
+    if (!cfg) return;
     const input   = document.getElementById('kbEditColName');
     const newName = (input ? input.value : '').trim();
 
     if (!newName) { if (input) { input.focus(); input.classList.add('kb-input-error'); } return; }
 
-    const list = masterLists.ativStatus || [];
+    const list = masterLists[cfg.statusKey] || [];
 
     if (newName !== oldName && list.some(s => s.name === newName)) {
         alert('Já existe um status com esse nome.');
@@ -470,11 +478,11 @@ function confirmKanbanEditCol(oldName) {
     }
 
     if (newName !== oldName) {
-        (activities || []).forEach(a => { if (a.status === oldName) a.status = newName; });
-        const order = _kbGetColOrder();
+        (cfg.getItems() || []).forEach(a => { if (a.status === oldName) a.status = newName; });
+        const order = _kbGetColOrder(cfg);
         if (order) {
             const oi = order.indexOf(oldName);
-            if (oi !== -1) { order[oi] = newName; _kbSaveColOrder(order); }
+            if (oi !== -1) { order[oi] = newName; _kbSaveColOrder(order, cfg); }
         }
     }
 
@@ -488,7 +496,9 @@ function confirmKanbanEditCol(oldName) {
 // ---- Reordenar coluna ----
 
 function moveKanbanColumn(statusName, direction) {
-    const statuses = _kbGetSortedStatuses();
+    const cfg = _kbGetConfig();
+    if (!cfg) return;
+    const statuses = _kbGetSortedStatuses(cfg);
     const regulars = statuses.filter(s => !_kbIsFinalStatus(s.name));
     const idx      = regulars.findIndex(s => s.name === statusName);
 
@@ -497,7 +507,7 @@ function moveKanbanColumn(statusName, direction) {
     if (newIdx < 0 || newIdx >= regulars.length) return;
 
     [regulars[idx], regulars[newIdx]] = [regulars[newIdx], regulars[idx]];
-    _kbSaveColOrder(regulars.map(s => s.name));
+    _kbSaveColOrder(regulars.map(s => s.name), cfg);
     renderKanban();
 }
 
@@ -568,12 +578,15 @@ function kbPickColor(colorKey, btn) {
 }
 
 function confirmKanbanAddCol() {
+    const cfg = _kbGetConfig();
+    if (!cfg) return;
     const input = document.getElementById('kbNewColName');
     const name  = (input ? input.value : '').trim();
 
     if (!name) { if (input) { input.focus(); input.classList.add('kb-input-error'); } return; }
 
-    const list = masterLists.ativStatus || (masterLists.ativStatus = []);
+    if (!masterLists[cfg.statusKey]) masterLists[cfg.statusKey] = [];
+    const list = masterLists[cfg.statusKey];
     if (list.some(s => s.name === name)) {
         alert('Já existe um status com esse nome.');
         if (input) input.focus();
@@ -582,9 +595,9 @@ function confirmKanbanAddCol() {
 
     list.push({ name, color: _kbNewColColor });
 
-    const order = _kbGetColOrder() || list.filter(s => !_kbIsFinalStatus(s.name)).map(s => s.name);
+    const order = _kbGetColOrder(cfg) || list.filter(s => !_kbIsFinalStatus(s.name)).map(s => s.name);
     if (!order.includes(name)) order.push(name);
-    _kbSaveColOrder(order.filter(n => !_kbIsFinalStatus(n)));
+    _kbSaveColOrder(order.filter(n => !_kbIsFinalStatus(n)), cfg);
 
     const modal = document.getElementById('kbAddColModal');
     if (modal) modal.remove();
@@ -599,17 +612,21 @@ function confirmKanbanAddCol() {
 
 var _KB_FALLBACK_STATUS = 'A definir';
 
-function _kbEnsureFallbackStatus() {
-    if (!masterLists.ativStatus) masterLists.ativStatus = [];
-    const exists = masterLists.ativStatus.some(s => s.name === _KB_FALLBACK_STATUS);
-    if (!exists) masterLists.ativStatus.unshift({ name: _KB_FALLBACK_STATUS, color: 'default' });
+function _kbEnsureFallbackStatus(cfg) {
+    cfg = cfg || _kbGetConfig();
+    if (!cfg) return;
+    if (!masterLists[cfg.statusKey]) masterLists[cfg.statusKey] = [];
+    const exists = masterLists[cfg.statusKey].some(s => s.name === _KB_FALLBACK_STATUS);
+    if (!exists) masterLists[cfg.statusKey].unshift({ name: _KB_FALLBACK_STATUS, color: 'default' });
 }
 
 function openKanbanDeleteCol(statusName) {
+    const cfg = _kbGetConfig();
+    if (!cfg) return;
     const existing = document.getElementById('kbDeleteModal');
     if (existing) existing.remove();
 
-    const cardCount = (activities || []).filter(a => !a.deleted && a.status === statusName).length;
+    const cardCount = (cfg.getItems() || []).filter(a => !a.deleted && a.status === statusName).length;
 
     const modal = document.createElement('div');
     modal.id = 'kbDeleteModal';
@@ -642,22 +659,20 @@ function openKanbanDeleteCol(statusName) {
 }
 
 function confirmKanbanDeleteCol(statusName) {
-    // Garante que o status fallback existe antes de migrar
-    _kbEnsureFallbackStatus();
+    const cfg = _kbGetConfig();
+    if (!cfg) return;
+    _kbEnsureFallbackStatus(cfg);
 
-    // Migra todos os cards do status excluído para "A definir"
-    (activities || []).forEach(a => {
+    (cfg.getItems() || []).forEach(a => {
         if (!a.deleted && a.status === statusName) a.status = _KB_FALLBACK_STATUS;
     });
 
-    // Remove da lista de status
-    if (masterLists.ativStatus) {
-        masterLists.ativStatus = masterLists.ativStatus.filter(s => s.name !== statusName);
+    if (masterLists[cfg.statusKey]) {
+        masterLists[cfg.statusKey] = masterLists[cfg.statusKey].filter(s => s.name !== statusName);
     }
 
-    // Remove da ordem salva
-    const order = _kbGetColOrder();
-    if (order) _kbSaveColOrder(order.filter(n => n !== statusName));
+    const order = _kbGetColOrder(cfg);
+    if (order) _kbSaveColOrder(order.filter(n => n !== statusName), cfg);
 
     const modal = document.getElementById('kbDeleteModal');
     if (modal) modal.remove();
@@ -669,7 +684,7 @@ function confirmKanbanDeleteCol(statusName) {
 function toggleKanbanCol(btn, statusName) {
     const col = btn.closest('.kanban-col');
     if (!col) return;
-    const colKey = 'kb_col_collapsed_' + statusName;
+    const colKey = `kb_col_collapsed_${currentTab}_${statusName}`;
     const collapsed = col.classList.toggle('kanban-col-collapsed');
     localStorage.setItem(colKey, collapsed ? '1' : '0');
     const icon = btn.querySelector('i');
