@@ -274,10 +274,21 @@
             </div>
         </div>
 
+        <div id="viewToggleAtivBar" style="display:none;">
+            <div class="view-module-tabs">
+                <button id="btnViewList" class="view-module-tab active" onclick="toggleKanbanView('list')">
+                    <i class="fas fa-list"></i> Lista
+                </button>
+                <button id="btnViewKanban" class="view-module-tab" onclick="toggleKanbanView('kanban')">
+                    <i class="fas fa-columns"></i> Kanban
+                </button>
+            </div>
+        </div>
+
         <div class="filters-bar" id="filtersBar" style="display:none;">
             <div class="filter-controls">
                 <div style="font-weight:600; color:var(--primary); font-size:14px;"><i class="fa-solid fa-filter"></i> Filtros:</div>
-                
+
                 <div id="filtersAuditoria" class="filter-group" style="display:flex;">
                     <select id="fAuditSetor" class="filter-input" onchange="onFilterSetorChange('Audit')" style="display:none;">
                         <option value="">Setor: Todos</option>
@@ -514,7 +525,9 @@
             </div>
             
             <div style="display: flex; gap: 8px;">
-                <button class="btn-primary" id="addBtn"> <i class="fas fa-plus"></i> Novo Registro
+                <button class="btn-primary" id="addBtn"><i class="fas fa-plus"></i> Novo Registro</button>
+                <button class="btn-primary" id="addColBtn" style="display:none;" onclick="openKanbanAddCol()">
+                    <i class="fas fa-columns"></i> Nova Coluna
                 </button>
                 <button class="btn-secondary" id="trashBtn" onclick="openTrashBin()" title="Visualizar itens deletados">
                     <i class="fas fa-trash"></i>
@@ -523,8 +536,9 @@
             </div>
         </div>
 
-        <div class="cards-grid" id="cardsGrid" style="display:none;">
-            </div>
+        <div class="cards-grid" id="cardsGrid" style="display:none;"></div>
+
+        <div id="kanbanBoard"></div>
 
         <!-- ABA CONFIGURAÇÕES (apenas para admin) -->
         <div id="configContent" style="display:none;">
@@ -1137,6 +1151,7 @@
 <script src="gestao.js"></script>
 <script src="treinamentos.js"></script>
 <script src="documentos.js"></script>
+<script src="kanban.js"></script>
 <script src="key.js"></script>
 </body>
 </html>

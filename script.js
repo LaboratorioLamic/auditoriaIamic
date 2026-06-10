@@ -1593,7 +1593,11 @@
     
     // --- RENDERIZAÇÃO DE CARDS E FILTROS ---
     function renderCards() {
-        if(currentTab === 'backup' || currentTab === 'dashboard') return; 
+        if(currentTab === 'backup' || currentTab === 'dashboard') return;
+        if(currentTab === 'atividades' && typeof kanbanActive !== 'undefined' && kanbanActive) {
+            if(typeof renderKanban === 'function') renderKanban();
+            return;
+        }
 
         // Atualiza dinamicamente os filtros (selects) para mostrar apenas opções
         // que possuem ao menos 1 card possível com os filtros atuais
@@ -3370,19 +3374,27 @@
 
     document.getElementById('filtersBar').style.display = (isBackup || isDashboard || isConfig) ? 'none' : 'flex';
     document.getElementById('filtersBarDashboard').style.display = isDashboard ? 'flex' : 'none';
-    document.getElementById('cardsGrid').style.display = (isBackup || isDashboard || isConfig) ? 'none' : 'grid';
+
+    // Kanban: controla grid vs board kanban
+    var _isKanbanMode = tab === 'atividades' && typeof kanbanActive !== 'undefined' && kanbanActive;
+    var _hideGrid = isBackup || isDashboard || isConfig || _isKanbanMode;
+    document.getElementById('cardsGrid').style.display = _hideGrid ? 'none' : 'grid';
+    var _kbBoard = document.getElementById('kanbanBoard');
+    if (_kbBoard) _kbBoard.style.display = _isKanbanMode ? 'flex' : 'none';
+
+    // Toggle Lista/Kanban — só aparece na aba atividades
+    var _kbToggle = document.getElementById('viewToggleAtivBar');
+    if (_kbToggle) _kbToggle.style.display = (tab === 'atividades') ? 'block' : 'none';
     
-    // --- CORREÇÃO AQUI: Controle do botão "Novo Registro" ---
-    var addBtn = document.getElementById('addBtn');
-    if (addBtn) {
-        // O botão só aparece se NÃO for backup/dash/config E se o usuário tiver permissão de edição
-        const canUserEdit = userCanEditCards(); 
-        if (!isBackup && !isDashboard && !isConfig && canUserEdit) {
-            addBtn.style.display = 'flex';
-        } else {
-            addBtn.style.display = 'none';
-        }
-    }
+    // --- Controle do botão "Novo Registro" e "Nova Coluna" ---
+    var addBtn    = document.getElementById('addBtn');
+    var addColBtn = document.getElementById('addColBtn');
+    var _isKanbanNow = tab === 'atividades' && typeof kanbanActive !== 'undefined' && kanbanActive;
+    var canUserEdit  = userCanEditCards();
+    var showActions  = !isBackup && !isDashboard && !isConfig && canUserEdit;
+
+    if (addBtn)    addBtn.style.display    = (showActions && !_isKanbanNow) ? 'flex' : 'none';
+    if (addColBtn) addColBtn.style.display = (showActions && _isKanbanNow)  ? 'flex' : 'none';
     
     // --- Controle do botão de LIXEIRA ---
     var trashBtn = document.getElementById('trashBtn');
