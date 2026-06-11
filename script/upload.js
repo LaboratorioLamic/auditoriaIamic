@@ -352,12 +352,20 @@ function _renderAnexosList(ctx) {
 function _removeAnexoItem(ctx, index) {
   if (!window._anexosData) window._anexosData = {};
   if (!window._anexosData[ctx]) window._anexosData[ctx] = [];
-  const item = window._anexosData[ctx][index];
-  if (item && item.fileId) {
-    driveDelete(item.fileId).catch(() => {});
-  }
-  window._anexosData[ctx].splice(index, 1);
-  _renderAnexosList(ctx);
+  const anexo = window._anexosData[ctx][index];
+  const nome = (anexo && anexo.titulo) ? `"${anexo.titulo}"` : 'este anexo';
+  showConfirmDanger({
+    title: 'Remover anexo?',
+    message: `${nome} será removido e não poderá ser recuperado.`,
+    confirmLabel: 'Remover',
+    onConfirm: () => {
+      if (anexo && anexo.fileId) {
+        driveDelete(anexo.fileId).catch(() => {});
+      }
+      window._anexosData[ctx].splice(index, 1);
+      _renderAnexosList(ctx);
+    }
+  });
 }
 
 function _startRenameAnexo(ctx, index) {

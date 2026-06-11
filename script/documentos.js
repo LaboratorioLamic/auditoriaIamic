@@ -79,6 +79,7 @@
         }
 
         saveAll(); closeFormDrawer(); renderCards();
+        if (typeof isCalendarActive === 'function' && isCalendarActive()) renderCalendar();
     }
 
     function duplicateDocumento() {
@@ -153,9 +154,9 @@ window.onDocRotinaChange = function(skipCalc) {
     freqWrap.style.display = (!isPontual && !isDiaSemana) ? '' : 'none';
     wdWrap.style.display = isDiaSemana ? '' : 'none';
 
-    dpInput.readOnly = !isPontual;
-    dpInput.style.background = !isPontual ? '#f1f5f9' : '';
-    dpInput.style.cursor = !isPontual ? 'not-allowed' : '';
+    dpInput.readOnly = isDiaSemana;
+    dpInput.style.background = isDiaSemana ? '#f1f5f9' : '';
+    dpInput.style.cursor = isDiaSemana ? 'not-allowed' : '';
 
     if (!skipCalc && !isPontual) calcDocDataPrevisao();
 };

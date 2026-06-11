@@ -406,10 +406,16 @@ function resetModal(prefix) {
             alert('Você não tem permissão para excluir este registro.');
             return;
         }
-        if (!confirm('Deseja mover este item para a lixeira? Os dados serão preservados e podem ser restaurados por um administrador.')) {
-            return;
-        }
+        showConfirmDanger({
+            title: 'Mover para a lixeira?',
+            message: 'Os dados serão preservados e podem ser restaurados por um administrador.',
+            confirmLabel: 'Mover para lixeira',
+            onConfirm: () => _doDeleteItem(id, tab)
+        });
+        return;
+    }
 
+    function _doDeleteItem(id, tab) {
         // SOFT DELETE: Marcar item como deleted ao invés de remover do array
         const now = new Date().toISOString();
         const deletedBy = currentuser.email || currentuser.name || 'unknown';
@@ -457,7 +463,7 @@ function resetModal(prefix) {
         }
 
         if (item) {
-            alert('Item ocultado com sucesso. Os dados foram preservados no banco de dados.');
+            if (typeof showToast === 'function') showToast('Item movido para a lixeira. Dados preservados.', 'success');
             saveAll();
             renderCards();
             updateTrashBadge();
@@ -471,10 +477,16 @@ function resetModal(prefix) {
             return;
         }
 
-        if (!confirm('Deseja restaurar este item da lixeira?')) {
-            return;
-        }
+        showConfirmDanger({
+            title: 'Restaurar item?',
+            message: 'O item será restaurado da lixeira e voltará a aparecer normalmente.',
+            confirmLabel: 'Restaurar',
+            onConfirm: () => _doRestoreDeletedItem(id, tab)
+        });
+        return;
+    }
 
+    function _doRestoreDeletedItem(id, tab) {
         let item = null;
         if (tab === 'auditoria' || tab === 'audit') {
             item = audits.find(a => String(a.id) === String(id));
@@ -506,7 +518,7 @@ function resetModal(prefix) {
                 detalhes: [`Item restaurado pelo usuário ${item.restoredBy}`]
             });
 
-            alert('Item restaurado com sucesso!');
+            if (typeof showToast === 'function') showToast('Item restaurado com sucesso!', 'success');
             saveAll();
             renderCards();
 
@@ -1132,8 +1144,10 @@ window.renderHistoryDrawer = function() {
                     </div>
                 </div>
                 <div class="hd-item-body">
-                    ${changesHtml || '<span style="color:#94a3b8; font-size:12px; font-style:italic;">Sem detalhes adicionais.</span>'}
-                    ${deleteBtn}
+                    <div class="hd-item-body-inner">
+                        ${changesHtml || '<span style="color:#94a3b8; font-size:12px; font-style:italic;">Sem detalhes adicionais.</span>'}
+                        ${deleteBtn}
+                    </div>
                 </div>
             </div>`;
         }).join('');
@@ -1337,8 +1351,16 @@ function viewHistoryItem(id, tab, historyIndex) {
     function deleteHistoryEntry(id, tab, historyIndex) {
         // Somente admin pode apagar histórico
         if (!(typeof userIsAdmin === 'function') || !userIsAdmin()) return;
-        if (!confirm('Deseja realmente excluir este registro do histórico?')) return;
+        showConfirmDanger({
+            title: 'Excluir registro do histórico?',
+            message: 'Esta entrada será removida permanentemente do histórico de alterações.',
+            confirmLabel: 'Excluir',
+            onConfirm: () => _doDeleteHistoryEntry(id, tab, historyIndex)
+        });
+        return;
+    }
 
+    function _doDeleteHistoryEntry(id, tab, historyIndex) {
         let item;
         let finalTab = tab;
 

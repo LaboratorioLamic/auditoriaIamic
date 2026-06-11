@@ -304,6 +304,7 @@ function _kbRenderCard(item) {
     const deadline = _kbDeadlineColor(dateVal, item.flagDias || 3, item.status, item);
     const marcColor = _kbResolveColor(item.marcadorCor || 'default');
     const canEdit   = typeof userCanEditCards === 'function' ? userCanEditCards(item) : false;
+    const canDelete = typeof userCanDeleteCards === 'function' ? userCanDeleteCards(item) : false;
 
     const clList  = item.checklist || [];
     const clTotal = clList.length;
@@ -332,7 +333,7 @@ function _kbRenderCard(item) {
                     ${item.marcador ? `<span class="kanban-card-tag" style="background:${marcColor}">${_kbHtml(item.marcador)}</span>` : '<span></span>'}
                     <div class="kanban-card-acts" onclick="event.stopPropagation()">
                         ${canEdit ? `<button onclick="kbEditCard(${item.id})" title="Editar"><i class="fas fa-pen"></i></button>` : ''}
-                        <button onclick="kbViewCard(${item.id})" title="Visualizar"><i class="fas fa-eye"></i></button>
+                        ${canDelete ? `<button onclick="deleteItem(${item.id},'${currentTab}')" title="Excluir" class="kanban-card-act-del"><i class="fas fa-trash"></i></button>` : ''}
                     </div>
                 </div>
             </div>
@@ -676,8 +677,8 @@ function openKanbanDeleteCol(statusName) {
 
     modal.innerHTML = `
         <div class="kb-modal-box">
+            <div class="kb-modal-icon"><i class="fas fa-trash-alt"></i></div>
             <div class="kb-modal-header">
-                <i class="fas fa-trash" style="color:var(--c-red)"></i>
                 <h3>Excluir coluna</h3>
             </div>
             <p class="kb-modal-desc">
@@ -689,9 +690,9 @@ function openKanbanDeleteCol(statusName) {
                     : ''}
             </p>
             <div class="kb-modal-actions">
-                <button class="kb-form-btn-cancel" onclick="document.getElementById('kbDeleteModal').remove()">Cancelar</button>
+                <button class="confirm-danger-cancel" onclick="document.getElementById('kbDeleteModal').remove()">Cancelar</button>
                 <button class="kb-form-btn-delete" onclick="confirmKanbanDeleteCol('${_kbHtml(statusName)}')">
-                    <i class="fas fa-trash"></i> Excluir
+                    <i class="fas fa-trash-alt"></i> Excluir
                 </button>
             </div>
         </div>`;

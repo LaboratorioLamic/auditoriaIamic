@@ -713,6 +713,8 @@ function _calcRotinaNextDate(item, baseDate, targetField) {
         next.setMonth(next.getMonth() + freq);
     } else if (rotina === 'semanal') {
         next.setDate(next.getDate() + freq * 7);
+    } else if (rotina === 'diario') {
+        next.setDate(next.getDate() + freq);
     } else if (rotina === 'diasemana') {
         const days = Array.isArray(item.diasSemana) ? item.diasSemana : [];
         if (days.length === 0) return;
@@ -740,6 +742,8 @@ function _calcAuditNextDate(item) {
         next.setMonth(next.getMonth() + freq);
     } else if (rotina === 'semanal') {
         next.setDate(next.getDate() + freq * 7);
+    } else if (rotina === 'diario') {
+        next.setDate(next.getDate() + freq);
     } else if (rotina === 'diasemana') {
         const days = Array.isArray(item.diasSemana) ? item.diasSemana : [];
         if (days.length === 0) return;
@@ -941,15 +945,20 @@ window.excluirPublicacao = function(id, tab, index) {
         if (typeof showToast === 'function') showToast('Você não tem permissão para excluir publicações.', 'error');
         return;
     }
-    if (!confirm('Tem certeza que deseja excluir esta publicação?')) return;
-    item.publicacoes.splice(index, 1);
-    saveAll();
-    closeModal('modalVerPublicacao');
-    renderViewPublicacoes(item);
-    _updatePubTabBadge(item);
-    renderCards();
-    if (typeof showToast === 'function') showToast('Publicação excluída.', 'success');
-};
+    showConfirmDanger({
+        title: 'Excluir publicação?',
+        message: 'Esta publicação será removida permanentemente e não poderá ser recuperada.',
+        confirmLabel: 'Excluir',
+        onConfirm: () => {
+            item.publicacoes.splice(index, 1);
+            saveAll();
+            closeModal('modalVerPublicacao');
+            renderViewPublicacoes(item);
+            _updatePubTabBadge(item);
+            renderCards();
+            if (typeof showToast === 'function') showToast('Publicação excluída.', 'success');
+        }
+    });
 
 function _updatePubTabBadge(item) {
     const badge = document.getElementById('pubTabBadge');

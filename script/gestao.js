@@ -70,6 +70,7 @@
         }
 
         saveAll(); closeFormDrawer(); renderCards();
+        if (typeof isCalendarActive === 'function' && isCalendarActive()) renderCalendar();
     }
 
     function duplicateAtividade() {

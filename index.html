@@ -1318,10 +1318,6 @@
                 <div class="history-drawer-subtitle">Rastreabilidade Geral</div>
             </div>
         </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-            <button class="history-drawer-cal" title="Filtrar por data" id="btnHistoryCalendar" onclick="toggleHistoryDateFilter()"><i class="fas fa-calendar-alt"></i></button>
-            <button class="history-drawer-close" onclick="closeHistoryDrawer()"><i class="fas fa-times"></i></button>
-        </div>
     </div>
     <div class="history-drawer-date-filter" id="historyDateFilter" style="display:none;">
         <input type="date" id="histFilterDateIni" onchange="renderHistoryDrawer()">
@@ -1330,6 +1326,10 @@
     </div>
     <div class="history-drawer-body" id="historyDrawerBody"></div>
     <div class="history-drawer-pagination" id="historyDrawerPagination"></div>
+    <div class="history-drawer-footer">
+        <button class="history-drawer-cal" title="Filtrar por data" id="btnHistoryCalendar" onclick="toggleHistoryDateFilter()"><i class="fas fa-calendar-alt"></i> Filtrar por data</button>
+        <button class="history-drawer-close-btn" onclick="closeHistoryDrawer()"><i class="fas fa-times"></i> Fechar</button>
+    </div>
 </div>
 
 <div class="modal" id="historyViewModal">

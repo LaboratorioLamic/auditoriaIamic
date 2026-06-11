@@ -1,4 +1,107 @@
 /* =========================================================================
+   MODAL DE CONFIRMAÇÃO DE EXCLUSÃO (vermelho, moderno)
+   ========================================================================= */
+.confirm-danger-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2,6,23,0.65);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    animation: fadeIn 0.15s ease;
+}
+
+.confirm-danger-box {
+    background: #fff;
+    border-radius: 20px;
+    width: min(420px, 100%);
+    padding: 32px 28px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.05);
+    animation: modalUp 0.2s cubic-bezier(0.34,1.4,0.64,1);
+}
+
+.confirm-danger-icon-wrap {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #fee2e2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #dc2626;
+    font-size: 24px;
+    margin-bottom: 4px;
+}
+
+.confirm-danger-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.2;
+}
+
+.confirm-danger-message {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.5;
+    max-width: 340px;
+}
+
+.confirm-danger-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    width: 100%;
+    justify-content: center;
+}
+
+.confirm-danger-cancel {
+    flex: 1;
+    max-width: 160px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+.confirm-danger-cancel:hover { background: #f3f4f6; border-color: #d1d5db; }
+
+.confirm-danger-confirm {
+    flex: 1;
+    max-width: 160px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    background: #dc2626;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    transition: background 0.15s, box-shadow 0.15s;
+    box-shadow: 0 2px 8px rgba(220,38,38,0.25);
+}
+.confirm-danger-confirm:hover { background: #b91c1c; box-shadow: 0 4px 16px rgba(220,38,38,0.35); }
+
+/* =========================================================================
    MODAIS
    ========================================================================= */
 .modal {

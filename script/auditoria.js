@@ -87,6 +87,7 @@
         saveAll();
         closeFormDrawer();
         renderCards();
+        if (typeof isCalendarActive === 'function' && isCalendarActive()) renderCalendar();
     } catch (error) {
         console.error('Erro ao salvar auditoria:', error);
         alert('Erro ao salvar auditoria. Dados foram salvos localmente.');
@@ -167,9 +168,11 @@ window.onAuditRotinaChange = function(skipCalc) {
     freqWrap.style.display = (!isPontual && !isDiaSemana) ? '' : 'none';
     wdWrap.style.display = isDiaSemana ? '' : 'none';
 
-    dpInput.readOnly = !isPontual;
-    dpInput.style.background = !isPontual ? '#f1f5f9' : '';
-    dpInput.style.cursor = !isPontual ? 'not-allowed' : '';
+    // Dia da semana: data calculada automaticamente (não editável)
+    // Demais rotinas: permite edição manual mas também calcula ao mudar
+    dpInput.readOnly = isDiaSemana;
+    dpInput.style.background = isDiaSemana ? '#f1f5f9' : '';
+    dpInput.style.cursor = isDiaSemana ? 'not-allowed' : '';
 
     if (!skipCalc && !isPontual) calcAuditDataPrevisao();
 };

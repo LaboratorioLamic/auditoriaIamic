@@ -1,5 +1,42 @@
 // === UTILITÁRIOS GERAIS ===
 
+// Modal de confirmação de exclusão (vermelho, moderno)
+// showConfirmDanger({ title, message, confirmLabel, onConfirm })
+window.showConfirmDanger = function({ title, message, confirmLabel, onConfirm } = {}) {
+    const existing = document.getElementById('confirmDangerModal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'confirmDangerModal';
+    overlay.className = 'confirm-danger-overlay';
+
+    overlay.innerHTML = `
+        <div class="confirm-danger-box">
+            <div class="confirm-danger-icon-wrap">
+                <i class="fas fa-trash-alt"></i>
+            </div>
+            <div class="confirm-danger-title">${title || 'Confirmar exclusão'}</div>
+            <div class="confirm-danger-message">${message || 'Esta ação não pode ser desfeita.'}</div>
+            <div class="confirm-danger-actions">
+                <button class="confirm-danger-cancel" id="confirmDangerCancel">Cancelar</button>
+                <button class="confirm-danger-confirm" id="confirmDangerOk">
+                    <i class="fas fa-trash-alt"></i> ${confirmLabel || 'Excluir'}
+                </button>
+            </div>
+        </div>`;
+
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    overlay.querySelector('#confirmDangerCancel').onclick = () => overlay.remove();
+    overlay.querySelector('#confirmDangerOk').onclick = () => {
+        overlay.remove();
+        if (typeof onConfirm === 'function') onConfirm();
+    };
+
+    document.body.appendChild(overlay);
+    // Foco no botão cancelar por segurança
+    setTimeout(() => overlay.querySelector('#confirmDangerCancel')?.focus(), 50);
+};
+
 // Remove 'historico' do snapshot para evitar aninhamento exponencial no Firebase
 window._safeSnapshot = function(item) {
     const copy = JSON.parse(JSON.stringify(item));
