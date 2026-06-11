@@ -1008,10 +1008,69 @@ window.closeHistoryDrawer = function() {
     backdrop.classList.remove('open');
 };
 
-window.toggleHistoryDateFilter = function() {
-    var el = document.getElementById('historyDateFilter');
-    if (!el) return;
-    el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+window._hdPickerYear = new Date().getFullYear();
+window._hdFilterMonth = null; // { year, month } or null
+
+window.toggleHistoryMonthPicker = function() {
+    var picker = document.getElementById('hdMonthPicker');
+    if (!picker) return;
+    var isOpen = picker.classList.contains('open');
+    if (isOpen) { picker.classList.remove('open'); return; }
+    window._hdPickerYear = window._hdFilterMonth ? window._hdFilterMonth.year : new Date().getFullYear();
+    hdRenderMonthGrid();
+    picker.classList.add('open');
+    setTimeout(function() {
+        document.addEventListener('click', hdPickerOutsideClick, { once: true });
+    }, 0);
+};
+
+function hdPickerOutsideClick(e) {
+    var picker = document.getElementById('hdMonthPicker');
+    var btn = document.getElementById('btnHistoryCalendar');
+    if (picker && !picker.contains(e.target) && btn && !btn.contains(e.target)) {
+        picker.classList.remove('open');
+    } else if (picker && picker.classList.contains('open')) {
+        document.addEventListener('click', hdPickerOutsideClick, { once: true });
+    }
+}
+
+window.hdChangeYear = function(delta) {
+    window._hdPickerYear += delta;
+    hdRenderMonthGrid();
+};
+
+function hdRenderMonthGrid() {
+    var yearEl = document.getElementById('hdPickerYear');
+    var grid = document.getElementById('hdMonthGrid');
+    var clearBtn = document.getElementById('hdClearFilter');
+    if (!yearEl || !grid) return;
+    yearEl.textContent = window._hdPickerYear;
+    var months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    grid.innerHTML = months.map(function(m, i) {
+        var active = window._hdFilterMonth && window._hdFilterMonth.year === window._hdPickerYear && window._hdFilterMonth.month === i;
+        return '<button class="hd-mp-month' + (active ? ' active' : '') + '" onclick="hdSelectMonth(' + i + ')">' + m + '</button>';
+    }).join('');
+    if (clearBtn) clearBtn.style.display = window._hdFilterMonth ? 'flex' : 'none';
+}
+
+window.hdSelectMonth = function(monthIndex) {
+    window._hdFilterMonth = { year: window._hdPickerYear, month: monthIndex };
+    var picker = document.getElementById('hdMonthPicker');
+    if (picker) picker.classList.remove('open');
+    var btn = document.getElementById('btnHistoryCalendar');
+    if (btn) btn.classList.add('active');
+    window._historyDrawerPage = 1;
+    renderHistoryDrawer();
+};
+
+window.hdClearMonthFilter = function() {
+    window._hdFilterMonth = null;
+    var btn = document.getElementById('btnHistoryCalendar');
+    if (btn) btn.classList.remove('active');
+    var picker = document.getElementById('hdMonthPicker');
+    if (picker) picker.classList.remove('open');
+    window._historyDrawerPage = 1;
+    renderHistoryDrawer();
 };
 
 window.renderHistoryDrawer = function() {
@@ -1027,16 +1086,18 @@ window.renderHistoryDrawer = function() {
     else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
     if (!item) return;
 
-    var dateIni = document.getElementById('histFilterDateIni') ? document.getElementById('histFilterDateIni').value : '';
-    var dateFim = document.getElementById('histFilterDateFim') ? document.getElementById('histFilterDateFim').value : '';
-
     var allHistory = (item.historico || []).slice().reverse().map((entry, revIndex) => ({
         entry,
         originalIndex: (item.historico.length - 1) - revIndex
     })).filter(h => !h.entry.deleted);
 
-    if (dateIni) allHistory = allHistory.filter(h => new Date(h.entry.timestamp) >= new Date(dateIni));
-    if (dateFim) allHistory = allHistory.filter(h => new Date(h.entry.timestamp) <= new Date(dateFim + 'T23:59:59'));
+    if (window._hdFilterMonth) {
+        var fy = window._hdFilterMonth.year, fm = window._hdFilterMonth.month;
+        allHistory = allHistory.filter(h => {
+            var d = new Date(h.entry.timestamp);
+            return d.getFullYear() === fy && d.getMonth() === fm;
+        });
+    }
 
     var itemsPerPage = 10;
     var totalItems = allHistory.length;
@@ -1984,12 +2045,15 @@ function viewHistoryItem(id, tab, historyIndex) {
             openListManager('categorias');
         }
     }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+        if (id === 'viewModal') closeHistoryDrawer();
+    }
 
     const FORM_DRAWER_IDS = ['modalAuditoria', 'modalTreinamentos', 'modalAtividades', 'modalDocumentos', 'modalManutencao'];
 
     function openFormDrawer(id) {
-        // Fecha qualquer drawer de formulário aberto
+        closeHistoryDrawer();
         FORM_DRAWER_IDS.forEach(did => {
             const el = document.getElementById(did);
             if (el) el.classList.remove('open');

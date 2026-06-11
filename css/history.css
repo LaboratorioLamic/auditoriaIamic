@@ -79,6 +79,92 @@
     flex-shrink: 0;
     gap: 8px;
 }
+/* Month picker popover */
+.hd-month-picker {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+    padding: 14px;
+    width: 220px;
+    z-index: 10100;
+    flex-direction: column;
+    gap: 10px;
+}
+.hd-month-picker.open { display: flex; }
+
+.hd-month-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+.hd-mp-year {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    flex: 1;
+    text-align: center;
+}
+.hd-mp-nav {
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 11px;
+    transition: background var(--t-fast), color var(--t-fast);
+}
+.hd-mp-nav:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.hd-month-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+}
+.hd-mp-month {
+    background: #f8fafc;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    padding: 7px 4px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--text);
+    cursor: pointer;
+    transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+.hd-mp-month:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+.hd-mp-month.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.hd-mp-clear {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background: #fef2f2;
+    color: #ef4444;
+    border: 1px solid #fecaca;
+    border-radius: 7px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    width: 100%;
+    transition: background var(--t-fast);
+}
+.hd-mp-clear:hover { background: #fee2e2; }
+
 .history-drawer-cal {
     display: inline-flex;
     align-items: center;
@@ -196,6 +282,7 @@
     border-radius: 10px;
     overflow: hidden;
     transition: box-shadow var(--t-fast);
+    flex-shrink: 0;
 }
 .hd-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
 

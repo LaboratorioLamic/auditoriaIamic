@@ -1319,15 +1319,21 @@
             </div>
         </div>
     </div>
-    <div class="history-drawer-date-filter" id="historyDateFilter" style="display:none;">
-        <input type="date" id="histFilterDateIni" onchange="renderHistoryDrawer()">
-        <span style="color:#94a3b8; font-size:12px;">até</span>
-        <input type="date" id="histFilterDateFim" onchange="renderHistoryDrawer()">
-    </div>
     <div class="history-drawer-body" id="historyDrawerBody"></div>
     <div class="history-drawer-pagination" id="historyDrawerPagination"></div>
     <div class="history-drawer-footer">
-        <button class="history-drawer-cal" title="Filtrar por data" id="btnHistoryCalendar" onclick="toggleHistoryDateFilter()"><i class="fas fa-calendar-alt"></i> Filtrar por data</button>
+        <div style="position:relative;">
+            <button class="history-drawer-cal" title="Filtrar por mês" id="btnHistoryCalendar" onclick="toggleHistoryMonthPicker()"><i class="fas fa-calendar-alt"></i> Filtrar por data</button>
+            <div class="hd-month-picker" id="hdMonthPicker">
+                <div class="hd-month-picker-header">
+                    <button class="hd-mp-nav" onclick="hdChangeYear(-1)"><i class="fas fa-chevron-left"></i></button>
+                    <span class="hd-mp-year" id="hdPickerYear"></span>
+                    <button class="hd-mp-nav" onclick="hdChangeYear(1)"><i class="fas fa-chevron-right"></i></button>
+                </div>
+                <div class="hd-month-picker-grid" id="hdMonthGrid"></div>
+                <button class="hd-mp-clear" id="hdClearFilter" onclick="hdClearMonthFilter()"><i class="fas fa-times-circle"></i> Limpar filtro</button>
+            </div>
+        </div>
         <button class="history-drawer-close-btn" onclick="closeHistoryDrawer()"><i class="fas fa-times"></i> Fechar</button>
     </div>
 </div>
