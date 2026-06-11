@@ -75,9 +75,9 @@ window.showPermanentDeleteConfirm = function({ title, message, onConfirm } = {})
 };
 
 // Modal de confirmação de exclusão (vermelho, moderno) com campo de motivo obrigatório
-// showConfirmDanger({ title, message, confirmLabel, onConfirm })
-// onConfirm recebe (reason: string)
-window.showConfirmDanger = function({ title, message, confirmLabel, onConfirm } = {}) {
+// showConfirmDanger({ title, message, confirmLabel, onConfirm, requireReason })
+// onConfirm recebe (reason: string). requireReason=false omite o campo de motivo.
+window.showConfirmDanger = function({ title, message, confirmLabel, onConfirm, requireReason = true } = {}) {
     const existing = document.getElementById('confirmDangerModal');
     if (existing) existing.remove();
 
@@ -92,14 +92,15 @@ window.showConfirmDanger = function({ title, message, confirmLabel, onConfirm } 
             </div>
             <div class="confirm-danger-title">${title || 'Confirmar exclusão'}</div>
             <div class="confirm-danger-message">${message || 'Esta ação não pode ser desfeita.'}</div>
+            ${requireReason ? `
             <div class="perm-delete-input-wrap" style="margin-top:4px;">
                 <label class="perm-delete-label">Motivo da exclusão <span style="color:#dc2626;">*</span></label>
                 <textarea id="confirmDangerReason" class="perm-delete-input" rows="2" placeholder="Descreva o motivo..." style="font-family:inherit;font-size:13px;letter-spacing:normal;resize:vertical;min-height:60px;font-weight:400;"></textarea>
                 <div class="perm-delete-input-hint" id="confirmDangerHint"></div>
-            </div>
+            </div>` : ''}
             <div class="confirm-danger-actions">
                 <button class="confirm-danger-cancel" id="confirmDangerCancel">Cancelar</button>
-                <button class="confirm-danger-confirm" id="confirmDangerOk" disabled style="opacity:0.45;">
+                <button class="confirm-danger-confirm" id="confirmDangerOk" ${requireReason ? 'disabled style="opacity:0.45;"' : ''}>
                     <i class="fas fa-trash-alt"></i> ${confirmLabel || 'Excluir'}
                 </button>
             </div>
@@ -108,32 +109,41 @@ window.showConfirmDanger = function({ title, message, confirmLabel, onConfirm } 
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
     overlay.querySelector('#confirmDangerCancel').onclick = () => overlay.remove();
 
-    const textarea = overlay.querySelector('#confirmDangerReason');
     const btn = overlay.querySelector('#confirmDangerOk');
-    const hint = overlay.querySelector('#confirmDangerHint');
 
-    textarea.addEventListener('input', () => {
-        const val = textarea.value.trim();
-        if (val.length >= 3) {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            hint.textContent = '';
-        } else {
-            btn.disabled = true;
-            btn.style.opacity = '0.45';
-            hint.textContent = val.length > 0 ? 'Motivo muito curto (mínimo 3 caracteres)' : '';
-        }
-    });
+    if (requireReason) {
+        const textarea = overlay.querySelector('#confirmDangerReason');
+        const hint = overlay.querySelector('#confirmDangerHint');
 
-    btn.onclick = () => {
-        const reason = textarea.value.trim();
-        if (reason.length < 3) return;
-        overlay.remove();
-        if (typeof onConfirm === 'function') onConfirm(reason);
-    };
+        textarea.addEventListener('input', () => {
+            const val = textarea.value.trim();
+            if (val.length >= 3) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                hint.textContent = '';
+            } else {
+                btn.disabled = true;
+                btn.style.opacity = '0.45';
+                hint.textContent = val.length > 0 ? 'Motivo muito curto (mínimo 3 caracteres)' : '';
+            }
+        });
 
-    document.body.appendChild(overlay);
-    setTimeout(() => textarea?.focus(), 50);
+        btn.onclick = () => {
+            const reason = textarea.value.trim();
+            if (reason.length < 3) return;
+            overlay.remove();
+            if (typeof onConfirm === 'function') onConfirm(reason);
+        };
+
+        document.body.appendChild(overlay);
+        setTimeout(() => textarea?.focus(), 50);
+    } else {
+        btn.onclick = () => {
+            overlay.remove();
+            if (typeof onConfirm === 'function') onConfirm('');
+        };
+        document.body.appendChild(overlay);
+    }
 };
 
 // Remove 'historico' do snapshot para evitar aninhamento exponencial no Firebase

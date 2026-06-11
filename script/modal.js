@@ -410,7 +410,8 @@ function resetModal(prefix) {
             title: 'Mover para a lixeira?',
             message: 'Os dados serão preservados e podem ser restaurados por um administrador.',
             confirmLabel: 'Mover para lixeira',
-            onConfirm: (reason) => _doDeleteItem(id, tab, reason)
+            requireReason: false,
+            onConfirm: () => _doDeleteItem(id, tab, '')
         });
         return;
     }
@@ -979,6 +980,11 @@ function renderViewContent(id, tab) {
     if (typeof renderViewAnexos === 'function') renderViewAnexos(item);
 
     // ── Publicações tab ───────────────────────────────────────
+    window._pubSubtabAtivo = 'Todos';
+    document.querySelectorAll('.pub-subtab').forEach(b => { b.classList.toggle('active', b.dataset.tipo === 'Todos'); });
+    const _subtabsEl = document.getElementById('pubSubtabs');
+    const _tabsComTipo = ['auditoria', 'atividades'];
+    if (_subtabsEl) _subtabsEl.style.display = _tabsComTipo.includes(finalTab) ? '' : 'none';
     if (typeof renderViewPublicacoes === 'function') renderViewPublicacoes(item);
 
     // Badge

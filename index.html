@@ -1234,6 +1234,12 @@
                 <div id="viewAnexosContent"></div>
             </div>
             <div class="view-tab-panel" id="view-panel-publicacoes">
+                <div class="pub-subtabs" id="pubSubtabs">
+                    <button class="pub-subtab active" data-tipo="Todos" onclick="switchPubSubtab('Todos',this)">Todos <span class="pub-subtab-badge" id="pubSubBadgeTodos"></span></button>
+                    <button class="pub-subtab" data-tipo="Comentário" onclick="switchPubSubtab('Comentário',this)"><i class="fas fa-comment-dots"></i> Comentário <span class="pub-subtab-badge" id="pubSubBadgeComentario"></span></button>
+                    <button class="pub-subtab" data-tipo="Atualização" onclick="switchPubSubtab('Atualização',this)"><i class="fas fa-rotate"></i> Atualização <span class="pub-subtab-badge" id="pubSubBadgeAtualizacao"></span></button>
+                    <button class="pub-subtab" data-tipo="Evidência" onclick="switchPubSubtab('Evidência',this)"><i class="fas fa-file-circle-check"></i> Evidência <span class="pub-subtab-badge" id="pubSubBadgeEvidencia"></span></button>
+                </div>
                 <div id="viewPublicacoesContent"></div>
             </div>
         </div>

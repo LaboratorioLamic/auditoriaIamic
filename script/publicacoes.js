@@ -758,18 +758,49 @@ function _calcAuditNextDate(item) {
     item.dataPrevisao = next.toISOString().split('T')[0];
 }
 
+// ─── SUB-ABA DE PUBLICAÇÕES ───────────────────────────────────
+window._pubSubtabAtivo = 'Todos';
+
+window.switchPubSubtab = function(tipo, btn) {
+    window._pubSubtabAtivo = tipo;
+    document.querySelectorAll('.pub-subtab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const allItems = [...(audits||[]),...(trainings||[]),...(activities||[]),...(documents||[]),...(maintenances||[])];
+    const item = allItems.find(i => i.id === currentViewItemId);
+    if (item) renderViewPublicacoes(item);
+};
+
 // ─── RENDER PUBLICAÇÕES (aba view modal) ─────────────────────
 window.renderViewPublicacoes = function(item) {
     const container = document.getElementById('viewPublicacoesContent');
     if (!container) return;
-    const pubs = item.publicacoes || [];
+    const allPubs = item.publicacoes || [];
+
+    // Atualiza badges das sub-abas
+    const tiposSubtab = ['Comentário', 'Atualização', 'Evidência'];
+    const badgeMap = { 'Comentário': 'pubSubBadgeComentario', 'Atualização': 'pubSubBadgeAtualizacao', 'Evidência': 'pubSubBadgeEvidencia' };
+    const badgeTodos = document.getElementById('pubSubBadgeTodos');
+    if (badgeTodos) { badgeTodos.textContent = allPubs.length || ''; badgeTodos.style.display = allPubs.length ? '' : 'none'; }
+    tiposSubtab.forEach(t => {
+        const el = document.getElementById(badgeMap[t]);
+        const cnt = allPubs.filter(p => p.tipo === t).length;
+        if (el) { el.textContent = cnt || ''; el.style.display = cnt ? '' : 'none'; }
+    });
+
+    // Filtra pelo tipo ativo
+    const filtroAtivo = window._pubSubtabAtivo || 'Todos';
+    const pubs = filtroAtivo === 'Todos' ? allPubs : allPubs.filter(p => p.tipo === filtroAtivo);
+
     if (pubs.length === 0) {
-        container.innerHTML = '<div class="pub-empty"><i class="fas fa-paper-plane"></i><p>Nenhuma publicação registrada ainda.</p></div>';
+        const msg = filtroAtivo === 'Todos' ? 'Nenhuma publicação registrada ainda.' : `Nenhuma publicação do tipo "${filtroAtivo}" encontrada.`;
+        container.innerHTML = `<div class="pub-empty"><i class="fas fa-paper-plane"></i><p>${msg}</p></div>`;
         return;
     }
     const _canMgPubs = typeof userCanManagePubs === 'function' ? userCanManagePubs(item) : true;
 
-    const rows = pubs.map((p, i) => {
+    const rows = pubs.map((p, _fi) => {
+        // índice real no array original (necessário para editar/excluir)
+        const i = allPubs.indexOf(p);
         const typeClass = {
             'Evidência': 'evidencia',
             'Atualização': 'atualizacao',
