@@ -78,6 +78,10 @@ function _clDonutHtml(done, total, pct, size, absolute) {
             return;
         }
 
+        // Sub-aba lista: desviar para tabela ou grupos se necessário
+        if (currentListSubtab === 'table') { _renderListTable(); return; }
+        if (currentListSubtab === 'groups') { _renderListGroups(); return; }
+
         // Atualiza dinamicamente os filtros (selects) para mostrar apenas opções
         // que possuem ao menos 1 card possível com os filtros atuais
         const tabToFilterPrefix = (tab) => {
@@ -92,7 +96,10 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         if (currentFilterPrefix) updateFilterFacetOptions(currentFilterPrefix);
 
         const grid = document.getElementById('cardsGrid');
+        grid.style.display = 'grid';
         grid.innerHTML = '';
+        const _tv = document.getElementById('tableView'); if (_tv) _tv.style.display = 'none';
+        const _gv = document.getElementById('groupsView'); if (_gv) _gv.style.display = 'none';
 
         let data = [];
         let statusList = [];
@@ -608,6 +615,424 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         });
 
         // Atualiza contador de notificações após renderizar cards
+        updateNotificationCount();
+    }
+
+    // ── SUB-ABAS DA LISTA ──────────────────────────────────────────────────
+
+    function setListSubtab(mode) {
+        currentListSubtab = mode;
+        document.querySelectorAll('.list-subtab').forEach(b => b.classList.remove('active'));
+        const btn = document.getElementById('listSubtab' + mode.charAt(0).toUpperCase() + mode.slice(1));
+        if (btn) btn.classList.add('active');
+        renderCards();
+    }
+
+    // Retorna os dados filtrados da aba atual (reutiliza a lógica de renderCards)
+    function _getFilteredData() {
+        let data = [];
+        let statusList = [];
+        let getDeadlineDate = null;
+
+        if (currentTab === 'auditoria') {
+            statusList = masterLists.auditStatus || [];
+            getDeadlineDate = it => it.dataPrevisao;
+            const setor = document.getElementById('fAuditSetor')?.value || '';
+            const cat = document.getElementById('fAuditCat')?.value || '';
+            const stat = document.getElementById('fAuditStatus')?.value || '';
+            const marcador = document.getElementById('fAuditMarcador')?.value || '';
+            const responsavel = document.getElementById('fAuditResponsavel')?.value || '';
+            const revisor = document.getElementById('fAuditRevisor')?.value || '';
+            const dateType = document.getElementById('fAuditDateType')?.value || 'all';
+            data = audits.filter(item => {
+                if (item.deleted) return false;
+                const allowedSetores = getAllowedSetores();
+                if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return false;
+                if (setor && item.setor !== setor) return false;
+                if (cat && item.categoria !== cat) return false;
+                if (stat && item.status !== stat) return false;
+                if (marcador && item.marcador !== marcador) return false;
+                if (revisor && item.revisor !== revisor) return false;
+                if (responsavel) { const r = normalizeResponsavel(item.responsavel); if (!r || !r.includes(responsavel.toLowerCase())) return false; }
+                if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
+                return true;
+            });
+        } else if (currentTab === 'treinamentos') {
+            statusList = masterLists.trainStatus || [];
+            getDeadlineDate = it => it.dataPrevisao;
+            const setor = document.getElementById('fTrainSetor')?.value || '';
+            const cat = document.getElementById('fTrainCat')?.value || '';
+            const stat = document.getElementById('fTrainStatus')?.value || '';
+            const responsavel = document.getElementById('fTrainResponsavel')?.value || '';
+            data = trainings.filter(item => {
+                if (item.deleted) return false;
+                const allowedSetores = getAllowedSetores();
+                if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return false;
+                if (setor && item.setor !== setor) return false;
+                if (cat && item.categoria !== cat) return false;
+                if (stat && item.status !== stat) return false;
+                if (responsavel) { const r = normalizeResponsavel(item.responsavel || ''); if (!r || !r.includes(responsavel.toLowerCase())) return false; }
+                if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
+                return true;
+            });
+        } else if (currentTab === 'atividades') {
+            statusList = masterLists.ativStatus || [];
+            getDeadlineDate = it => it.dataConclusao;
+            const setor = document.getElementById('fAtivSetor')?.value || '';
+            const cat = document.getElementById('fAtivCat')?.value || '';
+            const stat = document.getElementById('fAtivStatus')?.value || '';
+            const responsavel = document.getElementById('fAtivResponsavel')?.value || '';
+            const revisor = document.getElementById('fAtivRevisor')?.value || '';
+            data = activities.filter(item => {
+                if (item.deleted) return false;
+                const allowedSetores = getAllowedSetores();
+                if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return false;
+                if (setor && item.setor !== setor) return false;
+                if (cat && item.categoria !== cat) return false;
+                if (stat && item.status !== stat) return false;
+                if (revisor && item.revisor !== revisor) return false;
+                if (responsavel) { const r = normalizeResponsavel(item.responsavel); if (!r || !r.includes(responsavel.toLowerCase())) return false; }
+                if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
+                return true;
+            });
+        } else if (currentTab === 'documentos') {
+            statusList = masterLists.docStatus || [];
+            getDeadlineDate = it => it.dataProximaRevisao;
+            const setor = document.getElementById('fDocSetor')?.value || '';
+            const cat = document.getElementById('fDocCat')?.value || '';
+            const stat = document.getElementById('fDocStatus')?.value || '';
+            const responsavel = document.getElementById('fDocResponsavel')?.value || '';
+            data = documents.filter(item => {
+                if (item.deleted) return false;
+                const allowedSetores = getAllowedSetores();
+                if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return false;
+                if (setor && item.setor !== setor) return false;
+                if (cat && item.categoria !== cat) return false;
+                if (stat && item.status !== stat) return false;
+                if (responsavel) { const r = normalizeResponsavel(item.responsavel); if (!r || !r.includes(responsavel.toLowerCase())) return false; }
+                if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
+                return true;
+            });
+        } else if (currentTab === 'manutencao') {
+            statusList = masterLists.mantStatus || [];
+            getDeadlineDate = it => getMaintenanceDeadlineDate(it);
+            const setor = document.getElementById('fMantSetor')?.value || '';
+            const cat = document.getElementById('fMantCat')?.value || '';
+            const stat = document.getElementById('fMantStatus')?.value || '';
+            data = maintenances.filter(item => {
+                if (item.deleted) return false;
+                const allowedSetores = getAllowedSetores();
+                if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return false;
+                if (setor && item.setor !== setor) return false;
+                if (cat && item.categoria !== cat) return false;
+                if (stat && item.status !== stat) return false;
+                if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
+                return true;
+            });
+        }
+
+        // Filtro de busca por título
+        if (titleSearchCardsEnabled && titleSearchCardsQuery) {
+            data = data.filter(item => normalizeText(item.titulo || '').includes(titleSearchCardsQuery));
+        }
+        // Filtro finalizados
+        const showFinalized = document.getElementById('showFinalizedCheckbox')?.checked !== false;
+        if (!showFinalized) {
+            data = data.filter(item => {
+                const s = normalizeStatusName(item.status || '');
+                return s !== 'concluído' && s !== 'cancelado';
+            });
+        }
+
+        return { data, statusList, getDeadlineDate };
+    }
+
+    function _getItemIndicatorClass(item, getDeadlineDate) {
+        const d = daysDiff(getDeadlineDate ? getDeadlineDate(item) : null);
+        const flagDays = item.flagDias || 7;
+        const _skipFlag = item.status === 'Concluído' && !isConcludedRecurring(item, currentTab);
+        if (_skipFlag || d === Infinity) return 'green';
+        if (d < 0) return 'red';
+        if (d <= flagDays) return 'yellow';
+        return 'green';
+    }
+
+    function _getDateDisplay(item) {
+        if (currentTab === 'auditoria') return formatBR(item.dataPrevisao);
+        if (currentTab === 'treinamentos') return formatBR(item.dataPrevisao);
+        if (currentTab === 'atividades') return formatBR(item.dataConclusao);
+        if (currentTab === 'manutencao') {
+            const isNA = isBlankPeriodicity(item.intervalo);
+            return isNA ? 'N/A' : formatBR(item.proxima);
+        }
+        if (currentTab === 'documentos') {
+            const isPontual = !item.rotina || item.rotina === 'pontual';
+            return isPontual && !item.dataProximaRevisao ? 'N/A' : formatBR(item.dataProximaRevisao);
+        }
+        return '';
+    }
+
+    // Estado de ordenação da tabela: { col: string, dir: 'asc'|'desc' }
+    var _tableSort = { col: null, dir: 'asc' };
+
+    // Seta a coluna de ordenação padrão por módulo (coluna de data de conclusão/previsão)
+    function _tableDefaultSortCol() {
+        if (currentTab === 'auditoria')    return 'dataPrevisao';
+        if (currentTab === 'treinamentos') return 'dataPrevisao';
+        if (currentTab === 'atividades')   return 'dataConclusao';
+        if (currentTab === 'manutencao')   return 'proxima';
+        if (currentTab === 'documentos')   return 'dataProximaRevisao';
+        return null;
+    }
+
+    // Retorna o valor de uma coluna de um item para fins de ordenação
+    function _tableSortValue(item, col) {
+        switch (col) {
+            case 'titulo':       return (item.titulo || '').toLowerCase();
+            case 'status':       return (item.status || '').toLowerCase();
+            case 'setor':        return (item.setor || '').toLowerCase();
+            case 'categoria':    return (item.categoria || '').toLowerCase();
+            case 'responsavel':  return (item.responsavel || '').toLowerCase();
+            case 'revisor':      return (item.revisor || '').toLowerCase();
+            case 'tipo':         return (item.tipo || '').toLowerCase();
+            case 'dataPublicacao':       return item.dataPublicacao || '';
+            case 'dataPrevisao':         return item.dataPrevisao || '';
+            case 'dataInicio':           return item.dataInicio || '';
+            case 'dataConclusao':        return item.dataConclusao || '';
+            case 'proxima': {
+                const isNA = isBlankPeriodicity(item.intervalo);
+                return isNA ? '' : (item.proxima || '');
+            }
+            case 'dataProximaRevisao': {
+                const isPontual = !item.rotina || item.rotina === 'pontual';
+                return (isPontual && !item.dataProximaRevisao) ? '' : (item.dataProximaRevisao || '');
+            }
+            case 'dataCriacao':          return item.dataCriacao || '';
+            default: return '';
+        }
+    }
+
+    function _tableSortData(data, col, dir) {
+        if (!col) return data;
+        const isDate = col.startsWith('data') || col === 'proxima';
+        return data.slice().sort((a, b) => {
+            const va = _tableSortValue(a, col);
+            const vb = _tableSortValue(b, col);
+            // ND (string vazia) sempre por último, independente de direção
+            const aEmpty = va === '';
+            const bEmpty = vb === '';
+            if (aEmpty && bEmpty) return 0;
+            if (aEmpty) return 1;
+            if (bEmpty) return -1;
+            let cmp;
+            if (isDate) {
+                cmp = new Date(va) - new Date(vb);
+            } else {
+                cmp = va < vb ? -1 : va > vb ? 1 : 0;
+            }
+            return dir === 'desc' ? -cmp : cmp;
+        });
+    }
+
+    window._tableClickSort = function(col) {
+        if (_tableSort.col === col) {
+            _tableSort.dir = _tableSort.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+            _tableSort.col = col;
+            _tableSort.dir = 'asc';
+        }
+        _renderListTable();
+    };
+
+    function _renderListTable() {
+        const grid = document.getElementById('cardsGrid');
+        if (grid) grid.style.display = 'none';
+        const gv = document.getElementById('groupsView');
+        if (gv) gv.style.display = 'none';
+
+        const tv = document.getElementById('tableView');
+        if (!tv) return;
+        tv.style.display = 'block';
+
+        // Aplica ordenação padrão se ainda não definida para este módulo
+        if (!_tableSort.col) {
+            _tableSort.col = _tableDefaultSortCol();
+            _tableSort.dir = 'asc';
+        }
+
+        const { data: rawData, statusList, getDeadlineDate } = _getFilteredData();
+        const data = _tableSortData(rawData, _tableSort.col, _tableSort.dir);
+
+        if (data.length === 0) {
+            tv.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-search fa-2x"></i><p>Nenhum registro encontrado.</p></div>';
+            updateNotificationCount();
+            return;
+        }
+
+        // Monta cabeçalhos clicáveis
+        function _th(label, col) {
+            const active = _tableSort.col === col;
+            const icon = active
+                ? (_tableSort.dir === 'asc' ? '<i class="fas fa-sort-up lt-sort-icon active"></i>' : '<i class="fas fa-sort-down lt-sort-icon active"></i>')
+                : '<i class="fas fa-sort lt-sort-icon"></i>';
+            return `<th class="lt-sortable${active?' lt-sort-active':''}" onclick="_tableClickSort('${col}')">${label}${icon}</th>`;
+        }
+
+        let colHeaders = '';
+        if (currentTab === 'auditoria') {
+            colHeaders = _th('Setor','setor')+_th('Categoria','categoria')+_th('Responsável','responsavel')+_th('Pub.','dataPublicacao')+_th('Previsão','dataPrevisao');
+        } else if (currentTab === 'treinamentos') {
+            colHeaders = _th('Setor','setor')+_th('Categoria','categoria')+_th('Responsável','responsavel')+_th('Pub.','dataPublicacao')+_th('Previsão','dataPrevisao');
+        } else if (currentTab === 'atividades') {
+            colHeaders = _th('Setor','setor')+_th('Categoria','categoria')+_th('Responsável','responsavel')+_th('Início','dataInicio')+_th('Conclusão','dataConclusao');
+        } else if (currentTab === 'manutencao') {
+            colHeaders = _th('Setor','setor')+_th('Categoria','categoria')+_th('Tipo','tipo')+_th('Resp. Técnico','responsavel')+_th('Próxima','proxima');
+        } else if (currentTab === 'documentos') {
+            colHeaders = _th('Setor','setor')+_th('Categoria','categoria')+_th('Responsável','responsavel')+_th('Criação','dataCriacao')+_th('Próx. Revisão','dataProximaRevisao');
+        }
+
+        let rows = '';
+        const indColors = { green: 'lt-ind-green', yellow: 'lt-ind-yellow', red: 'lt-ind-red' };
+        data.forEach(item => {
+            const canEdit = userCanEditCards(item);
+            const canDelete = userCanDeleteCards(item);
+            const statusObj = statusList.find(s => s.name === item.status) || { color: 'default' };
+            const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
+            const ind = _getItemIndicatorClass(item, getDeadlineDate);
+
+            let specificCols = '';
+            if (currentTab === 'auditoria') {
+                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${item.responsavel||'-'}</td><td>${formatBR(item.dataPublicacao)}</td><td>${formatBR(item.dataPrevisao)}</td>`;
+            } else if (currentTab === 'treinamentos') {
+                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${item.responsavel||'-'}</td><td>${formatBR(item.dataPublicacao)}</td><td>${formatBR(item.dataPrevisao)||'N/A'}</td>`;
+            } else if (currentTab === 'atividades') {
+                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${item.responsavel||'-'}</td><td>${formatBR(item.dataInicio)}</td><td>${formatBR(item.dataConclusao)}</td>`;
+            } else if (currentTab === 'manutencao') {
+                const isNA = isBlankPeriodicity(item.intervalo);
+                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${item.tipo||'-'}</td><td>${item.responsavelTecnico||'-'}</td><td>${isNA?'N/A':formatBR(item.proxima)}</td>`;
+            } else if (currentTab === 'documentos') {
+                const isPontual = !item.rotina || item.rotina === 'pontual';
+                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${item.responsavel||'-'}</td><td>${formatBR(item.dataCriacao)}</td><td>${isPontual&&!item.dataProximaRevisao?'N/A':formatBR(item.dataProximaRevisao)}</td>`;
+            }
+
+            rows += `<tr onclick="openView(${item.id},'${currentTab}')">
+                <td><span class="lt-ind ${indColors[ind]||'lt-ind-green'}"></span>${(item.titulo||'').replace(/</g,'&lt;').substring(0,60)}</td>
+                <td><span class="lt-status" style="background:${statusColorVar}">${item.status||'Novo'}</span></td>
+                ${specificCols}
+                <td><div class="lt-actions" onclick="event.stopPropagation()">
+                    ${canEdit ? `<button onclick="editItem(${item.id},'${currentTab}')" title="Editar"><i class="fas fa-pen"></i></button>` : ''}
+                    ${canDelete ? `<button onclick="deleteItem(${item.id},'${currentTab}')" title="Excluir"><i class="fas fa-trash"></i></button>` : ''}
+                </div></td>
+            </tr>`;
+        });
+
+        tv.innerHTML = `<table class="list-table">
+            <thead><tr>${_th('Título','titulo')}${_th('Status','status')}${colHeaders}<th></th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+        updateNotificationCount();
+    }
+
+    function _renderListGroups() {
+        const grid = document.getElementById('cardsGrid');
+        if (grid) grid.style.display = 'none';
+        const tv = document.getElementById('tableView');
+        if (tv) tv.style.display = 'none';
+
+        const gv = document.getElementById('groupsView');
+        if (!gv) return;
+        gv.style.display = 'flex';
+
+        const { data, statusList, getDeadlineDate } = _getFilteredData();
+
+        if (data.length === 0) {
+            gv.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-search fa-2x"></i><p>Nenhum registro encontrado.</p></div>';
+            updateNotificationCount();
+            return;
+        }
+
+        // Agrupa por categoria
+        const groups = {};
+        data.forEach(item => {
+            const cat = item.categoria || 'Sem Categoria';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(item);
+        });
+
+        let html = '';
+        Object.keys(groups).sort().forEach(cat => {
+            const items = groups[cat];
+            const folderId = 'gf_' + cat.replace(/\W/g,'_');
+            let cardsHtml = '';
+            items.forEach(item => {
+                const canEdit = userCanEditCards(item);
+                const canDelete = userCanDeleteCards(item);
+                const statusObj = statusList.find(s => s.name === item.status) || { color: 'default' };
+                const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
+                const ind = _getItemIndicatorClass(item, getDeadlineDate);
+                const indClass = ind === 'red' ? 'ind-red' : ind === 'yellow' ? 'ind-yellow' : 'ind-green';
+                const fullTitle = item.titulo || '';
+                const displayTitle = truncateText(fullTitle, 55);
+                const marcadorText = item.marcador || '';
+                const marcadorColorVar = colorMap[item.marcadorCor] || colorMap['default'];
+
+                const checklist = item.checklist || [];
+                const clTotal = checklist.length;
+                const clDone = checklist.filter(c => c.checked).length;
+                const clPct = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0;
+                const donutHtml = clTotal > 0 ? _clDonutHtml(clDone, clTotal, clPct, 40, true) : '';
+
+                let specificContent = '';
+                const formatR = r => r ? String(r).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+                if (currentTab === 'auditoria') {
+                    specificContent = `<div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor||'ND'}</span></div>
+                        ${item.responsavel?`<div class="card-info-row"><i class="fas fa-user"></i> <span>${formatR(item.responsavel)}</span></div>`:''}
+                        <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>`;
+                } else if (currentTab === 'treinamentos') {
+                    specificContent = `<div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor||'ND'}</span></div>
+                        ${item.responsavel?`<div class="card-info-row"><i class="fas fa-user"></i> <span>${formatR(item.responsavel)}</span></div>`:''}
+                        <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: ${formatBR(item.dataPrevisao)||'N/A'}</span></div>`;
+                } else if (currentTab === 'atividades') {
+                    specificContent = `<div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor||'ND'}</span></div>
+                        ${item.responsavel?`<div class="card-info-row"><i class="fas fa-user"></i> <span>${formatR(item.responsavel)}</span></div>`:''}
+                        <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Fim: <strong>${formatBR(item.dataConclusao)}</strong></span></div>`;
+                } else if (currentTab === 'manutencao') {
+                    const isNA = isBlankPeriodicity(item.intervalo);
+                    specificContent = `<div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor||'ND'}</span></div>
+                        <div class="card-info-row"><i class="fas fa-tag"></i> <span>${item.tipo||'ND'}</span></div>
+                        <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isNA?'N/A':formatBR(item.proxima)}</strong></span></div>`;
+                } else {
+                    const isPontual = !item.rotina || item.rotina === 'pontual';
+                    specificContent = `<div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor||'ND'}</span></div>
+                        ${item.responsavel?`<div class="card-info-row"><i class="fas fa-user"></i> <span>${formatR(item.responsavel)}</span></div>`:''}
+                        <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isPontual&&!item.dataProximaRevisao?'N/A':formatBR(item.dataProximaRevisao)}</strong></span></div>`;
+                }
+
+                cardsHtml += `<div class="card ${indClass}" onclick="openView(${item.id},'${currentTab}')">
+                    <div class="card-header">
+                        <span class="tag" style="background-color:${statusColorVar}">${item.status||'Novo'}</span>
+                        <div class="card-actions" onclick="event.stopPropagation()">
+                            ${canEdit?`<i class="fas fa-pen" onclick="editItem(${item.id},'${currentTab}')" title="Editar"></i>`:''}
+                            ${canDelete?`<i class="fas fa-trash" onclick="deleteItem(${item.id},'${currentTab}')" title="Excluir"></i>`:''}
+                        </div>
+                    </div>
+                    <div class="card-title"><h4 title="${fullTitle}">${displayTitle}</h4></div>
+                    <div class="card-body">${specificContent}${marcadorText?`<div class="card-marker" style="background:${marcadorColorVar}"><i class="fas fa-bookmark"></i> ${marcadorText}</div>`:''}</div>
+                    ${donutHtml}
+                </div>`;
+            });
+
+            html += `<div class="groups-folder open" id="${folderId}">
+                <div class="groups-folder-header" onclick="document.getElementById('${folderId}').classList.toggle('open')">
+                    <i class="fas fa-chevron-right groups-folder-icon"></i>
+                    <span class="groups-folder-name"><i class="fas fa-folder" style="margin-right:6px;color:#f59e0b;"></i>${cat}</span>
+                    <span class="groups-folder-count">${items.length}</span>
+                </div>
+                <div class="groups-folder-body">${cardsHtml}</div>
+            </div>`;
+        });
+
+        gv.innerHTML = html;
         updateNotificationCount();
     }
 

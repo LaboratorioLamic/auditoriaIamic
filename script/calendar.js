@@ -98,10 +98,14 @@ function toggleCalendarView(mode) {
         if (calBoard) calBoard.style.display = 'block';
         if (addBtn)    addBtn.style.display    = canEdit ? 'flex' : 'none';
         if (addColRow) addColRow.style.display = 'none';
+        var _lsBarCal = document.getElementById('listSubtabsBar'); if (_lsBarCal) _lsBarCal.style.display = 'none';
+        var _tvCal = document.getElementById('tableView'); if (_tvCal) _tvCal.style.display = 'none';
+        var _gvCal = document.getElementById('groupsView'); if (_gvCal) _gvCal.style.display = 'none';
         renderCalendar();
     } else {
         if (calBoard) calBoard.style.display = 'none';
-        if (grid) grid.style.display = 'grid';
+        if (grid) grid.style.display = (typeof currentListSubtab === 'undefined' || currentListSubtab === 'cards') ? 'grid' : 'none';
+        var _lsBarCalOff = document.getElementById('listSubtabsBar'); if (_lsBarCalOff) _lsBarCalOff.style.display = 'flex';
         if (addBtn) addBtn.style.display = canEdit ? 'flex' : 'none';
         if (typeof renderCards === 'function') renderCards();
     }

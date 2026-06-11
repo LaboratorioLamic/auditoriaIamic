@@ -7,6 +7,13 @@
     // Fechar janela de filtros ao mudar de aba
     closeFilters();
 
+    // Resetar sub-aba da lista e ordenação ao mudar de módulo
+    currentListSubtab = 'cards';
+    if (typeof _tableSort !== 'undefined') _tableSort = { col: null, dir: 'asc' };
+    document.querySelectorAll('.list-subtab').forEach(b => b.classList.remove('active'));
+    var _stCards = document.getElementById('listSubtabCards');
+    if (_stCards) _stCards.classList.add('active');
+
     // 1. Gerenciamento visual dos botões da sidebar
     document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
     var tabId = 'tab' + tab.charAt(0).toUpperCase() + tab.slice(1);
@@ -53,7 +60,14 @@
     var _isKanbanMode = _hasKanban && typeof isKanbanActive === 'function' && isKanbanActive(tab);
     var _isCalMode = _hasKanban && typeof isCalendarActive === 'function' && isCalendarActive(tab);
     var _hideGrid = isBackup || isDashboard || isConfig || _isKanbanMode || _isCalMode;
-    document.getElementById('cardsGrid').style.display = _hideGrid ? 'none' : 'grid';
+    var _showListMode = !isBackup && !isDashboard && !isConfig && !_isKanbanMode && !_isCalMode;
+    document.getElementById('cardsGrid').style.display = (_hideGrid || currentListSubtab !== 'cards') ? 'none' : 'grid';
+    var _lsBar = document.getElementById('listSubtabsBar');
+    if (_lsBar) _lsBar.style.display = _showListMode ? 'flex' : 'none';
+    var _tv = document.getElementById('tableView');
+    if (_tv) _tv.style.display = (_showListMode && currentListSubtab === 'table') ? 'block' : 'none';
+    var _gv = document.getElementById('groupsView');
+    if (_gv) _gv.style.display = (_showListMode && currentListSubtab === 'groups') ? 'flex' : 'none';
     var _kbBoard = document.getElementById('kanbanBoard');
     if (_kbBoard) _kbBoard.style.display = _isKanbanMode ? 'flex' : 'none';
     var _calBoard = document.getElementById('calendarBoard');

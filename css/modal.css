@@ -1,4 +1,100 @@
 /* =========================================================================
+   MODAL DE DELEÇÃO PERMANENTE — janela vermelha com campo "SIM"
+   ========================================================================= */
+.perm-delete-box {
+    border: 2px solid #fca5a5;
+    background: #fff;
+    position: relative;
+    overflow: hidden;
+    padding-top: 0 !important;
+}
+.perm-delete-header-bar {
+    width: calc(100% + 56px);
+    margin: 0 -28px;
+    height: 6px;
+    background: linear-gradient(90deg, #dc2626, #ef4444, #b91c1c);
+    margin-bottom: 20px;
+}
+.perm-delete-icon-wrap {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    border: 2px solid #fca5a5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #dc2626;
+    font-size: 26px;
+    margin-bottom: 2px;
+    box-shadow: 0 0 0 6px rgba(220,38,38,0.08);
+}
+.perm-delete-msg strong { color: #dc2626; }
+.perm-delete-input-wrap {
+    width: 100%;
+    margin-top: 4px;
+    background: #fff5f5;
+    border: 1.5px solid #fca5a5;
+    border-radius: 12px;
+    padding: 14px 16px 10px;
+    text-align: left;
+}
+.perm-delete-label {
+    font-size: 13px;
+    color: #6b7280;
+    font-weight: 500;
+    display: block;
+    margin-bottom: 8px;
+}
+.perm-delete-keyword {
+    font-family: monospace;
+    font-weight: 700;
+    color: #dc2626;
+    background: #fee2e2;
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+.perm-delete-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1.5px solid #fca5a5;
+    background: #fff;
+    font-size: 15px;
+    font-family: monospace;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: 2px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.perm-delete-input:focus { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.12); }
+.perm-delete-input--ok { border-color: #16a34a !important; box-shadow: 0 0 0 3px rgba(22,163,74,0.1) !important; }
+.perm-delete-input--error { border-color: #dc2626 !important; }
+.perm-delete-input-hint {
+    font-size: 12px;
+    color: #dc2626;
+    margin-top: 5px;
+    min-height: 16px;
+    font-weight: 500;
+}
+.perm-delete-confirm-btn {
+    max-width: 220px !important;
+    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+    transition: opacity 0.2s, background 0.15s, box-shadow 0.15s !important;
+}
+.perm-delete-confirm-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none !important;
+}
+.perm-delete-confirm-btn:not(:disabled):hover {
+    background: linear-gradient(135deg, #b91c1c, #991b1b) !important;
+    box-shadow: 0 4px 20px rgba(185,28,28,0.45) !important;
+}
+
+/* =========================================================================
    MODAL DE CONFIRMAÇÃO DE EXCLUSÃO (vermelho, moderno)
    ========================================================================= */
 .confirm-danger-overlay {

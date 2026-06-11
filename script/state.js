@@ -75,3 +75,6 @@
     var currentHistoryPage = 1; // NOVO: Para controle da paginação do histórico
     var currentViewItemId = null;   // ID do item atualmente aberto na visualização
     var currentViewTab = null;      // Aba do item atualmente aberto na visualização
+
+    // Sub-aba da view Lista: 'cards' | 'table' | 'groups'
+    var currentListSubtab = 'cards';

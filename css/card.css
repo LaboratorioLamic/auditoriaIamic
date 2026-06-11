@@ -185,3 +185,208 @@
     white-space: nowrap;
     line-height: 1;
 }
+
+/* =========================================================================
+   SUB-ABAS DA LISTA (Cards / Tabela / Grupos)
+   ========================================================================= */
+.list-subtabs-bar {
+    display: flex;
+    gap: 4px;
+    padding: 0 0 10px 0;
+}
+.list-subtab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text-light);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.list-subtab:hover {
+    background: var(--bg);
+    color: var(--text);
+    border-color: #cbd5e1;
+}
+.list-subtab.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+/* =========================================================================
+   VIEW TABELA
+   ========================================================================= */
+#tableView {
+    padding-bottom: 40px;
+    overflow-x: auto;
+}
+.list-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: #fff;
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-xs);
+    overflow: hidden;
+}
+.list-table thead tr {
+    background: var(--bg);
+    border-bottom: 2px solid var(--border);
+}
+.list-table th {
+    padding: 11px 14px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-light);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+}
+.list-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: middle;
+}
+.list-table tbody tr {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.list-table tbody tr:hover {
+    background: #f0f7ff;
+}
+.list-table tbody tr:last-child td {
+    border-bottom: none;
+}
+.list-table .lt-status {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+}
+.list-table .lt-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+.list-table .lt-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-light);
+    font-size: 13px;
+    padding: 4px 6px;
+    border-radius: 5px;
+    transition: background 0.15s, color 0.15s;
+}
+.list-table .lt-actions button:hover {
+    background: var(--bg);
+    color: var(--primary);
+}
+.list-table .lt-ind {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+.lt-ind-green  { background: var(--ind-green); }
+.lt-ind-yellow { background: var(--c-yellow); }
+.lt-ind-red    { background: var(--ind-red); }
+
+.list-table th.lt-sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition: color 0.15s;
+}
+.list-table th.lt-sortable:hover {
+    color: var(--primary);
+}
+.list-table th.lt-sort-active {
+    color: var(--primary);
+}
+.lt-sort-icon {
+    margin-left: 5px;
+    font-size: 10px;
+    opacity: 0.35;
+    transition: opacity 0.15s;
+}
+.lt-sort-icon.active {
+    opacity: 1;
+}
+.list-table th.lt-sortable:hover .lt-sort-icon {
+    opacity: 0.7;
+}
+
+/* =========================================================================
+   VIEW GRUPOS (pastas por Categoria)
+   ========================================================================= */
+#groupsView {
+    padding-bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.groups-folder {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-xs);
+    overflow: hidden;
+}
+.groups-folder-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--bg);
+    transition: background 0.15s;
+}
+.groups-folder-header:hover {
+    background: #eef2f7;
+}
+.groups-folder-icon {
+    font-size: 15px;
+    color: var(--primary);
+    transition: transform 0.2s;
+}
+.groups-folder.open .groups-folder-icon {
+    transform: rotate(90deg);
+}
+.groups-folder-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+    flex: 1;
+}
+.groups-folder-count {
+    background: var(--primary);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+.groups-folder-body {
+    display: none;
+    padding: 12px;
+}
+.groups-folder.open .groups-folder-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+}

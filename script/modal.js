@@ -410,12 +410,12 @@ function resetModal(prefix) {
             title: 'Mover para a lixeira?',
             message: 'Os dados serão preservados e podem ser restaurados por um administrador.',
             confirmLabel: 'Mover para lixeira',
-            onConfirm: () => _doDeleteItem(id, tab)
+            onConfirm: (reason) => _doDeleteItem(id, tab, reason)
         });
         return;
     }
 
-    function _doDeleteItem(id, tab) {
+    function _doDeleteItem(id, tab, reason) {
         // SOFT DELETE: Marcar item como deleted ao invés de remover do array
         const now = new Date().toISOString();
         const deletedBy = currentuser.email || currentuser.name || 'unknown';
@@ -427,6 +427,7 @@ function resetModal(prefix) {
                 item.deleted = true;
                 item.deletedAt = now;
                 item.deletedBy = deletedBy;
+                item.deletedReason = reason || '';
             }
         }
         else if (tab === 'treinamentos' || tab === 'train') {
@@ -435,6 +436,7 @@ function resetModal(prefix) {
                 item.deleted = true;
                 item.deletedAt = now;
                 item.deletedBy = deletedBy;
+                item.deletedReason = reason || '';
             }
         }
         else if (tab === 'atividades' || tab === 'ativ') {
@@ -443,6 +445,7 @@ function resetModal(prefix) {
                 item.deleted = true;
                 item.deletedAt = now;
                 item.deletedBy = deletedBy;
+                item.deletedReason = reason || '';
             }
         }
         else if (tab === 'manutencao' || tab === 'mant') {
@@ -451,6 +454,7 @@ function resetModal(prefix) {
                 item.deleted = true;
                 item.deletedAt = now;
                 item.deletedBy = deletedBy;
+                item.deletedReason = reason || '';
             }
         }
         else if (tab === 'documentos' || tab === 'doc') {
@@ -459,6 +463,7 @@ function resetModal(prefix) {
                 item.deleted = true;
                 item.deletedAt = now;
                 item.deletedBy = deletedBy;
+                item.deletedReason = reason || '';
             }
         }
 
@@ -580,7 +585,8 @@ function resetModal(prefix) {
                         tipo: 'Auditoria',
                         setor: a.setor,
                         deletedAt: a.deletedAt,
-                        deletedBy: a.deletedBy
+                        deletedBy: a.deletedBy,
+                        deletedReason: a.deletedReason
                     });
                 }
             });
@@ -594,7 +600,8 @@ function resetModal(prefix) {
                         tipo: 'Treinamento',
                         setor: t.setor,
                         deletedAt: t.deletedAt,
-                        deletedBy: t.deletedBy
+                        deletedBy: t.deletedBy,
+                        deletedReason: t.deletedReason
                     });
                 }
             });
@@ -608,7 +615,8 @@ function resetModal(prefix) {
                         tipo: 'Atividade',
                         setor: a.setor,
                         deletedAt: a.deletedAt,
-                        deletedBy: a.deletedBy
+                        deletedBy: a.deletedBy,
+                        deletedReason: a.deletedReason
                     });
                 }
             });
@@ -622,7 +630,8 @@ function resetModal(prefix) {
                         tipo: 'Manutenção',
                         setor: m.setor,
                         deletedAt: m.deletedAt,
-                        deletedBy: m.deletedBy
+                        deletedBy: m.deletedBy,
+                        deletedReason: m.deletedReason
                     });
                 }
             });
@@ -636,7 +645,8 @@ function resetModal(prefix) {
                         tipo: 'Documento',
                         setor: d.setor,
                         deletedAt: d.deletedAt,
-                        deletedBy: d.deletedBy
+                        deletedBy: d.deletedBy,
+                        deletedReason: d.deletedReason
                     });
                 }
             });
@@ -654,6 +664,7 @@ function resetModal(prefix) {
             html += '<th style="padding:12px; text-align:left; font-weight:600;">Tipo</th>';
             html += '<th style="padding:12px; text-align:left; font-weight:600;">Setor</th>';
             html += '<th style="padding:12px; text-align:left; font-weight:600;">Deletado por</th>';
+            html += '<th style="padding:12px; text-align:left; font-weight:600;">Motivo</th>';
             html += '<th style="padding:12px; text-align:left; font-weight:600;">Data</th>';
             html += '<th style="padding:12px; text-align:center; font-weight:600;">Ações</th>';
             html += '</tr></thead><tbody>';
@@ -661,12 +672,16 @@ function resetModal(prefix) {
             deletedItems.forEach(item => {
                 const deletedDate = new Date(item.deletedAt).toLocaleDateString('pt-BR') + ' ' + new Date(item.deletedAt).toLocaleTimeString('pt-BR');
                 const isAdmin = userIsAdmin();
+                const reasonHtml = item.deletedReason
+                    ? `<span title="${item.deletedReason.replace(/"/g,'&quot;')}" style="display:inline-block;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;">${item.deletedReason}</span>`
+                    : '<span style="color:#9ca3af;font-style:italic;">—</span>';
 
                 html += `<tr style="border-bottom:1px solid var(--border); transition:background 0.2s;" onmouseover="this.style.background='rgba(37,99,235,0.05)'" onmouseout="this.style.background='transparent'">
                     <td style="padding:12px; font-weight:500;">${item.titulo}</td>
                     <td style="padding:12px;"><span style="background:var(--accent); color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:500;">${item.tipo}</span></td>
                     <td style="padding:12px;">${item.setor || 'ND'}</td>
                     <td style="padding:12px;">${item.deletedBy || 'desconhecido'}</td>
+                    <td style="padding:12px; font-size:12px; color:#374151;">${reasonHtml}</td>
                     <td style="padding:12px; font-size:12px; color:#6b7280;">${deletedDate}</td>
                     <td style="padding:12px; text-align:center; white-space:nowrap;">
                         <button onclick="closeModal('modalTrashBin'); openView(${item.id}, '${item.tab}')" title="Visualizar" style="background:#3b82f6; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:500; margin-right:4px; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
@@ -692,56 +707,50 @@ function resetModal(prefix) {
     // SOFT DELETE: Função para deletar permanentemente (apenas admin)
     function permanentlyDeleteItem(id, tab) {
         if (!userIsAdmin()) {
-            alert('Apenas administradores podem deletar permanentemente itens.');
+            showConfirmDanger({
+                title: 'Acesso negado',
+                message: 'Apenas administradores podem deletar permanentemente itens.',
+                confirmLabel: 'Entendi',
+                onConfirm: () => {}
+            });
             return;
         }
 
-        const confirmation = prompt('⚠️ DELEÇÃO PERMANENTE IRREVERSÍVEL ⚠️\n\nDigite "SIM" (em maiúsculo) para confirmar a exclusão permanente do item:');
-        if (confirmation !== 'SIM') {
-            alert('Operação cancelada. A exclusão permanente não foi realizada.');
-            return;
-        }
+        showPermanentDeleteConfirm({
+            title: '⚠️ Deleção Permanente',
+            message: 'O item será <strong>removido para sempre</strong> e não poderá ser recuperado.<br>Esta ação é irreversível.',
+            onConfirm: (reason) => {
+                let deleted = false;
 
-        // Encontrar e remover o item de forma permanente
-        if (tab === 'auditoria' || tab === 'audit') {
-            const index = audits.findIndex(a => String(a.id) === String(id));
-            if (index > -1) {
-                audits.splice(index, 1);
-                alert('Item deletado permanentemente!');
-            }
-        }
-        else if (tab === 'treinamentos' || tab === 'train') {
-            const index = trainings.findIndex(t => String(t.id) === String(id));
-            if (index > -1) {
-                trainings.splice(index, 1);
-                alert('Item deletado permanentemente!');
-            }
-        }
-        else if (tab === 'atividades' || tab === 'ativ') {
-            const index = activities.findIndex(a => String(a.id) === String(id));
-            if (index > -1) {
-                activities.splice(index, 1);
-                alert('Item deletado permanentemente!');
-            }
-        }
-        else if (tab === 'manutencao' || tab === 'mant') {
-            const index = maintenances.findIndex(m => String(m.id) === String(id));
-            if (index > -1) {
-                maintenances.splice(index, 1);
-                alert('Item deletado permanentemente!');
-            }
-        }
-        else if (tab === 'documentos' || tab === 'doc') {
-            const index = documents.findIndex(d => String(d.id) === String(id));
-            if (index > -1) {
-                documents.splice(index, 1);
-                alert('Item deletado permanentemente!');
-            }
-        }
+                if (tab === 'auditoria' || tab === 'audit') {
+                    const index = audits.findIndex(a => String(a.id) === String(id));
+                    if (index > -1) { audits.splice(index, 1); deleted = true; }
+                }
+                else if (tab === 'treinamentos' || tab === 'train') {
+                    const index = trainings.findIndex(t => String(t.id) === String(id));
+                    if (index > -1) { trainings.splice(index, 1); deleted = true; }
+                }
+                else if (tab === 'atividades' || tab === 'ativ') {
+                    const index = activities.findIndex(a => String(a.id) === String(id));
+                    if (index > -1) { activities.splice(index, 1); deleted = true; }
+                }
+                else if (tab === 'manutencao' || tab === 'mant') {
+                    const index = maintenances.findIndex(m => String(m.id) === String(id));
+                    if (index > -1) { maintenances.splice(index, 1); deleted = true; }
+                }
+                else if (tab === 'documentos' || tab === 'doc') {
+                    const index = documents.findIndex(d => String(d.id) === String(id));
+                    if (index > -1) { documents.splice(index, 1); deleted = true; }
+                }
 
-        saveAll();
-        openTrashBin(); // Atualiza a lixeira
-        updateTrashBadge();
+                if (deleted) {
+                    saveAll();
+                    openTrashBin();
+                    updateTrashBadge();
+                    if (typeof showToast === 'function') showToast('Item deletado permanentemente.', 'error');
+                }
+            }
+        });
     }
 
     // Anexos Logic — delegado ao sistema de upload (upload.js)
@@ -940,7 +949,20 @@ function renderViewContent(id, tab) {
             </div>`;
     }
 
+    const deletedBanner = item.deleted ? `
+        <div style="background:#fff5f5;border:1.5px solid #fca5a5;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#dc2626;">
+                <i class="fas fa-trash-alt"></i> Item na lixeira
+            </div>
+            <div style="font-size:12px;color:#6b7280;">
+                <span style="font-weight:600;">Excluído por:</span> ${item.deletedBy || 'desconhecido'} &nbsp;·&nbsp;
+                <span style="font-weight:600;">Em:</span> ${item.deletedAt ? new Date(item.deletedAt).toLocaleString('pt-BR') : 'ND'}
+            </div>
+            ${item.deletedReason ? `<div style="font-size:12px;color:#374151;background:#fee2e2;border-radius:8px;padding:8px 10px;margin-top:2px;"><span style="font-weight:700;color:#dc2626;">Motivo:</span> ${item.deletedReason.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
+        </div>` : '';
+
     const infoHtml = `
+        ${deletedBanner}
         <div class="view-info-grid">${detailsCards}</div>
         ${checklistProgress}
         <div>

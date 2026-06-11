@@ -1,7 +1,82 @@
 // === UTILITÁRIOS GERAIS ===
 
-// Modal de confirmação de exclusão (vermelho, moderno)
+// Modal de confirmação de deleção PERMANENTE — exige digitar "SIM"
+// showPermanentDeleteConfirm({ title, message, onConfirm })
+window.showPermanentDeleteConfirm = function({ title, message, onConfirm } = {}) {
+    const existing = document.getElementById('permDeleteModal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'permDeleteModal';
+    overlay.className = 'confirm-danger-overlay';
+
+    overlay.innerHTML = `
+        <div class="confirm-danger-box perm-delete-box">
+            <div class="perm-delete-header-bar"></div>
+            <div class="perm-delete-icon-wrap">
+                <i class="fas fa-skull"></i>
+            </div>
+            <div class="confirm-danger-title">${title || '⚠️ Deleção Permanente'}</div>
+            <div class="confirm-danger-message perm-delete-msg">${message || 'Esta ação é <strong>irreversível</strong>. O item será removido para sempre.'}</div>
+            <div class="perm-delete-input-wrap">
+                <label class="perm-delete-label">Motivo da exclusão <span style="color:#dc2626;">*</span></label>
+                <textarea id="permDeleteReason" class="perm-delete-input" rows="2" placeholder="Descreva o motivo..." style="font-family:inherit;font-size:13px;letter-spacing:normal;resize:vertical;min-height:60px;font-weight:400;margin-bottom:10px;"></textarea>
+                <label class="perm-delete-label" style="margin-top:4px;">Digite <span class="perm-delete-keyword">SIM</span> para confirmar:</label>
+                <input id="permDeleteInput" class="perm-delete-input" type="text" placeholder="SIM" autocomplete="off" spellcheck="false" />
+                <div class="perm-delete-input-hint" id="permDeleteHint"></div>
+            </div>
+            <div class="confirm-danger-actions">
+                <button class="confirm-danger-cancel" id="permDeleteCancel">Cancelar</button>
+                <button class="confirm-danger-confirm perm-delete-confirm-btn" id="permDeleteOk" disabled>
+                    <i class="fas fa-trash-alt"></i> Deletar Permanentemente
+                </button>
+            </div>
+        </div>`;
+
+    document.body.appendChild(overlay);
+
+    const input = overlay.querySelector('#permDeleteInput');
+    const reason = overlay.querySelector('#permDeleteReason');
+    const btn = overlay.querySelector('#permDeleteOk');
+    const hint = overlay.querySelector('#permDeleteHint');
+
+    function _checkPermForm() {
+        const sim = input.value.trim() === 'SIM';
+        const hasReason = reason.value.trim().length >= 3;
+        btn.disabled = !(sim && hasReason);
+        btn.style.opacity = (sim && hasReason) ? '1' : '0.45';
+        if (input.value.trim().length > 0 && !sim) {
+            input.classList.add('perm-delete-input--error');
+            input.classList.remove('perm-delete-input--ok');
+            hint.textContent = 'Digite exatamente: SIM';
+        } else if (sim) {
+            input.classList.remove('perm-delete-input--error');
+            input.classList.add('perm-delete-input--ok');
+            hint.textContent = '';
+        } else {
+            input.classList.remove('perm-delete-input--error', 'perm-delete-input--ok');
+            hint.textContent = '';
+        }
+    }
+
+    input.addEventListener('input', _checkPermForm);
+    reason.addEventListener('input', _checkPermForm);
+
+    overlay.querySelector('#permDeleteCancel').onclick = () => overlay.remove();
+    btn.onclick = () => {
+        if (input.value.trim() !== 'SIM' || reason.value.trim().length < 3) return;
+        const r = reason.value.trim();
+        overlay.remove();
+        if (typeof onConfirm === 'function') onConfirm(r);
+    };
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+    setTimeout(() => reason.focus(), 80);
+};
+
+// Modal de confirmação de exclusão (vermelho, moderno) com campo de motivo obrigatório
 // showConfirmDanger({ title, message, confirmLabel, onConfirm })
+// onConfirm recebe (reason: string)
 window.showConfirmDanger = function({ title, message, confirmLabel, onConfirm } = {}) {
     const existing = document.getElementById('confirmDangerModal');
     if (existing) existing.remove();
@@ -17,9 +92,14 @@ window.showConfirmDanger = function({ title, message, confirmLabel, onConfirm } 
             </div>
             <div class="confirm-danger-title">${title || 'Confirmar exclusão'}</div>
             <div class="confirm-danger-message">${message || 'Esta ação não pode ser desfeita.'}</div>
+            <div class="perm-delete-input-wrap" style="margin-top:4px;">
+                <label class="perm-delete-label">Motivo da exclusão <span style="color:#dc2626;">*</span></label>
+                <textarea id="confirmDangerReason" class="perm-delete-input" rows="2" placeholder="Descreva o motivo..." style="font-family:inherit;font-size:13px;letter-spacing:normal;resize:vertical;min-height:60px;font-weight:400;"></textarea>
+                <div class="perm-delete-input-hint" id="confirmDangerHint"></div>
+            </div>
             <div class="confirm-danger-actions">
                 <button class="confirm-danger-cancel" id="confirmDangerCancel">Cancelar</button>
-                <button class="confirm-danger-confirm" id="confirmDangerOk">
+                <button class="confirm-danger-confirm" id="confirmDangerOk" disabled style="opacity:0.45;">
                     <i class="fas fa-trash-alt"></i> ${confirmLabel || 'Excluir'}
                 </button>
             </div>
@@ -27,14 +107,33 @@ window.showConfirmDanger = function({ title, message, confirmLabel, onConfirm } 
 
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
     overlay.querySelector('#confirmDangerCancel').onclick = () => overlay.remove();
-    overlay.querySelector('#confirmDangerOk').onclick = () => {
+
+    const textarea = overlay.querySelector('#confirmDangerReason');
+    const btn = overlay.querySelector('#confirmDangerOk');
+    const hint = overlay.querySelector('#confirmDangerHint');
+
+    textarea.addEventListener('input', () => {
+        const val = textarea.value.trim();
+        if (val.length >= 3) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            hint.textContent = '';
+        } else {
+            btn.disabled = true;
+            btn.style.opacity = '0.45';
+            hint.textContent = val.length > 0 ? 'Motivo muito curto (mínimo 3 caracteres)' : '';
+        }
+    });
+
+    btn.onclick = () => {
+        const reason = textarea.value.trim();
+        if (reason.length < 3) return;
         overlay.remove();
-        if (typeof onConfirm === 'function') onConfirm();
+        if (typeof onConfirm === 'function') onConfirm(reason);
     };
 
     document.body.appendChild(overlay);
-    // Foco no botão cancelar por segurança
-    setTimeout(() => overlay.querySelector('#confirmDangerCancel')?.focus(), 50);
+    setTimeout(() => textarea?.focus(), 50);
 };
 
 // Remove 'historico' do snapshot para evitar aninhamento exponencial no Firebase

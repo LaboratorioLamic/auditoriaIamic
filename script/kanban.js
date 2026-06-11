@@ -148,12 +148,16 @@ function toggleKanbanView(mode) {
     if (kbOn) {
         if (grid)  grid.style.display  = 'none';
         if (board) board.style.display = 'flex';
+        var _lsBarKb = document.getElementById('listSubtabsBar'); if (_lsBarKb) _lsBarKb.style.display = 'none';
+        var _tvK = document.getElementById('tableView'); if (_tvK) _tvK.style.display = 'none';
+        var _gvK = document.getElementById('groupsView'); if (_gvK) _gvK.style.display = 'none';
         if (addBtn)    addBtn.style.display    = canEdit ? 'flex' : 'none';
         if (addColRow) addColRow.style.display = canEdit ? 'flex' : 'none';
         renderKanban();
     } else {
         if (board) board.style.display = 'none';
-        if (grid)  grid.style.display  = 'grid';
+        if (grid)  grid.style.display  = (typeof currentListSubtab === 'undefined' || currentListSubtab === 'cards') ? 'grid' : 'none';
+        var _lsBarK = document.getElementById('listSubtabsBar'); if (_lsBarK) _lsBarK.style.display = 'flex';
         if (addBtn)    addBtn.style.display    = canEdit ? 'flex' : 'none';
         if (addColRow) addColRow.style.display = 'none';
         renderCards();

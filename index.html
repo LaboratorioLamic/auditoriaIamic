@@ -478,7 +478,22 @@
             </div>
         </div>
 
+        <!-- Sub-abas da view Lista -->
+        <div class="list-subtabs-bar" id="listSubtabsBar" style="display:none;">
+            <button class="list-subtab active" id="listSubtabCards" onclick="setListSubtab('cards')">
+                <i class="fas fa-th-large"></i> Cards
+            </button>
+            <button class="list-subtab" id="listSubtabTable" onclick="setListSubtab('table')">
+                <i class="fas fa-table"></i> Tabela
+            </button>
+            <button class="list-subtab" id="listSubtabGroups" onclick="setListSubtab('groups')">
+                <i class="fas fa-layer-group"></i> Grupos
+            </button>
+        </div>
+
         <div class="cards-grid" id="cardsGrid" style="display:none;"></div>
+        <div id="tableView" style="display:none;"></div>
+        <div id="groupsView" style="display:none;"></div>
 
         <div id="kanbanBoard"></div>
 
