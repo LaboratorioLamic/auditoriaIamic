@@ -73,6 +73,10 @@ function _clDonutHtml(done, total, pct, size, absolute) {
             updateNotificationCount();
             return;
         }
+        if (typeof isCalendarActive === 'function' && isCalendarActive()) {
+            if (typeof renderCalendar === 'function') renderCalendar();
+            return;
+        }
 
         // Atualiza dinamicamente os filtros (selects) para mostrar apenas opções
         // que possuem ao menos 1 card possível com os filtros atuais

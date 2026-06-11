@@ -910,6 +910,52 @@ function _checkTriPerm(permVal, item) {
             event.preventDefault();
             return false;
         }
+
+        // ESC: fecha qualquer aba/janela aberta
+        if (event.key === 'Escape') {
+            // Modais com display flex/block (IDs conhecidos)
+            const modalIds = [
+                'viewModal', 'historyViewModal', 'modalTrashBin',
+                'modalListManager', 'modalUsuario', 'modalSetoresPermissoes',
+                'modalPublicacao', 'modalVerPublicacao'
+            ];
+            let closed = false;
+            for (const id of modalIds) {
+                const el = document.getElementById(id);
+                if (el && el.style.display && el.style.display !== 'none') {
+                    el.style.display = 'none';
+                    if (id === 'viewModal' && typeof closeHistoryDrawer === 'function') closeHistoryDrawer();
+                    closed = true;
+                    break;
+                }
+            }
+            if (!closed) {
+                // Modais dinâmicos com classe genérica (fbar, setor, calendar)
+                const flexModal = document.querySelector('.modal-overlay[style*="flex"], .modal-backdrop[style*="flex"]');
+                if (flexModal) { flexModal.style.display = 'none'; closed = true; }
+            }
+            if (!closed) {
+                // History drawer
+                const hd = document.getElementById('historyDrawer');
+                if (hd && hd.classList.contains('open')) {
+                    if (typeof closeHistoryDrawer === 'function') closeHistoryDrawer();
+                    closed = true;
+                }
+            }
+            if (!closed) {
+                // Form drawers (novo/editar card)
+                const formDrawerIds = ['modalAuditoria', 'modalTreinamentos', 'modalAtividades', 'modalDocumentos', 'modalManutencao'];
+                for (const id of formDrawerIds) {
+                    const el = document.getElementById(id);
+                    if (el && el.classList.contains('open')) {
+                        if (typeof closeFormDrawer === 'function') closeFormDrawer();
+                        else el.classList.remove('open');
+                        closed = true;
+                        break;
+                    }
+                }
+            }
+        }
     };
             document.addEventListener('contextmenu', function(evento) {
                     evento.preventDefault();

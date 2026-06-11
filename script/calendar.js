@@ -236,15 +236,17 @@ function _calBuildDayMap(rangeStart, rangeEnd) {
     const allowedSetores = (typeof getAllowedSetores === 'function') ? getAllowedSetores() : null;
     if (allowedSetores !== null) data = data.filter(i => allowedSetores.includes(i.setor));
 
-    const titleRaw = (document.getElementById('titleSearchInput') || {}).value || '';
-    const titleQ = typeof normalizeText === 'function' ? normalizeText(titleRaw) : titleRaw.toLowerCase().trim();
+    const showFinalized = document.getElementById('showFinalizedCheckbox')?.checked !== false;
 
     data = data.filter(item => {
-        if (typeof passesFilters === 'function' && !passesFilters(cfg.prefix, item, { status: true })) return false;
+        // Respeita todos os filtros da aba (setor, categoria, status, responsável, revisor, marcador, título)
+        // exceto o filtro de data, que o calendário gerencia por navegação
+        if (typeof passesFilters === 'function' && !passesFilters(cfg.prefix, item, { date: true })) return false;
         if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
-        if (titleQ) {
-            const t = typeof normalizeText === 'function' ? normalizeText(item.titulo || '') : (item.titulo || '').toLowerCase();
-            if (!t.includes(titleQ)) return false;
+        // Respeita o checkbox "Mostrar concluídos/cancelados"
+        if (!showFinalized && typeof normalizeStatusName === 'function') {
+            const s = normalizeStatusName(item.status || '');
+            if (s === 'concluído' || s === 'cancelado') return false;
         }
         return true;
     });

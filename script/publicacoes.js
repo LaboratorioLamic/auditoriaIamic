@@ -959,6 +959,7 @@ window.excluirPublicacao = function(id, tab, index) {
             if (typeof showToast === 'function') showToast('Publicação excluída.', 'success');
         }
     });
+};
 
 function _updatePubTabBadge(item) {
     const badge = document.getElementById('pubTabBadge');
