@@ -330,7 +330,7 @@ function onFbarAdvChange(type) {
     const drop = document.getElementById(dropMap[type]);
     if (real && drop) real.value = drop.value;
     _populateFbarAdv();
-    saveFiltersToLocalStorage();
+    saveFiltersToFirebase();
     renderCards();
 }
 

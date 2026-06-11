@@ -1,29 +1,5 @@
     function calculateTrainingPrevisao() {
-        const dataPublicacao = document.getElementById('trainDataPublicacao').value;
-        const periodicidade = parseInt(document.getElementById('trainPeriodicidade').value) || 0;
-        const fieldPrevisaoDiv = document.getElementById('trainDataPrevisao');
-        const fieldPrevisaoValue = document.getElementById('trainDataPrevisaoValue');
-
-        if (!dataPublicacao || periodicidade === 0) {
-            fieldPrevisaoDiv.textContent = '--/--/----';
-            fieldPrevisaoValue.value = '';
-            return;
-        }
-
-        const pubDate = new Date(dataPublicacao);
-        pubDate.setDate(pubDate.getDate() + periodicidade);
-
-        const year = pubDate.getFullYear();
-        const month = String(pubDate.getMonth() + 1).padStart(2, '0');
-        const day = String(pubDate.getDate()).padStart(2, '0');
-        const dataFormatada = `${year}-${month}-${day}`;
-
-        const dayDisplay = String(pubDate.getDate()).padStart(2, '0');
-        const monthDisplay = String(pubDate.getMonth() + 1).padStart(2, '0');
-        const yearDisplay = pubDate.getFullYear();
-
-        fieldPrevisaoDiv.textContent = `${dayDisplay}/${monthDisplay}/${yearDisplay}`;
-        fieldPrevisaoValue.value = dataFormatada;
+        // kept for backward compatibility — rotina system handles this now
     }
 
     function saveTraining() {
@@ -46,10 +22,16 @@
         const trainMarkerObj = (masterLists.trainMarcadores || []).find(m => m.name === selectedTrainMarkerName);
 
         let responsavel = document.getElementById('trainResponsavel').value || '';
+        let revisor = document.getElementById('trainRevisor').value || '';
 
         if (!isNew && !userIsAdmin()) {
             if (!responsavel) responsavel = item.responsavel || '';
         }
+
+        const rotinaVal = document.getElementById('trainRotina').value;
+        const freqVal = Number(document.getElementById('trainFrequencia').value) || 1;
+        const selectedDays = Array.from(document.querySelectorAll('#trainWeekdays .wd-btn.active')).map(b => Number(b.dataset.day));
+        const dataPrevisaoVal = document.getElementById('trainDataPrevisao').value;
 
         const newItem = {
             ...item,
@@ -60,27 +42,29 @@
             subcategoria: '',
             status: document.getElementById('trainStatus').value,
             dataPublicacao: document.getElementById('trainDataPublicacao').value,
-            periodicidade: parseInt(document.getElementById('trainPeriodicidade').value) || 0,
-            dataPrevisao: document.getElementById('trainDataPrevisaoValue').value,
+            dataPrevisao: dataPrevisaoVal,
+            rotina: rotinaVal,
+            frequencia: freqVal,
+            diasSemana: rotinaVal === 'diasemana' ? selectedDays : [],
             responsavel: responsavel,
+            revisor: revisor,
             flagDias: Number(document.getElementById('trainFlagDias').value) ?? 7,
             marcador: trainMarkerObj ? trainMarkerObj.name : '',
             marcadorCor: trainMarkerObj ? trainMarkerObj.color : 'default',
             anexos: getAnexos('train'),
-            checklist: (typeof getChecklist === 'function') ? getChecklist('train') : (item.checklist || [])
+            checklist: (typeof getChecklist === 'function') ? getChecklist('train') : (item.checklist || []),
+            checklistPublicacao: (typeof getChecklistPub === 'function') ? getChecklistPub('train') : (item.checklistPublicacao || [])
         };
 
         if (!isNew && originalItem) {
         }
 
         if (isNew) {
-            const snap = JSON.parse(JSON.stringify(newItem));
-            snap.historico = [];
             newItem.historico.push({
                 timestamp: new Date().toISOString(),
                 acao: 'Criação do Registro',
                 usuario: currentuser?.name || 'Sistema',
-                snapshot: snap
+                snapshot: _safeSnapshot(newItem)
             });
             trainings.push(newItem);
         } else {
@@ -104,7 +88,7 @@
                         acao: 'Edição de Dados',
                         usuario: currentuser?.name || 'Sistema',
                         detalhes: changes,
-                        snapshot: JSON.parse(JSON.stringify(originalItem))
+                        snapshot: _safeSnapshot(originalItem)
                     });
                 }
                 trainings = trainings.map(t => t.id === editingTrainId ? newItem : t);
@@ -126,6 +110,7 @@
             return;
         }
 
+        const rotinaValDup = document.getElementById('trainRotina').value;
         const formData = {
             titulo: document.getElementById('trainTitulo').value,
             descricao: document.getElementById('trainDescricao').value,
@@ -134,9 +119,12 @@
             subcategoria: '',
             status: document.getElementById('trainStatus').value,
             dataPublicacao: document.getElementById('trainDataPublicacao').value,
-            periodicidade: parseInt(document.getElementById('trainPeriodicidade').value) || 0,
-            dataPrevisao: document.getElementById('trainDataPrevisaoValue').value,
+            dataPrevisao: document.getElementById('trainDataPrevisao').value,
+            rotina: rotinaValDup,
+            frequencia: Number(document.getElementById('trainFrequencia').value) || 1,
+            diasSemana: Array.from(document.querySelectorAll('#trainWeekdays .wd-btn.active')).map(b => Number(b.dataset.day)),
             responsavel: document.getElementById('trainResponsavel').value || '',
+            revisor: document.getElementById('trainRevisor').value || '',
             flagDias: Number(document.getElementById('trainFlagDias').value) ?? 7,
             marcador: document.getElementById('trainMarcador').value,
             anexos: typeof getAnexos === 'function' ? getAnexos('train') : []
@@ -154,16 +142,91 @@
             document.getElementById('trainCategoria').value = formData.categoria;
             document.getElementById('trainStatus').value = formData.status;
             document.getElementById('trainDataPublicacao').value = formData.dataPublicacao;
-            document.getElementById('trainPeriodicidade').value = formData.periodicidade;
-            document.getElementById('trainDataPrevisaoValue').value = formData.dataPrevisao;
+            document.getElementById('trainDataPrevisao').value = formData.dataPrevisao;
+            document.getElementById('trainRotina').value = formData.rotina;
+            document.getElementById('trainFrequencia').value = formData.frequencia;
+            document.querySelectorAll('#trainWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
+            formData.diasSemana.forEach(d => {
+                const btn = document.querySelector(`#trainWeekdays .wd-btn[data-day="${d}"]`);
+                if (btn) btn.classList.add('active');
+            });
             document.getElementById('trainResponsavel').value = formData.responsavel;
+            document.getElementById('trainRevisor').value = formData.revisor;
             document.getElementById('trainFlagDias').value = formData.flagDias;
             document.getElementById('trainMarcador').value = formData.marcador;
 
             if (typeof restoreAnexos === 'function') restoreAnexos('train', formData.anexos);
 
             onCategoryChange('train');
-            calculateTrainingPrevisao();
+            if (typeof onTrainRotinaChange === 'function') onTrainRotinaChange(true);
             openFormDrawer('modalTreinamentos');
         }, 200);
     }
+
+// ─── ROTINA DE TREINAMENTOS ───────────────────────────────────────────────────
+
+window.onTrainRotinaChange = function(skipCalc) {
+    const rotina = document.getElementById('trainRotina').value;
+    const freqWrap = document.getElementById('trainFrequenciaWrap');
+    const wdWrap = document.getElementById('trainDiaSemanaWrap');
+    const dpInput = document.getElementById('trainDataPrevisao');
+
+    const isPontual = rotina === 'pontual';
+    const isDiaSemana = rotina === 'diasemana';
+
+    freqWrap.style.display = (!isPontual && !isDiaSemana) ? '' : 'none';
+    wdWrap.style.display = isDiaSemana ? '' : 'none';
+
+    dpInput.readOnly = !isPontual;
+    dpInput.style.background = !isPontual ? '#f1f5f9' : '';
+    dpInput.style.cursor = !isPontual ? 'not-allowed' : '';
+
+    if (!skipCalc && !isPontual) calcTrainDataPrevisao();
+};
+
+window.toggleTrainWeekday = function(btn) {
+    btn.classList.toggle('active');
+    calcTrainDataPrevisao();
+};
+
+window.calcTrainDataPrevisao = function() {
+    const rotina = document.getElementById('trainRotina').value;
+    const freq = Number(document.getElementById('trainFrequencia').value) || 1;
+    const dpInput = document.getElementById('trainDataPrevisao');
+    const pubDate = document.getElementById('trainDataPublicacao').value;
+
+    const base = pubDate ? new Date(pubDate + 'T00:00:00') : new Date();
+
+    if (rotina === 'pontual') return;
+
+    let next = new Date(base);
+
+    if (rotina === 'anual') {
+        next.setFullYear(next.getFullYear() + freq);
+    } else if (rotina === 'mensal') {
+        next.setMonth(next.getMonth() + freq);
+    } else if (rotina === 'semanal') {
+        next.setDate(next.getDate() + freq * 7);
+    } else if (rotina === 'diario') {
+        next.setDate(next.getDate() + freq);
+    } else if (rotina === 'diasemana') {
+        const activeDays = Array.from(document.querySelectorAll('#trainWeekdays .wd-btn.active')).map(b => Number(b.dataset.day));
+        if (activeDays.length === 0) { dpInput.value = ''; return; }
+        const tomorrow = new Date(base);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        for (let i = 0; i < 14; i++) {
+            const d = new Date(tomorrow);
+            d.setDate(tomorrow.getDate() + i);
+            if (activeDays.includes(d.getDay())) { next = d; break; }
+        }
+    }
+
+    dpInput.value = next.toISOString().split('T')[0];
+};
+
+(function() {
+    const dpPub = document.getElementById('trainDataPublicacao');
+    if (dpPub) dpPub.addEventListener('change', () => {
+        if (document.getElementById('trainRotina').value !== 'pontual') calcTrainDataPrevisao();
+    });
+})();

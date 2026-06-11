@@ -68,7 +68,7 @@
         }
 
         closeFilters();
-        saveFiltersToLocalStorage();
+        saveFiltersToFirebase();
         renderCards();
     }
 

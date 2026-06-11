@@ -1,5 +1,12 @@
 // === UTILITÁRIOS GERAIS ===
 
+// Remove 'historico' do snapshot para evitar aninhamento exponencial no Firebase
+window._safeSnapshot = function(item) {
+    const copy = JSON.parse(JSON.stringify(item));
+    delete copy.historico;
+    return copy;
+};
+
     // --- UTILITÁRIOS ---
     var today = () => new Date().toISOString().split('T')[0];
     var currentYear = new Date().getFullYear();
@@ -139,7 +146,7 @@
     var getMaintenanceCardDate = item => item?.ultima; // publicação (última manutenção)
     var getMaintenanceDeadlineDate = item => (isBlankPeriodicity(item?.intervalo) ? null : item?.proxima);
     var getDocumentCardDate = item => item?.dataCriacao; // publicação (criação)
-    var getDocumentDeadlineDate = item => (isBlankPeriodicity(item?.docIntervalo) ? null : item?.dataProximaRevisao);
+    var getDocumentDeadlineDate = item => item?.dataProximaRevisao || null;
 
     // Normalização de texto (corrige mismatch no mobile por Unicode/acentos)
     // Função auxiliar para normalizar responsável (pode ser string, JSON array, ou null)
@@ -261,7 +268,7 @@
         // Documentos
         docTitulo: 'Título', docDescricao: 'Descrição', docSetor: 'Setor', docCategoria: 'Categoria',
         docSub: 'Subcategoria', docStatus: 'Status', docDataCriacao: 'Data do Documento',
-        docIntervalo: 'Periodicidade (Dias)', docResponsavel: 'Responsável', docRevisor: 'Revisor',
+        docRotina: 'Rotina', docFrequencia: 'Frequência', docResponsavel: 'Responsável', docRevisor: 'Revisor',
         docFlagDias: 'Alerta (Dias)', docProximaRevisao: 'Próxima Revisão',
         docMarcador: 'Marcador',
 
@@ -281,7 +288,7 @@
         'titulo', 'descricao', 'setor', 'categoria', 'subcategoria',
         'item', 'tipo', 'status', 'dataPublicacao', 'dataPrevisao',
         'dataInicio', 'dataConclusao', 'ultima', 'intervalo',
-        'dataCriacao', 'docIntervalo', 'responsavel', 'auditor',
+        'dataCriacao', 'rotina', 'frequencia', 'diasSemana', 'responsavel', 'auditor',
         'responsavelTecnico', 'responsavelManutencao', 'revisor',
         'flagDias', 'marcador'
     ];
@@ -308,7 +315,8 @@
         responsavelTecnico: 'Resp. Técnico',
         responsavelManutencao: 'Resp. Manutenção',
         dataCriacao: 'Data do Documento',
-        docIntervalo: 'Periodicidade',
+        rotina: 'Rotina',
+        frequencia: 'Frequência',
         revisor: 'Revisor',
         marcador: 'Marcador'
     };
@@ -426,20 +434,26 @@
 // Esses itens continuam sendo monitorados pelo prazo mesmo após conclusão.
 function isConcludedRecurring(item, tabType) {
     if (!/conclu/i.test(item.status || '')) return false;
+    if (tabType === 'auditoria' || tabType === 'audit') {
+        // Rotina não-pontual continua monitorando prazo mesmo concluída
+        return item.rotina && item.rotina !== 'pontual';
+    }
     if (tabType === 'treinamentos' || tabType === 'train') {
-        return !isBlankPeriodicity(item.periodicidade);
+        return item.rotina && item.rotina !== 'pontual';
     }
     if (tabType === 'documentos' || tabType === 'doc') {
-        return !isBlankPeriodicity(item.docIntervalo);
+        return item.rotina && item.rotina !== 'pontual';
     }
     return false;
 }
 
-// Retorna true se o status "Concluído" é permitido para o item dado seu checklist.
-// checklist: array de {texto, checked} — pode ser undefined/null (sem checklist = permitido).
+// Retorna true se o status "Concluído" é permitido dado o checklist.
+// Só bloqueia itens marcados como requiredForPub=true; se nenhum tiver, libera.
 function canSetConcluido(checklist) {
     if (!checklist || checklist.length === 0) return true;
-    return checklist.every(function(item) { return !!item.checked; });
+    const required = checklist.filter(function(item) { return !!item.requiredForPub; });
+    if (required.length === 0) return true;
+    return required.every(function(item) { return !!item.checked; });
 }
 
     var colorMap = {

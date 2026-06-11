@@ -158,6 +158,138 @@ function initAcField(selectEl, opts) {
     selectEl._acSync = syncFromSelect;
 }
 
+// ── Inicializa autocomplete para um <select> sem .select-wrapper ──
+function initAcFieldDirect(selectEl, opts) {
+    if (!selectEl || selectEl._acInit) return;
+    selectEl._acInit = true;
+
+    var container = selectEl.parentElement;
+    if (!container) return;
+
+    // Oculta o select original
+    selectEl.style.display = 'none';
+
+    // Cria wrapper relativo para o dropdown
+    var wrapper = document.createElement('div');
+    wrapper.className = 'ac-direct-wrapper';
+    container.insertBefore(wrapper, selectEl.nextSibling);
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'ac-input';
+    input.placeholder = opts.placeholder || 'Selecione ou digite...';
+    input.autocomplete = 'off';
+    input.setAttribute('spellcheck', 'false');
+
+    var dropdown = document.createElement('div');
+    dropdown.className = 'ac-dropdown';
+    dropdown.style.display = 'none';
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(dropdown);
+
+    function syncFromSelect() {
+        var val = selectEl.value;
+        if (val) {
+            var opt = selectEl.querySelector('option[value="' + val.replace(/"/g, '\\"') + '"]');
+            input.value = opt ? opt.textContent : val;
+        } else {
+            input.value = '';
+        }
+    }
+    syncFromSelect();
+
+    var mo = new MutationObserver(function () { syncFromSelect(); });
+    mo.observe(selectEl, { attributes: true, childList: true, subtree: true });
+
+    // Sincroniza quando o valor é alterado externamente (ex: resetModal, editItem)
+    selectEl.addEventListener('change', function () { syncFromSelect(); });
+
+    function openDropdown(filterText) {
+        var options = Array.from(selectEl.options).filter(function (o) {
+            return o.value !== '' && o.value !== undefined;
+        });
+        if (!options.length) { dropdown.style.display = 'none'; return; }
+
+        var q = (filterText || '').toLowerCase().trim();
+        var filtered = q
+            ? options.filter(function (o) { return o.textContent.toLowerCase().includes(q); })
+            : options;
+
+        if (!filtered.length) { dropdown.style.display = 'none'; return; }
+
+        dropdown.innerHTML = filtered.map(function (o) {
+            var label = o.textContent;
+            var highlighted = q
+                ? label.replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'),
+                    '<strong>$1</strong>')
+                : label;
+            return '<div class="ac-option" data-value="' + o.value.replace(/"/g, '&quot;') + '">'
+                + highlighted + '</div>';
+        }).join('');
+
+        dropdown.querySelectorAll('.ac-option').forEach(function (item) {
+            item.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                selectValue(item.dataset.value, item.textContent);
+            });
+        });
+
+        dropdown.style.display = 'block';
+    }
+
+    function closeDropdown() { dropdown.style.display = 'none'; }
+
+    function selectValue(val, label) {
+        selectEl.value = val;
+        input.value = label || val;
+        closeDropdown();
+        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        if (typeof opts.onChange === 'function') opts.onChange(val);
+    }
+
+    input.addEventListener('focus', function () { openDropdown(input.value); });
+
+    input.addEventListener('input', function () {
+        openDropdown(input.value);
+        if (input.value.trim() === '') {
+            selectEl.value = '';
+            if (typeof opts.onChange === 'function') opts.onChange('');
+        }
+    });
+
+    input.addEventListener('blur', function () {
+        setTimeout(function () {
+            closeDropdown();
+            syncFromSelect();
+        }, 150);
+    });
+
+    input.addEventListener('keydown', function (e) {
+        var items = dropdown.querySelectorAll('.ac-option');
+        var active = dropdown.querySelector('.ac-option.ac-active');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            var next = active ? active.nextElementSibling : items[0];
+            if (active) active.classList.remove('ac-active');
+            if (next) { next.classList.add('ac-active'); next.scrollIntoView({ block: 'nearest' }); }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            var prev = active ? active.previousElementSibling : items[items.length - 1];
+            if (active) active.classList.remove('ac-active');
+            if (prev) { prev.classList.add('ac-active'); prev.scrollIntoView({ block: 'nearest' }); }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (active) { selectValue(active.dataset.value, active.textContent); }
+        } else if (e.key === 'Escape') {
+            closeDropdown();
+            syncFromSelect();
+        }
+    });
+
+    selectEl._acSync = syncFromSelect;
+}
+
 // ── Inicializa todos os campos de setor e categoria ───────────
 function initAllAcFields() {
     AC_PREFIXES.forEach(function (prefix) {
@@ -174,6 +306,22 @@ function initAllAcFields() {
             initAcField(catSel, {
                 placeholder: 'Categoria...',
                 onChange: function () {}
+            });
+        }
+    });
+
+    // Responsável e Revisor (sem select-wrapper)
+    var RESP_REV_IDS = [
+        'auditResponsavel', 'auditRevisor',
+        'trainResponsavel', 'trainRevisor',
+        'ativResponsavel', 'ativRevisor',
+        'docResponsavel', 'docRevisor'
+    ];
+    RESP_REV_IDS.forEach(function (id) {
+        var sel = document.getElementById(id);
+        if (sel) {
+            initAcFieldDirect(sel, {
+                placeholder: id.includes('Revisor') ? 'Revisor...' : 'Responsável...'
             });
         }
     });
@@ -198,6 +346,16 @@ document.addEventListener('DOMContentLoaded', function () {
             observer.observe(sel, { childList: true });
         });
     });
+
+    // Responsável e Revisor — re-sincroniza quando options mudam (populateSelects)
+    ['auditResponsavel','auditRevisor','trainResponsavel','trainRevisor','ativResponsavel','ativRevisor','docResponsavel','docRevisor'].forEach(function (id) {
+        var sel = document.getElementById(id);
+        if (!sel) return;
+        var observer = new MutationObserver(function () {
+            if (sel._acSync) sel._acSync();
+        });
+        observer.observe(sel, { childList: true });
+    });
 });
 
 // Expõe para chamada manual se necessário
@@ -207,6 +365,10 @@ window.acSyncAll = function () {
             var sel = document.getElementById(prefix + field);
             if (sel && sel._acSync) sel._acSync();
         });
+    });
+    ['auditResponsavel','auditRevisor','trainResponsavel','trainRevisor','ativResponsavel','ativRevisor','docResponsavel','docRevisor'].forEach(function (id) {
+        var sel = document.getElementById(id);
+        if (sel && sel._acSync) sel._acSync();
     });
 };
 

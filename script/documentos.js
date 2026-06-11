@@ -2,17 +2,10 @@
         originalItem = null;
 
         const dataCriacao = document.getElementById('docDataCriacao').value;
-        const docIntervaloStr = (document.getElementById('docIntervalo').value || '').trim();
-        const docIntervaloNum = docIntervaloStr === '' ? null : parseInt(docIntervaloStr);
-        const hasPeriodicidade = Number.isFinite(docIntervaloNum) && docIntervaloNum > 0;
-        const dataProximaRevisao = (hasPeriodicidade && dataCriacao)
-            ? (() => {
-                const nextRevisao = new Date(dataCriacao);
-                nextRevisao.setDate(nextRevisao.getDate() + docIntervaloNum);
-                return nextRevisao.toISOString().split('T')[0];
-            })()
-            : '';
-        const docIntervalo = hasPeriodicidade ? docIntervaloNum : '';
+        const rotinaVal = document.getElementById('docRotina').value;
+        const freqVal = Number(document.getElementById('docFrequencia').value) || 1;
+        const selectedDays = Array.from(document.querySelectorAll('#docWeekdays .wd-btn.active')).map(b => Number(b.dataset.day));
+        const dataProximaRevisao = document.getElementById('docDataProximaRevisao').value;
 
         const isNew = !editingDocId;
         let item = isNew ? { id: Date.now(), historico: [], type: 'doc' } : documents.find(d => d.id === editingDocId);
@@ -37,8 +30,10 @@
             subcategoria: '',
             status: document.getElementById('docStatus').value,
             dataCriacao,
-            docIntervalo,
             dataProximaRevisao,
+            rotina: rotinaVal,
+            frequencia: freqVal,
+            diasSemana: rotinaVal === 'diasemana' ? selectedDays : [],
             responsavel: responsavel,
             revisor: revisor,
             flagDias: +document.getElementById('docFlagDias').value,
@@ -46,13 +41,12 @@
             marcadorCor: docMarkerObj ? docMarkerObj.color : 'default',
             anexos: getAnexos('doc'),
             checklist: (typeof getChecklist === 'function') ? getChecklist('doc') : (item.checklist || []),
+            checklistPublicacao: (typeof getChecklistPub === 'function') ? getChecklistPub('doc') : (item.checklistPublicacao || []),
             historico: item && Array.isArray(item.historico) ? [...item.historico] : []
         };
 
         if (isNew) {
-            const snap = JSON.parse(JSON.stringify(newItem));
-            snap.historico = [];
-            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema', snapshot: snap });
+            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema', snapshot: _safeSnapshot(newItem) });
             documents.push(newItem);
         } else {
             if (!originalItem) {
@@ -74,7 +68,7 @@
                     acao: 'Edição de Dados',
                     usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
                     detalhes: changes,
-                    snapshot: JSON.parse(JSON.stringify(originalItem))
+                    snapshot: _safeSnapshot(originalItem)
                 });
             } else if (!changes.silentChanged) {
                 documents = documents.map(d => d.id === editingDocId ? item : d);
@@ -93,13 +87,17 @@
             return;
         }
 
+        const rotinaValDup = document.getElementById('docRotina').value;
         const formData = {
             title: document.getElementById('docTitulo').value,
             categoria: document.getElementById('docCategoria').value,
             setor: document.getElementById('docSetor').value,
             status: document.getElementById('docStatus').value,
             dataCriacao: document.getElementById('docDataCriacao').value,
-            intervalo: document.getElementById('docIntervalo').value,
+            dataProximaRevisao: document.getElementById('docDataProximaRevisao').value,
+            rotina: rotinaValDup,
+            frequencia: Number(document.getElementById('docFrequencia').value) || 1,
+            diasSemana: Array.from(document.querySelectorAll('#docWeekdays .wd-btn.active')).map(b => Number(b.dataset.day)),
             responsavel: document.getElementById('docResponsavel').value,
             revisor: document.getElementById('docRevisor').value,
             flagDias: document.getElementById('docFlagDias').value,
@@ -119,7 +117,14 @@
             document.getElementById('docSetor').value = formData.setor;
             document.getElementById('docStatus').value = formData.status;
             document.getElementById('docDataCriacao').value = formData.dataCriacao;
-            document.getElementById('docIntervalo').value = formData.intervalo;
+            document.getElementById('docDataProximaRevisao').value = formData.dataProximaRevisao;
+            document.getElementById('docRotina').value = formData.rotina;
+            document.getElementById('docFrequencia').value = formData.frequencia;
+            document.querySelectorAll('#docWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
+            formData.diasSemana.forEach(d => {
+                const btn = document.querySelector(`#docWeekdays .wd-btn[data-day="${d}"]`);
+                if (btn) btn.classList.add('active');
+            });
             document.getElementById('docResponsavel').value = formData.responsavel;
             document.getElementById('docRevisor').value = formData.revisor;
             document.getElementById('docFlagDias').value = formData.flagDias;
@@ -129,6 +134,75 @@
             if (typeof restoreAnexos === 'function') restoreAnexos('doc', formData.anexos);
 
             onCategoryChange('doc');
+            if (typeof onDocRotinaChange === 'function') onDocRotinaChange(true);
             openFormDrawer('modalDocumentos');
         }, 200);
     }
+
+// ─── ROTINA DE DOCUMENTOS ────────────────────────────────────────────────────
+
+window.onDocRotinaChange = function(skipCalc) {
+    const rotina = document.getElementById('docRotina').value;
+    const freqWrap = document.getElementById('docFrequenciaWrap');
+    const wdWrap = document.getElementById('docDiaSemanaWrap');
+    const dpInput = document.getElementById('docDataProximaRevisao');
+
+    const isPontual = rotina === 'pontual';
+    const isDiaSemana = rotina === 'diasemana';
+
+    freqWrap.style.display = (!isPontual && !isDiaSemana) ? '' : 'none';
+    wdWrap.style.display = isDiaSemana ? '' : 'none';
+
+    dpInput.readOnly = !isPontual;
+    dpInput.style.background = !isPontual ? '#f1f5f9' : '';
+    dpInput.style.cursor = !isPontual ? 'not-allowed' : '';
+
+    if (!skipCalc && !isPontual) calcDocDataPrevisao();
+};
+
+window.toggleDocWeekday = function(btn) {
+    btn.classList.toggle('active');
+    calcDocDataPrevisao();
+};
+
+window.calcDocDataPrevisao = function() {
+    const rotina = document.getElementById('docRotina').value;
+    const freq = Number(document.getElementById('docFrequencia').value) || 1;
+    const dpInput = document.getElementById('docDataProximaRevisao');
+    const criacaoDate = document.getElementById('docDataCriacao').value;
+
+    const base = criacaoDate ? new Date(criacaoDate + 'T00:00:00') : new Date();
+
+    if (rotina === 'pontual') return;
+
+    let next = new Date(base);
+
+    if (rotina === 'anual') {
+        next.setFullYear(next.getFullYear() + freq);
+    } else if (rotina === 'mensal') {
+        next.setMonth(next.getMonth() + freq);
+    } else if (rotina === 'semanal') {
+        next.setDate(next.getDate() + freq * 7);
+    } else if (rotina === 'diario') {
+        next.setDate(next.getDate() + freq);
+    } else if (rotina === 'diasemana') {
+        const activeDays = Array.from(document.querySelectorAll('#docWeekdays .wd-btn.active')).map(b => Number(b.dataset.day));
+        if (activeDays.length === 0) { dpInput.value = ''; return; }
+        const tomorrow = new Date(base);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        for (let i = 0; i < 14; i++) {
+            const d = new Date(tomorrow);
+            d.setDate(tomorrow.getDate() + i);
+            if (activeDays.includes(d.getDay())) { next = d; break; }
+        }
+    }
+
+    dpInput.value = next.toISOString().split('T')[0];
+};
+
+(function() {
+    const dpCriacao = document.getElementById('docDataCriacao');
+    if (dpCriacao) dpCriacao.addEventListener('change', () => {
+        if (document.getElementById('docRotina').value !== 'pontual') calcDocDataPrevisao();
+    });
+})();

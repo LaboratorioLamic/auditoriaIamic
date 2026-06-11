@@ -32,13 +32,12 @@
             marcadorCor: ativMarkerObj ? ativMarkerObj.color : 'default',
             anexos: getAnexos('ativ'),
             checklist: (typeof getChecklist === 'function') ? getChecklist('ativ') : (item.checklist || []),
+            checklistPublicacao: (typeof getChecklistPub === 'function') ? getChecklistPub('ativ') : (item.checklistPublicacao || []),
             historico: item && Array.isArray(item.historico) ? [...item.historico] : []
         };
 
         if (isNew) {
-            const snap = JSON.parse(JSON.stringify(newItem));
-            snap.historico = [];
-            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema', snapshot: snap });
+            newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema', snapshot: _safeSnapshot(newItem) });
             activities.push(newItem);
         } else {
             if (!originalItem) {
@@ -60,7 +59,7 @@
                     acao: 'Edição de Dados',
                     usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
                     detalhes: changes,
-                    snapshot: JSON.parse(JSON.stringify(originalItem))
+                    snapshot: _safeSnapshot(originalItem)
                 });
             } else if (!changes.silentChanged) {
                 activities = activities.map(a => a.id === editingAtivId ? item : a);

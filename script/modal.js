@@ -39,14 +39,23 @@ function resetModal(prefix) {
         document.getElementById('auditDataPublicacao').value = today();
         document.getElementById('auditDataPrevisao').value = today();
         document.getElementById('auditFlagDias').value = 7;
-        document.getElementById('auditAuditor').value = '';
+        document.getElementById('auditRotina').value = 'pontual';
+        document.getElementById('auditFrequencia').value = 1;
+        document.getElementById('auditFrequenciaWrap').style.display = 'none';
+        document.getElementById('auditDiaSemanaWrap').style.display = 'none';
+        document.getElementById('auditDataPrevisao').readOnly = false;
+        document.querySelectorAll('#auditWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
         const defaultAuditCat = masterLists.auditCategorias[0] || '';
         document.getElementById('auditCategoria').value = defaultAuditCat;
     } else if (prefix === 'train') {
         document.getElementById('trainDataPublicacao').value = today();
-        document.getElementById('trainPeriodicidade').value = 0;
-        document.getElementById('trainDataPrevisao').textContent = '--/--/----';
-        document.getElementById('trainDataPrevisaoValue').value = '';
+        document.getElementById('trainDataPrevisao').value = today();
+        document.getElementById('trainRotina').value = 'pontual';
+        document.getElementById('trainFrequencia').value = 1;
+        document.getElementById('trainFrequenciaWrap').style.display = 'none';
+        document.getElementById('trainDiaSemanaWrap').style.display = 'none';
+        document.getElementById('trainDataPrevisao').readOnly = false;
+        document.querySelectorAll('#trainWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('trainFlagDias').value = 7;
         const defaultTrainCat = masterLists.trainCategorias[0] || '';
         document.getElementById('trainCategoria').value = defaultTrainCat;
@@ -69,12 +78,17 @@ function resetModal(prefix) {
         calculateNextDate('mant');
     } else if (prefix === 'doc') {
         document.getElementById('docDataCriacao').value = today();
-        document.getElementById('docIntervalo').value = 365;
+        document.getElementById('docDataProximaRevisao').value = today();
+        document.getElementById('docRotina').value = 'pontual';
+        document.getElementById('docFrequencia').value = 1;
+        document.getElementById('docFrequenciaWrap').style.display = 'none';
+        document.getElementById('docDiaSemanaWrap').style.display = 'none';
+        document.getElementById('docDataProximaRevisao').readOnly = false;
+        document.querySelectorAll('#docWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('docRevisor').value = '';
         document.getElementById('docFlagDias').value = 30;
         const defaultDocCat = masterLists.docCategorias[0] || '';
         document.getElementById('docCategoria').value = defaultDocCat;
-        calculateNextDate('doc');
     }
 
     // 3. Chamar onCategoryChange após definir a categoria (se a categoria existir)
@@ -136,8 +150,15 @@ function resetModal(prefix) {
     }
 
     function editItem(id, tab) {
-        if (!userCanEditCards()) {
-            alert('Você não tem permissão para editar cards. Seu acesso está configurado como somente leitura.');
+        // Resolve item primeiro para checar permissão parcial
+        let _itemForPerm = null;
+        if (tab === 'audit' || tab === 'auditoria') _itemForPerm = audits.find(a => a.id === id);
+        else if (tab === 'treinamentos') _itemForPerm = trainings.find(a => a.id === id);
+        else if (tab === 'atividades')   _itemForPerm = activities.find(a => a.id === id);
+        else if (tab === 'documentos')   _itemForPerm = documents.find(a => a.id === id);
+        if (!_itemForPerm) _itemForPerm = [...(audits||[]),...(trainings||[]),...(activities||[]),...(documents||[])].find(a => a.id === id);
+        if (!userCanEditCards(_itemForPerm)) {
+            alert('Você não tem permissão para editar este registro.');
             return;
         }
 
@@ -213,16 +234,23 @@ function resetModal(prefix) {
                 try { auditRev = JSON.parse(auditRev)[0]; } catch {}
             }
             document.getElementById('auditRevisor').value = auditRev || '';
-            let auditAud = item.auditor;
-            if (Array.isArray(auditAud)) auditAud = auditAud[0];
-            else if (typeof auditAud === 'string' && auditAud.startsWith('[')) {
-                try { auditAud = JSON.parse(auditAud)[0]; } catch {}
-            }
-            document.getElementById('auditAuditor').value = auditAud || '';
             document.getElementById('auditFlagDias').value = item.flagDias;
+            // Rotina
+            const rotina = item.rotina || 'pontual';
+            document.getElementById('auditRotina').value = rotina;
+            document.getElementById('auditFrequencia').value = item.frequencia || 1;
+            // Restaurar dias da semana selecionados
+            document.querySelectorAll('#auditWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
+            if (rotina === 'diasemana' && Array.isArray(item.diasSemana)) {
+                item.diasSemana.forEach(d => {
+                    const btn = document.querySelector(`#auditWeekdays .wd-btn[data-day="${d}"]`);
+                    if (btn) btn.classList.add('active');
+                });
+            }
+            if (typeof onAuditRotinaChange === 'function') onAuditRotinaChange(true);
             document.getElementById('auditMarcador').value = item.marcador || '';
             restoreAnexos('audit', item.anexos);
-            if (typeof restoreChecklist === 'function') restoreChecklist('audit', item.checklist);
+            if (typeof restoreChecklist === 'function') restoreChecklist('audit', item.checklist, item.checklistPublicacao);
             openFormDrawer('modalAuditoria');
         } else if (finalTab === 'atividades') {
             editingAtivId = id;
@@ -251,7 +279,7 @@ function resetModal(prefix) {
             document.getElementById('ativFlagDias').value = item.flagDias;
             document.getElementById('ativMarcador').value = item.marcador || '';
             restoreAnexos('ativ', item.anexos);
-            if (typeof restoreChecklist === 'function') restoreChecklist('ativ', item.checklist);
+            if (typeof restoreChecklist === 'function') restoreChecklist('ativ', item.checklist, item.checklistPublicacao);
             openFormDrawer('modalAtividades');
         } else if (finalTab === 'treinamentos') {
             editingTrainId = id;
@@ -264,25 +292,35 @@ function resetModal(prefix) {
             if (trainSubEl) trainSubEl.value = item.subcategoria || '';
             document.getElementById('trainStatus').value = item.status;
             document.getElementById('trainDataPublicacao').value = item.dataPublicacao;
-            document.getElementById('trainPeriodicidade').value = item.periodicidade || 0;
-            document.getElementById('trainDataPrevisaoValue').value = item.dataPrevisao || '';
-            // Atualiza o display da data de previsão
-            const prevDiv = document.getElementById('trainDataPrevisao');
-            if (item.dataPrevisao && item.periodicidade > 0) {
-                prevDiv.textContent = formatBR(item.dataPrevisao);
-            } else {
-                prevDiv.textContent = '--/--/----';
+            document.getElementById('trainDataPrevisao').value = item.dataPrevisao || '';
+            // Rotina
+            const trainRotina = item.rotina || 'pontual';
+            document.getElementById('trainRotina').value = trainRotina;
+            document.getElementById('trainFrequencia').value = item.frequencia || 1;
+            document.querySelectorAll('#trainWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
+            if (trainRotina === 'diasemana' && Array.isArray(item.diasSemana)) {
+                item.diasSemana.forEach(d => {
+                    const btn = document.querySelector(`#trainWeekdays .wd-btn[data-day="${d}"]`);
+                    if (btn) btn.classList.add('active');
+                });
             }
+            if (typeof onTrainRotinaChange === 'function') onTrainRotinaChange(true);
             let trainResp = item.responsavel;
             if (Array.isArray(trainResp)) trainResp = trainResp[0];
             else if (typeof trainResp === 'string' && trainResp.startsWith('[')) {
                 try { trainResp = JSON.parse(trainResp)[0]; } catch {}
             }
             document.getElementById('trainResponsavel').value = trainResp || '';
+            let trainRev = item.revisor;
+            if (Array.isArray(trainRev)) trainRev = trainRev[0];
+            else if (typeof trainRev === 'string' && trainRev.startsWith('[')) {
+                try { trainRev = JSON.parse(trainRev)[0]; } catch {}
+            }
+            document.getElementById('trainRevisor').value = trainRev || '';
             document.getElementById('trainFlagDias').value = item.flagDias;
             document.getElementById('trainMarcador').value = item.marcador || '';
             restoreAnexos('train', item.anexos);
-            if (typeof restoreChecklist === 'function') restoreChecklist('train', item.checklist);
+            if (typeof restoreChecklist === 'function') restoreChecklist('train', item.checklist, item.checklistPublicacao);
             openFormDrawer('modalTreinamentos');
 
             // Armazena o item original no estado atual para calcular as diferenças ao salvar
@@ -323,7 +361,19 @@ function resetModal(prefix) {
             if (docSubEl) docSubEl.value = item.subcategoria || '';
             document.getElementById('docStatus').value = item.status;
             document.getElementById('docDataCriacao').value = item.dataCriacao;
-            document.getElementById('docIntervalo').value = (item.docIntervalo ?? ''); // permite vazio
+            document.getElementById('docDataProximaRevisao').value = item.dataProximaRevisao || '';
+            // Rotina
+            const docRotina = item.rotina || 'pontual';
+            document.getElementById('docRotina').value = docRotina;
+            document.getElementById('docFrequencia').value = item.frequencia || 1;
+            document.querySelectorAll('#docWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
+            if (docRotina === 'diasemana' && Array.isArray(item.diasSemana)) {
+                item.diasSemana.forEach(d => {
+                    const btn = document.querySelector(`#docWeekdays .wd-btn[data-day="${d}"]`);
+                    if (btn) btn.classList.add('active');
+                });
+            }
+            if (typeof onDocRotinaChange === 'function') onDocRotinaChange(true);
             let docResp = item.responsavel;
             if (Array.isArray(docResp)) docResp = docResp[0];
             else if (typeof docResp === 'string' && docResp.startsWith('[')) {
@@ -337,10 +387,9 @@ function resetModal(prefix) {
             }
             document.getElementById('docRevisor').value = docRev || '';
             document.getElementById('docFlagDias').value = item.flagDias;
-            calculateNextDate('doc');
             restoreAnexos('doc', item.anexos);
             document.getElementById('docMarcador').value = item.marcador || '';
-            if (typeof restoreChecklist === 'function') restoreChecklist('doc', item.checklist);
+            if (typeof restoreChecklist === 'function') restoreChecklist('doc', item.checklist, item.checklistPublicacao);
             openFormDrawer('modalDocumentos');
         }
 
@@ -351,8 +400,10 @@ function resetModal(prefix) {
             alert('Você precisa estar logado para excluir registros.');
             return;
         }
-        if (!userCanDeleteCards()) {
-            alert('Você não tem permissão para fazer isso');
+        // Resolve item para checar permissão parcial
+        let _itemForDelPerm = [...(audits||[]),...(trainings||[]),...(activities||[]),...(documents||[]),...(maintenances||[])].find(a => a.id === id);
+        if (!userCanDeleteCards(_itemForDelPerm)) {
+            alert('Você não tem permissão para excluir este registro.');
             return;
         }
         if (!confirm('Deseja mover este item para a lixeira? Os dados serão preservados e podem ser restaurados por um administrador.')) {
@@ -800,11 +851,12 @@ function renderViewContent(id, tab) {
 
     // ── Edit button ───────────────────────────────────────────
     var btnEdit = document.getElementById('btnViewEdit');
-    if (btnEdit) btnEdit.style.display = (userCanEditCards() && !item.deleted) ? 'inline-flex' : 'none';
+    if (btnEdit) btnEdit.style.display = (userCanEditCards(item) && !item.deleted) ? 'inline-flex' : 'none';
 
     // ── Publicar button ───────────────────────────────────────
     var btnPublicar = document.getElementById('btnPublicar');
-    if (btnPublicar) btnPublicar.style.display = (finalTab !== 'manutencao' && !item.deleted) ? 'inline-flex' : 'none';
+    var _canPub = typeof userCanPublish === 'function' ? userCanPublish(item) : true;
+    if (btnPublicar) btnPublicar.style.display = (finalTab !== 'manutencao' && !item.deleted && _canPub) ? 'inline-flex' : 'none';
 
     // ── INFO TAB ──────────────────────────────────────────────
     var detailsCards = '';
@@ -837,23 +889,23 @@ function renderViewContent(id, tab) {
             ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
         ]);
     } else if (finalTab === 'treinamentos') {
-        const isNA = isBlankPeriodicity(item.periodicidade);
-        detailsCards = _viewCards([
-            ['Setor', item.setor], ['Categoria', item.categoria],
-            ['Responsável', item.responsavel],
-            ['Data Publicação', formatBR(item.dataPublicacao)],
-            ['Periodicidade', isNA ? 'N/A' : item.periodicidade + ' dias'],
-            ['Data Previsão', isNA ? 'N/A' : formatBR(item.dataPrevisao)],
-            ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
-        ]);
-    } else if (finalTab === 'documentos') {
-        const isNA = isBlankPeriodicity(item.docIntervalo);
+        const rotinaLabelTrain = { pontual: 'Pontual', anual: 'Anual', mensal: 'Mensal', semanal: 'Semanal', diasemana: 'Dia da semana' }[item.rotina || 'pontual'] || 'Pontual';
         detailsCards = _viewCards([
             ['Setor', item.setor], ['Categoria', item.categoria],
             ['Responsável', item.responsavel], ['Revisor', item.revisor],
-            ['Periodicidade', isNA ? 'N/A' : item.docIntervalo + ' dias'],
+            ['Rotina', rotinaLabelTrain],
+            ['Data Publicação', formatBR(item.dataPublicacao)],
+            ['Data Previsão', item.dataPrevisao ? formatBR(item.dataPrevisao) : 'N/A'],
+            ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
+        ]);
+    } else if (finalTab === 'documentos') {
+        const rotinaLabelDoc = { pontual: 'Pontual', anual: 'Anual', mensal: 'Mensal', semanal: 'Semanal', diasemana: 'Dia da semana' }[item.rotina || 'pontual'] || 'Pontual';
+        detailsCards = _viewCards([
+            ['Setor', item.setor], ['Categoria', item.categoria],
+            ['Responsável', item.responsavel], ['Revisor', item.revisor],
+            ['Rotina', rotinaLabelDoc],
             ['Data do Documento', formatBR(item.dataCriacao)],
-            ['Próx. Revisão', isNA ? 'N/A' : formatBR(item.dataProximaRevisao)],
+            ['Próx. Revisão', item.dataProximaRevisao ? formatBR(item.dataProximaRevisao) : 'N/A'],
             ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
         ]);
     }
@@ -1177,22 +1229,22 @@ function viewHistoryItem(id, tab, historyIndex) {
             ['Resp. Técnico', _val(snap.responsavelTecnico)], ['Empresa', _val(snap.empresaResponsavel)]
         ];
     } else if (finalTab === 'treinamentos') {
-        const isNA = isBlankPeriodicity(snap.periodicidade);
-        pairs = [
-            ['Setor', _val(snap.setor)], ['Categoria', _val(snap.categoria)],
-            ['Responsável', _val(snap.responsavel)], ['Status', _val(snap.status)],
-            ['Data Publicação', _date(snap.dataPublicacao)],
-            ['Periodicidade', isNA ? 'N/A' : `${snap.periodicidade} dias`]
-        ];
-    } else if (finalTab === 'documentos') {
-        const isNA = isBlankPeriodicity(snap.docIntervalo);
+        const rotinaLabelSnTrain = { pontual: 'Pontual', anual: 'Anual', mensal: 'Mensal', semanal: 'Semanal', diasemana: 'Dia da semana' }[snap.rotina || 'pontual'] || 'Pontual';
         pairs = [
             ['Setor', _val(snap.setor)], ['Categoria', _val(snap.categoria)],
             ['Responsável', _val(snap.responsavel)], ['Revisor', _val(snap.revisor)],
-            ['Status', _val(snap.status)],
+            ['Rotina', rotinaLabelSnTrain], ['Status', _val(snap.status)],
+            ['Data Publicação', _date(snap.dataPublicacao)],
+            ['Data Previsão', snap.dataPrevisao ? _date(snap.dataPrevisao) : 'N/A']
+        ];
+    } else if (finalTab === 'documentos') {
+        const rotinaLabelSnDoc = { pontual: 'Pontual', anual: 'Anual', mensal: 'Mensal', semanal: 'Semanal', diasemana: 'Dia da semana' }[snap.rotina || 'pontual'] || 'Pontual';
+        pairs = [
+            ['Setor', _val(snap.setor)], ['Categoria', _val(snap.categoria)],
+            ['Responsável', _val(snap.responsavel)], ['Revisor', _val(snap.revisor)],
+            ['Rotina', rotinaLabelSnDoc], ['Status', _val(snap.status)],
             ['Data do Documento', _date(snap.dataCriacao)],
-            ['Periodicidade', isNA ? 'N/A' : `${snap.docIntervalo} dias`],
-            ['Próx. Revisão', isNA ? 'N/A' : _date(snap.dataProximaRevisao)]
+            ['Próx. Revisão', snap.dataProximaRevisao ? _date(snap.dataProximaRevisao) : 'N/A']
         ];
     }
 
@@ -1342,11 +1394,12 @@ function viewHistoryItem(id, tab, historyIndex) {
     }
 
     function editCurrentViewItem() {
-        if (!userCanEditCards()) {
-            alert('Você não tem permissão para editar cards. Seu acesso está configurado como somente leitura.');
+        if (!currentViewItemId || !currentViewTab) return;
+        const _vItem = [...(audits||[]),...(trainings||[]),...(activities||[]),...(documents||[])].find(a => a.id === currentViewItemId);
+        if (!userCanEditCards(_vItem)) {
+            alert('Você não tem permissão para editar este registro.');
             return;
         }
-        if (!currentViewItemId || !currentViewTab) return;
 
         closeModal('viewModal');
         editItem(currentViewItemId, currentViewTab);
@@ -1925,6 +1978,8 @@ function viewHistoryItem(id, tab, historyIndex) {
         if (drawer) drawer.classList.add('open');
         if (backdrop) backdrop.classList.add('open');
         if (fab) fab.classList.add('open');
+        // Sincroniza os inputs de autocomplete com os valores atuais dos selects
+        if (typeof window.acSyncAll === 'function') window.acSyncAll();
     }
 
     function closeFormDrawer() {

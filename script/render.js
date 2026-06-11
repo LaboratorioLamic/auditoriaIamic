@@ -108,6 +108,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
 
             const setor = document.getElementById(filterSetorId)?.value || '';
             const cat = document.getElementById(filterCatId)?.value || '';
+            const sub = '';
             const stat = document.getElementById('fAuditStatus')?.value || '';
             const marcador = document.getElementById('fAuditMarcador')?.value || '';
             const responsavel = document.getElementById('fAuditResponsavel')?.value || '';
@@ -454,10 +455,9 @@ function _clDonutHtml(done, total, pct, size, absolute) {
             return;
         }
 
-        const canEdit = userCanEditCards();
-        const canDelete = userCanDeleteCards();
-
         data.forEach(item => {
+        const canEdit = userCanEditCards(item);
+        const canDelete = userCanDeleteCards(item);
             try {
             const div = document.createElement('div');
             const flagDays = item.flagDias || 7;
@@ -536,13 +536,13 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isNA ? 'N/A' : formatBR(item.proxima)}</strong></span></div>
                 `;
             } else { // Documentos
-                const isNA = isBlankPeriodicity(item.docIntervalo);
+                const isPontualDoc = !item.rotina || item.rotina === 'pontual';
                 const responsaveis = formatResponsavel(item.responsavel);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
                     ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
-                    <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isNA ? 'N/A' : formatBR(item.dataProximaRevisao)}</strong></span></div>
+                    <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isPontualDoc && !item.dataProximaRevisao ? 'N/A' : formatBR(item.dataProximaRevisao)}</strong></span></div>
                 `;
             }
 
@@ -657,7 +657,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         }
         if (!allowedTabs || allowedTabs.includes('documentos')) {
             rawItems = rawItems.concat(
-                documents.map(d => ({ ...d, type: 'doc', statusType: getStatusType(d.status), dateField: d.dataCriacao, deadlineField: isBlankPeriodicity(d.docIntervalo) ? null : d.dataProximaRevisao, color: getStatusColor(d.status, 'doc') }))
+                documents.map(d => ({ ...d, type: 'doc', statusType: getStatusType(d.status), dateField: d.dataCriacao, deadlineField: d.dataProximaRevisao || null, color: getStatusColor(d.status, 'doc') }))
             );
         }
 

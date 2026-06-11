@@ -10,6 +10,17 @@ function _nowTimeStr() {
     return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+// ─── CHECKLIST SUB-ABAS ──────────────────────────────────────
+window.switchClSubtab = function(prefix, subName, btn) {
+    const panel = btn.closest('.drawer-tab-panel');
+    if (!panel) return;
+    panel.querySelectorAll('.cl-subtab').forEach(t => t.classList.remove('active'));
+    panel.querySelectorAll('.cl-subpanel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const sub = panel.querySelector(`#${prefix}-clpanel-${subName}`);
+    if (sub) sub.classList.add('active');
+};
+
 // ─── DRAWER TABS ─────────────────────────────────────────────
 window.switchDrawerTab = function(prefix, tabName, btn) {
     // Desativa todos os tabs e panels do drawer
@@ -52,8 +63,10 @@ function renderChecklistEditor(prefix) {
         container.innerHTML = '<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;"><i class="fas fa-list-check" style="font-size:24px;display:block;margin-bottom:8px;"></i>Nenhum item ainda. Adicione abaixo.</div>';
         return;
     }
+    const isPubPrefix = prefix.endsWith('-pub');
     container.innerHTML = items.map((item, i) => {
         const requiresComment = !!item.requiresComment;
+        const requiredForPub = !!item.requiredForPub;
         const commentVal = (item.comment || '').replace(/"/g, '&quot;');
         return `
         <div class="checklist-editor-item">
@@ -61,15 +74,22 @@ function renderChecklistEditor(prefix) {
                 <input type="text" class="checklist-item-text-input" value="${(item.texto || '').replace(/"/g, '&quot;')}"
                     onchange="updateChecklistItemText('${prefix}', ${i}, this.value)"
                     placeholder="Texto do item">
+                ${isPubPrefix ? `
+                <button class="checklist-item-required-toggle ${requiredForPub ? 'active required-for-pub' : ''}"
+                    onclick="toggleChecklistItemRequiredForPub('${prefix}', ${i}, this)"
+                    title="${requiredForPub ? 'Obrigatório para publicar (clique para remover)' : 'Tornar obrigatório para publicar'}">
+                    <i class="fas fa-exclamation-circle" style="font-size:11px;"></i>
+                    ${requiredForPub ? 'Obrigatório' : 'Opcional'}
+                </button>` : `
                 <button class="checklist-item-required-toggle ${requiresComment ? 'active' : ''}"
                     onclick="toggleChecklistItemRequired('${prefix}', ${i}, this)"
                     title="${requiresComment ? 'Comentário obrigatório ativado' : 'Exigir comentário para marcar'}">
                     <i class="fas fa-comment-dots" style="font-size:11px;"></i>
                     ${requiresComment ? 'Comentário obrigatório' : 'Exigir comentário'}
-                </button>
+                </button>`}
                 <button class="checklist-item-del-btn" onclick="removeChecklistItem('${prefix}',${i})" title="Remover">&times;</button>
             </div>
-            ${requiresComment ? `
+            ${!isPubPrefix && requiresComment ? `
             <div class="checklist-editor-comment-area">
                 <textarea class="checklist-editor-comment-input"
                     placeholder="Comentário pré-preenchido (opcional)…"
@@ -116,10 +136,30 @@ window.toggleChecklistItemRequired = function(prefix, index, btn) {
     btn.innerHTML = `<i class="fas fa-comment-dots" style="font-size:11px;"></i> ${isNow ? 'Comentário obrigatório' : 'Exigir comentário'}`;
 };
 
+window.toggleChecklistItemRequiredForPub = function(prefix, index, btn) {
+    const items = _getChecklistData(prefix);
+    if (!items[index]) return;
+    items[index].requiredForPub = !items[index].requiredForPub;
+    _setChecklistData(prefix, items);
+    const isNow = items[index].requiredForPub;
+    btn.classList.toggle('active', isNow);
+    btn.classList.toggle('required-for-pub', isNow);
+    btn.innerHTML = `<i class="fas fa-exclamation-circle" style="font-size:11px;"></i> ${isNow ? 'Obrigatório' : 'Opcional'}`;
+};
+
 // Chamado ao abrir drawer em modo edição
-window.restoreChecklist = function(prefix, checklistArr) {
+window.restoreChecklist = function(prefix, checklistArr, checklistPubArr) {
     _setChecklistData(prefix, checklistArr ? JSON.parse(JSON.stringify(checklistArr)) : []);
     renderChecklistEditor(prefix);
+    // Restaura checklist de publicação se existir
+    _setChecklistData(prefix + '-pub', checklistPubArr ? JSON.parse(JSON.stringify(checklistPubArr)) : []);
+    renderChecklistEditor(prefix + '-pub');
+    // Reset sub-abas para Geral
+    const panel = document.getElementById(`${prefix}-panel-checklist`);
+    if (panel) {
+        panel.querySelectorAll('.cl-subtab').forEach((t, i) => t.classList.toggle('active', i === 0));
+        panel.querySelectorAll('.cl-subpanel').forEach((p, i) => p.classList.toggle('active', i === 0));
+    }
 };
 
 // Chamado ao salvar
@@ -132,10 +172,22 @@ window.getChecklist = function(prefix) {
     }));
 };
 
+window.getChecklistPub = function(prefix) {
+    return _getChecklistData(prefix + '-pub').map(i => ({
+        texto: i.texto || '',
+        checked: !!i.checked,
+        requiresComment: !!i.requiresComment,
+        requiredForPub: !!i.requiredForPub,
+        comment: i.comment || ''
+    }));
+};
+
 // Limpa ao fechar/resetar
 window.clearChecklist = function(prefix) {
     _setChecklistData(prefix, []);
     renderChecklistEditor(prefix);
+    _setChecklistData(prefix + '-pub', []);
+    renderChecklistEditor(prefix + '-pub');
 };
 
 // ─── VIEW CHECKLIST ──────────────────────────────────────────
@@ -150,17 +202,24 @@ window.renderViewChecklist = function(item, tab) {
     const done = checklist.filter(c => c.checked).length;
     const pct = checklist.length > 0 ? Math.round((done / checklist.length) * 100) : 0;
 
+    const canCL = typeof userCanChecklist === 'function' ? userCanChecklist(item) : true;
+
     const itemsHtml = checklist.map((c, i) => {
         const hasComment = !!(c.comment || '').trim();
         const needsComment = !!c.requiresComment;
-        const blocked = needsComment && !hasComment && !c.checked;
+        const blockedByComment = needsComment && !hasComment && !c.checked;
+        const blockedByPerm = !canCL;
+        const isDisabled = blockedByComment || blockedByPerm;
+        const title = blockedByPerm
+            ? 'Você não tem permissão para preencher este checklist'
+            : (blockedByComment ? 'Digite um comentário antes de marcar este item' : '');
         const commentBtnClass = hasComment ? 'has-comment' : '';
         return `
-        <div class="view-checklist-item ${c.checked ? 'checked' : ''}" id="vcl-item-${item.id}-${i}">
+        <div class="view-checklist-item ${c.checked ? 'checked' : ''} ${blockedByPerm ? 'vcl-perm-locked' : ''}" id="vcl-item-${item.id}-${i}">
             <div class="view-checklist-item-row">
-                <input type="checkbox" class="view-checklist-cb" ${c.checked ? 'checked' : ''} ${blocked ? 'disabled' : ''}
+                <input type="checkbox" class="view-checklist-cb" ${c.checked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''}
                     onchange="toggleViewChecklistItem(${item.id},'${tab}',${i})"
-                    title="${blocked ? 'Digite um comentário antes de marcar este item' : ''}">
+                    title="${title}">
                 <span class="view-checklist-item-text">${c.texto || ''}</span>
                 <button class="view-checklist-comment-btn ${commentBtnClass}"
                     onclick="toggleViewChecklistComment('vcl-item-${item.id}-${i}')"
@@ -170,15 +229,18 @@ window.renderViewChecklist = function(item, tab) {
                     </svg>
                 </button>
             </div>
-            <div class="view-checklist-comment-area ${hasComment ? 'open' : ''}" id="vcl-cmt-${item.id}-${i}">
+            <div class="view-checklist-comment-area ${(hasComment || (needsComment && !c.checked)) ? 'open' : ''}" id="vcl-cmt-${item.id}-${i}">
                 ${needsComment && !c.checked ? `<div class="view-checklist-required-hint"><i class="fas fa-exclamation-circle"></i> Comentário obrigatório para marcar este item</div>` : ''}
                 <textarea class="view-checklist-comment-input"
                     placeholder="Adicione um comentário..."
                     oninput="saveViewChecklistComment(${item.id},'${tab}',${i},this.value)"
+                    ${blockedByPerm ? 'disabled' : ''}
                 >${(c.comment || '').replace(/</g,'&lt;')}</textarea>
             </div>
         </div>`;
     }).join('');
+
+    const permBanner = !canCL ? `<div class="vcl-perm-banner"><i class="fas fa-lock"></i> Você não tem permissão para preencher este checklist.</div>` : '';
 
     container.innerHTML = `
         <div class="view-cl-progress-wrap">
@@ -192,8 +254,9 @@ window.renderViewChecklist = function(item, tab) {
                 </div>
             </div>
         </div>
+        ${permBanner}
         <div class="view-checklist-header">
-            <button class="view-checklist-select-all" onclick="selectAllViewChecklist(${item.id},'${tab}')">Selecionar todos</button>
+            ${canCL ? `<button class="view-checklist-select-all" onclick="selectAllViewChecklist(${item.id},'${tab}')">Selecionar todos</button>` : ''}
         </div>
         <div class="view-checklist-list">${itemsHtml}</div>
         <div class="view-checklist-footer">${done}/${checklist.length} itens marcados</div>`;
@@ -219,6 +282,7 @@ window.saveViewChecklistComment = function(id, tab, index, value) {
     else if (finalTab === 'treinamentos') found = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') found = documents.find(i => i.id === id);
     if (!found || !found.checklist || !found.checklist[index]) return;
+    if (typeof userCanChecklist === 'function' && !userCanChecklist(found)) return;
     found.checklist[index].comment = value;
     // Unblock checkbox if required comment is now present
     if (found.checklist[index].requiresComment) {
@@ -238,6 +302,7 @@ window.selectAllViewChecklist = function(id, tab) {
     else if (finalTab === 'treinamentos') found = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') found = documents.find(i => i.id === id);
     if (!found || !found.checklist) return;
+    if (typeof userCanChecklist === 'function' && !userCanChecklist(found)) return;
     const allDone = found.checklist.every(c => c.checked);
     found.checklist.forEach(c => {
         // Only toggle items that are not blocked by required comment
@@ -261,6 +326,8 @@ window.toggleViewChecklistItem = function(id, tab, index) {
     if (!found.checklist) found.checklist = [];
     const c = found.checklist[index];
     if (!c) return;
+    // Bloqueia se não tem permissão de checklist
+    if (typeof userCanChecklist === 'function' && !userCanChecklist(found)) return;
     // Block if requires comment but none provided
     if (!c.checked && c.requiresComment && !(c.comment || '').trim()) return;
     c.checked = !c.checked;
@@ -299,6 +366,51 @@ window._editingPubIndex = null;
 
 // Abre modal de publicação para o item atualmente em view
 // editIndex: número = editar publicação existente; undefined/null = nova publicação
+// ─── CHECKLIST DE PUBLICAÇÃO (modal de publicar) ─────────────
+window._pubChecklistState = [];
+
+function _renderPubChecklistItems() {
+    return (window._pubChecklistState || []).map((c, i) => {
+        const isRequired = !!c.requiredForPub;
+        const needsWarning = isRequired && !c.checked;
+        return `
+        <label class="pub-cl-item ${c.checked ? 'checked' : ''} ${needsWarning ? 'pub-cl-required-warn' : ''}" data-pub-cl-index="${i}">
+            <input type="checkbox" ${c.checked ? 'checked' : ''} onchange="togglePubClItem(${i}, this)">
+            ${isRequired ? `<i class="fas fa-exclamation-circle pub-cl-required-icon" title="Item obrigatório para publicar"></i>` : ''}
+            <span>${c.texto || ''}</span>
+        </label>`;
+    }).join('');
+}
+
+function _updatePubClToggleBtn() {
+    const btn = document.getElementById('pubClToggleAllBtn');
+    if (!btn || !window._pubChecklistState) return;
+    const allChecked = window._pubChecklistState.length > 0 && window._pubChecklistState.every(c => c.checked);
+    btn.textContent = allChecked ? 'Desmarcar todos' : 'Marcar todos';
+}
+
+window.togglePubClItem = function(i, cb) {
+    if (!window._pubChecklistState || !window._pubChecklistState[i]) return;
+    window._pubChecklistState[i].checked = cb.checked;
+    const label = cb.closest('.pub-cl-item');
+    if (label) {
+        label.classList.toggle('checked', cb.checked);
+        if (window._pubChecklistState[i].requiredForPub) {
+            label.classList.toggle('pub-cl-required-warn', !cb.checked);
+        }
+    }
+    _updatePubClToggleBtn();
+};
+
+window.toggleAllPubChecklist = function() {
+    if (!window._pubChecklistState || window._pubChecklistState.length === 0) return;
+    const allChecked = window._pubChecklistState.every(c => c.checked);
+    const newState = !allChecked;
+    window._pubChecklistState.forEach(c => c.checked = newState);
+    document.getElementById('pubChecklistItems').innerHTML = _renderPubChecklistItems();
+    _updatePubClToggleBtn();
+};
+
 window.openPublicacaoModal = function(editIndex) {
     const id = window._currentViewId;
     const tab = window._currentViewTab;
@@ -312,7 +424,20 @@ window.openPublicacaoModal = function(editIndex) {
     else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
     if (!item) return;
 
+    // Verificar permissão de publicação
+    if (typeof userCanPublish === 'function' && !userCanPublish(item)) {
+        if (typeof showToast === 'function') showToast('Você não tem permissão para publicar neste card.', 'error');
+        return;
+    }
+    // Para edição, verificar permissão de gerenciar publicações
     const isEditing = editIndex !== undefined && editIndex !== null;
+    if (isEditing && typeof userCanManagePubs === 'function' && !userCanManagePubs(item)) {
+        if (typeof showToast === 'function') showToast('Você não tem permissão para editar publicações.', 'error');
+        return;
+    }
+
+
+
     window._editingPubIndex = isEditing ? editIndex : null;
     const existingPub = isEditing ? (item.publicacoes || [])[editIndex] : null;
 
@@ -345,11 +470,11 @@ window.openPublicacaoModal = function(editIndex) {
         fieldsHtml = `
         <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;">
             <div class="field-group">
-                <label>Data</label>
+                <label>Data <span class="req-star">*</span></label>
                 <input type="date" id="pubData" value="${dateVal}">
             </div>
             <div class="field-group">
-                <label>Hora</label>
+                <label>Hora <span class="req-star">*</span></label>
                 <input type="time" id="pubHora" value="${timeVal}">
             </div>
             <div class="field-group">
@@ -373,7 +498,7 @@ window.openPublicacaoModal = function(editIndex) {
                 <input type="text" id="pubLocal" placeholder="Ex: Sala de Treinamento A" value="${existingPub ? (existingPub.localEvento || '') : ''}">
             </div>
             <div class="field-group full-width">
-                <label>Descrição</label>
+                <label>Descrição <span class="req-star">*</span></label>
                 <textarea id="pubDescricao" rows="3" placeholder="Descreva o treinamento realizado...">${descVal}</textarea>
             </div>
         </div>`;
@@ -385,15 +510,15 @@ window.openPublicacaoModal = function(editIndex) {
                 <input type="text" id="pubTitulo" placeholder="Título desta revisão/publicação" value="${existingPub ? (existingPub.titulo || '') : ''}">
             </div>
             <div class="field-group">
-                <label>Data</label>
+                <label>Data <span class="req-star">*</span></label>
                 <input type="date" id="pubData" value="${dateVal}">
             </div>
             <div class="field-group">
-                <label>Hora</label>
+                <label>Hora <span class="req-star">*</span></label>
                 <input type="time" id="pubHora" value="${timeVal}">
             </div>
             <div class="field-group full-width">
-                <label>Descrição</label>
+                <label>Descrição <span class="req-star">*</span></label>
                 <textarea id="pubDescricao" rows="3" placeholder="Descreva as alterações ou o conteúdo...">${descVal}</textarea>
             </div>
         </div>
@@ -413,21 +538,44 @@ window.openPublicacaoModal = function(editIndex) {
                 </select>
             </div>
             <div class="field-group">
-                <label>Data</label>
+                <label>Data <span class="req-star">*</span></label>
                 <input type="date" id="pubData" value="${dateVal}">
             </div>
             <div class="field-group">
-                <label>Hora</label>
+                <label>Hora <span class="req-star">*</span></label>
                 <input type="time" id="pubHora" value="${timeVal}">
             </div>
             <div class="field-group full-width">
-                <label>Descrição</label>
+                <label>Descrição <span class="req-star">*</span></label>
                 <textarea id="pubDescricao" rows="3" placeholder="Descreva o comentário, atualização ou evidência...">${descVal}</textarea>
             </div>
         </div>`;
     }
 
     fieldsEl.innerHTML = fieldsHtml;
+
+    // Checklist de publicação
+    const pubCL = item.checklistPublicacao || [];
+    const clWrap = document.getElementById('pubChecklistWrap');
+    const clItems = document.getElementById('pubChecklistItems');
+    if (clWrap && clItems) {
+        if (isEditing && existingPub && existingPub.checklistSnapshot && existingPub.checklistSnapshot.length > 0) {
+            // Ao editar: carrega o snapshot salvo preservando o estado marcado
+            window._pubChecklistState = existingPub.checklistSnapshot.map(c => ({ ...c }));
+            clItems.innerHTML = _renderPubChecklistItems();
+            clWrap.style.display = '';
+            _updatePubClToggleBtn();
+        } else if (pubCL.length > 0 && !isEditing) {
+            window._pubChecklistState = pubCL.map(c => ({ ...c, checked: false, comment: '' }));
+            clItems.innerHTML = _renderPubChecklistItems();
+            clWrap.style.display = '';
+            _updatePubClToggleBtn();
+        } else {
+            clWrap.style.display = 'none';
+            window._pubChecklistState = [];
+        }
+    }
+
     closeModal('modalVerPublicacao');
     document.getElementById('modalPublicacao').style.display = 'flex';
 };
@@ -452,6 +600,25 @@ window.confirmarPublicacao = function() {
 
     const anexos = (typeof getAnexosUpload === 'function') ? getAnexosUpload('pub') : [];
 
+    // Validações obrigatórias
+    const _markReq = (id, bad) => { const el = document.getElementById(id); if (el) el.classList.toggle('field-required-error', bad); };
+    const _dataOk = !!dataVal, _horaOk = !!horaVal, _descOk = !!descVal;
+    _markReq('pubData', !_dataOk); _markReq('pubHora', !_horaOk); _markReq('pubDescricao', !_descOk);
+    if (!_dataOk) { if (typeof showToast === 'function') showToast('Data é obrigatória.', 'error'); document.getElementById('pubData')?.focus(); return; }
+    if (!_horaOk) { if (typeof showToast === 'function') showToast('Hora é obrigatória.', 'error'); document.getElementById('pubHora')?.focus(); return; }
+    if (!_descOk) { if (typeof showToast === 'function') showToast('Descrição é obrigatória.', 'error'); document.getElementById('pubDescricao')?.focus(); return; }
+    // Checklist de publicação: apenas itens obrigatórios (requiredForPub) devem estar marcados
+    if (!isEditing && window._pubChecklistState && window._pubChecklistState.length > 0) {
+        const requiredItems = window._pubChecklistState.filter(c => !!c.requiredForPub);
+        const hasRequiredUnchecked = requiredItems.some(c => !c.checked);
+        if (hasRequiredUnchecked) {
+            // Re-renderizar para mostrar avisos visuais nos itens obrigatórios não marcados
+            document.getElementById('pubChecklistItems').innerHTML = _renderPubChecklistItems();
+            const count = requiredItems.filter(c => !c.checked).length;
+            if (typeof showToast === 'function') showToast(`${count} item(s) obrigatório(s) do checklist não foram marcados.`, 'error');
+            return;
+        }
+    }
     // Validação doc: anexo obrigatório apenas para novas publicações
     if (!isEditing && finalTab === 'documentos' && anexos.length === 0) {
         if (typeof showToast === 'function') showToast('Anexo obrigatório para publicações de documentos.', 'error');
@@ -471,6 +638,13 @@ window.confirmarPublicacao = function() {
         usuario: isEditing ? (item.publicacoes[editIndex]?.usuario || '') : (window.currentuser ? (window.currentuser.name || window.currentuser.user || '') : ''),
         anexos: anexos
     };
+
+    // Salva snapshot do checklist de publicação
+    if (window._pubChecklistState && window._pubChecklistState.length > 0) {
+        pub.checklistSnapshot = window._pubChecklistState.map(c => ({ texto: c.texto, checked: c.checked, requiredForPub: !!c.requiredForPub }));
+    } else if (isEditing && item.publicacoes[editIndex]?.checklistSnapshot) {
+        pub.checklistSnapshot = item.publicacoes[editIndex].checklistSnapshot;
+    }
 
     if (finalTab === 'treinamentos') {
         const horas = parseInt(document.getElementById('pubCHoras')?.value) || 0;
@@ -509,26 +683,75 @@ window.confirmarPublicacao = function() {
 
 function _updateItemDatesAfterPublicacao(item, tab, newDate) {
     if (tab === 'auditoria') {
-        item.dataPublicacao = newDate;
+        // Usa a data da publicação mais recente (publicacoes já ordenadas desc)
+        const pubs = item.publicacoes || [];
+        const dates = pubs.map(p => p.data).filter(Boolean).sort().reverse();
+        item.dataPublicacao = dates[0] || newDate;
+        // Recalcular dataPrevisao se rotina configurada
+        _calcAuditNextDate(item);
     } else if (tab === 'atividades') {
         item.dataInicio = newDate;
     } else if (tab === 'treinamentos') {
         item.dataPublicacao = newDate;
-        const per = parseInt(item.periodicidade) || 0;
-        if (per > 0 && newDate) {
-            const next = new Date(newDate);
-            next.setDate(next.getDate() + per);
-            item.dataPrevisao = next.toISOString().split('T')[0];
-        }
+        _calcRotinaNextDate(item, item.dataPublicacao, 'dataPrevisao');
     } else if (tab === 'documentos') {
         item.dataCriacao = newDate;
-        const inter = parseInt(item.docIntervalo) || 0;
-        if (inter > 0 && newDate) {
-            const next = new Date(newDate);
-            next.setDate(next.getDate() + inter);
-            item.dataProximaRevisao = next.toISOString().split('T')[0];
+        _calcRotinaNextDate(item, item.dataCriacao, 'dataProximaRevisao');
+    }
+}
+
+function _calcRotinaNextDate(item, baseDate, targetField) {
+    const rotina = item.rotina || 'pontual';
+    if (rotina === 'pontual') return;
+    const freq = Number(item.frequencia) || 1;
+    const base = baseDate ? new Date(baseDate + 'T00:00:00') : new Date();
+    let next = new Date(base);
+
+    if (rotina === 'anual') {
+        next.setFullYear(next.getFullYear() + freq);
+    } else if (rotina === 'mensal') {
+        next.setMonth(next.getMonth() + freq);
+    } else if (rotina === 'semanal') {
+        next.setDate(next.getDate() + freq * 7);
+    } else if (rotina === 'diasemana') {
+        const days = Array.isArray(item.diasSemana) ? item.diasSemana : [];
+        if (days.length === 0) return;
+        const tomorrow = new Date(base);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        for (let i = 0; i < 14; i++) {
+            const d = new Date(tomorrow);
+            d.setDate(tomorrow.getDate() + i);
+            if (days.includes(d.getDay())) { next = d; break; }
         }
     }
+    item[targetField] = next.toISOString().split('T')[0];
+}
+
+function _calcAuditNextDate(item) {
+    const rotina = item.rotina || 'pontual';
+    if (rotina === 'pontual') return;
+    const freq = Number(item.frequencia) || 1;
+    const base = item.dataPublicacao ? new Date(item.dataPublicacao + 'T00:00:00') : new Date();
+    let next = new Date(base);
+
+    if (rotina === 'anual') {
+        next.setFullYear(next.getFullYear() + freq);
+    } else if (rotina === 'mensal') {
+        next.setMonth(next.getMonth() + freq);
+    } else if (rotina === 'semanal') {
+        next.setDate(next.getDate() + freq * 7);
+    } else if (rotina === 'diasemana') {
+        const days = Array.isArray(item.diasSemana) ? item.diasSemana : [];
+        if (days.length === 0) return;
+        const tomorrow = new Date(base);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        for (let i = 0; i < 14; i++) {
+            const d = new Date(tomorrow);
+            d.setDate(tomorrow.getDate() + i);
+            if (days.includes(d.getDay())) { next = d; break; }
+        }
+    }
+    item.dataPrevisao = next.toISOString().split('T')[0];
 }
 
 // ─── RENDER PUBLICAÇÕES (aba view modal) ─────────────────────
@@ -540,6 +763,8 @@ window.renderViewPublicacoes = function(item) {
         container.innerHTML = '<div class="pub-empty"><i class="fas fa-paper-plane"></i><p>Nenhuma publicação registrada ainda.</p></div>';
         return;
     }
+    const _canMgPubs = typeof userCanManagePubs === 'function' ? userCanManagePubs(item) : true;
+
     const rows = pubs.map((p, i) => {
         const typeClass = {
             'Evidência': 'evidencia',
@@ -558,8 +783,8 @@ window.renderViewPublicacoes = function(item) {
             <td>${p.usuario || '–'}</td>
             <td>${nAnexos > 0 ? `<i class="fas fa-paperclip" style="color:#94a3b8"></i> ${nAnexos}` : '–'}</td>
             <td onclick="event.stopPropagation();" style="white-space:nowrap;">
-                <button class="pub-action-btn" title="Editar" onclick="openPublicacaoModal(${i})"><i class="fas fa-pencil-alt"></i></button>
-                <button class="pub-action-btn pub-action-btn-del" title="Excluir" onclick="excluirPublicacao(${item.id},'${window._currentViewTab}',${i})"><i class="fas fa-trash"></i></button>
+                ${_canMgPubs ? `<button class="pub-action-btn" title="Editar" onclick="openPublicacaoModal(${i})"><i class="fas fa-pencil-alt"></i></button>` : ''}
+                ${_canMgPubs ? `<button class="pub-action-btn pub-action-btn-del" title="Excluir" onclick="excluirPublicacao(${item.id},'${window._currentViewTab}',${i})"><i class="fas fa-trash"></i></button>` : ''}
             </td>
         </tr>`;
     }).join('');
@@ -574,6 +799,14 @@ window.renderViewPublicacoes = function(item) {
         </div>`;
 };
 
+const _VER_PUB_TYPE_CONFIG = {
+    'Comentário':  { icon: 'fas fa-comment-dots', color: '#6366f1', bg: '#eef2ff' },
+    'Atualização': { icon: 'fas fa-rotate',        color: '#0891b2', bg: '#e0f2fe' },
+    'Evidência':   { icon: 'fas fa-file-circle-check', color: '#16a34a', bg: '#dcfce7' },
+    'Treinamento': { icon: 'fas fa-chalkboard-user', color: '#d97706', bg: '#fef3c7' },
+    'Documento':   { icon: 'fas fa-file-alt',       color: '#7c3aed', bg: '#f5f3ff' },
+};
+
 window.verPublicacao = function(id, tab, index) {
     const finalTab = _normalizeTab(tab);
     let item;
@@ -585,68 +818,118 @@ window.verPublicacao = function(id, tab, index) {
     const pub = (item.publicacoes || [])[index];
     if (!pub) return;
 
-    document.getElementById('verPubTitle').textContent = `Publicação — ${pub.tipo || ''}`;
+    const tipo = pub.tipo || 'Comentário';
+    const cfg = _VER_PUB_TYPE_CONFIG[tipo] || { icon: 'fas fa-paper-plane', color: '#0369a1', bg: '#e0f2fe' };
 
-    let fields = `
-        <div class="ver-pub-grid">
-            <div class="ver-pub-field"><label>Tipo</label><div>${pub.tipo || '–'}</div></div>
-            <div class="ver-pub-field"><label>Data</label><div>${_formatDateBR(pub.data)} ${pub.hora || ''}</div></div>
-            <div class="ver-pub-field"><label>Usuário</label><div>${pub.usuario || '–'}</div></div>`;
+    // Header
+    const iconEl = document.getElementById('verPubTypeIcon');
+    const labelEl = document.getElementById('verPubTypeLabel');
+    const titleEl = document.getElementById('verPubTitle');
+    if (iconEl) { iconEl.innerHTML = `<i class="${cfg.icon}"></i>`; iconEl.style.background = cfg.bg; iconEl.style.color = cfg.color; }
+    if (labelEl) { labelEl.textContent = tipo; labelEl.style.color = cfg.color; }
+    if (titleEl) titleEl.textContent = item.titulo || '';
 
-    if (pub.titulo) fields += `<div class="ver-pub-field full-width" style="grid-column:1/-1"><label>Título</label><div>${pub.titulo}</div></div>`;
-    if (pub.instrutor) fields += `<div class="ver-pub-field"><label>Instrutor</label><div>${pub.instrutor}</div></div>`;
-    if (pub.cargaHoraria) fields += `<div class="ver-pub-field"><label>Carga Horária</label><div>${pub.cargaHoraria}</div></div>`;
-    if (pub.localEvento) fields += `<div class="ver-pub-field"><label>Local</label><div>${pub.localEvento}</div></div>`;
-    if (pub.participantes) fields += `<div class="ver-pub-field" style="grid-column:1/-1"><label>Participantes</label><div>${pub.participantes}</div></div>`;
+    // Meta pills
+    const metaPills = `
+        <div class="ver-pub-meta-row">
+            <span class="ver-pub-meta-pill"><i class="fas fa-calendar"></i> ${_formatDateBR(pub.data)}${pub.hora ? ' · ' + pub.hora : ''}</span>
+            ${pub.usuario ? `<span class="ver-pub-meta-pill"><i class="fas fa-user"></i> ${pub.usuario}</span>` : ''}
+            ${pub.instrutor ? `<span class="ver-pub-meta-pill"><i class="fas fa-chalkboard-user"></i> ${pub.instrutor}</span>` : ''}
+            ${pub.cargaHoraria ? `<span class="ver-pub-meta-pill"><i class="fas fa-clock"></i> ${pub.cargaHoraria}</span>` : ''}
+            ${pub.localEvento ? `<span class="ver-pub-meta-pill"><i class="fas fa-location-dot"></i> ${pub.localEvento}</span>` : ''}
+        </div>`;
 
-    fields += '</div>';
+    // Campos extra
+    let extras = '';
+    if (pub.titulo) extras += `
+        <div class="ver-pub-section">
+            <div class="ver-pub-section-label">Título</div>
+            <div class="ver-pub-section-value">${pub.titulo}</div>
+        </div>`;
+    if (pub.participantes) extras += `
+        <div class="ver-pub-section">
+            <div class="ver-pub-section-label">Participantes</div>
+            <div class="ver-pub-section-value">${pub.participantes.replace(/\n/g,'<br>')}</div>
+        </div>`;
 
-    if (pub.descricao) {
-        fields += `<div style="margin-bottom:16px;">
-            <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:6px;">Descrição</div>
-            <div class="view-desc-block">${pub.descricao.replace(/\n/g,'<br>')}</div>
+    // Descrição
+    const descBlock = pub.descricao ? `
+        <div class="ver-pub-section">
+            <div class="ver-pub-section-label"><i class="fas fa-align-left"></i> Descrição</div>
+            <div class="ver-pub-desc-block">${pub.descricao.replace(/\n/g,'<br>')}</div>
+        </div>` : '';
+
+    // Checklist de publicação (salvo no pub)
+    const clItems = pub.checklistSnapshot || [];
+    let clBlock = '';
+    if (clItems.length > 0) {
+        const done = clItems.filter(c => c.checked).length;
+        const pct = Math.round((done / clItems.length) * 100);
+        clBlock = `
+        <div class="ver-pub-section">
+            <div class="ver-pub-section-label"><i class="fas fa-list-check"></i> Checklist de Publicação <span class="ver-pub-cl-badge">${done}/${clItems.length}</span></div>
+            <div class="ver-pub-cl-progress"><div class="ver-pub-cl-progress-bar" style="width:${pct}%"></div></div>
+            <div class="ver-pub-cl-list">
+                ${clItems.map(c => `
+                    <div class="ver-pub-cl-item ${c.checked ? 'done' : ''}">
+                        <span class="ver-pub-cl-dot">${c.checked ? '<i class="fas fa-check"></i>' : ''}</span>
+                        <span>${c.texto || ''}</span>
+                    </div>`).join('')}
+            </div>
         </div>`;
     }
 
+    // Anexos
     const anexos = pub.anexos || [];
+    let anexosBlock = '';
     if (anexos.length > 0) {
-        fields += `<div>
-            <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:8px;">Anexos</div>
-            <div class="view-anexos-grid">${anexos.map(a => {
-                const name = a.titulo || 'Arquivo';
-                return `<a href="${a.url}" target="_blank" class="view-anexo-card">
-                    <i class="fas fa-file-pdf anexo-icon"></i>
-                    <span class="anexo-name">${name}</span>
-                </a>`;
-            }).join('')}</div>
+        const _extIcon = (name, tipo) => {
+            if (tipo === 'link') return `<i class="fas fa-link" style="color:#2563eb"></i>`;
+            const ext = (name.includes('.') ? name.slice(name.lastIndexOf('.')).toLowerCase() : '');
+            if (ext === '.pdf') return `<i class="fas fa-file-pdf" style="color:#ef4444"></i>`;
+            if (['.xls','.xlsx','.ods'].includes(ext)) return `<i class="fas fa-file-excel" style="color:#16a34a"></i>`;
+            if (['.ppt','.pptx','.odp'].includes(ext)) return `<i class="fas fa-file-powerpoint" style="color:#ea580c"></i>`;
+            if (['.jpg','.jpeg','.png','.gif','.webp','.svg'].includes(ext)) return `<i class="fas fa-file-image" style="color:#0891b2"></i>`;
+            return `<i class="fas fa-file" style="color:#6b7280"></i>`;
+        };
+        anexosBlock = `
+        <div class="ver-pub-section">
+            <div class="ver-pub-section-label"><i class="fas fa-paperclip"></i> Anexos</div>
+            <div class="ver-pub-anexos-grid">
+                ${anexos.map(a => `
+                    <a href="${a.url}" target="_blank" class="ver-pub-anexo-card">
+                        <span class="ver-pub-anexo-icon">${_extIcon(a.titulo || '', a.tipo)}</span>
+                        <span class="ver-pub-anexo-name">${a.titulo || 'Arquivo'}</span>
+                    </a>`).join('')}
+            </div>
         </div>`;
     }
 
-    document.getElementById('verPubContent').innerHTML = fields;
+    document.getElementById('verPubContent').innerHTML = metaPills + extras + descBlock + clBlock + anexosBlock;
 
-    // Guarda referência para editar/excluir
     window._verPubId = id;
     window._verPubTab = tab;
     window._verPubIndex = index;
 
-    // Atualiza botões do footer
+    const _vpTab = _normalizeTab(tab);
+    let _vpItem = null;
+    if (_vpTab === 'auditoria') _vpItem = audits.find(i => i.id === id);
+    else if (_vpTab === 'atividades') _vpItem = activities.find(i => i.id === id);
+    else if (_vpTab === 'treinamentos') _vpItem = trainings.find(i => i.id === id);
+    else if (_vpTab === 'documentos') _vpItem = documents.find(i => i.id === id);
+    const _canMgPubs = typeof userCanManagePubs === 'function' ? userCanManagePubs(_vpItem) : true;
     const footerEl = document.getElementById('verPubFooter');
     if (footerEl) {
         footerEl.innerHTML = `
             <button class="btn-cancel" onclick="closeModal('modalVerPublicacao')">Fechar</button>
-            <button class="btn-secondary" onclick="openPublicacaoModal(window._verPubIndex)">
-                <i class="fas fa-pencil-alt"></i> Editar
-            </button>
-            <button class="btn-danger" onclick="excluirPublicacao(window._verPubId, window._verPubTab, window._verPubIndex)">
-                <i class="fas fa-trash"></i> Excluir
-            </button>`;
+            ${_canMgPubs ? `<button class="btn-secondary" onclick="openPublicacaoModal(window._verPubIndex)"><i class="fas fa-pencil-alt"></i> Editar</button>` : ''}
+            ${_canMgPubs ? `<button class="btn-danger" onclick="excluirPublicacao(window._verPubId,window._verPubTab,window._verPubIndex)"><i class="fas fa-trash"></i> Excluir</button>` : ''}`;
     }
 
     document.getElementById('modalVerPublicacao').style.display = 'flex';
 };
 
 window.excluirPublicacao = function(id, tab, index) {
-    if (!confirm('Tem certeza que deseja excluir esta publicação?')) return;
     const finalTab = _normalizeTab(tab);
     let item;
     if (finalTab === 'auditoria') item = audits.find(i => i.id === id);
@@ -654,7 +937,11 @@ window.excluirPublicacao = function(id, tab, index) {
     else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
     if (!item || !item.publicacoes) return;
-
+    if (typeof userCanManagePubs === 'function' && !userCanManagePubs(item)) {
+        if (typeof showToast === 'function') showToast('Você não tem permissão para excluir publicações.', 'error');
+        return;
+    }
+    if (!confirm('Tem certeza que deseja excluir esta publicação?')) return;
     item.publicacoes.splice(index, 1);
     saveAll();
     closeModal('modalVerPublicacao');

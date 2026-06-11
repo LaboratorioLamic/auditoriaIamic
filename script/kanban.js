@@ -57,13 +57,33 @@ function _kbIsFinalStatus(name) {
 function _kbGetColOrder(cfg) {
     cfg = cfg || _kbGetConfig();
     if (!cfg) return null;
-    try { return JSON.parse(localStorage.getItem(cfg.colOrderKey) || 'null'); } catch { return null; }
+    return kanbanOrder[cfg.colOrderKey] || null;
 }
 
+// Atualiza ordem apenas em memória (usar quando saveAll() será chamado em seguida)
+function _kbSetColOrderMemory(order, cfg) {
+    cfg = cfg || _kbGetConfig();
+    if (!cfg) return;
+    kanbanOrder[cfg.colOrderKey] = order;
+}
+
+// Atualiza em memória E persiste direto no Firebase (usar quando não há saveAll() subsequente)
 function _kbSaveColOrder(order, cfg) {
     cfg = cfg || _kbGetConfig();
     if (!cfg) return;
-    try { localStorage.setItem(cfg.colOrderKey, JSON.stringify(order)); } catch {}
+    kanbanOrder[cfg.colOrderKey] = order;
+    _kbPersistOrder();
+}
+
+async function _kbPersistOrder() {
+    try {
+        const database = getFirebaseDatabase();
+        const dbRef = getFirebaseRef();
+        const dbSet = getFirebaseSet();
+        await dbSet(dbRef(database, '/kanbanOrder'), kanbanOrder);
+    } catch (error) {
+        console.error('Erro ao salvar ordem do kanban:', error);
+    }
 }
 
 function _kbHtml(str) {
@@ -112,13 +132,18 @@ function _kbGetSortedStatuses(cfg) {
 function toggleKanbanView(mode) {
     if (!KANBAN_TABS.includes(currentTab)) return;
     kanbanActiveByTab[currentTab] = (mode === 'kanban');
+    // Desativa calendário ao trocar para kanban/lista
+    if (typeof calendarActiveByTab !== 'undefined') calendarActiveByTab[currentTab] = false;
 
     const grid      = document.getElementById('cardsGrid');
     const board     = document.getElementById('kanbanBoard');
+    const calBoard  = document.getElementById('calendarBoard');
     const addBtn    = document.getElementById('addBtn');
     const addColRow = document.getElementById('fbarAddcolRow');
     const canEdit   = typeof userCanEditCards === 'function' ? userCanEditCards() : false;
     const kbOn      = isKanbanActive();
+
+    if (calBoard) calBoard.style.display = 'none';
 
     if (kbOn) {
         if (grid)  grid.style.display  = 'none';
@@ -135,6 +160,7 @@ function toggleKanbanView(mode) {
     }
 
     _kbUpdateToggleBtns();
+    if (typeof _calUpdateToggleBtns === 'function') _calUpdateToggleBtns();
     if (typeof _populateFbarAdv === 'function') _populateFbarAdv();
 }
 
@@ -214,7 +240,7 @@ function renderKanban() {
         col.dataset.status = status.name;
 
         const colKey = `kb_col_collapsed_${currentTab}_${status.name}`;
-        const isCollapsed = localStorage.getItem(colKey) === '1';
+        const isCollapsed = !!(_userPrefsCache && _userPrefsCache.kanbanCollapsed && _userPrefsCache.kanbanCollapsed[colKey]);
         if (isCollapsed) col.classList.add('kanban-col-collapsed');
 
         col.innerHTML = `
@@ -277,7 +303,7 @@ function _kbRenderCard(item) {
     const dateVal = cfg ? (item[cfg.sortDateField] || '') : (item.dataConclusao || '');
     const deadline = _kbDeadlineColor(dateVal, item.flagDias || 3, item.status, item);
     const marcColor = _kbResolveColor(item.marcadorCor || 'default');
-    const canEdit   = typeof userCanEditCards === 'function' ? userCanEditCards() : false;
+    const canEdit   = typeof userCanEditCards === 'function' ? userCanEditCards(item) : false;
 
     const clList  = item.checklist || [];
     const clTotal = clList.length;
@@ -376,7 +402,7 @@ function kbDrop(event, targetStatus) {
         return;
     }
 
-    const snapshot = JSON.parse(JSON.stringify(item));
+    const prevStatus = item.status;
     item.status = targetStatus;
 
     if (!Array.isArray(item.historico)) item.historico = [];
@@ -384,8 +410,8 @@ function kbDrop(event, targetStatus) {
         timestamp: new Date().toISOString(),
         acao: 'Alteração de Status via Kanban',
         usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
-        detalhes: [{ campo: 'Status', de: snapshot.status, para: targetStatus }],
-        snapshot
+        detalhes: [{ campo: 'Status', de: prevStatus, para: targetStatus }],
+        snapshot: _safeSnapshot(item)
     });
 
     saveAll();
@@ -495,11 +521,11 @@ function confirmKanbanEditCol(oldName) {
 
     if (newName !== oldName) {
         (cfg.getItems() || []).forEach(a => { if (a.status === oldName) a.status = newName; });
-        const order = _kbGetColOrder(cfg);
-        if (order) {
-            const oi = order.indexOf(oldName);
-            if (oi !== -1) { order[oi] = newName; _kbSaveColOrder(order, cfg); }
-        }
+        const list2 = masterLists[cfg.statusKey] || [];
+        const order = _kbGetColOrder(cfg) || list2.filter(s => !_kbIsFinalStatus(s.name)).map(s => s.name);
+        const oi = order.indexOf(oldName);
+        if (oi !== -1) order[oi] = newName;
+        _kbSetColOrderMemory(order.filter(n => !_kbIsFinalStatus(n)), cfg);
     }
 
     const modal = document.getElementById('kbEditColModal');
@@ -613,7 +639,7 @@ function confirmKanbanAddCol() {
 
     const order = _kbGetColOrder(cfg) || list.filter(s => !_kbIsFinalStatus(s.name)).map(s => s.name);
     if (!order.includes(name)) order.push(name);
-    _kbSaveColOrder(order.filter(n => !_kbIsFinalStatus(n)), cfg);
+    _kbSetColOrderMemory(order.filter(n => !_kbIsFinalStatus(n)), cfg);
 
     const modal = document.getElementById('kbAddColModal');
     if (modal) modal.remove();
@@ -688,7 +714,7 @@ function confirmKanbanDeleteCol(statusName) {
     }
 
     const order = _kbGetColOrder(cfg);
-    if (order) _kbSaveColOrder(order.filter(n => n !== statusName), cfg);
+    if (order) _kbSetColOrderMemory(order.filter(n => n !== statusName), cfg);
 
     const modal = document.getElementById('kbDeleteModal');
     if (modal) modal.remove();
@@ -702,7 +728,10 @@ function toggleKanbanCol(btn, statusName) {
     if (!col) return;
     const colKey = `kb_col_collapsed_${currentTab}_${statusName}`;
     const collapsed = col.classList.toggle('kanban-col-collapsed');
-    localStorage.setItem(colKey, collapsed ? '1' : '0');
+    if (!_userPrefsCache) _userPrefsCache = {};
+    if (!_userPrefsCache.kanbanCollapsed) _userPrefsCache.kanbanCollapsed = {};
+    _userPrefsCache.kanbanCollapsed[colKey] = collapsed;
+    _persistUserPrefs();
     const icon = btn.querySelector('i');
     if (icon) {
         icon.className = collapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-up';

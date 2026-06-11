@@ -25,6 +25,11 @@
             if (!revisor) revisor = item.revisor || '';
         }
 
+        const rotinaVal = document.getElementById('auditRotina').value;
+        const freqVal = Number(document.getElementById('auditFrequencia').value) || 1;
+        const selectedDays = Array.from(document.querySelectorAll('#auditWeekdays .wd-btn.active')).map(b => Number(b.dataset.day));
+        const dataPrevisaoVal = document.getElementById('auditDataPrevisao').value;
+
         const newItem = {
             ...item,
             titulo: document.getElementById('auditTitulo').value,
@@ -34,15 +39,18 @@
             subcategoria: '',
             status: document.getElementById('auditStatus').value,
             dataPublicacao: document.getElementById('auditDataPublicacao').value,
-            dataPrevisao: document.getElementById('auditDataPrevisao').value,
+            dataPrevisao: dataPrevisaoVal,
             responsavel: responsavel,
             revisor: revisor,
-            auditor: document.getElementById('auditAuditor').value,
+            rotina: rotinaVal,
+            frequencia: freqVal,
+            diasSemana: rotinaVal === 'diasemana' ? selectedDays : [],
             flagDias: Number(document.getElementById('auditFlagDias').value) || 7,
             marcador: auditMarkerObj ? auditMarkerObj.name : '',
             marcadorCor: auditMarkerObj ? auditMarkerObj.color : 'default',
             anexos: getAnexos('audit'),
-            checklist: (typeof getChecklist === 'function') ? getChecklist('audit') : (item.checklist || [])
+            checklist: (typeof getChecklist === 'function') ? getChecklist('audit') : (item.checklist || []),
+            checklistPublicacao: (typeof getChecklistPub === 'function') ? getChecklistPub('audit') : (item.checklistPublicacao || [])
         };
 
         if (/conclu/i.test(newItem.status) && !canSetConcluido(newItem.checklist)) {
@@ -56,13 +64,11 @@
         }
 
         if (isNew) {
-            const snap = JSON.parse(JSON.stringify(newItem));
-            snap.historico = [];
             newItem.historico.push({
                 timestamp: new Date().toISOString(),
                 acao: 'Criação do Registro',
                 usuario: currentuser?.name || 'Sistema',
-                snapshot: snap
+                snapshot: _safeSnapshot(newItem)
             });
             audits.push(newItem);
         } else if (changes.length > 0 || changes.silentChanged) {
@@ -72,7 +78,7 @@
                     acao: 'Edição de Dados',
                     usuario: currentuser?.name || 'Sistema',
                     detalhes: changes,
-                    snapshot: JSON.parse(JSON.stringify(originalItem))
+                    snapshot: originalItem ? _safeSnapshot(originalItem) : {}
                 });
             }
             audits = audits.map(a => a.id === editingAuditId ? newItem : a);
@@ -104,7 +110,9 @@
             dataPrevisao: document.getElementById('auditDataPrevisao').value,
             responsavel: document.getElementById('auditResponsavel').value,
             revisor: document.getElementById('auditRevisor').value,
-            auditor: document.getElementById('auditAuditor').value,
+            rotina: document.getElementById('auditRotina').value,
+            frequencia: document.getElementById('auditFrequencia').value,
+            diasSemana: Array.from(document.querySelectorAll('#auditWeekdays .wd-btn.active')).map(b => Number(b.dataset.day)),
             flagDias: document.getElementById('auditFlagDias').value,
             marcador: document.getElementById('auditMarcador').value,
             anexos: typeof getAnexos === 'function' ? getAnexos('audit') : []
@@ -125,7 +133,16 @@
             document.getElementById('auditDataPrevisao').value = formData.dataPrevisao;
             document.getElementById('auditResponsavel').value = formData.responsavel;
             document.getElementById('auditRevisor').value = formData.revisor;
-            document.getElementById('auditAuditor').value = formData.auditor;
+            document.getElementById('auditRotina').value = formData.rotina || 'pontual';
+            document.getElementById('auditFrequencia').value = formData.frequencia || 1;
+            document.querySelectorAll('#auditWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
+            if (formData.rotina === 'diasemana' && Array.isArray(formData.diasSemana)) {
+                formData.diasSemana.forEach(d => {
+                    const btn = document.querySelector(`#auditWeekdays .wd-btn[data-day="${d}"]`);
+                    if (btn) btn.classList.add('active');
+                });
+            }
+            if (typeof onAuditRotinaChange === 'function') onAuditRotinaChange(true);
             document.getElementById('auditFlagDias').value = formData.flagDias;
             document.getElementById('auditMarcador').value = formData.marcador;
 
@@ -135,3 +152,73 @@
             openFormDrawer('modalAuditoria');
         }, 200);
     }
+
+// ─── ROTINA DE AUDITORIA ──────────────────────────────────────────────────────
+
+window.onAuditRotinaChange = function(skipCalc) {
+    const rotina = document.getElementById('auditRotina').value;
+    const freqWrap = document.getElementById('auditFrequenciaWrap');
+    const wdWrap = document.getElementById('auditDiaSemanaWrap');
+    const dpInput = document.getElementById('auditDataPrevisao');
+
+    const isPontual = rotina === 'pontual';
+    const isDiaSemana = rotina === 'diasemana';
+
+    freqWrap.style.display = (!isPontual && !isDiaSemana) ? '' : 'none';
+    wdWrap.style.display = isDiaSemana ? '' : 'none';
+
+    dpInput.readOnly = !isPontual;
+    dpInput.style.background = !isPontual ? '#f1f5f9' : '';
+    dpInput.style.cursor = !isPontual ? 'not-allowed' : '';
+
+    if (!skipCalc && !isPontual) calcAuditDataPrevisao();
+};
+
+window.toggleAuditWeekday = function(btn) {
+    btn.classList.toggle('active');
+    calcAuditDataPrevisao();
+};
+
+window.calcAuditDataPrevisao = function() {
+    const rotina = document.getElementById('auditRotina').value;
+    const freq = Number(document.getElementById('auditFrequencia').value) || 1;
+    const dpInput = document.getElementById('auditDataPrevisao');
+    const pubDate = document.getElementById('auditDataPublicacao').value;
+
+    const base = pubDate ? new Date(pubDate + 'T00:00:00') : new Date();
+
+    if (rotina === 'pontual') return;
+
+    let next = new Date(base);
+
+    if (rotina === 'anual') {
+        next.setFullYear(next.getFullYear() + freq);
+    } else if (rotina === 'mensal') {
+        next.setMonth(next.getMonth() + freq);
+    } else if (rotina === 'semanal') {
+        next.setDate(next.getDate() + freq * 7);
+    } else if (rotina === 'diario') {
+        next.setDate(next.getDate() + freq);
+    } else if (rotina === 'diasemana') {
+        const activeDays = Array.from(document.querySelectorAll('#auditWeekdays .wd-btn.active')).map(b => Number(b.dataset.day));
+        if (activeDays.length === 0) { dpInput.value = ''; return; }
+        // Próxima ocorrência a partir de amanhã
+        const tomorrow = new Date(base);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        for (let i = 0; i < 14; i++) {
+            const d = new Date(tomorrow);
+            d.setDate(tomorrow.getDate() + i);
+            if (activeDays.includes(d.getDay())) { next = d; break; }
+        }
+    }
+
+    dpInput.value = next.toISOString().split('T')[0];
+};
+
+// Recalcular quando data de publicação mudar
+(function() {
+    const dpPub = document.getElementById('auditDataPublicacao');
+    if (dpPub) dpPub.addEventListener('change', () => {
+        if (document.getElementById('auditRotina').value !== 'pontual') calcAuditDataPrevisao();
+    });
+})();

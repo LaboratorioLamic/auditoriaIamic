@@ -62,6 +62,8 @@
 
     var masterLists = JSON.parse(JSON.stringify(defaultMasterLists)); // Clone inicial
 
+    var kanbanOrder = {};   // ordem das colunas kanban (compartilhada entre todos os usuários)
+
     var currentTab = 'dashboard';
     var editingAuditId = null;
     var editingTrainId = null;

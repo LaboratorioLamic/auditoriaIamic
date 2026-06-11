@@ -1,70 +1,45 @@
-// === CACHE / LOCALSTORAGE + PERSISTÊNCIA DE FILTROS ===
+// === PREFERÊNCIAS DE USUÁRIO (Firebase Realtime Database) ===
 
-    // ===== SISTEMA DE CACHE COM LOCALSTORAGE =====
-    var CACHE_KEYS = {
-        audits: 'lamic_audits_cache',
-        trainings: 'lamic_trainings_cache',
-        activities: 'lamic_activities_cache',
-        maintenances: 'lamic_maintenances_cache',
-        documents: 'lamic_documents_cache',
-        masterLists: 'lamic_masterLists_cache',
-        lastSync: 'lamic_lastSync_timestamp',
-        users: 'lamic_users_cache',
-        filters: 'lamic_filters_cache'
-    };
+    // Cache em memória das preferências do usuário atual
+    var _userPrefsCache = {};
+    var _filterSaveTimer = null;
 
-    function saveToLocalStorage(key, data) {
+    function _getUserPrefsPath() {
+        const username = currentuser && (currentuser.user || currentuser.name);
+        return username ? 'userPreferences/' + username : null;
+    }
+
+    async function loadUserPrefsFromFirebase() {
+        const path = _getUserPrefsPath();
+        if (!path) return;
         try {
-            localStorage.setItem(CACHE_KEYS[key], JSON.stringify(data));
-            localStorage.setItem(CACHE_KEYS.lastSync, new Date().toISOString());
+            const database = getFirebaseDatabase();
+            const dbRef = getFirebaseRef();
+            const dbGet = getFirebaseGet();
+            const snapshot = await dbGet(dbRef(database, path));
+            _userPrefsCache = snapshot.exists() ? snapshot.val() : {};
         } catch (error) {
-            console.error(`Erro ao salvar ${key} no localStorage:`, error);
+            console.error('Erro ao carregar preferências do usuário:', error);
+            _userPrefsCache = {};
         }
     }
 
-    function loadFromLocalStorage(key) {
+    async function _persistUserPrefs() {
+        const path = _getUserPrefsPath();
+        if (!path) return;
         try {
-            const cached = localStorage.getItem(CACHE_KEYS[key]);
-            return cached ? JSON.parse(cached) : null;
+            const database = getFirebaseDatabase();
+            const dbRef = getFirebaseRef();
+            const { set } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
+            await set(dbRef(database, path), _userPrefsCache);
         } catch (error) {
-            console.error(`Erro ao carregar ${key} do localStorage:`, error);
-            return null;
+            console.error('Erro ao salvar preferências do usuário:', error);
         }
     }
 
-    function getLastSyncTime() {
-        try {
-            const lastSync = localStorage.getItem(CACHE_KEYS.lastSync);
-            return lastSync ? new Date(lastSync) : null;
-        } catch (error) {
-            console.error('Erro ao obter último sincronismo:', error);
-            return null;
-        }
-    }
+    // ===== SISTEMA DE PERSISTÊNCIA DE FILTROS (Firebase) =====
 
-    function clearAllCache() {
-        try {
-            // PROTEÇÃO: Limpa TODOS os dados cacheados incluindo sincronização
-            // Preserva apenas filtros do usuário para melhor experiência
-            const filtersBackup = localStorage.getItem(CACHE_KEYS.filters);
-
-            Object.values(CACHE_KEYS).forEach(key => {
-                localStorage.removeItem(key);
-            });
-
-            // Restaura apenas filtros se existiam
-            if (filtersBackup) {
-                localStorage.setItem(CACHE_KEYS.filters, filtersBackup);
-            }
-
-            console.log('Cache de dados completamente limpo. Apenas filtros do usuário foram preservados.');
-        } catch (error) {
-            console.error('Erro ao limpar cache:', error);
-        }
-    }
-
-    // ===== SISTEMA DE PERSISTÊNCIA DE FILTROS =====
-    function saveFiltersToLocalStorage() {
+    function saveFiltersToFirebase() {
         try {
             const filters = {
                 // Dashboard
@@ -143,28 +118,26 @@
                 fDocDataIni: document.getElementById('fDocDataIni')?.value || '',
                 fDocDataFim: document.getElementById('fDocDataFim')?.value || ''
             };
-            localStorage.setItem(CACHE_KEYS.filters, JSON.stringify(filters));
+
+            _userPrefsCache.filters = filters;
+
+            // Debounce: salva no Firebase após 1s de inatividade
+            clearTimeout(_filterSaveTimer);
+            _filterSaveTimer = setTimeout(_persistUserPrefs, 1000);
         } catch (error) {
             console.error('Erro ao salvar filtros:', error);
         }
     }
 
-    function restoreFiltersFromLocalStorage() {
+    function restoreFiltersFromFirebase() {
         try {
-            const saved = localStorage.getItem(CACHE_KEYS.filters);
-            if (!saved) return;
+            const filters = _userPrefsCache && _userPrefsCache.filters;
+            if (!filters) return;
 
-            const filters = JSON.parse(saved);
-            const filterIds = Object.keys(filters);
-
-            filterIds.forEach(id => {
+            Object.keys(filters).forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
-                    try {
-                        el.value = filters[id];
-                    } catch(_) {
-                        // Elemento pode não estar pronto
-                    }
+                    try { el.value = filters[id]; } catch (_) {}
                 }
             });
         } catch (error) {

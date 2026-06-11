@@ -6,7 +6,7 @@
             updateDateInputs('Dash');
         }
         updateDashboardFilterOptions();
-        saveFiltersToLocalStorage();
+        saveFiltersToFirebase();
         renderDashboard();
     }
 
@@ -321,7 +321,7 @@
         setTitleSearchEnabled('dash', false);
         updateDateInputs('Dash');
         updateDashboardFilterOptions();
-        saveFiltersToLocalStorage();
+        saveFiltersToFirebase();
         renderDashboard();
     }
 
@@ -361,7 +361,7 @@
 
         updateDateInputs(tabPrefix);
 
-        saveFiltersToLocalStorage();
+        saveFiltersToFirebase();
 
         onFilterSetorChange(tabPrefix);
         renderCards();
@@ -589,7 +589,7 @@
     });
 
     // Popula os selects de responsáveis e revisores
-    ['auditResponsavel', 'trainResponsavel', 'ativResponsavel', 'mantResponsavelTecnico', 'docResponsavel', 'auditRevisor', 'ativRevisor', 'docRevisor'].forEach(id => {
+    ['auditResponsavel', 'trainResponsavel', 'trainRevisor', 'ativResponsavel', 'mantResponsavelTecnico', 'docResponsavel', 'auditRevisor', 'ativRevisor', 'docRevisor'].forEach(id => {
         const select = document.getElementById(id);
         if (select) {
             const currentValue = select.value;
@@ -1188,12 +1188,6 @@
             ultima = document.getElementById('mantUltima').value;
             intervaloId = 'mantIntervalo';
             proximaDisplayId = 'mantProxima';
-            const intervalStr = (document.getElementById(intervaloId).value || '').trim();
-            intervalValue = intervalStr === '' ? null : parseInt(intervalStr);
-        } else if (prefix === 'doc') {
-            ultima = document.getElementById('docDataCriacao').value;
-            intervaloId = 'docIntervalo';
-            proximaDisplayId = 'docProximaRevisao';
             const intervalStr = (document.getElementById(intervaloId).value || '').trim();
             intervalValue = intervalStr === '' ? null : parseInt(intervalStr);
         } else {

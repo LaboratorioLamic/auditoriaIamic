@@ -38,6 +38,7 @@
 </script>
 
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="css/calendar.css">
 </head>
 <body>
 
@@ -314,6 +315,9 @@
                 <button id="btnViewList" class="view-module-tab" onclick="toggleKanbanView('list')">
                     <i class="fas fa-list"></i> Lista
                 </button>
+                <button id="btnViewCalendar" class="view-module-tab" onclick="toggleCalendarView('calendar')">
+                    <i class="fas fa-calendar-days"></i> Calendário
+                </button>
             </div>
             <div class="view-toggle-actions" id="fbarAddcolRow" style="display:none;">
                 <button class="fbar-addcol-btn" id="addColBtn" onclick="openKanbanAddCol()" title="Adicionar coluna">
@@ -478,117 +482,60 @@
 
         <div id="kanbanBoard"></div>
 
+        <div id="calendarBoard" style="display:none;"></div>
+
         <!-- ABA CONFIGURAÇÕES (apenas para admin) -->
         <div id="configContent" style="display:none;">
-            <div class="config-container">
-                <div class="config-header">
+            <div class="usr-page">
+
+                <!-- Cabeçalho da página -->
+                <div class="usr-page-header">
                     <div>
-                        <h2><i class="fa-solid fa-gear"></i> Configurações de Usuários</h2>
-                        <p>Cadastre usuários, defina quais abas cada um pode acessar e se podem excluir cards.</p>
+                        <h1 class="usr-page-title">Usuários</h1>
+                        <p class="usr-page-sub">Gerencie os membros com acesso ao sistema</p>
                     </div>
+                    <button class="usr-btn-new" onclick="openUserModal(null)">
+                        <i class="fas fa-plus"></i> Novo Usuário
+                    </button>
                 </div>
 
-                <div class="config-card">
-                    <h3>Usuário</h3>
-                    <div class="config-grid-2">
-                        <div class="field-group">
-                            <label>Nome</label>
-                            <input id="cfgname" placeholder="Nome que aparecerá na interface">
-                        </div>
-                        <div class="field-group">
-                            <label>Login (user)</label>
-                            <input id="cfguser" placeholder="Ex: joao.silva">
-                        </div>
-                        <div class="field-group">
-                            <label>Senha</label>
-                            <input id="cfgPassword" type="password" placeholder="Senha">
-                        </div>
-                        <div class="field-group">
-                            <label>Permite editar cards?</label>
-                            <select id="cfgCanEdit">
-                                <option value="true">Sim</option>
-                                <option value="false">Não (Somente leitura)</option>
-                            </select>
-                        </div>
-                        <div class="field-group">
-                            <label>Permite excluir cards?</label>
-                            <select id="cfgCanDelete">
-                                <option value="false">Não</option>
-                                <option value="true">Sim</option>
-                            </select>
-                        </div>
-                        <div class="field-group">
-                            <label>Permite gerenciar listas suspensas?</label>
-                            <select id="cfgCanManageLists">
-                                <option value="false">Não</option>
-                                <option value="true">Sim</option>
-                            </select>
-                        </div>
-                        <div class="field-group">
-                            <label>Status do login</label>
-                            <select id="cfgStatus">
-                                <option value="true">Ativo</option>
-                                <option value="false">Inativo</option>
-                            </select>
-                        </div>
-                        <div class="field-group">
-                            <label>É administrador?</label>
-                            <select id="cfgIsAdmin">
-                                <option value="false">Não</option>
-                                <option value="true">Sim</option>
-                            </select>
-                        </div>
+                <!-- Card de configuração global -->
+                <div class="usr-settings-card">
+                    <div class="usr-settings-left">
+                        <span class="usr-settings-title">Permitir criação de contas pela tela de login</span>
+                        <span class="usr-settings-desc">Quando desativado, o botão "Criar Conta" fica oculto na tela de login</span>
                     </div>
-
-                    <div class="field-group full-width" style="margin-top:8px;">
-                        <label>Acesso às abas</label>
-                        <div class="config-tabs">
-                            <label><input type="checkbox" class="cfg-tab" value="dashboard" checked> Dashboard</label>
-                            <label><input type="checkbox" class="cfg-tab" value="auditoria" checked> Auditoria</label>
-                            <label><input type="checkbox" class="cfg-tab" value="treinamentos"> Treinamentos</label>
-                            <label><input type="checkbox" class="cfg-tab" value="documentos"> Documentos</label>
-                            <label><input type="checkbox" class="cfg-tab" value="atividades"> Atividades</label>
-                            <label><input type="checkbox" class="cfg-tab" value="backup"> Backup</label>
-                        </div>
-                    </div>
-
-                    <div class="field-group full-width" style="margin-top:8px;">
-                        <label>Acesso aos Setores</label>
-                        <button type="button" class="btn-select-setores" onclick="openSetoresModal()" style="width:100%; padding:12px 16px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border:none; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.3s ease; box-shadow:0 2px 8px rgba(102, 126, 234, 0.3);">
-                            <i class="fa-solid fa-building"></i>
-                            <span id="setoresButtonText">Selecionar Setores</span>
-                            <i class="fa-solid fa-chevron-right"></i>
-                        </button>
-                        <p style="color:#6b7280; font-size:12px; margin-top:8px;">Usuários com permissão de gerenciar listas têm acesso a todos os setores automaticamente.</p>
-                    </div>
-
-                    <div class="config-actions">
-                        <button class="btn-cancel" onclick="resetConfigForm()">Limpar</button>
-                        <button class="btn-save" onclick="saveuserConfig()">Salvar Usuário</button>
-                    </div>
+                    <label class="usr-toggle">
+                        <input type="checkbox" id="cfgAllowSignup" onchange="saveAllowSignupSetting(this.checked)" checked>
+                        <span class="usr-toggle-track"><span class="usr-toggle-thumb"></span></span>
+                    </label>
                 </div>
 
-                <div class="config-table-wrapper">
-                    <table class="config-table">
+                <!-- Filtro por status -->
+                <div class="usr-filter-tabs">
+                    <button class="usr-ftab active" data-filter="ativos" onclick="setUserFilter('ativos',this)">Ativos</button>
+                    <button class="usr-ftab" data-filter="inativos" onclick="setUserFilter('inativos',this)">Inativos</button>
+                    <button class="usr-ftab" data-filter="ambos" onclick="setUserFilter('ambos',this)">Ambos</button>
+                </div>
+
+                <!-- Tabela de usuários -->
+                <div class="usr-table-card">
+                    <table class="usr-table">
                         <thead>
                             <tr>
-                                <th>Nome</th>
-                                <th>Login</th>
-                                <th>Abas</th>
-                                <th>Editar</th>
+                                <th>Usuário</th>
+                                <th>CPF</th>
+                                <th>Cargo</th>
+                                <th>Grupo</th>
                                 <th>Status</th>
-                                <th>Administrador</th>
-                                <th>Excluir cards</th>
-                                <th>Gerenciar listas</th>
-                                <th style="text-align:right;">Ações</th>
+                                <th class="text-right">Ações</th>
                             </tr>
                         </thead>
-                         <tbody id="cfgusersTable"></tbody>
+                        <tbody id="cfgusersTable"></tbody>
                     </table>
                 </div>
-                <p class="config-note">
-                    Observação: o usuário <strong>admin</strong> é sempre administrador, tem acesso a todas as abas e não aparece na lista para edição ou exclusão.
-                </p>
+
+                <p class="usr-note">O usuário <strong>admin</strong> é sempre administrador e não aparece na lista para edição ou exclusão.</p>
             </div>
         </div>
     </div>
@@ -660,6 +607,33 @@
                 <input type="date" id="auditDataPrevisao">
             </div>
             <div class="field-group">
+                <label>Rotina</label>
+                <select id="auditRotina" onchange="onAuditRotinaChange()">
+                    <option value="pontual">Pontual</option>
+                    <option value="anual">Anual</option>
+                    <option value="mensal">Mensal</option>
+                    <option value="semanal">Semanal</option>
+                    <option value="diario">Diário</option>
+                    <option value="diasemana">Dia da semana</option>
+                </select>
+            </div>
+            <div class="field-group" id="auditFrequenciaWrap" style="display:none;">
+                <label>Frequência <span style="font-size:11px;color:#6b7280;">(intervalo)</span></label>
+                <input type="number" id="auditFrequencia" min="1" value="1" oninput="calcAuditDataPrevisao()">
+            </div>
+            <div class="field-group full-width" id="auditDiaSemanaWrap" style="display:none;">
+                <label>Dias da semana</label>
+                <div class="audit-weekdays" id="auditWeekdays">
+                    <button type="button" class="wd-btn" data-day="0" onclick="toggleAuditWeekday(this)">Dom</button>
+                    <button type="button" class="wd-btn" data-day="1" onclick="toggleAuditWeekday(this)">Seg</button>
+                    <button type="button" class="wd-btn" data-day="2" onclick="toggleAuditWeekday(this)">Ter</button>
+                    <button type="button" class="wd-btn" data-day="3" onclick="toggleAuditWeekday(this)">Qua</button>
+                    <button type="button" class="wd-btn" data-day="4" onclick="toggleAuditWeekday(this)">Qui</button>
+                    <button type="button" class="wd-btn" data-day="5" onclick="toggleAuditWeekday(this)">Sex</button>
+                    <button type="button" class="wd-btn" data-day="6" onclick="toggleAuditWeekday(this)">Sáb</button>
+                </div>
+            </div>
+            <div class="field-group">
                 <label>Responsável</label>
                 <select id="auditResponsavel">
                     <option value="">Selecione um responsável...</option>
@@ -670,9 +644,6 @@
                 <select id="auditRevisor">
                     <option value="">Selecione um revisor...</option>
                 </select>
-            </div>
-            <div class="field-group">
-                <label>Auditor</label> <input id="auditAuditor" placeholder="Nome do Auditor">
             </div>
             <div class="field-group">
                 <label>Alerta (Dias antes)</label>
@@ -689,10 +660,23 @@
         </div>
         <!-- Aba Checklist -->
         <div class="drawer-tab-panel" id="audit-panel-checklist">
-            <div class="checklist-editor" id="audit-checklist-editor"></div>
-            <div class="checklist-add-row">
-                <input type="text" id="audit-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('audit')">
-                <button class="checklist-add-btn" onclick="addChecklistItem('audit')"><i class="fas fa-plus"></i> Adicionar</button>
+            <div class="cl-subtabs">
+                <button class="cl-subtab active" onclick="switchClSubtab('audit','geral',this)"><i class="fas fa-list-check"></i> Geral</button>
+                <button class="cl-subtab" onclick="switchClSubtab('audit','pub',this)"><i class="fas fa-paper-plane"></i> Publicação</button>
+            </div>
+            <div class="cl-subpanel active" id="audit-clpanel-geral">
+                <div class="checklist-add-row">
+                    <input type="text" id="audit-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('audit')">
+                    <button class="checklist-add-btn" onclick="addChecklistItem('audit')"><i class="fas fa-plus"></i> Adicionar</button>
+                </div>
+                <div class="checklist-editor" id="audit-checklist-editor"></div>
+            </div>
+            <div class="cl-subpanel" id="audit-clpanel-pub">
+                <div class="checklist-add-row">
+                    <input type="text" id="audit-pub-checklist-input" class="checklist-new-input" placeholder="Novo item de publicação..." onkeydown="if(event.key==='Enter')addChecklistItem('audit-pub')">
+                    <button class="checklist-add-btn" onclick="addChecklistItem('audit-pub')"><i class="fas fa-plus"></i> Adicionar</button>
+                </div>
+                <div class="checklist-editor" id="audit-pub-checklist-editor"></div>
             </div>
         </div>
         <!-- Aba Anexos -->
@@ -781,21 +765,49 @@
             </div>
             <div class="field-group">
                 <label>Data Publicação</label>
-                <input type="date" id="trainDataPublicacao" onchange="calculateTrainingPrevisao()">
+                <input type="date" id="trainDataPublicacao" onchange="onTrainRotinaChange()">
             </div>
             <div class="field-group">
-                <label>Periodicidade (Dias)</label>
-                <input type="number" id="trainPeriodicidade" value="0" onchange="calculateTrainingPrevisao()">
+                <label>Data Previsão</label>
+                <input type="date" id="trainDataPrevisao">
             </div>
-            <div class="field-group full-width" style="background:#f0f9ff; padding:10px; border-radius:8px; border:1px solid #bae6fd">
-                <label style="color:#0369a1">Data Previsão (Calculada)</label>
-                <div id="trainDataPrevisao" style="font-size:16px; font-weight:700; color:#0c4a6e; margin-top:4px">--/--/----</div>
+            <div class="field-group">
+                <label>Rotina</label>
+                <select id="trainRotina" onchange="onTrainRotinaChange()">
+                    <option value="pontual">Pontual</option>
+                    <option value="anual">Anual</option>
+                    <option value="mensal">Mensal</option>
+                    <option value="semanal">Semanal</option>
+                    <option value="diario">Diário</option>
+                    <option value="diasemana">Dia da semana</option>
+                </select>
             </div>
-            <input type="hidden" id="trainDataPrevisaoValue">
+            <div class="field-group" id="trainFrequenciaWrap" style="display:none;">
+                <label>Frequência <span style="font-size:11px;color:#6b7280;">(intervalo)</span></label>
+                <input type="number" id="trainFrequencia" min="1" value="1" oninput="calcTrainDataPrevisao()">
+            </div>
+            <div class="field-group full-width" id="trainDiaSemanaWrap" style="display:none;">
+                <label>Dias da semana</label>
+                <div class="audit-weekdays" id="trainWeekdays">
+                    <button type="button" class="wd-btn" data-day="0" onclick="toggleTrainWeekday(this)">Dom</button>
+                    <button type="button" class="wd-btn" data-day="1" onclick="toggleTrainWeekday(this)">Seg</button>
+                    <button type="button" class="wd-btn" data-day="2" onclick="toggleTrainWeekday(this)">Ter</button>
+                    <button type="button" class="wd-btn" data-day="3" onclick="toggleTrainWeekday(this)">Qua</button>
+                    <button type="button" class="wd-btn" data-day="4" onclick="toggleTrainWeekday(this)">Qui</button>
+                    <button type="button" class="wd-btn" data-day="5" onclick="toggleTrainWeekday(this)">Sex</button>
+                    <button type="button" class="wd-btn" data-day="6" onclick="toggleTrainWeekday(this)">Sáb</button>
+                </div>
+            </div>
             <div class="field-group">
                 <label>Responsável</label>
                 <select id="trainResponsavel">
                     <option value="">Selecione um responsável...</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label>Revisor</label>
+                <select id="trainRevisor">
+                    <option value="">Selecione um revisor...</option>
                 </select>
             </div>
             <div class="field-group">
@@ -813,10 +825,23 @@
         </div><!-- /train-panel-info -->
         <!-- Aba Checklist -->
         <div class="drawer-tab-panel" id="train-panel-checklist">
-            <div class="checklist-editor" id="train-checklist-editor"></div>
-            <div class="checklist-add-row">
-                <input type="text" id="train-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('train')">
-                <button class="checklist-add-btn" onclick="addChecklistItem('train')"><i class="fas fa-plus"></i> Adicionar</button>
+            <div class="cl-subtabs">
+                <button class="cl-subtab active" onclick="switchClSubtab('train','geral',this)"><i class="fas fa-list-check"></i> Geral</button>
+                <button class="cl-subtab" onclick="switchClSubtab('train','pub',this)"><i class="fas fa-paper-plane"></i> Publicação</button>
+            </div>
+            <div class="cl-subpanel active" id="train-clpanel-geral">
+                <div class="checklist-add-row">
+                    <input type="text" id="train-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('train')">
+                    <button class="checklist-add-btn" onclick="addChecklistItem('train')"><i class="fas fa-plus"></i> Adicionar</button>
+                </div>
+                <div class="checklist-editor" id="train-checklist-editor"></div>
+            </div>
+            <div class="cl-subpanel" id="train-clpanel-pub">
+                <div class="checklist-add-row">
+                    <input type="text" id="train-pub-checklist-input" class="checklist-new-input" placeholder="Novo item de publicação..." onkeydown="if(event.key==='Enter')addChecklistItem('train-pub')">
+                    <button class="checklist-add-btn" onclick="addChecklistItem('train-pub')"><i class="fas fa-plus"></i> Adicionar</button>
+                </div>
+                <div class="checklist-editor" id="train-pub-checklist-editor"></div>
             </div>
         </div>
         <!-- Aba Anexos -->
@@ -938,10 +963,23 @@
         </div><!-- /ativ-panel-info -->
         <!-- Aba Checklist -->
         <div class="drawer-tab-panel" id="ativ-panel-checklist">
-            <div class="checklist-editor" id="ativ-checklist-editor"></div>
-            <div class="checklist-add-row">
-                <input type="text" id="ativ-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('ativ')">
-                <button class="checklist-add-btn" onclick="addChecklistItem('ativ')"><i class="fas fa-plus"></i> Adicionar</button>
+            <div class="cl-subtabs">
+                <button class="cl-subtab active" onclick="switchClSubtab('ativ','geral',this)"><i class="fas fa-list-check"></i> Geral</button>
+                <button class="cl-subtab" onclick="switchClSubtab('ativ','pub',this)"><i class="fas fa-paper-plane"></i> Publicação</button>
+            </div>
+            <div class="cl-subpanel active" id="ativ-clpanel-geral">
+                <div class="checklist-add-row">
+                    <input type="text" id="ativ-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('ativ')">
+                    <button class="checklist-add-btn" onclick="addChecklistItem('ativ')"><i class="fas fa-plus"></i> Adicionar</button>
+                </div>
+                <div class="checklist-editor" id="ativ-checklist-editor"></div>
+            </div>
+            <div class="cl-subpanel" id="ativ-clpanel-pub">
+                <div class="checklist-add-row">
+                    <input type="text" id="ativ-pub-checklist-input" class="checklist-new-input" placeholder="Novo item de publicação..." onkeydown="if(event.key==='Enter')addChecklistItem('ativ-pub')">
+                    <button class="checklist-add-btn" onclick="addChecklistItem('ativ-pub')"><i class="fas fa-plus"></i> Adicionar</button>
+                </div>
+                <div class="checklist-editor" id="ativ-pub-checklist-editor"></div>
             </div>
         </div>
         <!-- Aba Anexos -->
@@ -1030,15 +1068,38 @@
             </div>
             <div class="field-group">
                 <label>Data de Criação</label>
-                <input type="date" id="docDataCriacao" onchange="calculateNextDate('doc')">
+                <input type="date" id="docDataCriacao" onchange="onDocRotinaChange()">
             </div>
             <div class="field-group">
-                <label>Periodicidade (Dias)</label>
-                <input type="number" id="docIntervalo" value="365" onchange="calculateNextDate('doc')">
+                <label>Próxima Revisão</label>
+                <input type="date" id="docDataProximaRevisao">
             </div>
-            <div class="field-group full-width" style="background:#f0f9ff; padding:10px; border-radius:8px; border:1px solid #bae6fd">
-                <label style="color:#0369a1">Próxima Revisão (Calculada)</label>
-                <div id="docProximaRevisao" style="font-size:16px; font-weight:700; color:#0c4a6e; margin-top:4px">--/--/----</div>
+            <div class="field-group">
+                <label>Rotina</label>
+                <select id="docRotina" onchange="onDocRotinaChange()">
+                    <option value="pontual">Pontual</option>
+                    <option value="anual">Anual</option>
+                    <option value="mensal">Mensal</option>
+                    <option value="semanal">Semanal</option>
+                    <option value="diario">Diário</option>
+                    <option value="diasemana">Dia da semana</option>
+                </select>
+            </div>
+            <div class="field-group" id="docFrequenciaWrap" style="display:none;">
+                <label>Frequência <span style="font-size:11px;color:#6b7280;">(intervalo)</span></label>
+                <input type="number" id="docFrequencia" min="1" value="1" oninput="calcDocDataPrevisao()">
+            </div>
+            <div class="field-group full-width" id="docDiaSemanaWrap" style="display:none;">
+                <label>Dias da semana</label>
+                <div class="audit-weekdays" id="docWeekdays">
+                    <button type="button" class="wd-btn" data-day="0" onclick="toggleDocWeekday(this)">Dom</button>
+                    <button type="button" class="wd-btn" data-day="1" onclick="toggleDocWeekday(this)">Seg</button>
+                    <button type="button" class="wd-btn" data-day="2" onclick="toggleDocWeekday(this)">Ter</button>
+                    <button type="button" class="wd-btn" data-day="3" onclick="toggleDocWeekday(this)">Qua</button>
+                    <button type="button" class="wd-btn" data-day="4" onclick="toggleDocWeekday(this)">Qui</button>
+                    <button type="button" class="wd-btn" data-day="5" onclick="toggleDocWeekday(this)">Sex</button>
+                    <button type="button" class="wd-btn" data-day="6" onclick="toggleDocWeekday(this)">Sáb</button>
+                </div>
             </div>
             <div class="field-group">
                 <label>Responsável</label>
@@ -1067,10 +1128,23 @@
         </div><!-- /doc-panel-info -->
         <!-- Aba Checklist -->
         <div class="drawer-tab-panel" id="doc-panel-checklist">
-            <div class="checklist-editor" id="doc-checklist-editor"></div>
-            <div class="checklist-add-row">
-                <input type="text" id="doc-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('doc')">
-                <button class="checklist-add-btn" onclick="addChecklistItem('doc')"><i class="fas fa-plus"></i> Adicionar</button>
+            <div class="cl-subtabs">
+                <button class="cl-subtab active" onclick="switchClSubtab('doc','geral',this)"><i class="fas fa-list-check"></i> Geral</button>
+                <button class="cl-subtab" onclick="switchClSubtab('doc','pub',this)"><i class="fas fa-paper-plane"></i> Publicação</button>
+            </div>
+            <div class="cl-subpanel active" id="doc-clpanel-geral">
+                <div class="checklist-add-row">
+                    <input type="text" id="doc-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('doc')">
+                    <button class="checklist-add-btn" onclick="addChecklistItem('doc')"><i class="fas fa-plus"></i> Adicionar</button>
+                </div>
+                <div class="checklist-editor" id="doc-checklist-editor"></div>
+            </div>
+            <div class="cl-subpanel" id="doc-clpanel-pub">
+                <div class="checklist-add-row">
+                    <input type="text" id="doc-pub-checklist-input" class="checklist-new-input" placeholder="Novo item de publicação..." onkeydown="if(event.key==='Enter')addChecklistItem('doc-pub')">
+                    <button class="checklist-add-btn" onclick="addChecklistItem('doc-pub')"><i class="fas fa-plus"></i> Adicionar</button>
+                </div>
+                <div class="checklist-editor" id="doc-pub-checklist-editor"></div>
             </div>
         </div>
         <!-- Aba Anexos -->
@@ -1172,6 +1246,14 @@
         <div id="pubModalFields">
             <!-- preenchido por JS -->
         </div>
+        <!-- Checklist de Publicação -->
+        <div id="pubChecklistWrap" style="display:none; margin-top:12px;">
+            <div class="pub-cl-header">
+                <span><i class="fas fa-list-check"></i> Checklist de Publicação</span>
+                <button type="button" class="pub-cl-toggle-all-btn" id="pubClToggleAllBtn" onclick="toggleAllPubChecklist()">Marcar todos</button>
+            </div>
+            <div id="pubChecklistItems"></div>
+        </div>
         <!-- Upload -->
         <div class="field-group full-width" style="margin-top:12px;">
             <label>Anexos</label>
@@ -1207,13 +1289,19 @@
 
 <!-- MODAL VISUALIZAÇÃO DE PUBLICAÇÃO -->
 <div class="modal" id="modalVerPublicacao">
-    <div class="modal-content" style="max-width:600px;">
-        <div class="modal-header">
-            <h3 id="verPubTitle" style="margin:0;font-size:16px;"></h3>
-            <button onclick="closeModal('modalVerPublicacao')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;">&times;</button>
+    <div class="modal-content ver-pub-modal-content">
+        <div class="ver-pub-modal-header">
+            <div class="ver-pub-modal-header-left">
+                <div class="ver-pub-modal-icon" id="verPubTypeIcon"><i class="fas fa-paper-plane"></i></div>
+                <div>
+                    <div class="ver-pub-modal-type" id="verPubTypeLabel">Publicação</div>
+                    <div class="ver-pub-modal-title" id="verPubTitle"></div>
+                </div>
+            </div>
+            <button onclick="closeModal('modalVerPublicacao')" class="ver-pub-close-btn">&times;</button>
         </div>
-        <div id="verPubContent"></div>
-        <div class="modal-actions" id="verPubFooter">
+        <div class="ver-pub-modal-body" id="verPubContent"></div>
+        <div class="ver-pub-modal-footer" id="verPubFooter">
             <button class="btn-cancel" onclick="closeModal('modalVerPublicacao')">Fechar</button>
         </div>
     </div>
@@ -1325,6 +1413,195 @@
     </div>
 </div>
 
+<!-- ── MODAL NOVO / EDITAR USUÁRIO ──────────────────────────────── -->
+<div class="modal" id="modalUsuario">
+    <div class="modal-content um-wrap">
+
+        <!-- Coluna esquerda: perfil + permissões -->
+        <div class="um-sidebar">
+            <button onclick="closeModal('modalUsuario')" class="um-close-btn" title="Fechar">&times;</button>
+
+            <div class="um-avatar-area">
+                <div class="um-avatar" id="usrModalAvatarLg">?</div>
+                <h2 class="um-title" id="usrModalTitle">Novo Usuário</h2>
+                <p class="um-subtitle">Defina os dados e acessos</p>
+            </div>
+
+            <!-- Status + Admin -->
+            <div class="um-side-fields">
+                <div class="um-side-field">
+                    <span class="um-side-label">Status</span>
+                    <select id="cfgStatus" class="um-side-select">
+                        <option value="true">✦ Ativo</option>
+                        <option value="false">◌ Inativo</option>
+                    </select>
+                </div>
+                <div class="um-side-field">
+                    <span class="um-side-label">Administrador</span>
+                    <select id="cfgIsAdmin" class="um-side-select">
+                        <option value="false">Não</option>
+                        <option value="true">Sim</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Permissões de ação -->
+            <div class="um-perm-block">
+                <div class="um-perm-title"><i class="fas fa-shield-halved"></i> Permissões</div>
+                <div class="um-perm-item">
+                    <div class="um-perm-left">
+                        <span class="um-perm-dot" style="background:#3b82f6"></span>
+                        <div>
+                            <div class="um-perm-name">Editar registros</div>
+                        </div>
+                    </div>
+                    <select id="cfgCanEdit" class="um-perm-sel um-perm-sel-w">
+                        <option value="total">Total</option>
+                        <option value="parcial">Parcial</option>
+                        <option value="nao">Não</option>
+                    </select>
+                </div>
+                <div class="um-perm-item">
+                    <div class="um-perm-left">
+                        <span class="um-perm-dot" style="background:#ef4444"></span>
+                        <div>
+                            <div class="um-perm-name">Excluir registros</div>
+                        </div>
+                    </div>
+                    <select id="cfgCanDelete" class="um-perm-sel um-perm-sel-w">
+                        <option value="nao">Não</option>
+                        <option value="parcial">Parcial</option>
+                        <option value="total">Total</option>
+                    </select>
+                </div>
+                <div class="um-perm-item">
+                    <div class="um-perm-left">
+                        <span class="um-perm-dot" style="background:#8b5cf6"></span>
+                        <div>
+                            <div class="um-perm-name">Gerenciar listas</div>
+                        </div>
+                    </div>
+                    <select id="cfgCanManageLists" class="um-perm-sel" onchange="updateSetoresButtonText()">
+                        <option value="false">Não</option>
+                        <option value="true">Sim</option>
+                    </select>
+                </div>
+                <div class="um-perm-item">
+                    <div class="um-perm-left">
+                        <span class="um-perm-dot" style="background:#06b6d4"></span>
+                        <div>
+                            <div class="um-perm-name">Gerenciar publicações</div>
+                        </div>
+                    </div>
+                    <select id="cfgCanManagePubs" class="um-perm-sel um-perm-sel-w">
+                        <option value="total">Total</option>
+                        <option value="parcial">Parcial</option>
+                        <option value="nao">Não</option>
+                    </select>
+                </div>
+                <div class="um-perm-item">
+                    <div class="um-perm-left">
+                        <span class="um-perm-dot" style="background:#10b981"></span>
+                        <div>
+                            <div class="um-perm-name">Realizar publicações</div>
+                        </div>
+                    </div>
+                    <select id="cfgCanPublish" class="um-perm-sel um-perm-sel-w">
+                        <option value="total">Total</option>
+                        <option value="parcial">Parcial</option>
+                        <option value="nao">Não</option>
+                    </select>
+                </div>
+                <div class="um-perm-item">
+                    <div class="um-perm-left">
+                        <span class="um-perm-dot" style="background:#f59e0b"></span>
+                        <div>
+                            <div class="um-perm-name">Preencher checklist</div>
+                        </div>
+                    </div>
+                    <select id="cfgCanChecklist" class="um-perm-sel um-perm-sel-w">
+                        <option value="total">Total</option>
+                        <option value="parcial">Parcial</option>
+                        <option value="nao">Não</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Abas -->
+            <div class="um-tabs-block">
+                <div class="um-perm-title"><i class="fas fa-table-columns"></i> Abas permitidas</div>
+                <div class="um-tab-chips">
+                    <label class="um-chip"><input type="checkbox" class="cfg-tab" value="dashboard" checked><span>Dashboard</span></label>
+                    <label class="um-chip"><input type="checkbox" class="cfg-tab" value="auditoria" checked><span>Auditoria</span></label>
+                    <label class="um-chip"><input type="checkbox" class="cfg-tab" value="treinamentos"><span>Treinamentos</span></label>
+                    <label class="um-chip"><input type="checkbox" class="cfg-tab" value="documentos"><span>Documentos</span></label>
+                    <label class="um-chip"><input type="checkbox" class="cfg-tab" value="atividades"><span>Atividades</span></label>
+                    <label class="um-chip"><input type="checkbox" class="cfg-tab" value="backup"><span>Backup</span></label>
+                </div>
+            </div>
+
+            <!-- Setores -->
+            <button type="button" onclick="openSetoresModal()" class="um-setores-btn">
+                <i class="fas fa-building"></i>
+                <span id="setoresButtonText">Selecionar Setores</span>
+                <i class="fas fa-chevron-right" style="margin-left:auto;opacity:.5;font-size:11px"></i>
+            </button>
+        </div>
+
+        <!-- Coluna direita: formulário -->
+        <div class="um-main">
+            <div class="um-main-body">
+
+                <div class="um-section">
+                    <div class="um-section-title">Identificação</div>
+                    <div class="um-grid">
+                        <div class="field-group um-span2">
+                            <label>Nome Completo</label>
+                            <input id="cfgname" placeholder="Nome exibido na interface" oninput="updateUsrModalAvatar()">
+                        </div>
+                        <div class="field-group">
+                            <label>Login</label>
+                            <input id="cfguser" placeholder="Ex: joao.silva">
+                        </div>
+                        <div class="field-group">
+                            <label>CPF</label>
+                            <input id="cfgCpf" placeholder="000.000.000-00" maxlength="14" oninput="maskCpfInput(this)">
+                        </div>
+                        <div class="field-group">
+                            <label>Cargo</label>
+                            <input id="cfgCargo" placeholder="Ex: Analista da Qualidade">
+                        </div>
+                        <div class="field-group">
+                            <label>Grupo / Perfil</label>
+                            <input id="cfgGrupo" placeholder="Ex: Analistas, Supervisor...">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="um-section">
+                    <div class="um-section-title">Segurança</div>
+                    <div class="um-grid">
+                        <div class="field-group um-span2">
+                            <label>Senha <span id="cfgPasswordHint" class="um-hint">(deixe em branco para não alterar)</span></label>
+                            <div class="um-pw-wrap">
+                                <input id="cfgPassword" type="password" placeholder="Senha de acesso">
+                                <button type="button" class="um-pw-eye" onclick="toggleUsrPwVis()" tabindex="-1" title="Mostrar/ocultar"><i class="fas fa-eye" id="umPwEyeIcon"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="um-footer">
+                <button class="um-btn-cancel" onclick="closeModal('modalUsuario')">Cancelar</button>
+                <button class="um-btn-save" onclick="saveuserConfig()"><i class="fas fa-floppy-disk"></i> Salvar</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
 <div class="modal" id="modalSetoresPermissoes">
     <div class="modal-content" style="width:500px; max-width:90vw;">
         <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
@@ -1412,6 +1689,7 @@
 <script src="script/render.js"></script>
 <script src="script/filters.js"></script>
 <script src="script/kanban.js"></script>
+<script src="script/calendar.js"></script>
 <script src="script/tabs.js"></script>
 <script src="script/upload.js"></script>
 <script src="script/publicacoes.js"></script>

@@ -265,8 +265,8 @@
         if (tabType === 'audit') return item.dataPrevisao;
         if (tabType === 'ativ') return item.dataConclusao;
         if (tabType === 'mant') return isBlankPeriodicity(item.intervalo) ? null : item.proxima;
-        if (tabType === 'train') return isBlankPeriodicity(item.periodicidade) ? item.dataPrevisao : item.dataPrevisao;
-        if (tabType === 'doc') return isBlankPeriodicity(item.docIntervalo) ? null : item.dataProximaRevisao;
+        if (tabType === 'train') return item.dataPrevisao || null;
+        if (tabType === 'doc') return (item.rotina && item.rotina !== 'pontual') || item.dataProximaRevisao ? item.dataProximaRevisao : null;
         return null;
     }
 

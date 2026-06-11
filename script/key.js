@@ -1,4 +1,34 @@
 ﻿// --- LÓGICA DE LOGIN (USUÁRIO + SENHA VIA BIN DE USUÁRIOS) ---
+
+// Normaliza permissão tripla: aceita bool legado ou string 'total'|'parcial'|'nao'
+function _normTriPerm(val, defaultVal) {
+    if (val === 'total' || val === 'parcial' || val === 'nao') return val;
+    // Compatibilidade com bool legado
+    if (val === true)  return 'total';
+    if (val === false) return 'nao';
+    return defaultVal || 'nao';
+}
+
+// Verifica permissão tripla para item específico
+// item=undefined → contexto sem card (ex: criar novo) → parcial libera
+function _checkTriPerm(permVal, item) {
+    if (permVal === 'total') return true;
+    if (permVal === 'nao')   return false;
+    // parcial: sem item específico (criação/listagem global) → permite
+    if (!item) return true;
+    const me = ((currentuser && (currentuser.name || currentuser.user)) || '').trim().toLowerCase();
+    if (!me) return false;
+    const resp = (item?.responsavelTecnico || item?.responsavel || '').trim().toLowerCase();
+    const rev  = (item?.revisor || '').trim().toLowerCase();
+    // responsável pode ser JSON array
+    let isResp = false;
+    try {
+        const parsed = JSON.parse(resp);
+        if (Array.isArray(parsed)) isResp = parsed.map(n => String(n).toLowerCase().trim()).includes(me);
+        else isResp = String(parsed).toLowerCase().trim() === me;
+    } catch { isResp = resp === me; }
+    return isResp || rev === me;
+}
     document.getElementById('passwordInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') checkLogin();
     });
@@ -30,10 +60,16 @@
                     name: u.name || u.Name || u.user || '',
                     user: u.user || u.User || '',
                     password: String(u.password || ''),
+                    cpf: u.cpf || '',
+                    cargo: u.cargo || '',
+                    grupo: u.grupo || '',
                     active: u.active !== false,
-                    canDeleteCards: !!u.canDeleteCards,
-                    canEditCards: u.canEditCards !== false,
+                    canDeleteCards: _normTriPerm(u.canDeleteCards, 'nao'),
+                    canEditCards:   _normTriPerm(u.canEditCards,   'total'),
                     canManageLists: !!u.canManageLists,
+                    canManagePubs:  _normTriPerm(u.canManagePubs,  'total'),
+                    canPublish: u.canPublish || 'total',
+                    canChecklist: u.canChecklist || 'total',
                     isAdmin: !!u.isAdmin || normalizedUser === 'admin'
                 };
             });
@@ -99,16 +135,16 @@
         return normalizedUser === 'admin' || currentuser.isAdmin === true;
     }
 
-    function userCanDeleteCards() {
+    function userCanDeleteCards(item) {
         if (!currentuser) return false;
         if (userIsAdmin()) return true;
-        return currentuser.canDeleteCards === true;
+        return _checkTriPerm(_normTriPerm(currentuser.canDeleteCards, 'nao'), item);
     }
 
-    function userCanEditCards() {
+    function userCanEditCards(item) {
         if (!currentuser) return false;
         if (userIsAdmin()) return true;
-        return currentuser.canEditCards === true;
+        return _checkTriPerm(_normTriPerm(currentuser.canEditCards, 'total'), item);
     }
 
     function userCanManageLists() {
@@ -116,6 +152,46 @@
         if (userIsAdmin()) return true;
         return currentuser.canManageLists === true;
     }
+
+    // ── Novas permissões ─────────────────────────────────────────
+
+    // Pode editar/excluir publicações — Total/Parcial/Não
+    window.userCanManagePubs = function(item) {
+        if (!currentuser) return false;
+        if (userIsAdmin()) return true;
+        return _checkTriPerm(_normTriPerm(currentuser.canManagePubs, 'total'), item);
+    };
+
+    // Pode publicar no card informado:
+    //   'total'   → qualquer card
+    //   'parcial' → apenas se for responsável ou revisor do card
+    //   'nao'     → nunca
+    window.userCanPublish = function(item) {
+        if (!currentuser) return false;
+        if (userIsAdmin()) return true;
+        const perm = currentuser.canPublish || 'total';
+        if (perm === 'nao') return false;
+        if (perm === 'total') return true;
+        // parcial
+        const me = (currentuser.name || currentuser.user || '').trim().toLowerCase();
+        const resp = (item?.responsavel || '').trim().toLowerCase();
+        const rev  = (item?.revisor    || '').trim().toLowerCase();
+        return !!me && (me === resp || me === rev);
+    };
+
+    // Pode preencher checklist no card informado (mesma lógica)
+    window.userCanChecklist = function(item) {
+        if (!currentuser) return false;
+        if (userIsAdmin()) return true;
+        const perm = currentuser.canChecklist || 'total';
+        if (perm === 'nao') return false;
+        if (perm === 'total') return true;
+        // parcial
+        const me = (currentuser.name || currentuser.user || '').trim().toLowerCase();
+        const resp = (item?.responsavel || '').trim().toLowerCase();
+        const rev  = (item?.revisor    || '').trim().toLowerCase();
+        return !!me && (me === resp || me === rev);
+    };
 
     function userAllowedTabs() {
         if (!currentuser) return null;
@@ -353,20 +429,113 @@
     
 
     // --- CONFIGURAÇÕES: GESTÃO DE USUÁRIOS ---
-    let editinguserIndex = null; // índice em users (exceto admin) para edição
-
-    // Variável para armazenar setores selecionados temporariamente no modal
+    let editinguserIndex = null;
     let tempSelectedSetores = [];
+    let currentUserFilter = 'ativos';
+
+    // ── Cores para avatar (determinístico por nome) ──────────────
+    function _usrAvatarColor(name) {
+        const palette = ['#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f59e0b','#10b981','#ef4444','#6366f1','#06b6d4','#f97316'];
+        let h = 0;
+        for (let i = 0; i < (name||'').length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+        return palette[Math.abs(h) % palette.length];
+    }
+
+    // ── Cores para badge de grupo ────────────────────────────────
+    function _grupoColor(grupo) {
+        if (!grupo) return { bg: '#f1f5f9', text: '#64748b' };
+        if (grupo.toLowerCase() === 'admin') return { bg: '#ccfbf1', text: '#0f766e' };
+        const opts = [
+            { bg: '#ede9fe', text: '#7c3aed' },
+            { bg: '#dbeafe', text: '#1d4ed8' },
+            { bg: '#fce7f3', text: '#be185d' },
+            { bg: '#fef3c7', text: '#b45309' },
+            { bg: '#dcfce7', text: '#166534' },
+            { bg: '#fee2e2', text: '#b91c1c' },
+            { bg: '#e0f2fe', text: '#0369a1' },
+        ];
+        let h = 0;
+        for (let i = 0; i < grupo.length; i++) h = (h * 31 + grupo.charCodeAt(i)) & 0xffffffff;
+        return opts[Math.abs(h) % opts.length];
+    }
+
+    // ── Máscara de CPF ───────────────────────────────────────────
+    window.maskCpfInput = function(el) {
+        let v = el.value.replace(/\D/g, '').slice(0, 11);
+        if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d+)/, '$1.$2.$3-$4');
+        else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d+)/, '$1.$2.$3');
+        else if (v.length > 3) v = v.replace(/(\d{3})(\d+)/, '$1.$2');
+        el.value = v;
+    };
+
+    // ── Atualiza avatar no sidebar do modal ──────────────────────
+    window.updateUsrModalAvatar = function() {
+        const name = (document.getElementById('cfgname')?.value || '').trim();
+        const initials = name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
+        const el = document.getElementById('usrModalAvatarLg');
+        if (el) {
+            el.textContent = initials;
+            el.style.background = name ? _usrAvatarColor(name) : '';
+        }
+    };
+
+    // ── Mostrar/ocultar senha ────────────────────────────────────
+    window.toggleUsrPwVis = function() {
+        const inp = document.getElementById('cfgPassword');
+        const ico = document.getElementById('umPwEyeIcon');
+        if (!inp) return;
+        const show = inp.type === 'password';
+        inp.type = show ? 'text' : 'password';
+        if (ico) { ico.className = show ? 'fas fa-eye-slash' : 'fas fa-eye'; }
+    };
+
+    // ── Filtro de status ─────────────────────────────────────────
+    window.setUserFilter = function(filter, btn) {
+        currentUserFilter = filter;
+        document.querySelectorAll('.usr-ftab').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        renderusersConfigTable();
+    };
+
+    // ── Toggle "permitir criação de conta" ───────────────────────
+    window.saveAllowSignupSetting = function(val) {
+        // Persistência futura via Firebase; por ora apenas mantém estado UI
+    };
+
+    // ── Abre modal de criação ou edição ─────────────────────────
+    window.openUserModal = function(idx) {
+        if (idx === null) {
+            editinguserIndex = null;
+            resetConfigForm();
+            document.getElementById('usrModalTitle').textContent = 'Novo Usuário';
+            const hint = document.getElementById('cfgPasswordHint');
+            if (hint) hint.style.display = 'none';
+        } else {
+            edituserConfig(idx);
+            document.getElementById('usrModalTitle').textContent = 'Editar Usuário';
+            const hint = document.getElementById('cfgPasswordHint');
+            if (hint) hint.style.display = 'inline';
+        }
+        updateUsrModalAvatar();
+        document.getElementById('modalUsuario').style.display = 'flex';
+    };
 
     function resetConfigForm() {
-        document.getElementById('cfgname').value = '';
-        document.getElementById('cfguser').value = '';
-        document.getElementById('cfgPassword').value = '';
-        document.getElementById('cfgCanEdit').value = 'true';
-        document.getElementById('cfgCanDelete').value = 'false';
-        document.getElementById('cfgCanManageLists').value = 'false';
-        document.getElementById('cfgStatus').value = 'true';
-        document.getElementById('cfgIsAdmin').value = 'false';
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+        set('cfgname', '');
+        set('cfguser', '');
+        set('cfgPassword', '');
+        set('cfgCpf', '');
+        set('cfgCargo', '');
+        set('cfgGrupo', '');
+        set('cfgCanEdit', 'true');
+        set('cfgCanDelete', 'false');
+        set('cfgCanManageLists', 'false');
+        set('cfgCanManagePubs', 'true');
+        set('cfgCanPublish', 'total');
+        set('cfgCanChecklist', 'total');
+        set('cfgStatus', 'true');
+        set('cfgIsAdmin', 'false');
         document.querySelectorAll('.cfg-tab').forEach(chk => {
             chk.checked = (chk.value === 'dashboard' || chk.value === 'auditoria');
             chk.disabled = false;
@@ -374,14 +543,6 @@
         tempSelectedSetores = [];
         updateSetoresButtonText();
         editinguserIndex = null;
-        
-        // Adiciona listener para canManageLists
-        const canManageInput = document.getElementById('cfgCanManageLists');
-        if (canManageInput) {
-            canManageInput.onchange = function() {
-                updateSetoresButtonText();
-            };
-        }
     }
 
     function openSetoresModal() {
@@ -502,101 +663,95 @@
         const tbody = document.getElementById('cfgusersTable');
         if (!tbody) return;
         tbody.innerHTML = '';
-        users
+
+        const visible = users
             .map((u, idx) => ({ u, idx }))
-            .filter(wrapper => String(wrapper.u.user).trim().toLowerCase() !== 'admin') // admin não aparece
-            .forEach(wrapper => {
-                const u = wrapper.u;
-                const idx = wrapper.idx;
-                const tabs = Array.isArray(u.tabs) && u.tabs.length > 0 ? u.tabs.join(', ') : 'Dashboard, Auditoria';
-                const editLabel = u.canEditCards === false ? 'Somente leitura' : 'Editar';
-                const statusLabel = u.active === false ? 'Inativo' : 'Ativo';
-                const isAdmin = (u.isAdmin === true || u.user === 'admin') ? 'Sim' : 'Não';
-                const canDel = u.canDeleteCards ? 'Sim' : 'Não';
-                const canManage = u.canManageLists ? 'Sim' : 'Não';
-                tbody.innerHTML += `
-                    <tr>
-                        <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${u.name || '-'}</td>
-                        <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${u.user || '-'}</td>
-                        <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${tabs}</td>
-                        <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${editLabel}</td>
-                        <td style="padding:8px; border-bottom:1px solid #f1f5f9;">${statusLabel}</td>
-                        <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:center; font-weight:${isAdmin === 'Sim' ? 'bold' : 'normal'}; color:${isAdmin === 'Sim' ? 'var(--ind-green)' : 'inherit'};">${isAdmin}</td>
-                        <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:center;">${canDel}</td>
-                        <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:center;">${canManage}</td>
-                        <td style="padding:8px; border-bottom:1px solid #f1f5f9; text-align:right;">
-                            <button class="btn-clear" style="padding:4px 8px; font-size:12px;" onclick="edituserConfig(${idx})"><i class="fas fa-pen"></i></button>
-                            <button class="btn-clear" style="padding:4px 8px; font-size:12px; color:var(--ind-red);" onclick="deleteuserConfig(${idx})"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `;
+            .filter(({ u }) => String(u.user).trim().toLowerCase() !== 'admin')
+            .filter(({ u }) => {
+                if (currentUserFilter === 'ativos') return u.active !== false;
+                if (currentUserFilter === 'inativos') return u.active === false;
+                return true;
             });
+
+        if (visible.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:36px;color:#94a3b8;font-size:13px;"><i class="fas fa-users" style="font-size:22px;display:block;margin-bottom:8px;opacity:.4"></i>Nenhum usuário encontrado.</td></tr>`;
+            return;
+        }
+
+        visible.forEach(({ u, idx }) => {
+            const name = u.name || u.user || '';
+            const initials = name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
+            const color = _usrAvatarColor(name);
+            const isYou = currentuser && String(currentuser.user).toLowerCase() === String(u.user).toLowerCase();
+            const grupo = u.grupo || (u.isAdmin ? 'Admin' : '');
+            const gc = _grupoColor(grupo);
+            const statusCls = u.active === false ? 'inativo' : 'ativo';
+            const statusLbl = u.active === false ? 'Inativo' : 'Ativo';
+            const cpf = u.cpf || '—';
+            const cargo = u.cargo || '—';
+
+            tbody.innerHTML += `
+            <tr>
+                <td>
+                    <div class="usr-cell">
+                        <div class="usr-avatar" style="background:${color}">${initials}</div>
+                        <div class="usr-cell-info">
+                            <div class="usr-cell-name">${name || '-'}${isYou ? '<span class="usr-you-badge">Você</span>' : ''}</div>
+                            <div class="usr-cell-login">${u.user || '-'}</div>
+                        </div>
+                    </div>
+                </td>
+                <td style="color:#64748b;font-size:13px">${cpf}</td>
+                <td style="color:#374151;font-size:13px">${cargo}</td>
+                <td>${grupo ? `<span class="usr-grupo-badge" style="background:${gc.bg};color:${gc.text}">${grupo}</span>` : '<span style="color:#94a3b8">—</span>'}</td>
+                <td><span class="usr-status-badge ${statusCls}">${statusLbl}</span></td>
+                <td>
+                    <div class="usr-actions">
+                        <button class="usr-action-btn edit" onclick="openUserModal(${idx})" title="Editar"><i class="fas fa-pen"></i></button>
+                        <button class="usr-action-btn del" onclick="deleteuserConfig(${idx})" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+        });
     }
 
     async function saveuserConfig() {
-        const name = document.getElementById('cfgname').value.trim();
-        const user = document.getElementById('cfguser').value.trim();
-        const password = document.getElementById('cfgPassword').value;
-        const canEdit = document.getElementById('cfgCanEdit').value === 'true';
-        const canDelete = document.getElementById('cfgCanDelete').value === 'true';
-        const canManageLists = document.getElementById('cfgCanManageLists').value === 'true';
-        const isActive = document.getElementById('cfgStatus').value !== 'false';
-        const isAdmin = document.getElementById('cfgIsAdmin').value === 'true';
-        // Coleta abas selecionadas (canManageLists não afeta mais as abas)
-        const tabs = Array.from(document.querySelectorAll('.cfg-tab'))
-            .filter(chk => chk.checked)
-            .map(chk => chk.value);
-        
-        // Coleta setores permitidos
-        let allowedSetores = [];
-        if (canManageLists) {
-            // Se tem permissão de gerenciar listas, permite todos os setores
-            allowedSetores = (masterLists.setores || []).slice();
-        } else {
-            // Usa os setores selecionados no modal
-            allowedSetores = tempSelectedSetores.slice();
-        }
+        const g = id => document.getElementById(id);
+        const name = g('cfgname').value.trim();
+        const user = g('cfguser').value.trim();
+        const password = g('cfgPassword').value;
+        const cpf = (g('cfgCpf')?.value || '').trim();
+        const cargo = (g('cfgCargo')?.value || '').trim();
+        const grupo = (g('cfgGrupo')?.value || '').trim();
+        const canEdit = g('cfgCanEdit').value || 'total';
+        const canDelete = g('cfgCanDelete').value || 'nao';
+        const canManageLists = g('cfgCanManageLists').value === 'true';
+        const canManagePubs = g('cfgCanManagePubs').value || 'total';
+        const canPublish = g('cfgCanPublish').value || 'total';
+        const canChecklist = g('cfgCanChecklist').value || 'total';
+        const isActive = g('cfgStatus').value !== 'false';
+        const isAdmin = g('cfgIsAdmin').value === 'true';
+        const tabs = Array.from(document.querySelectorAll('.cfg-tab')).filter(c => c.checked).map(c => c.value);
+        let allowedSetores = canManageLists ? (masterLists.setores || []).slice() : tempSelectedSetores.slice();
 
         if (!name || !user || (!password && editinguserIndex === null)) {
-            alert('Preencha ao menos Nome, Login e Senha (para novos usuários).');
-            return;
+            alert('Preencha ao menos Nome, Login e Senha (para novos usuários).'); return;
         }
         if (user.toLowerCase() === 'admin') {
-            alert('O usuário "admin" é reservado e não pode ser criado/alterado por aqui.');
-            return;
+            alert('O usuário "admin" é reservado e não pode ser criado/alterado por aqui.'); return;
+        }
+        if (editinguserIndex === null && users.some(u => String(u.user).trim().toLowerCase() === user.toLowerCase())) {
+            alert('Já existe um usuário com esse login.'); return;
         }
 
-        // Evita logins duplicados em novos usuários
-        if (editinguserIndex === null && users.some(u => String(u.user).trim().toLowerCase() === user.toLowerCase())) {
-            alert('Já existe um usuário com esse login.');
-            return;
-        }
+        const userData = { name, user, tabs, cpf, cargo, grupo, canEditCards: canEdit, canDeleteCards: canDelete, canManageLists, canManagePubs: canManagePubs, canPublish, canChecklist, allowedSetores, active: isActive, isAdmin };
 
         if (editinguserIndex === null) {
-            users.push({
-                name: name,
-                user: user,
-                password: password,
-                tabs,
-                canEditCards: canEdit,
-                canDeleteCards: canDelete,
-                canManageLists: canManageLists,
-                allowedSetores: allowedSetores,
-                active: isActive,
-                isAdmin: isAdmin
-            });
+            users.push({ ...userData, password });
         } else {
             const u = users[editinguserIndex];
-            u.name = name;
-            u.user = user;
+            Object.assign(u, userData);
             if (password) u.password = password;
-            u.tabs = tabs;
-            u.canEditCards = canEdit;
-            u.canDeleteCards = canDelete;
-            u.canManageLists = canManageLists;
-            u.allowedSetores = allowedSetores;
-            u.active = isActive;
-            u.isAdmin = isAdmin;
         }
 
         try {
@@ -608,6 +763,7 @@
                 applyuserPermissionsToTabs();
                 applyListManagerPermissions();
             }
+            closeModal('modalUsuario');
             resetConfigForm();
             alert('Usuário salvo com sucesso.');
         } catch (e) {
@@ -618,31 +774,28 @@
     function edituserConfig(idx) {
         const u = users[idx];
         editinguserIndex = idx;
-        document.getElementById('cfgname').value = u.name || '';
-        document.getElementById('cfguser').value = u.user || '';
-        document.getElementById('cfgPassword').value = '';
-        document.getElementById('cfgCanEdit').value = (u.canEditCards === false ? 'false' : 'true');
-        document.getElementById('cfgCanDelete').value = u.canDeleteCards ? 'true' : 'false';
-        document.getElementById('cfgCanManageLists').value = u.canManageLists ? 'true' : 'false';
-        document.getElementById('cfgStatus').value = (u.active === false ? 'false' : 'true');
-        document.getElementById('cfgIsAdmin').value = (u.isAdmin === true) ? 'true' : 'false';
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+        set('cfgname', u.name || '');
+        set('cfguser', u.user || '');
+        set('cfgPassword', '');
+        set('cfgCpf', u.cpf || '');
+        set('cfgCargo', u.cargo || '');
+        set('cfgGrupo', u.grupo || '');
+        set('cfgCanEdit',   _normTriPerm(u.canEditCards,  'total'));
+        set('cfgCanDelete', _normTriPerm(u.canDeleteCards, 'nao'));
+        set('cfgCanManageLists', u.canManageLists ? 'true' : 'false');
+        set('cfgCanManagePubs', _normTriPerm(u.canManagePubs, 'total'));
+        set('cfgCanPublish', u.canPublish || 'total');
+        set('cfgCanChecklist', u.canChecklist || 'total');
+        set('cfgStatus', u.active === false ? 'false' : 'true');
+        set('cfgIsAdmin', u.isAdmin === true ? 'true' : 'false');
         const tabs = Array.isArray(u.tabs) && u.tabs.length > 0 ? u.tabs : ['dashboard', 'auditoria'];
         document.querySelectorAll('.cfg-tab').forEach(chk => {
             chk.checked = tabs.includes(chk.value);
-            chk.disabled = false; // canManageLists não afeta mais as abas
+            chk.disabled = false;
         });
-        // Carrega setores permitidos
-        const allowedSetores = Array.isArray(u.allowedSetores) ? u.allowedSetores : [];
-        tempSelectedSetores = allowedSetores.slice();
+        tempSelectedSetores = Array.isArray(u.allowedSetores) ? u.allowedSetores.slice() : [];
         updateSetoresButtonText();
-        
-        // Adiciona listener para canManageLists (apenas para atualizar o botão de setores)
-        const canManageInput = document.getElementById('cfgCanManageLists');
-        if (canManageInput) {
-            canManageInput.onchange = function() {
-                updateSetoresButtonText();
-            };
-        }
     }
 
     async function deleteuserConfig(idx) {

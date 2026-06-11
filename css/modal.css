@@ -297,6 +297,44 @@
     color: #1d4ed8;
 }
 .ac-option strong { font-weight: 700; }
+
+/* Wrapper para campos Responsável/Revisor (sem select-wrapper) */
+.ac-direct-wrapper {
+    position: relative;
+    display: block;
+    width: 100%;
+}
+.ac-direct-wrapper .ac-input { width: 100%; box-sizing: border-box; }
+.ac-direct-wrapper .ac-dropdown { width: 100%; }
+
+/* ── Rotina de Auditoria ───────────────────────────────────── */
+.audit-weekdays {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 0;
+}
+.wd-btn {
+    padding: 5px 11px;
+    border: 1.5px solid #d1d5db;
+    border-radius: 20px;
+    background: #f9fafb;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    line-height: 1;
+}
+.wd-btn:hover { border-color: var(--primary, #0369a1); color: var(--primary, #0369a1); background: #eff6ff; }
+.wd-btn.active { background: var(--primary, #0369a1); border-color: var(--primary, #0369a1); color: #fff; }
+
+#auditDataPrevisao[readonly] {
+    background: #f1f5f9 !important;
+    cursor: not-allowed !important;
+    color: #64748b;
+}
+
 .select-wrapper button {
     padding: 0 13px;
     background: var(--grad-accent);
@@ -451,6 +489,37 @@
 }
 .anexo-del:hover { background: #fee2e2; color: #ef4444; }
 
+.anexo-rename-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    color: #9ca3af;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+    padding: 0;
+    margin-right: 2px;
+}
+.anexo-rename-btn:hover { background: #eff6ff; color: #2563eb; }
+
+.anexo-name-input {
+    flex: 1;
+    min-width: 0;
+    height: 26px;
+    padding: 0 8px;
+    border: 1.5px solid var(--primary, #0369a1);
+    border-radius: 6px;
+    font-size: 12.5px;
+    color: #1e293b;
+    outline: none;
+    background: #fff;
+}
+
 /* =========================================================================
    DRAWER TABS (Informações / Checklist / Anexos)
    ========================================================================= */
@@ -493,10 +562,62 @@
    ========================================================================= */
 .checklist-editor { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
 /* .checklist-editor-item styles moved to "Checklist editor redesign" block below */
+/* ── Checklist sub-abas (Geral / Publicação) ──────────────── */
+.cl-subtabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 0;
+}
+.cl-subtab {
+    padding: 7px 16px;
+    border: none;
+    background: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+    border-bottom: 2.5px solid transparent;
+    margin-bottom: -2px;
+    border-radius: 0;
+    transition: color .15s, border-color .15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.cl-subtab:hover { color: var(--primary, #0369a1); }
+.cl-subtab.active { color: var(--primary, #0369a1); border-bottom-color: var(--primary, #0369a1); }
+.cl-subpanel { display: none; }
+.cl-subpanel.active { display: block; }
+
+/* ── Checklist de publicação no modal de publicar ─────────── */
+.pub-cl-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #fafafa;
+    margin-bottom: 6px;
+    cursor: pointer;
+    font-size: 13.5px;
+    color: #374151;
+    transition: background .12s;
+}
+.pub-cl-item:hover { background: #f0f9ff; }
+.pub-cl-item.checked { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; text-decoration: line-through; }
+.pub-cl-item.pub-cl-required-warn { border-color: #fca5a5; background: #fff1f2; }
+.pub-cl-item input[type=checkbox] { accent-color: var(--primary, #0369a1); width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; }
+.pub-cl-required-icon { color: #ef4444; font-size: 12px; flex-shrink: 0; }
+.pub-cl-item.checked .pub-cl-required-icon { color: #22c55e; }
+
 .checklist-add-row {
     display: flex;
     gap: 8px;
     align-items: center;
+    margin-bottom: 10px;
 }
 .checklist-new-input {
     flex: 1;
@@ -893,6 +1014,9 @@
 
 /* Publicação modal */
 .pub-modal-content { max-width: 580px; }
+.req-star { color: #ef4444; font-weight: 700; margin-left: 2px; }
+.field-required-error { border-color: #ef4444 !important; background: #fff5f5 !important; }
+.field-required-error:focus { box-shadow: 0 0 0 3px rgba(239,68,68,.15) !important; }
 .pub-modal-icon {
     width: 36px;
     height: 36px;
@@ -907,6 +1031,183 @@
 }
 
 /* Ver publicação */
+/* ── Ver Publicação — Modal moderno ──────────────────────── */
+.ver-pub-modal-content {
+    max-width: 640px;
+    padding: 0 !important;
+    overflow: hidden;
+    border-radius: 16px !important;
+}
+.ver-pub-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    background: #fff;
+}
+.ver-pub-modal-header-left { display: flex; align-items: center; gap: 14px; }
+.ver-pub-modal-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.ver-pub-modal-type { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; margin-bottom: 2px; }
+.ver-pub-modal-title { font-size: 15px; font-weight: 700; color: #1e293b; line-height: 1.3; max-width: 460px; }
+.ver-pub-close-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #9ca3af; line-height: 1; padding: 4px; border-radius: 6px; }
+.ver-pub-close-btn:hover { background: #f1f5f9; color: #374151; }
+
+.ver-pub-modal-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    max-height: 65vh;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.ver-pub-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 24px;
+    border-top: 1px solid #f1f5f9;
+    background: #fafafa;
+}
+
+.ver-pub-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.ver-pub-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12.5px;
+    color: #475569;
+    font-weight: 500;
+}
+.ver-pub-meta-pill i { color: #94a3b8; font-size: 11px; }
+
+.ver-pub-section { display: flex; flex-direction: column; gap: 8px; }
+.ver-pub-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.ver-pub-section-value { font-size: 13.5px; color: #1e293b; line-height: 1.5; }
+.ver-pub-desc-block {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13.5px;
+    color: #374151;
+    line-height: 1.6;
+}
+
+/* Checklist no ver publicação */
+.ver-pub-cl-badge {
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 20px;
+    padding: 2px 8px;
+    margin-left: 6px;
+}
+.ver-pub-cl-progress {
+    height: 5px;
+    background: #e2e8f0;
+    border-radius: 99px;
+    overflow: hidden;
+}
+.ver-pub-cl-progress-bar { height: 100%; background: #22c55e; border-radius: 99px; transition: width .3s; }
+.ver-pub-cl-list { display: flex; flex-direction: column; gap: 5px; }
+.ver-pub-cl-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    font-size: 13px;
+    color: #374151;
+}
+.ver-pub-cl-item.done { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; text-decoration: line-through; }
+.ver-pub-cl-dot {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2px solid #d1d5db;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px;
+    flex-shrink: 0;
+    color: transparent;
+}
+.ver-pub-cl-item.done .ver-pub-cl-dot { background: #22c55e; border-color: #22c55e; color: #fff; }
+
+/* Anexos no ver publicação */
+.ver-pub-anexos-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.ver-pub-anexo-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    text-decoration: none;
+    color: #374151;
+    font-size: 12.5px;
+    font-weight: 500;
+    transition: background .13s, border-color .13s;
+    max-width: 220px;
+    overflow: hidden;
+}
+.ver-pub-anexo-card:hover { background: #eff6ff; border-color: #bfdbfe; }
+.ver-pub-anexo-icon { font-size: 16px; flex-shrink: 0; }
+.ver-pub-anexo-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Botão marcar todos no checklist de publicação */
+.pub-cl-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+}
+.pub-cl-toggle-all-btn {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #0369a1;
+    background: #e0f2fe;
+    border: 1px solid #bae6fd;
+    border-radius: 20px;
+    padding: 3px 10px;
+    cursor: pointer;
+    transition: background .13s;
+}
+.pub-cl-toggle-all-btn:hover { background: #bae6fd; }
+
+/* Legacy – kept for backward compat */
 .ver-pub-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1038,6 +1339,22 @@
 }
 .view-checklist-item:hover { border-color: #d1d5db; }
 .view-checklist-item.checked { background: #fff; }
+.view-checklist-item.vcl-perm-locked { opacity: 0.7; pointer-events: none; }
+.view-checklist-item.vcl-perm-locked .view-checklist-item-text { color: #9ca3af; }
+
+.vcl-perm-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px 0;
+    padding: 10px 14px;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #92400e;
+    font-weight: 500;
+}
 
 .view-checklist-item-row {
     display: flex;
@@ -1166,6 +1483,7 @@
 }
 .checklist-item-required-toggle:hover { background: #fef3c7; border-color: #f59e0b; }
 .checklist-item-required-toggle.active { background: #fef3c7; border-color: #f59e0b; color: #92400e; font-weight: 600; }
+.checklist-item-required-toggle.required-for-pub.active { background: #fef2f2; border-color: #fca5a5; color: #dc2626; font-weight: 600; }
 .checklist-item-del-btn {
     width: 26px;
     height: 26px;
@@ -1181,6 +1499,52 @@
     font-size: 16px;
 }
 .checklist-item-del-btn:hover { background: #fef2f2; }
+
+/* Área de comentário pré-preenchido no editor de checklist */
+.checklist-editor-comment-area {
+    margin-top: 6px;
+    padding: 10px 12px 10px 40px;
+    background: linear-gradient(135deg, #fffbeb 0%, #fefce8 100%);
+    border: 1.5px solid #fde68a;
+    border-radius: 8px;
+    position: relative;
+    animation: cl-comment-in .18s ease;
+}
+@keyframes cl-comment-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.checklist-editor-comment-area::before {
+    content: '\f27a'; /* fa-comment */
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    left: 12px; top: 11px;
+    font-size: 13px;
+    color: #d97706;
+}
+.checklist-editor-comment-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #fcd34d;
+    border-radius: 6px;
+    background: rgba(255,255,255,.75);
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #78350f;
+    padding: 7px 10px;
+    resize: vertical;
+    min-height: 54px;
+    outline: none;
+    transition: border-color .15s, background .15s, box-shadow .15s;
+    font-family: inherit;
+}
+.checklist-editor-comment-input::placeholder { color: #d97706; opacity: .7; }
+.checklist-editor-comment-input:focus {
+    border-color: #f59e0b;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(245,158,11,.15);
+}
 
 /* Histórico — linha de modificação de campo */
 .hd-change-row {

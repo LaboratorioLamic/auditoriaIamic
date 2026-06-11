@@ -48,18 +48,22 @@
     document.getElementById('filtersBarWrap').style.display = (isBackup || isDashboard || isConfig) ? 'none' : 'flex';
     document.getElementById('filtersBarDashboard').style.display = isDashboard ? 'flex' : 'none';
 
-    // Kanban: controla grid vs board kanban
+    // Kanban/Calendário: controla grid vs board kanban vs board calendário
     var _hasKanban = typeof KANBAN_TABS !== 'undefined' && KANBAN_TABS.includes(tab);
     var _isKanbanMode = _hasKanban && typeof isKanbanActive === 'function' && isKanbanActive(tab);
-    var _hideGrid = isBackup || isDashboard || isConfig || _isKanbanMode;
+    var _isCalMode = _hasKanban && typeof isCalendarActive === 'function' && isCalendarActive(tab);
+    var _hideGrid = isBackup || isDashboard || isConfig || _isKanbanMode || _isCalMode;
     document.getElementById('cardsGrid').style.display = _hideGrid ? 'none' : 'grid';
     var _kbBoard = document.getElementById('kanbanBoard');
     if (_kbBoard) _kbBoard.style.display = _isKanbanMode ? 'flex' : 'none';
+    var _calBoard = document.getElementById('calendarBoard');
+    if (_calBoard) _calBoard.style.display = _isCalMode ? 'block' : 'none';
 
-    // Toggle Lista/Kanban — módulos com visualização kanban
+    // Toggle Lista/Kanban/Calendário — módulos com visualização kanban
     var _kbToggle = document.getElementById('viewToggleModuleBar');
     if (_kbToggle) _kbToggle.style.display = _hasKanban ? 'flex' : 'none';
     if (typeof _kbUpdateToggleBtns === 'function') _kbUpdateToggleBtns();
+    if (typeof _calUpdateToggleBtns === 'function') _calUpdateToggleBtns();
 
     // --- Controle do botão "Novo Registro" e "Nova Coluna" ---
     var addBtn     = document.getElementById('addBtn');
@@ -112,14 +116,18 @@
     if(isDashboard) {
         renderDashboard();
     } else if(!isBackup && !isConfig) {
-        renderCards();
+        if (_isCalMode && typeof renderCalendar === 'function') {
+            renderCalendar();
+        } else {
+            renderCards();
+        }
     }
 
     // 7. Atualiza o contador de notificações para a aba
     updateNotificationCount();
 
-    // 8. Salva os filtros no localStorage
-    saveFiltersToLocalStorage();
+    // 8. Salva os filtros no Firebase
+    saveFiltersToFirebase();
 }
 
     document.getElementById('tabDashboard').onclick = () => switchTab('dashboard');

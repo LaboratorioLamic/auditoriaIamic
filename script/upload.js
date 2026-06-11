@@ -326,10 +326,20 @@ function _renderAnexosList(ctx) {
       else if (['.jpg','.jpeg','.png','.gif','.webp','.svg'].includes(ext)) iconColor = '#0891b2';
       iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;color:${iconColor};flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
     }
+    const nameEsc = name.replace(/"/g, '&quot;').replace(/</g, '&lt;');
     return `
-      <div class="anexo-saved-item">
+      <div class="anexo-saved-item" id="anexo-item-${ctx}-${i}">
         ${iconSvg}
-        <a href="${a.url}" target="_blank" class="anexo-saved-name" title="${name}">${name}</a>
+        <a href="${a.url}" target="_blank" class="anexo-saved-name anexo-name-display" title="${nameEsc}">${nameEsc}</a>
+        <input type="text" class="anexo-name-input" value="${nameEsc}" style="display:none;"
+          onblur="_commitRenameAnexo('${ctx}',${i},this)"
+          onkeydown="if(event.key==='Enter'){this.blur();}if(event.key==='Escape'){_cancelRenameAnexo('${ctx}',${i},this);}">
+        <button class="anexo-rename-btn" onclick="_startRenameAnexo('${ctx}',${i})" title="Renomear">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:11px;height:11px;">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
         <button class="anexo-del" onclick="_removeAnexoItem('${ctx}', ${i})" title="Remover">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:11px;height:11px;">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -347,6 +357,56 @@ function _removeAnexoItem(ctx, index) {
     driveDelete(item.fileId).catch(() => {});
   }
   window._anexosData[ctx].splice(index, 1);
+  _renderAnexosList(ctx);
+}
+
+function _startRenameAnexo(ctx, index) {
+  const item = document.getElementById(`anexo-item-${ctx}-${index}`);
+  if (!item) return;
+  const display = item.querySelector('.anexo-name-display');
+  const input   = item.querySelector('.anexo-name-input');
+  const renBtn  = item.querySelector('.anexo-rename-btn');
+  if (!display || !input) return;
+  display.style.display = 'none';
+  input.style.display   = '';
+  if (renBtn) renBtn.style.display = 'none';
+  input.focus();
+  input.select();
+}
+
+function _cancelRenameAnexo(ctx, index, input) {
+  const item = document.getElementById(`anexo-item-${ctx}-${index}`);
+  if (!item) return;
+  const display = item.querySelector('.anexo-name-display');
+  const renBtn  = item.querySelector('.anexo-rename-btn');
+  if (display) {
+    input.value = display.textContent;
+    display.style.display = '';
+  }
+  input.style.display = 'none';
+  if (renBtn) renBtn.style.display = '';
+}
+
+function _commitRenameAnexo(ctx, index, input) {
+  if (!window._anexosData || !window._anexosData[ctx]) return;
+  const anexo = window._anexosData[ctx][index];
+  if (!anexo) return;
+
+  const newName = input.value.trim();
+  if (!newName) { _cancelRenameAnexo(ctx, index, input); return; }
+
+  const oldName = anexo.titulo || '';
+  if (newName === oldName) { _cancelRenameAnexo(ctx, index, input); return; }
+
+  anexo.titulo = newName;
+
+  // Renomeia no Drive se tiver fileId (arquivos; links não têm arquivo no Drive)
+  if (anexo.fileId && anexo.tipo !== 'link') {
+    const ext = oldName.includes('.') ? oldName.slice(oldName.lastIndexOf('.')) : '';
+    const driveName = newName.endsWith(ext) ? newName : newName + ext;
+    renameAnexoDrive(anexo.fileId, driveName).catch(() => {});
+  }
+
   _renderAnexosList(ctx);
 }
 
