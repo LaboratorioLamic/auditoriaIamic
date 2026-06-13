@@ -132,30 +132,25 @@
                 if (!raw || !raw.includes(filters.responsavel)) return false;
             }
 
-            // Filtro por Revisor (direto)
+            // Filtro por Revisor
             if (filters.revisor) {
-                if (!(item.revisor || '').includes(filters.revisor)) return false;
+                const _rv = typeof normalizeResponsavel === 'function' ? normalizeResponsavel(item.revisor || '') : (item.revisor || '').toLowerCase();
+                if (!_rv || !_rv.includes(filters.revisor.toLowerCase())) return false;
             }
 
             // Filtro "Minhas Tarefas"
             if (filters.myTasksActive && currentuser) {
-                const me = (currentuser.name || '').toLowerCase().trim();
-                if (me) {
-                    const parseNames = raw => {
-                        try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map(n => String(n).toLowerCase().trim()) : [String(p).toLowerCase().trim()]; }
-                        catch { return [String(raw).toLowerCase().trim()]; }
-                    };
-                    const raw = type === 'mant'
-                        ? (item.responsavelTecnico || item.responsavelManutencao || '')
-                        : (item.responsavel || '');
-                    const respNames = parseNames(raw).filter(Boolean);
-                    const isResp = respNames.some(n => n === me);
-                    const isRev  = (item.revisor || '').toLowerCase().trim() === me;
-
-                    if (filters.myTasksMode === 'responsavel' && !isResp) return false;
-                    if (filters.myTasksMode === 'revisor'     && !isRev)  return false;
-                    if (filters.myTasksMode !== 'responsavel' && filters.myTasksMode !== 'revisor' && !isResp && !isRev) return false;
-                }
+                const _hasMe = (raw) => typeof _fieldHasCurrentUser === 'function'
+                    ? _fieldHasCurrentUser(raw)
+                    : (typeof normalizeResponsavel === 'function' && normalizeResponsavel(raw).includes((currentuser.name||'').toLowerCase().trim()));
+                const rawResp = type === 'mant'
+                    ? (item.responsavelTecnico || item.responsavelManutencao || '')
+                    : (item.responsavel || '');
+                const isResp = _hasMe(rawResp);
+                const isRev  = _hasMe(item.revisor || '');
+                if (filters.myTasksMode === 'responsavel' && !isResp) return false;
+                if (filters.myTasksMode === 'revisor'     && !isRev)  return false;
+                if (filters.myTasksMode !== 'responsavel' && filters.myTasksMode !== 'revisor' && !isResp && !isRev) return false;
             }
 
             // Filtro por Período (usa fbarDateMode do header)

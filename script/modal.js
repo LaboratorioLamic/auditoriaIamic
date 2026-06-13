@@ -1070,8 +1070,27 @@ function renderViewContent(id, tab) {
 }
 
 function _viewCards(pairs) {
+    const _esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const _renderVal = (val) => {
+        if (val === null || val === undefined || val === '') return '<span class="view-info-nd">ND</span>';
+        try {
+            const p = JSON.parse(val);
+            if (Array.isArray(p) && p.length > 0) {
+                // Tenta resolver cada item como ID de usuário; filtra os não-encontrados
+                const names = p.map(id => {
+                    const name = typeof resolveUserId === 'function' ? resolveUserId(String(id)) : null;
+                    return name || null;
+                }).filter(Boolean);
+                if (names.length > 0) {
+                    return `<div class="view-info-chips">${names.map(n => `<span class="view-info-chip"><i class="fas fa-user-circle"></i>${_esc(n)}</span>`).join('')}</div>`;
+                }
+                return '<span class="view-info-nd">ND</span>';
+            }
+        } catch (_) {}
+        return _esc(val) || '<span class="view-info-nd">ND</span>';
+    };
     return pairs.filter(([, val]) => val !== null && val !== undefined).map(([label, val]) =>
-        `<div class="view-info-card"><label>${label}</label><div>${val || 'ND'}</div></div>`
+        `<div class="view-info-card"><label>${label}</label><div>${_renderVal(val)}</div></div>`
     ).join('');
 }
 
@@ -2159,6 +2178,20 @@ function viewHistoryItem(id, tab, historyIndex) {
         if (drawer) drawer.classList.add('open');
         if (backdrop) backdrop.classList.add('open');
         if (fab) fab.classList.add('open');
+
+        // Mostra botão Duplicar apenas ao editar (não ao criar novo)
+        const _dupMap = {
+            'modalAuditoria':   { btn: 'btnDuplicateAudit',    id: editingAuditId },
+            'modalTreinamentos':{ btn: 'btnDuplicateTraining',  id: editingTrainId },
+            'modalAtividades':  { btn: 'btnDuplicateAtiv',      id: editingAtivId  },
+            'modalDocumentos':  { btn: 'btnDuplicateDoc',       id: editingDocId   },
+        };
+        const _dm = _dupMap[id];
+        if (_dm) {
+            const _dupBtn = document.getElementById(_dm.btn);
+            if (_dupBtn) _dupBtn.style.display = _dm.id ? '' : 'none';
+        }
+
         // Sincroniza os inputs de autocomplete com os valores atuais dos selects
         if (typeof window.acSyncAll === 'function') window.acSyncAll();
     }

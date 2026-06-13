@@ -844,16 +844,14 @@
         const filterResp = (document.getElementById(`f${prefix}Responsavel`)?.value || '').toLowerCase().trim();
         if (filterResp) {
             const itemRespRaw = (prefix === 'Mant') ? (item.responsavelTecnico || '') : (item.responsavel || '');
-            let respNames = [];
-            try {
-                const parsed = JSON.parse(itemRespRaw);
-                respNames = Array.isArray(parsed)
-                    ? parsed.map(n => String(n).toLowerCase().trim())
-                    : [String(parsed).toLowerCase().trim()];
-            } catch {
-                respNames = [String(itemRespRaw).toLowerCase().trim()];
+            // Se o filtro é "Minhas Tarefas" (modo responsável), usa _fieldHasCurrentUser para comparar por ID
+            if (typeof fbarMyTasksActive !== 'undefined' && fbarMyTasksActive && typeof fbarMyTasksMode !== 'undefined' && fbarMyTasksMode === 'responsavel') {
+                if (typeof _fieldHasCurrentUser === 'function' && !_fieldHasCurrentUser(itemRespRaw)) return false;
+            } else {
+                // Filtro manual: resolve IDs para nomes e compara
+                const normResp = typeof normalizeResponsavel === 'function' ? normalizeResponsavel(itemRespRaw) : itemRespRaw.toLowerCase();
+                if (!normResp || !normResp.includes(filterResp)) return false;
             }
-            if (!respNames.some(n => n === filterResp)) return false;
         }
     }
 
@@ -870,17 +868,8 @@
     if (prefix !== 'Mant' && !excluded.revisor) {
         const filterRev = (document.getElementById(`f${prefix}Revisor`)?.value || '').toLowerCase().trim();
         if (filterRev) {
-            const itemRevRaw = item.revisor || '';
-            let revNames = [];
-            try {
-                const parsed = JSON.parse(itemRevRaw);
-                revNames = Array.isArray(parsed)
-                    ? parsed.map(n => String(n).toLowerCase().trim())
-                    : [String(parsed).toLowerCase().trim()];
-            } catch {
-                revNames = [String(itemRevRaw).toLowerCase().trim()];
-            }
-            if (!revNames.some(n => n === filterRev)) return false;
+            const revNorm = normalizeResponsavel(item.revisor || '');
+            if (!revNorm || !revNorm.includes(filterRev)) return false;
         }
     }
 

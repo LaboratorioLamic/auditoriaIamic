@@ -142,18 +142,19 @@
 }
 
 .btn-cancel {
-    background: var(--surface-muted);
-    color: var(--text);
-    padding: 10px 20px;
-    border-radius: var(--r-md);
-    border: 1.5px solid var(--border);
+    background: #fff;
+    color: #64748b;
+    padding: 10px 22px;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
     font-weight: 600;
     cursor: pointer;
-    transition: background var(--t-fast), border-color var(--t-fast);
+    transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
     font-family: inherit;
     font-size: 13.5px;
+    letter-spacing: 0.1px;
 }
-.btn-cancel:hover { background: var(--bg-elevated); border-color: var(--border-strong); }
+.btn-cancel:hover { background: #f8fafc; border-color: #cbd5e1; color: #374151; }
 
 .btn-duplicate {
     background: #fff;
@@ -170,19 +171,23 @@
 .btn-duplicate:hover { background: #fffbeb; transform: translateY(-1px); }
 
 .btn-save {
-    background: var(--grad-accent);
+    background: linear-gradient(135deg, #1e40af, #2563eb);
     color: #fff;
-    padding: 10px 20px;
-    border-radius: var(--r-md);
+    padding: 10px 24px;
+    border-radius: 10px;
     border: none;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(37,99,235,0.28);
-    transition: filter var(--t-fast), transform var(--t-fast);
+    box-shadow: 0 4px 16px rgba(37,99,235,0.30);
+    transition: filter var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
     font-family: inherit;
     font-size: 13.5px;
+    letter-spacing: 0.1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
 }
-.btn-save:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.btn-save:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.38); }
 
 .btn-edit {
     background: var(--grad-accent);

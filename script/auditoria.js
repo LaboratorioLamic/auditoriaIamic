@@ -41,6 +41,14 @@
         const selectedDays = Array.from(document.querySelectorAll('#auditWeekdays .wd-btn.active')).map(b => Number(b.dataset.day));
         const dataPrevisaoVal = document.getElementById('auditDataPrevisao').value;
 
+        if (typeof _validateRequiredFields === 'function') {
+            if (!_validateRequiredFields([
+                { id: 'auditTitulo',    label: 'Título' },
+                { id: 'auditSetor',     label: 'Setor' },
+                { id: 'auditCategoria', label: 'Categoria' },
+            ])) return;
+        }
+
         const newItem = {
             ...item,
             titulo: document.getElementById('auditTitulo').value,
@@ -65,6 +73,13 @@
             checklist: (typeof getChecklist === 'function') ? getChecklist('audit') : (item.checklist || []),
             checklistPublicacao: (typeof getChecklistPub === 'function') ? getChecklistPub('audit') : (item.checklistPublicacao || [])
         };
+
+        const _respArr = JSON.parse(responsavel || '[]');
+        if (!_respArr.length) {
+            if (typeof showToast === 'function') showToast('É necessário ao menos um Responsável para salvar o registro.', 'error');
+            document.getElementById('ms-audit-resp-input')?.focus();
+            return;
+        }
 
         if (/conclu/i.test(newItem.status) && !canSetConcluido(newItem.checklist)) {
             if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de marcar como Concluído.', 'error');

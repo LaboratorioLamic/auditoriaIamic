@@ -39,6 +39,21 @@
         responsavel = JSON.stringify(responsavel);
         revisor     = JSON.stringify(revisor);
 
+        if (typeof _validateRequiredFields === 'function') {
+            if (!_validateRequiredFields([
+                { id: 'trainTitulo',    label: 'Título' },
+                { id: 'trainSetor',     label: 'Setor' },
+                { id: 'trainCategoria', label: 'Categoria' },
+            ])) return;
+        }
+
+        const _respArrTren = JSON.parse(responsavel || '[]');
+        if (!_respArrTren.length) {
+            if (typeof showToast === 'function') showToast('É necessário ao menos um Responsável para salvar o registro.', 'error');
+            document.getElementById('ms-tren-resp-input')?.focus();
+            return;
+        }
+
         const rotinaVal = document.getElementById('trainRotina').value;
         const freqVal = Number(document.getElementById('trainFrequencia').value) || 1;
         const selectedDays = Array.from(document.querySelectorAll('#trainWeekdays .wd-btn.active')).map(b => Number(b.dataset.day));

@@ -31,6 +31,21 @@
         responsavel = JSON.stringify(responsavel);
         revisor     = JSON.stringify(revisor);
 
+        if (typeof _validateRequiredFields === 'function') {
+            if (!_validateRequiredFields([
+                { id: 'docTitulo',    label: 'Título' },
+                { id: 'docSetor',     label: 'Setor' },
+                { id: 'docCategoria', label: 'Categoria' },
+            ])) return;
+        }
+
+        const _respArrDoc = JSON.parse(responsavel || '[]');
+        if (!_respArrDoc.length) {
+            if (typeof showToast === 'function') showToast('É necessário ao menos um Responsável para salvar o registro.', 'error');
+            document.getElementById('ms-doc-resp-input')?.focus();
+            return;
+        }
+
         const newItem = {
             ...item,
             titulo: document.getElementById('docTitulo').value,

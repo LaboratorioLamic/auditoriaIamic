@@ -329,7 +329,7 @@ function _kbRenderCard(item) {
             <div class="kanban-card-inner">
                 <div class="kanban-card-title">${_kbHtml(item.titulo || 'Sem título')}</div>
                 <div class="kanban-card-metas">
-                    ${item.responsavel ? `<span class="kanban-card-meta"><i class="fas fa-user"></i>${_kbHtml(item.responsavel)}</span>` : ''}
+                    ${item.responsavel ? `<span class="kanban-card-meta"><i class="fas fa-user"></i>${(() => { try { const p = JSON.parse(item.responsavel); if (Array.isArray(p) && p.length > 0) { const n = typeof resolveUserId === 'function' ? resolveUserId(p[0]) : null; const extra = p.length - 1; return `<span class="kb-meta-name">${_kbHtml(n || p[0] || '')}</span>` + (extra > 0 ? `<span class="card-resp-extra">+${extra}</span>` : ''); } } catch(_){} return `<span class="kb-meta-name">${_kbHtml(item.responsavel)}</span>`; })()}</span>` : ''}
                     ${dateVal ? `<span class="kanban-card-meta"><i class="fas fa-calendar-alt"></i>${_kbFormatBR(dateVal)}</span>` : ''}
                     ${item.setor ? `<span class="kanban-card-meta"><i class="fas fa-building"></i>${_kbHtml(item.setor)}</span>` : ''}
                 </div>

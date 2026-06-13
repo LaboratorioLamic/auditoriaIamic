@@ -275,6 +275,7 @@
     white-space: nowrap;
 }
 .kanban-card-meta i { width: 12px; text-align: center; color: var(--text-muted); flex-shrink: 0; }
+.kb-meta-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .kanban-card-foot {
     display: flex;
     align-items: center;

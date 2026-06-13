@@ -10,24 +10,29 @@ function _normTriPerm(val, defaultVal) {
 }
 
 // Verifica permissão tripla para item específico
+// Resolve user ID → name. Returns null if not found.
+window.resolveUserId = function(id) {
+    if (!id) return null;
+    const u = (typeof users !== 'undefined' ? users : []).find(u => u.id === String(id));
+    return u ? (u.name || u.user || '') : null;
+};
+
 // item=undefined → contexto sem card (ex: criar novo) → parcial libera
 function _checkTriPerm(permVal, item) {
     if (permVal === 'total') return true;
     if (permVal === 'nao')   return false;
-    // parcial: sem item específico (criação/listagem global) → permite
     if (!item) return true;
-    const me = ((currentuser && (currentuser.name || currentuser.user)) || '').trim().toLowerCase();
-    if (!me) return false;
-    const resp = (item?.responsavelTecnico || item?.responsavel || '').trim().toLowerCase();
-    const rev  = (item?.revisor || '').trim().toLowerCase();
-    // responsável pode ser JSON array
-    let isResp = false;
-    try {
-        const parsed = JSON.parse(resp);
-        if (Array.isArray(parsed)) isResp = parsed.map(n => String(n).toLowerCase().trim()).includes(me);
-        else isResp = String(parsed).toLowerCase().trim() === me;
-    } catch { isResp = resp === me; }
-    return isResp || rev === me;
+    const meId   = (currentuser && currentuser.id) || '';
+    const meName = ((currentuser && (currentuser.name || currentuser.user)) || '').trim().toLowerCase();
+    const _hasMe = (raw) => {
+        if (!raw) return false;
+        try {
+            const arr = JSON.parse(String(raw));
+            const vals = Array.isArray(arr) ? arr : [String(arr)];
+            return vals.some(v => { const vs = String(v).trim(); return (meId && vs === meId) || vs.toLowerCase() === meName; });
+        } catch { const vs = String(raw).trim(); return (meId && vs === meId) || vs.toLowerCase() === meName; }
+    };
+    return _hasMe(item?.responsavelTecnico || item?.responsavel) || _hasMe(item?.revisor);
 }
     document.getElementById('passwordInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') checkLogin();
@@ -74,6 +79,16 @@ function _checkTriPerm(permVal, item) {
                 };
             });
             
+            // Garante que cada usuário tem um ID único persistente
+            let _usersNeedSave = false;
+            users.forEach(u => {
+                if (!u.id) {
+                    u.id = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                    _usersNeedSave = true;
+                }
+            });
+            if (_usersNeedSave) await saveusers();
+
             // Inicializa os usuários no multi-select após carregar
             msRefreshUsers();
         } catch (error) {
@@ -169,28 +184,13 @@ function _checkTriPerm(permVal, item) {
     window.userCanPublish = function(item) {
         if (!currentuser) return false;
         if (userIsAdmin()) return true;
-        const perm = currentuser.canPublish || 'total';
-        if (perm === 'nao') return false;
-        if (perm === 'total') return true;
-        // parcial
-        const me = (currentuser.name || currentuser.user || '').trim().toLowerCase();
-        const resp = (item?.responsavel || '').trim().toLowerCase();
-        const rev  = (item?.revisor    || '').trim().toLowerCase();
-        return !!me && (me === resp || me === rev);
+        return _checkTriPerm(currentuser.canPublish || 'total', item);
     };
 
-    // Pode preencher checklist no card informado (mesma lógica)
     window.userCanChecklist = function(item) {
         if (!currentuser) return false;
         if (userIsAdmin()) return true;
-        const perm = currentuser.canChecklist || 'total';
-        if (perm === 'nao') return false;
-        if (perm === 'total') return true;
-        // parcial
-        const me = (currentuser.name || currentuser.user || '').trim().toLowerCase();
-        const resp = (item?.responsavel || '').trim().toLowerCase();
-        const rev  = (item?.revisor    || '').trim().toLowerCase();
-        return !!me && (me === resp || me === rev);
+        return _checkTriPerm(currentuser.canChecklist || 'total', item);
     };
 
     function userAllowedTabs() {
@@ -489,6 +489,26 @@ function _checkTriPerm(permVal, item) {
         if (ico) { ico.className = show ? 'fas fa-eye-slash' : 'fas fa-eye'; }
     };
 
+    window.toggleUsrPwConfirmVis = function() {
+        const inp = document.getElementById('cfgPasswordConfirm');
+        const ico = document.getElementById('umPwConfirmEyeIcon');
+        if (!inp) return;
+        const show = inp.type === 'password';
+        inp.type = show ? 'text' : 'password';
+        if (ico) { ico.className = show ? 'fas fa-eye-slash' : 'fas fa-eye'; }
+    };
+
+    window.checkPwMatch = function() {
+        const pw  = document.getElementById('cfgPassword')?.value || '';
+        const pw2 = document.getElementById('cfgPasswordConfirm')?.value || '';
+        const msg = document.getElementById('cfgPwMatchMsg');
+        if (!msg) return;
+        if (!pw && !pw2) { msg.textContent = ''; msg.className = 'um-pw-match-msg'; return; }
+        if (pw2.length === 0) { msg.textContent = ''; msg.className = 'um-pw-match-msg'; return; }
+        if (pw === pw2) { msg.textContent = '✓ Senhas coincidem'; msg.className = 'um-pw-match-msg um-pw-ok'; }
+        else            { msg.textContent = '✗ Senhas não coincidem'; msg.className = 'um-pw-match-msg um-pw-err'; }
+    };
+
     // ── Filtro de status ─────────────────────────────────────────
     window.setUserFilter = function(filter, btn) {
         currentUserFilter = filter;
@@ -525,6 +545,8 @@ function _checkTriPerm(permVal, item) {
         set('cfgname', '');
         set('cfguser', '');
         set('cfgPassword', '');
+        set('cfgPasswordConfirm', '');
+        const pwMsg = document.getElementById('cfgPwMatchMsg'); if (pwMsg) { pwMsg.textContent = ''; pwMsg.className = 'um-pw-match-msg'; }
         set('cfgCpf', '');
         set('cfgCargo', '');
         set('cfgGrupo', '');
@@ -734,29 +756,41 @@ function _checkTriPerm(permVal, item) {
         const tabs = Array.from(document.querySelectorAll('.cfg-tab')).filter(c => c.checked).map(c => c.value);
         let allowedSetores = canManageLists ? (masterLists.setores || []).slice() : tempSelectedSetores.slice();
 
+        const passwordConfirm = g('cfgPasswordConfirm')?.value || '';
+
+        const _toast = (msg, type) => typeof showToast === 'function' ? showToast(msg, type) : alert(msg);
         if (!name || !user || (!password && editinguserIndex === null)) {
-            alert('Preencha ao menos Nome, Login e Senha (para novos usuários).'); return;
+            _toast('Preencha ao menos Nome, Login e Senha (para novos usuários).', 'error'); return;
+        }
+        if (password && password !== passwordConfirm) {
+            _toast('A confirmação de senha não confere. Verifique os campos de senha.', 'error'); return;
         }
         if (user.toLowerCase() === 'admin') {
-            alert('O usuário "admin" é reservado e não pode ser criado/alterado por aqui.'); return;
+            _toast('O usuário "admin" é reservado e não pode ser criado/alterado por aqui.', 'warning'); return;
         }
         if (editinguserIndex === null && users.some(u => String(u.user).trim().toLowerCase() === user.toLowerCase())) {
-            alert('Já existe um usuário com esse login.'); return;
+            _toast('Já existe um usuário com esse login.', 'error'); return;
         }
 
         const userData = { name, user, tabs, cpf, cargo, grupo, canEditCards: canEdit, canDeleteCards: canDelete, canManageLists, canManagePubs: canManagePubs, canPublish, canChecklist, allowedSetores, active: isActive, isAdmin };
 
+        // Captura o nome anterior antes de alterar
+        let _oldName = null;
         if (editinguserIndex === null) {
             users.push({ ...userData, password });
         } else {
             const u = users[editinguserIndex];
+            _oldName = (u.name || '').trim();
             Object.assign(u, userData);
             if (password) u.password = password;
         }
 
+        // Com sistema de IDs, registros referenciam o ID do usuário — mudança de nome não requer propagação
         try {
             await saveusers();
+            if (typeof msRefreshUsers === 'function') msRefreshUsers();
             renderusersConfigTable();
+            if (typeof renderCards === 'function') renderCards();
             if (currentuser && currentuser.user && currentuser.user.toLowerCase() === user.toLowerCase()) {
                 currentuser = users[editinguserIndex === null ? users.length - 1 : editinguserIndex];
                 updateCurrentuserUI();
@@ -765,11 +799,62 @@ function _checkTriPerm(permVal, item) {
             }
             closeModal('modalUsuario');
             resetConfigForm();
-            alert('Usuário salvo com sucesso.');
+            if (typeof showToast === 'function') showToast('Usuário salvo com sucesso.', 'success');
         } catch (e) {
-            alert('Erro ao salvar usuários: ' + e.message);
+            if (typeof showToast === 'function') showToast('Erro ao salvar usuário: ' + e.message, 'error');
+            else alert('Erro ao salvar usuários: ' + e.message);
         }
     }
+
+    // Migra campos responsavel/revisor de nomes para IDs de usuário.
+    // Nomes sem correspondência a usuário cadastrado são removidos.
+    window.migrateResponsaveisToIds = async function() {
+        if (typeof users === 'undefined' || !users.length) return;
+        const nameToId = new Map();
+        users.forEach(u => { if (u.id && u.name) nameToId.set(u.name.trim().toLowerCase(), u.id); });
+        const validIds = new Set(users.map(u => u.id).filter(Boolean));
+        let anyChanged = false;
+
+        const migrateField = (val) => {
+            if (!val) return { val: '', changed: false };
+            let arr;
+            try {
+                const p = JSON.parse(val);
+                arr = Array.isArray(p) ? p.map(String).filter(Boolean) : (p ? [String(p).trim()] : []);
+            } catch { arr = [String(val).trim()].filter(Boolean); }
+            const newArr = [];
+            let changed = false;
+            for (const v of arr) {
+                if (!v.trim()) continue;
+                if (validIds.has(v)) { newArr.push(v); }
+                else {
+                    const id = nameToId.get(v.toLowerCase());
+                    if (id) { newArr.push(id); changed = true; }
+                    else { changed = true; } // inválido: remove
+                }
+            }
+            const newVal = newArr.length ? JSON.stringify(newArr) : '';
+            return { val: newVal, changed: changed || newVal !== val };
+        };
+
+        const patchArr = (arr, fields) => arr.forEach(item => {
+            fields.forEach(f => {
+                const r = migrateField(item[f]);
+                if (r.changed) { item[f] = r.val; anyChanged = true; }
+            });
+        });
+
+        patchArr(audits      || [], ['responsavel', 'revisor']);
+        patchArr(trainings   || [], ['responsavel', 'revisor']);
+        patchArr(activities  || [], ['responsavel', 'revisor']);
+        patchArr(documents   || [], ['responsavel', 'revisor']);
+        patchArr(maintenances || [], ['responsavelTecnico', 'responsavelManutencao']);
+
+        if (anyChanged) {
+            if (typeof saveAll === 'function') await saveAll();
+            if (typeof msRefreshUsers === 'function') msRefreshUsers();
+        }
+    };
 
     function edituserConfig(idx) {
         const u = users[idx];
@@ -778,6 +863,8 @@ function _checkTriPerm(permVal, item) {
         set('cfgname', u.name || '');
         set('cfguser', u.user || '');
         set('cfgPassword', '');
+        set('cfgPasswordConfirm', '');
+        const _pwMsg = document.getElementById('cfgPwMatchMsg'); if (_pwMsg) { _pwMsg.textContent = ''; _pwMsg.className = 'um-pw-match-msg'; }
         set('cfgCpf', u.cpf || '');
         set('cfgCargo', u.cargo || '');
         set('cfgGrupo', u.grupo || '');
@@ -800,15 +887,23 @@ function _checkTriPerm(permVal, item) {
 
     async function deleteuserConfig(idx) {
         const u = users[idx];
-        if (!confirm(`Deseja realmente excluir o usuário "${u.name || u.user}"?`)) return;
-        users.splice(idx, 1);
-        try {
-            await saveusers();
-            renderusersConfigTable();
-            alert('Usuário excluído com sucesso.');
-        } catch (e) {
-            alert('Erro ao excluir usuário: ' + e.message);
-        }
+        const _doDelete = async () => {
+            users.splice(idx, 1);
+            try {
+                await saveusers();
+                renderusersConfigTable();
+                if (typeof showToast === 'function') showToast('Usuário excluído com sucesso.', 'success');
+            } catch (e) {
+                if (typeof showToast === 'function') showToast('Erro ao excluir usuário: ' + e.message, 'error');
+            }
+        };
+        _showConfirmDialog({
+            title: 'Excluir Usuário',
+            message: `Deseja realmente excluir o usuário <strong>${u.name || u.user}</strong>?<br><span style="font-size:12px;color:#94a3b8;">Esta ação não pode ser desfeita.</span>`,
+            confirmLabel: 'Excluir',
+            confirmClass: 'confirm-dlg-btn--danger',
+            onConfirm: _doDelete
+        });
     }
 
     // Botão de logout ao lado do nome do usuário

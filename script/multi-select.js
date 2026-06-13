@@ -1,10 +1,8 @@
 // === MULTI-SELECT DE RESPONSÁVEIS E REVISORES ===
-// Campos: audit/ativ/tren/doc × resp/rev
-// Hidden inputs (auditResponsavel, auditRevisor, etc.) armazenam JSON array
+// Armazena IDs de usuário internamente; exibe nomes resolvidos via resolveUserId.
 
 (function () {
 
-    // Configuração de todos os campos multi-select
     var MS_FIELDS = [
         { key: 'audit-resp', hidden: 'auditResponsavel', field: 'ms-audit-resp', tags: 'ms-audit-resp-tags', input: 'ms-audit-resp-input', drop: 'ms-audit-resp-drop' },
         { key: 'audit-rev',  hidden: 'auditRevisor',     field: 'ms-audit-rev',  tags: 'ms-audit-rev-tags',  input: 'ms-audit-rev-input',  drop: 'ms-audit-rev-drop' },
@@ -16,102 +14,115 @@
         { key: 'doc-rev',    hidden: 'docRevisor',       field: 'ms-doc-rev',    tags: 'ms-doc-rev-tags',    input: 'ms-doc-rev-input',    drop: 'ms-doc-rev-drop' },
     ];
 
-    // Estado interno: key → array de nomes selecionados
+    // Estado interno: key → array de IDs selecionados
     var _state = {};
     MS_FIELDS.forEach(function (f) { _state[f.key] = []; });
 
-    // Lista global de usuários (carregada após dados disponíveis)
+    // Lista de usuários disponíveis: [{id, name}]
     var _allUsers = [];
 
+    // Resolve ID → nome para exibição
+    function _resolveName(id) {
+        var u = _allUsers.find(function(u) { return u.id === id; });
+        if (u) return u.name;
+        // fallback: tenta resolveUserId global
+        if (typeof resolveUserId === 'function') {
+            var name = resolveUserId(id);
+            if (name) return name;
+        }
+        return null;
+    }
+
+    // Atualiza _allUsers a partir do array global `users`
     window.msRefreshUsers = function () {
-        var set = new Set();
-        var sources = [
-            { arr: typeof audits     !== 'undefined' ? audits     : [], field: 'responsavel' },
-            { arr: typeof activities !== 'undefined' ? activities : [], field: 'responsavel' },
-            { arr: typeof trainings  !== 'undefined' ? trainings  : [], field: 'responsavel' },
-            { arr: typeof documents  !== 'undefined' ? documents  : [], field: 'responsavel' },
-            { arr: typeof audits     !== 'undefined' ? audits     : [], field: 'revisor' },
-            { arr: typeof activities !== 'undefined' ? activities : [], field: 'revisor' },
-            { arr: typeof trainings  !== 'undefined' ? trainings  : [], field: 'revisor' },
-            { arr: typeof documents  !== 'undefined' ? documents  : [], field: 'revisor' },
-        ];
-        sources.forEach(function (s) {
-            s.arr.forEach(function (item) {
-                var val = item[s.field];
-                if (!val) return;
-                try {
-                    var parsed = JSON.parse(val);
-                    if (Array.isArray(parsed)) { parsed.forEach(function (n) { if (n) set.add(String(n)); }); }
-                    else if (parsed) { set.add(String(parsed)); }
-                } catch (_) { set.add(String(val)); }
-            });
-        });
-        if (typeof masterLists !== 'undefined' && masterLists.responsaveis) {
-            masterLists.responsaveis.forEach(function (r) { if (r) set.add(String(r)); });
-        }
-        if (typeof users !== 'undefined') {
-            users.forEach(function (u) { if (u && u.name) set.add(String(u.name)); });
-        }
-        _allUsers = Array.from(set).filter(Boolean).sort();
+        if (typeof users === 'undefined') { _allUsers = []; return; }
+        _allUsers = users
+            .filter(function(u) { return u.id && u.name; })
+            .map(function(u) { return { id: u.id, name: u.name }; })
+            .sort(function(a, b) { return a.name.localeCompare(b.name); });
     };
 
-    // ── Renderiza as tags no campo ───────────────────────────────
-    function _renderTags(cfg) {
-        var tagsEl = document.getElementById(cfg.tags);
-        var hiddenEl = document.getElementById(cfg.hidden);
-        if (!tagsEl) return;
-        var selected = _state[cfg.key];
-        tagsEl.innerHTML = selected.map(function (name) {
-            var safe = name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            return '<span class="ms-tag">'
-                + _escHtml(name)
-                + '<button type="button" onclick="msRemove(\'' + cfg.key + '\',\'' + safe + '\')" title="Remover"><i class="fas fa-times"></i></button>'
-                + '</span>';
-        }).join('');
-        if (hiddenEl) hiddenEl.value = JSON.stringify(selected);
-    }
-
-    // ── Abre/atualiza o dropdown ─────────────────────────────────
-    function _renderDrop(cfg) {
-        var dropEl = document.getElementById(cfg.drop);
-        var inputEl = document.getElementById(cfg.input);
-        if (!dropEl) return;
-        var q = (inputEl ? inputEl.value : '').toLowerCase().trim();
-        var selected = _state[cfg.key];
-        var filtered = _allUsers.filter(function (u) {
-            return !q || u.toLowerCase().includes(q);
-        });
-        if (!filtered.length) {
-            dropEl.innerHTML = '<div class="ms-drop-empty">Nenhum usuário encontrado</div>';
-        } else {
-            dropEl.innerHTML = filtered.map(function (u) {
-                var isSel = selected.includes(u);
-                var safe = u.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                return '<div class="ms-option' + (isSel ? ' ms-option--sel' : '') + '" onclick="msToggle(\'' + cfg.key + '\',\'' + safe + '\')">'
-                    + (isSel ? '<i class="fas fa-check" style="margin-right:6px;font-size:10px;color:var(--accent)"></i>' : '<span style="width:16px;display:inline-block"></span>')
-                    + _escHtml(u)
-                    + '</div>';
-            }).join('');
-        }
-        dropEl.classList.add('ms-drop--open');
-    }
-
-    function _closeDrop(cfg) {
-        var dropEl = document.getElementById(cfg.drop);
-        if (dropEl) dropEl.classList.remove('ms-drop--open');
-        var inputEl = document.getElementById(cfg.input);
-        if (inputEl) inputEl.value = '';
+    function _initials(name) {
+        var parts = String(name || '').trim().split(/\s+/);
+        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     }
 
     function _escHtml(s) {
         return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    // Renderiza tags com nomes resolvidos a partir dos IDs
+    function _renderTags(cfg) {
+        var tagsEl = document.getElementById(cfg.tags);
+        var hiddenEl = document.getElementById(cfg.hidden);
+        if (!tagsEl) return;
+        var selected = _state[cfg.key]; // array de IDs
+        tagsEl.innerHTML = selected.map(function (id) {
+            var name = _resolveName(id) || id;
+            var safeId = id.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            return '<span class="ms-tag">'
+                + '<span class="ms-tag-avatar">' + _escHtml(_initials(name)) + '</span>'
+                + '<span>' + _escHtml(name) + '</span>'
+                + '<button type="button" onclick="msRemove(\'' + cfg.key + '\',\'' + safeId + '\')" title="Remover"><i class="fas fa-times"></i></button>'
+                + '</span>';
+        }).join('');
+        if (hiddenEl) hiddenEl.value = JSON.stringify(selected);
+    }
+
+    // Renderiza dropdown mostrando nomes, seleção armazena IDs
+    function _renderDrop(cfg) {
+        var dropEl = document.getElementById(cfg.drop);
+        var inputEl = document.getElementById(cfg.input);
+        if (!dropEl) return;
+        var q = (inputEl ? inputEl.value : '').toLowerCase().trim();
+        var selected = _state[cfg.key];
+        if (_allUsers.length === 0) msRefreshUsers();
+        var filtered = _allUsers.filter(function (u) {
+            return !q || u.name.toLowerCase().includes(q);
+        });
+        if (!filtered.length) {
+            dropEl.innerHTML = '<div class="ms-drop-empty"><i class="fas fa-user-slash" style="margin-right:6px;opacity:.5"></i>Nenhum usuário encontrado</div>';
+        } else {
+            dropEl.innerHTML = filtered.map(function (u) {
+                var isSel = selected.includes(u.id);
+                var safeId = u.id.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                return '<div class="ms-option' + (isSel ? ' ms-option--sel' : '') + '" onclick="msToggle(\'' + cfg.key + '\',\'' + safeId + '\')">'
+                    + '<span class="ms-option-avatar">' + _escHtml(_initials(u.name)) + '</span>'
+                    + '<span class="ms-option-name">' + _escHtml(u.name) + '</span>'
+                    + '<i class="fas fa-check ms-option-check"></i>'
+                    + '</div>';
+            }).join('');
+        }
+        dropEl.classList.add('ms-drop--open');
+
+        var fieldEl = document.getElementById(cfg.field);
+        if (fieldEl) {
+            var rect = fieldEl.getBoundingClientRect();
+            var spaceBelow = window.innerHeight - rect.bottom;
+            var dropH = Math.min(220, dropEl.scrollHeight || 220);
+            if (spaceBelow < dropH + 12 && rect.top > dropH + 12) {
+                dropEl.classList.add('ms-drop--above');
+            } else {
+                dropEl.classList.remove('ms-drop--above');
+            }
+        }
+    }
+
+    function _closeDrop(cfg) {
+        var dropEl = document.getElementById(cfg.drop);
+        if (dropEl) { dropEl.classList.remove('ms-drop--open'); dropEl.classList.remove('ms-drop--above'); }
+        var inputEl = document.getElementById(cfg.input);
+        if (inputEl) inputEl.value = '';
+    }
+
     // ── API pública ──────────────────────────────────────────────
-    window.msToggle = function (key, name) {
+
+    // Toggle por ID
+    window.msToggle = function (key, id) {
         var arr = _state[key];
-        var idx = arr.indexOf(name);
-        if (idx > -1) { arr.splice(idx, 1); } else { arr.push(name); }
+        var idx = arr.indexOf(id);
+        if (idx > -1) { arr.splice(idx, 1); } else { arr.push(id); }
         var cfg = MS_FIELDS.find(function (f) { return f.key === key; });
         if (!cfg) return;
         _renderTags(cfg);
@@ -120,15 +131,16 @@
         if (inputEl) inputEl.focus();
     };
 
-    window.msRemove = function (key, name) {
+    // Remove por ID
+    window.msRemove = function (key, id) {
         var arr = _state[key];
-        var idx = arr.indexOf(name);
+        var idx = arr.indexOf(id);
         if (idx > -1) arr.splice(idx, 1);
         var cfg = MS_FIELDS.find(function (f) { return f.key === key; });
         if (cfg) _renderTags(cfg);
     };
 
-    // Carrega dados salvos no hidden input para o estado interno
+    // Carrega dados do hidden input (JSON array de IDs) para o estado interno
     window.msLoad = function (key) {
         var cfg = MS_FIELDS.find(function (f) { return f.key === key; });
         if (!cfg) return;
@@ -137,15 +149,13 @@
         var val = hiddenEl.value || '';
         try {
             var parsed = JSON.parse(val);
-            _state[key] = Array.isArray(parsed) ? parsed.map(String).filter(Boolean)
-                : (parsed ? [String(parsed)] : []);
+            _state[key] = Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : (parsed ? [String(parsed)] : []);
         } catch (_) {
             _state[key] = val ? [val] : [];
         }
         _renderTags(cfg);
     };
 
-    // Reseta um campo (usado em resetModal)
     window.msReset = function (key) {
         _state[key] = [];
         var cfg = MS_FIELDS.find(function (f) { return f.key === key; });
@@ -156,19 +166,18 @@
         if (hiddenEl) hiddenEl.value = '';
     };
 
-    // Reseta todos os campos de um prefixo (audit/ativ/tren/doc)
     window.msResetPrefix = function (prefix) {
         MS_FIELDS.forEach(function (f) {
             if (f.key.startsWith(prefix + '-')) msReset(f.key);
         });
     };
 
-    // Lê o valor como array de nomes (para salvar no Firebase)
+    // Retorna array de IDs selecionados (para salvar no Firebase)
     window.msGetValue = function (key) {
         return _state[key].slice();
     };
 
-    // Define valor programaticamente (ao abrir edição)
+    // Define valor: aceita array de IDs; converte nomes legados para IDs se necessário
     window.msSetValue = function (key, value) {
         var arr;
         if (Array.isArray(value)) {
@@ -178,6 +187,16 @@
         } else {
             arr = value ? [String(value)] : [];
         }
+
+        // Converte nomes legados para IDs (para registros ainda não migrados)
+        arr = arr.map(function(item) {
+            // Já é um ID válido?
+            if (_allUsers.find(function(u) { return u.id === item; })) return item;
+            // Tenta encontrar por nome (compatibilidade legada)
+            var u = _allUsers.find(function(u) { return u.name && u.name.toLowerCase() === item.toLowerCase(); });
+            return u ? u.id : item; // mantém o valor original se não encontrar
+        }).filter(Boolean);
+
         _state[key] = arr;
         var cfg = MS_FIELDS.find(function (f) { return f.key === key; });
         if (cfg) {
@@ -187,14 +206,12 @@
         }
     };
 
-    // ── Inicializa eventos de cada campo ─────────────────────────
     function _initField(cfg) {
         var fieldEl = document.getElementById(cfg.field);
         var inputEl = document.getElementById(cfg.input);
         var dropEl  = document.getElementById(cfg.drop);
         if (!fieldEl || !inputEl || !dropEl) return;
 
-        // Clique no container abre o dropdown
         fieldEl.addEventListener('click', function (e) {
             if (e.target.closest('.ms-tag')) return;
             if (_allUsers.length === 0) msRefreshUsers();
@@ -202,26 +219,22 @@
             inputEl.focus();
         });
 
-        // Digitação filtra o dropdown
         inputEl.addEventListener('input', function () {
             _renderDrop(cfg);
         });
 
-        // Tecla Escape fecha
         inputEl.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') { _closeDrop(cfg); }
             if (e.key === 'Enter') { e.preventDefault(); }
         });
     }
 
-    // Fecha dropdowns ao clicar fora
     document.addEventListener('click', function (e) {
         if (!e.target.closest('.ms-field')) {
             MS_FIELDS.forEach(function (cfg) { _closeDrop(cfg); });
         }
     });
 
-    // Inicialização após DOM pronto
     document.addEventListener('DOMContentLoaded', function () {
         MS_FIELDS.forEach(_initField);
     });

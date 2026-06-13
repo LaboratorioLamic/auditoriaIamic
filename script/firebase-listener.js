@@ -47,6 +47,12 @@
             });
 
             await loadusers();
+            // Atualiza referência do currentuser para o objeto recém-carregado (com id)
+            if (typeof currentuser !== 'undefined' && currentuser && currentuser.user) {
+                const _refreshed = users.find(u => String(u.user).toLowerCase() === String(currentuser.user).toLowerCase());
+                if (_refreshed) currentuser = _refreshed;
+            }
+            await migrateResponsaveisToIds();
             await loadUserPrefsFromFirebase();
 
             cleanInvalidResponsaveis();

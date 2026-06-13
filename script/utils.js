@@ -1,5 +1,83 @@
 // === UTILITÁRIOS GERAIS ===
 
+// Validação de campos obrigatórios num drawer de registro
+// fields: [{ id, label, type }]  type: 'input'|'select'|'ms' (multi-select)
+// Retorna true se tudo ok, false se há erro (mostra toast e marca campo)
+window._validateRequiredFields = function(fields) {
+    let firstError = null;
+    fields.forEach(function(f) {
+        const el = document.getElementById(f.id);
+        const fg = el && el.closest('.field-group');
+        if (fg) fg.classList.remove('field-error');
+    });
+    for (const f of fields) {
+        const el = document.getElementById(f.id);
+        const empty = !el || !el.value || !el.value.trim();
+        if (empty) {
+            const fg = el && el.closest('.field-group');
+            if (fg) fg.classList.add('field-error');
+            if (!firstError) {
+                firstError = f;
+                if (el) el.focus();
+            }
+        }
+    }
+    if (firstError) {
+        showToast('O campo "' + firstError.label + '" é obrigatório.', 'error');
+        return false;
+    }
+    return true;
+};
+
+// Toast notifications
+window.showToast = function(msg, type = 'info', duration = 3500) {
+    const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        document.body.appendChild(container);
+    }
+    const el = document.createElement('div');
+    el.className = `toast-msg toast-${type}`;
+    el.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i><span>${msg}</span>`;
+    container.appendChild(el);
+    setTimeout(() => {
+        el.classList.add('toast-hide');
+        setTimeout(() => el.remove(), 250);
+    }, duration);
+};
+
+// Diálogo de confirmação elegante (substitui window.confirm)
+// _showConfirmDialog({ title, message, confirmLabel, confirmClass, cancelLabel, onConfirm })
+window._showConfirmDialog = function({ title = 'Confirmar', message = '', confirmLabel = 'Confirmar', confirmClass = '', cancelLabel = 'Cancelar', onConfirm } = {}) {
+    const existing = document.getElementById('_confirmDlgOverlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = '_confirmDlgOverlay';
+    overlay.className = 'confirm-dlg-overlay';
+    overlay.innerHTML = `
+        <div class="confirm-dlg-box">
+            <div class="confirm-dlg-icon confirm-dlg-icon--warn">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="confirm-dlg-title">${title}</div>
+            <div class="confirm-dlg-message">${message}</div>
+            <div class="confirm-dlg-actions">
+                <button class="confirm-dlg-btn confirm-dlg-btn--cancel" id="_confirmDlgCancel">${cancelLabel}</button>
+                <button class="confirm-dlg-btn ${confirmClass || 'confirm-dlg-btn--primary'}" id="_confirmDlgOk">${confirmLabel}</button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    const close = () => { overlay.classList.add('confirm-dlg-out'); setTimeout(() => overlay.remove(), 220); };
+    overlay.querySelector('#_confirmDlgCancel').addEventListener('click', close);
+    overlay.querySelector('#_confirmDlgOk').addEventListener('click', () => { close(); if (typeof onConfirm === 'function') onConfirm(); });
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+    requestAnimationFrame(() => overlay.classList.add('confirm-dlg-open'));
+};
+
 // Modal de confirmação de deleção PERMANENTE — exige digitar "SIM"
 // showPermanentDeleteConfirm({ title, message, onConfirm })
 window.showPermanentDeleteConfirm = function({ title, message, onConfirm } = {}) {
@@ -226,59 +304,33 @@ window._safeSnapshot = function(item) {
 
     // Função para limpar responsáveis que não são usuários cadastrados
     function cleanInvalidResponsaveis() {
-        // Coleta todos os nomes de usuários cadastrados
-        const validUserNames = new Set();
-        if (typeof users !== 'undefined') {
-            users.forEach(user => {
-                if (user.name) validUserNames.add(String(user.name));
-            });
-        }
-        if (masterLists.responsaveis) {
-            masterLists.responsaveis.forEach(r => validUserNames.add(String(r)));
-        }
-
-        const cleanResponsavel = (responsavel) => {
-            if (!responsavel) return '';
+        // Preserva JSON arrays de multi-select; sanitiza undefined/null para string vazia
+        const sanitizeField = (val) => {
+            if (val === null || val === undefined) return '';
+            const s = String(val);
+            if (!s.trim()) return '';
             try {
-                // Se for JSON array, pega o primeiro responsável
-                const parsed = JSON.parse(responsavel);
+                const parsed = JSON.parse(s);
                 if (Array.isArray(parsed)) {
-                    const firstValid = parsed.find(r => validUserNames.has(String(r)));
-                    return firstValid ? String(firstValid) : '';
+                    const cleaned = parsed.filter(r => r !== null && r !== undefined && String(r).trim());
+                    return cleaned.length ? JSON.stringify(cleaned) : '';
                 }
-                return validUserNames.has(String(parsed)) ? String(parsed) : '';
-            } catch {
-                return validUserNames.has(String(responsavel)) ? String(responsavel) : '';
-            }
+            } catch (_) {}
+            return s;
         };
 
-        // Limpa responsáveis em cada tipo de item
         [audits, trainings, activities, documents].forEach(arr => {
             arr.forEach(item => {
-                if (item.responsavel) {
-                    item.responsavel = cleanResponsavel(item.responsavel);
-                }
+                item.responsavel = sanitizeField(item.responsavel);
+                item.revisor     = sanitizeField(item.revisor);
             });
         });
 
         maintenances.forEach(item => {
-            if (item.responsavelTecnico) {
-                item.responsavelTecnico = cleanResponsavel(item.responsavelTecnico);
-            }
-            // responsavelManutencao é campo de texto, não precisa limpar (pode ser qualquer valor)
-        });
-
-        documents.forEach(item => {
-            if (item.responsavel) {
-                item.responsavel = cleanResponsavel(item.responsavel);
+            if (item.responsavelTecnico !== undefined) {
+                item.responsavelTecnico = sanitizeField(item.responsavelTecnico);
             }
         });
-
-        // Limpa a lista mestre de responsáveis, mantendo apenas usuários válidos
-        // COMENTADO: Não filtra responsáveis para garantir que TODOS os usuários apareçam nos modais de edição
-        // if (masterLists.responsaveis) {
-        //     masterLists.responsaveis = masterLists.responsaveis.filter(r => validUserNames.has(String(r)));
-        // }
     }
 
     function cleanMalformedItems() {
@@ -344,21 +396,27 @@ window._safeSnapshot = function(item) {
     var getDocumentDeadlineDate = item => item?.dataProximaRevisao || null;
 
     // Normalização de texto (corrige mismatch no mobile por Unicode/acentos)
-    // Função auxiliar para normalizar responsável (pode ser string, JSON array, ou null)
-    function normalizeResponsavel(responsavel) {
-        if (!responsavel) return '';
+    // Resolve um campo responsavel/revisor (JSON array de IDs) para array de nomes lowercase
+    window._parseUserField = function(raw) {
+        if (!raw) return [];
         try {
-            // Tenta fazer parse se for JSON array
-            const parsed = JSON.parse(responsavel);
-            if (Array.isArray(parsed)) {
-                // Pega apenas o primeiro responsável para compatibilidade
-                return String(parsed[0] || '').trim().toLowerCase();
-            }
-            return String(parsed || '').trim().toLowerCase();
+            const p = JSON.parse(String(raw));
+            const arr = Array.isArray(p) ? p : (p ? [String(p)] : []);
+            return arr.map(v => {
+                const name = typeof resolveUserId === 'function' ? resolveUserId(String(v)) : null;
+                return (name || String(v)).trim().toLowerCase();
+            }).filter(Boolean);
         } catch {
-            // Se não for JSON, trata como string simples
-            return String(responsavel || '').trim().toLowerCase();
+            const name = typeof resolveUserId === 'function' ? resolveUserId(String(raw)) : null;
+            return [(name || String(raw)).trim().toLowerCase()].filter(Boolean);
         }
+    };
+
+    // Função auxiliar para normalizar responsável — resolve IDs para nomes, retorna string lowercase
+    function normalizeResponsavel(responsavel) {
+        return typeof _parseUserField === 'function'
+            ? _parseUserField(responsavel).join(' ')
+            : (responsavel ? String(responsavel).trim().toLowerCase() : '');
     }
 
     function normalizeText(input) {

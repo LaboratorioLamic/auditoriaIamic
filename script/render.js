@@ -66,7 +66,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
 
     // --- RENDERIZAÇÃO DE CARDS E FILTROS ---
     function renderCards() {
-        if(currentTab === 'backup' || currentTab === 'dashboard') return;
+        if(currentTab === 'backup' || currentTab === 'dashboard' || currentTab === 'configuracoes') return;
         if (typeof applyOverdueStatuses === 'function') applyOverdueStatuses();
         if (typeof KANBAN_TABS !== 'undefined' && KANBAN_TABS.includes(currentTab) &&
             typeof isKanbanActive === 'function' && isKanbanActive()) {
@@ -144,7 +144,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                 if (sub && item.subcategoria !== sub) return false;
                 if (stat && item.status !== stat) return false;
                 if (marcador && item.marcador !== marcador) return false;
-                if (revisor && item.revisor !== revisor) return false; // CORREÇÃO: Filtro Revisor
+                if (revisor) { const _rv = normalizeResponsavel(item.revisor); if (!_rv || !_rv.includes(revisor.toLowerCase())) return false; } // CORREÇÃO: Filtro Revisor
 
                 if (responsavel) {
                     const itemResponsavel = normalizeResponsavel(item.responsavel);
@@ -258,7 +258,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                 if (cat && item.categoria !== cat) return false;
                 if (stat && item.status !== stat) return false;
                 if (marcador && item.marcador !== marcador) return false;
-                if (revisor && item.revisor !== revisor) return false;
+                if (revisor) { const _rv = normalizeResponsavel(item.revisor); if (!_rv || !_rv.includes(revisor.toLowerCase())) return false; }
 
                 if (responsavel) {
                     const itemResponsavel = normalizeResponsavel(item.responsavel);
@@ -378,7 +378,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                 if (cat && item.categoria !== cat) return false;
                 if (stat && item.status !== stat) return false;
                 if (marcador && item.marcador !== marcador) return false;
-                if (revisor && item.revisor !== revisor) return false;
+                if (revisor) { const _rv = normalizeResponsavel(item.revisor); if (!_rv || !_rv.includes(revisor.toLowerCase())) return false; }
 
                 if (responsavel) {
                     const itemResponsavel = normalizeResponsavel(item.responsavel);
@@ -503,61 +503,69 @@ function _clDonutHtml(done, total, pct, size, absolute) {
 
             let specificContent = '';
 
-                // Função para formatar responsável para exibição (suporta JSON array)
+                // Formata responsável para exibição no card (primeiro nome + badge "+N" se houver mais)
+                const _fmtEsc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
                 const formatResponsavel = (responsavel) => {
-                    if (!responsavel) return '';
+                    if (!responsavel) return { name: '', badge: '' };
                     try {
                         const p = JSON.parse(responsavel);
-                        if (Array.isArray(p)) return p.join(', ');
+                        if (Array.isArray(p) && p.length > 0) {
+                            const name = (typeof resolveUserId === 'function' ? resolveUserId(p[0]) : null) || String(p[0]);
+                            const extra = p.length - 1;
+                            return {
+                                name: _fmtEsc(name),
+                                badge: extra > 0 ? `<span class="card-resp-extra">+${extra}</span>` : ''
+                            };
+                        }
                     } catch (_) {}
-                    return String(responsavel).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                    return { name: _fmtEsc(String(responsavel)), badge: '' };
+                };
+                const _respRow = (raw) => {
+                    const { name, badge } = formatResponsavel(raw);
+                    if (!name) return '';
+                    return `<div class="card-info-row"><i class="fas fa-user"></i><span class="card-resp-wrap"><span class="card-resp-name">${name}</span>${badge}</span></div>`;
                 };
 
             if (currentTab === 'auditoria') {
-                const responsaveis = formatResponsavel(item.responsavel);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
-                    ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
+                    ${_respRow(item.responsavel)}
                     <div class="card-info-row"><i class="far fa-calendar"></i> <span>Pub: <strong>${formatBR(item.dataPublicacao)}</strong></span></div>
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>
                 `;
             } else if (currentTab === 'treinamentos') {
-                const responsaveis = formatResponsavel(item.responsavel || '');
                 const isNA = isBlankPeriodicity(item.periodicidade);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
-                    ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
+                    ${_respRow(item.responsavel)}
                     <div class="card-info-row"><i class="far fa-calendar"></i> <span>Pub: ${formatBR(item.dataPublicacao)}</span></div>
                     ${!isNA ? `<div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: ${formatBR(item.dataPrevisao)}</span></div>` : ''}
                 `;
             } else if (currentTab === 'atividades') {
-                const responsaveis = formatResponsavel(item.responsavel);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
-                    ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
+                    ${_respRow(item.responsavel)}
                     <div class="card-info-row"><i class="far fa-calendar"></i> <span>Inicio: <strong>${formatBR(item.dataInicio)}</strong></span></div>
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Fim: <strong>${formatBR(item.dataConclusao)}</strong></span></div>
                 `;
             } else if (currentTab === 'manutencao') {
                 const isNA = isBlankPeriodicity(item.intervalo);
-                const responsavelTec = formatResponsavel(item.responsavelTecnico);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
                     <div class="card-info-row"><i class="fas fa-tag"></i> <span>${item.tipo || 'ND'}</span></div>
-                    ${responsavelTec ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsavelTec}</span></div>` : ''}
+                    ${_respRow(item.responsavelTecnico)}
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isNA ? 'N/A' : formatBR(item.proxima)}</strong></span></div>
                 `;
             } else { // Documentos
                 const isPontualDoc = !item.rotina || item.rotina === 'pontual';
-                const responsaveis = formatResponsavel(item.responsavel);
                 specificContent = `
                     <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
-                    ${responsaveis ? `<div class="card-info-row"><i class="fas fa-user"></i> <span>${responsaveis}</span></div>` : ''}
+                    ${_respRow(item.responsavel)}
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isPontualDoc && !item.dataProximaRevisao ? 'N/A' : formatBR(item.dataProximaRevisao)}</strong></span></div>
                 `;
             }
@@ -657,7 +665,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                 if (cat && item.categoria !== cat) return false;
                 if (stat && item.status !== stat) return false;
                 if (marcador && item.marcador !== marcador) return false;
-                if (revisor && item.revisor !== revisor) return false;
+                if (revisor) { const _rv = normalizeResponsavel(item.revisor); if (!_rv || !_rv.includes(revisor.toLowerCase())) return false; }
                 if (responsavel) { const r = normalizeResponsavel(item.responsavel); if (!r || !r.includes(responsavel.toLowerCase())) return false; }
                 if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
                 return true;
@@ -695,7 +703,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                 if (setor && item.setor !== setor) return false;
                 if (cat && item.categoria !== cat) return false;
                 if (stat && item.status !== stat) return false;
-                if (revisor && item.revisor !== revisor) return false;
+                if (revisor) { const _rv = normalizeResponsavel(item.revisor); if (!_rv || !_rv.includes(revisor.toLowerCase())) return false; }
                 if (responsavel) { const r = normalizeResponsavel(item.responsavel); if (!r || !r.includes(responsavel.toLowerCase())) return false; }
                 if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
                 return true;
@@ -988,18 +996,31 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                 const donutHtml = clTotal > 0 ? _clDonutHtml(clDone, clTotal, clPct, 40, true) : '';
 
                 let specificContent = '';
-                const formatR = r => r ? String(r).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+                const _fmtEsc2 = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const _respRow2 = (raw) => {
+                    if (!raw) return '';
+                    try {
+                        const p = JSON.parse(raw);
+                        if (Array.isArray(p) && p.length > 0) {
+                            const name = (typeof resolveUserId === 'function' ? resolveUserId(p[0]) : null) || p[0] || '';
+                            const extra = p.length - 1;
+                            const badge = extra > 0 ? `<span class="card-resp-extra">+${extra}</span>` : '';
+                            return `<div class="card-info-row"><i class="fas fa-user"></i><span class="card-resp-wrap"><span class="card-resp-name">${_fmtEsc2(name)}</span>${badge}</span></div>`;
+                        }
+                    } catch (_) {}
+                    return `<div class="card-info-row"><i class="fas fa-user"></i><span class="card-resp-wrap"><span class="card-resp-name">${_fmtEsc2(String(raw))}</span></span></div>`;
+                };
                 if (currentTab === 'auditoria') {
                     specificContent = `<div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor||'ND'}</span></div>
-                        ${item.responsavel?`<div class="card-info-row"><i class="fas fa-user"></i> <span>${formatR(item.responsavel)}</span></div>`:''}
+                        ${_respRow2(item.responsavel)}
                         <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>`;
                 } else if (currentTab === 'treinamentos') {
                     specificContent = `<div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor||'ND'}</span></div>
-                        ${item.responsavel?`<div class="card-info-row"><i class="fas fa-user"></i> <span>${formatR(item.responsavel)}</span></div>`:''}
+                        ${_respRow2(item.responsavel)}
                         <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: ${formatBR(item.dataPrevisao)||'N/A'}</span></div>`;
                 } else if (currentTab === 'atividades') {
                     specificContent = `<div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor||'ND'}</span></div>
-                        ${item.responsavel?`<div class="card-info-row"><i class="fas fa-user"></i> <span>${formatR(item.responsavel)}</span></div>`:''}
+                        ${_respRow2(item.responsavel)}
                         <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Fim: <strong>${formatBR(item.dataConclusao)}</strong></span></div>`;
                 } else if (currentTab === 'manutencao') {
                     const isNA = isBlankPeriodicity(item.intervalo);
@@ -1009,7 +1030,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                 } else {
                     const isPontual = !item.rotina || item.rotina === 'pontual';
                     specificContent = `<div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor||'ND'}</span></div>
-                        ${item.responsavel?`<div class="card-info-row"><i class="fas fa-user"></i> <span>${formatR(item.responsavel)}</span></div>`:''}
+                        ${_respRow2(item.responsavel)}
                         <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isPontual&&!item.dataProximaRevisao?'N/A':formatBR(item.dataProximaRevisao)}</strong></span></div>`;
                 }
 
@@ -1027,8 +1048,10 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                 </div>`;
             });
 
-            html += `<div class="groups-folder open" id="${folderId}">
-                <div class="groups-folder-header" onclick="document.getElementById('${folderId}').classList.toggle('open')">
+            const _gfKey = `gf_collapsed_${currentTab}_${folderId}`;
+            const _gfCollapsed = localStorage.getItem(_gfKey) === '1';
+            html += `<div class="groups-folder${_gfCollapsed ? '' : ' open'}" id="${folderId}">
+                <div class="groups-folder-header" onclick="(function(el){el.classList.toggle('open');localStorage.setItem('gf_collapsed_${currentTab}_${folderId}',el.classList.contains('open')?'0':'1');})(document.getElementById('${folderId}'))">
                     <i class="fas fa-chevron-right groups-folder-icon"></i>
                     <span class="groups-folder-name"><i class="fas fa-folder" style="margin-right:6px;color:#f59e0b;"></i>${cat}</span>
                     <span class="groups-folder-count">${items.length}</span>
@@ -1135,27 +1158,21 @@ function _clDonutHtml(done, total, pct, size, absolute) {
 
             // 3.3 Filtro por Revisor
             if (fRevisor) {
-                const itemRevisor = item.revisor || '';
-                if (!itemRevisor || !itemRevisor.includes(fRevisor)) return false;
+                const _rv = normalizeResponsavel(item.revisor || '');
+                if (!_rv || !_rv.includes(fRevisor.toLowerCase())) return false;
             }
 
             // 3.4 Filtro "Minhas Tarefas" do dashboard
             if (fDashMy && currentuser) {
-                const me = (currentuser.name || '').toLowerCase().trim();
-                if (me) {
-                    if (fDashMyMode === 'responsavel') {
-                        const raw = item.responsavelTecnico || item.responsavel || '';
-                        const names = (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map(n=>String(n).toLowerCase().trim()) : [String(p).toLowerCase().trim()]; } catch { return [String(raw).toLowerCase().trim()]; } })().filter(Boolean);
-                        if (!names.some(n => n === me)) return false;
-                    } else if (fDashMyMode === 'revisor') {
-                        if ((item.revisor || '').toLowerCase().trim() !== me) return false;
-                    } else {
-                        const raw = item.responsavelTecnico || item.responsavel || '';
-                        const names = (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map(n=>String(n).toLowerCase().trim()) : [String(p).toLowerCase().trim()]; } catch { return [String(raw).toLowerCase().trim()]; } })().filter(Boolean);
-                        const isResp = names.some(n => n === me);
-                        const isRev  = (item.revisor || '').toLowerCase().trim() === me;
-                        if (!isResp && !isRev) return false;
-                    }
+                const _hasMe = (raw) => typeof _fieldHasCurrentUser === 'function'
+                    ? _fieldHasCurrentUser(raw)
+                    : _parseUserField(raw).some(n => n === (currentuser.name||'').toLowerCase().trim());
+                if (fDashMyMode === 'responsavel') {
+                    if (!_hasMe(item.responsavelTecnico || item.responsavel || '')) return false;
+                } else if (fDashMyMode === 'revisor') {
+                    if (!_hasMe(item.revisor || '')) return false;
+                } else {
+                    if (!_hasMe(item.responsavelTecnico || item.responsavel || '') && !_hasMe(item.revisor || '')) return false;
                 }
             }
 
@@ -1503,23 +1520,17 @@ function _clDonutHtml(done, total, pct, size, absolute) {
             if (_fArea && item.type !== _fArea) return false;
             if (_fCat  && item.categoria !== _fCat) return false;
             if (_fResp) {
-                const raw = item.responsavelTecnico || item.responsavel || '';
-                const names = (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map(n=>String(n).toLowerCase().trim()) : [String(p).toLowerCase().trim()]; } catch { return [String(raw).toLowerCase().trim()]; } })().filter(Boolean);
-                if (!names.some(n => n.includes(_fResp.toLowerCase()))) return false;
+                const _r = normalizeResponsavel(item.responsavelTecnico || item.responsavel || '');
+                if (!_r || !_r.includes(_fResp.toLowerCase())) return false;
             }
-            if (_fMyTasks && _me) {
+            if (_fMyTasks && currentuser) {
+                const _hasMe = (raw) => typeof _fieldHasCurrentUser === 'function' ? _fieldHasCurrentUser(raw) : false;
                 if (_fMyMode === 'revisor') {
-                    if ((item.revisor || '').toLowerCase().trim() !== _me) return false;
+                    if (!_hasMe(item.revisor || '')) return false;
                 } else if (_fMyMode === 'responsavel') {
-                    const raw = item.responsavelTecnico || item.responsavel || '';
-                    const names = (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map(n=>String(n).toLowerCase().trim()) : [String(p).toLowerCase().trim()]; } catch { return [String(raw).toLowerCase().trim()]; } })().filter(Boolean);
-                    if (!names.some(n => n === _me)) return false;
+                    if (!_hasMe(item.responsavelTecnico || item.responsavel || '')) return false;
                 } else {
-                    const raw = item.responsavelTecnico || item.responsavel || '';
-                    const names = (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map(n=>String(n).toLowerCase().trim()) : [String(p).toLowerCase().trim()]; } catch { return [String(raw).toLowerCase().trim()]; } })().filter(Boolean);
-                    const isResp = names.some(n => n === _me);
-                    const isRev  = (item.revisor || '').toLowerCase().trim() === _me;
-                    if (!isResp && !isRev) return false;
+                    if (!_hasMe(item.responsavelTecnico || item.responsavel || '') && !_hasMe(item.revisor || '')) return false;
                 }
             }
             if (!item.dateField) return false;
@@ -2127,6 +2138,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         const allowedTabs    = userAllowedTabs();
         const allowedSetores = getAllowedSetores();
         const fArea = document.getElementById('fDashArea')?.value || '';
+        const _isMeRevisor = (raw) => typeof _fieldHasCurrentUser === 'function' ? _fieldHasCurrentUser(raw) : (normalizeResponsavel(raw).includes(me));
 
         const sources = [
             { arr: typeof audits     !== 'undefined' ? audits     : [], tab: 'auditoria',   typeKey: 'audit', tabLabel: 'auditoria',    dateField: 'dataPublicacao' },
@@ -2146,8 +2158,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                 if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return;
                 // Exclui concluídos e cancelados
                 if (canceledTypes.has(item.status)) return;
-                const revisor = (item.revisor || '').toLowerCase().trim();
-                if (!me || !revisor || !revisor.includes(me)) return;
+                if (!me || !_isMeRevisor(item.revisor || '')) return;
                 items.push({ item, tab: tabLabel, typeKey, dateField });
             });
         });

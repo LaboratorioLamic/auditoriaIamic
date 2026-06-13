@@ -755,6 +755,7 @@
     <i class="fas fa-plus"></i>
 </button>
 <div class="form-drawer-backdrop" id="formDrawerBackdrop" onclick="closeFormDrawer()"></div>
+<div id="toastContainer"></div>
 
 <!-- DRAWER AUDITORIA -->
 <div class="form-drawer" id="modalAuditoria">
@@ -784,8 +785,9 @@
             </div>
             <div class="field-group full-width">
                 <label>Descrição</label>
-                <textarea id="auditDescricao" rows="2"></textarea>
+                <textarea id="auditDescricao" rows="2" placeholder="Descrição opcional..."></textarea>
             </div>
+            <div class="form-section-divider full-width"><span>Classificação</span></div>
             <div class="field-group">
                 <label>Setor</label>
                 <div class="select-wrapper">
@@ -808,12 +810,24 @@
                 </div>
             </div>
             <div class="field-group">
+                <label>Marcador</label>
+                <div class="select-wrapper">
+                    <select id="auditMarcador"></select>
+                    <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="form-section-divider full-width"><span>Datas &amp; Prazo</span></div>
+            <div class="field-group">
                 <label>Data Publicação</label>
                 <input type="date" id="auditDataPublicacao">
             </div>
             <div class="field-group">
                 <label>Data Previsão</label>
                 <input type="date" id="auditDataPrevisao">
+            </div>
+            <div class="field-group">
+                <label>Alerta (Dias antes)</label>
+                <input type="number" id="auditFlagDias" value="7">
             </div>
             <div class="field-group">
                 <label>Rotina</label>
@@ -842,34 +856,24 @@
                     <button type="button" class="wd-btn" data-day="6" onclick="toggleAuditWeekday(this)">Sáb</button>
                 </div>
             </div>
-            <div class="field-group">
-                <label>Responsáveis</label>
+            <div class="form-section-divider full-width"><span>Responsabilidade</span></div>
+            <div class="field-group full-width">
+                <label>Responsáveis <span class="req-star">*</span></label>
                 <div class="ms-field" id="ms-audit-resp">
+                    <input class="ms-input" id="ms-audit-resp-input" type="text" placeholder="Buscar e adicionar responsável..." autocomplete="off">
                     <div class="ms-tags" id="ms-audit-resp-tags"></div>
-                    <input class="ms-input" id="ms-audit-resp-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
                     <div class="ms-dropdown" id="ms-audit-resp-drop"></div>
                 </div>
                 <input type="hidden" id="auditResponsavel">
             </div>
-            <div class="field-group">
+            <div class="field-group full-width">
                 <label>Revisores</label>
                 <div class="ms-field" id="ms-audit-rev">
+                    <input class="ms-input" id="ms-audit-rev-input" type="text" placeholder="Buscar e adicionar revisor..." autocomplete="off">
                     <div class="ms-tags" id="ms-audit-rev-tags"></div>
-                    <input class="ms-input" id="ms-audit-rev-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
                     <div class="ms-dropdown" id="ms-audit-rev-drop"></div>
                 </div>
                 <input type="hidden" id="auditRevisor">
-            </div>
-            <div class="field-group">
-                <label>Alerta (Dias antes)</label>
-                <input type="number" id="auditFlagDias" value="7">
-            </div>
-            <div class="field-group">
-                <label>Marcador</label>
-                <div class="select-wrapper">
-                    <select id="auditMarcador"></select>
-                    <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
-                </div>
             </div>
             <div class="field-group full-width sched-status-wrap" id="auditSchedStatusWrap">
                 <div class="sched-box">
@@ -977,9 +981,9 @@
         </div>
     </div><!-- /form-drawer-body -->
     <div class="form-drawer-footer">
-        <button class="btn-duplicate" onclick="duplicateAudit()">Duplicar</button>
+        <button id="btnDuplicateAudit" class="btn-duplicate" onclick="duplicateAudit()">Duplicar</button>
         <button class="btn-cancel" onclick="closeFormDrawer()">Cancelar</button>
-        <button class="btn-save" onclick="saveAudit()">Salvar Registro</button>
+        <button class="btn-save" onclick="saveAudit()"><i class="fas fa-floppy-disk"></i> Salvar Registro</button>
     </div>
 </div>
 
@@ -1011,8 +1015,9 @@
             </div>
             <div class="field-group full-width">
                 <label>Descrição</label>
-                <textarea id="trainDescricao" rows="2"></textarea>
+                <textarea id="trainDescricao" rows="2" placeholder="Descrição opcional..."></textarea>
             </div>
+            <div class="form-section-divider full-width"><span>Classificação</span></div>
             <div class="field-group">
                 <label>Setor</label>
                 <div class="select-wrapper">
@@ -1035,12 +1040,24 @@
                 </div>
             </div>
             <div class="field-group">
+                <label>Marcador</label>
+                <div class="select-wrapper">
+                    <select id="trainMarcador"></select>
+                    <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="form-section-divider full-width"><span>Datas &amp; Prazo</span></div>
+            <div class="field-group">
                 <label>Data Publicação</label>
                 <input type="date" id="trainDataPublicacao" onchange="onTrainRotinaChange()">
             </div>
             <div class="field-group">
                 <label>Data Previsão</label>
                 <input type="date" id="trainDataPrevisao">
+            </div>
+            <div class="field-group">
+                <label>Alerta (Dias antes)</label>
+                <input type="number" id="trainFlagDias" value="7">
             </div>
             <div class="field-group">
                 <label>Rotina</label>
@@ -1069,34 +1086,24 @@
                     <button type="button" class="wd-btn" data-day="6" onclick="toggleTrainWeekday(this)">Sáb</button>
                 </div>
             </div>
-            <div class="field-group">
-                <label>Responsáveis</label>
+            <div class="form-section-divider full-width"><span>Responsabilidade</span></div>
+            <div class="field-group full-width">
+                <label>Responsáveis <span class="req-star">*</span></label>
                 <div class="ms-field" id="ms-tren-resp">
+                    <input class="ms-input" id="ms-tren-resp-input" type="text" placeholder="Buscar e adicionar responsável..." autocomplete="off">
                     <div class="ms-tags" id="ms-tren-resp-tags"></div>
-                    <input class="ms-input" id="ms-tren-resp-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
                     <div class="ms-dropdown" id="ms-tren-resp-drop"></div>
                 </div>
                 <input type="hidden" id="trainResponsavel">
             </div>
-            <div class="field-group">
+            <div class="field-group full-width">
                 <label>Revisores</label>
                 <div class="ms-field" id="ms-tren-rev">
+                    <input class="ms-input" id="ms-tren-rev-input" type="text" placeholder="Buscar e adicionar revisor..." autocomplete="off">
                     <div class="ms-tags" id="ms-tren-rev-tags"></div>
-                    <input class="ms-input" id="ms-tren-rev-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
                     <div class="ms-dropdown" id="ms-tren-rev-drop"></div>
                 </div>
                 <input type="hidden" id="trainRevisor">
-            </div>
-            <div class="field-group">
-                <label>Alerta (Dias antes)</label>
-                <input type="number" id="trainFlagDias" value="7">
-            </div>
-            <div class="field-group">
-                <label>Marcador</label>
-                <div class="select-wrapper">
-                    <select id="trainMarcador"></select>
-                    <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
-                </div>
             </div>
             <div class="field-group full-width sched-status-wrap" id="trainSchedStatusWrap">
                 <div class="sched-box">
@@ -1204,9 +1211,9 @@
         </div>
     </div><!-- /form-drawer-body -->
     <div class="form-drawer-footer">
-        <button class="btn-duplicate" onclick="duplicateTraining()">Duplicar</button>
+        <button id="btnDuplicateTraining" class="btn-duplicate" onclick="duplicateTraining()">Duplicar</button>
         <button class="btn-cancel" onclick="closeFormDrawer()">Cancelar</button>
-        <button class="btn-save" onclick="saveTraining()">Salvar Registro</button>
+        <button class="btn-save" onclick="saveTraining()"><i class="fas fa-floppy-disk"></i> Salvar Registro</button>
     </div>
 </div>
 
@@ -1234,12 +1241,13 @@
         <div class="form-grid">
             <div class="field-group full-width">
                 <label>Título</label>
-                <input id="ativTitulo" placeholder="Ex: Treinamento de Segurança">
+                <input id="ativTitulo" placeholder="Ex: Revisão de Procedimento Interno">
             </div>
             <div class="field-group full-width">
                 <label>Descrição</label>
-                <textarea id="ativDescricao" rows="2"></textarea>
+                <textarea id="ativDescricao" rows="2" placeholder="Descrição opcional..."></textarea>
             </div>
+            <div class="form-section-divider full-width"><span>Classificação</span></div>
             <div class="field-group">
                 <label>Setor</label>
                 <div class="select-wrapper">
@@ -1262,6 +1270,14 @@
                 </div>
             </div>
             <div class="field-group">
+                <label>Marcador</label>
+                <div class="select-wrapper">
+                    <select id="ativMarcador"></select>
+                    <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="form-section-divider full-width"><span>Datas &amp; Prazo</span></div>
+            <div class="field-group">
                 <label>Data Início</label>
                 <input type="date" id="ativDataInicio">
             </div>
@@ -1270,33 +1286,27 @@
                 <input type="date" id="ativDataConclusao">
             </div>
             <div class="field-group">
-                <label>Responsáveis</label>
+                <label>Alerta (Dias antes)</label>
+                <input type="number" id="ativFlagDias" value="3">
+            </div>
+            <div class="form-section-divider full-width"><span>Responsabilidade</span></div>
+            <div class="field-group full-width">
+                <label>Responsáveis <span class="req-star">*</span></label>
                 <div class="ms-field" id="ms-ativ-resp">
+                    <input class="ms-input" id="ms-ativ-resp-input" type="text" placeholder="Buscar e adicionar responsável..." autocomplete="off">
                     <div class="ms-tags" id="ms-ativ-resp-tags"></div>
-                    <input class="ms-input" id="ms-ativ-resp-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
                     <div class="ms-dropdown" id="ms-ativ-resp-drop"></div>
                 </div>
                 <input type="hidden" id="ativResponsavel">
             </div>
-            <div class="field-group">
+            <div class="field-group full-width">
                 <label>Revisores</label>
                 <div class="ms-field" id="ms-ativ-rev">
+                    <input class="ms-input" id="ms-ativ-rev-input" type="text" placeholder="Buscar e adicionar revisor..." autocomplete="off">
                     <div class="ms-tags" id="ms-ativ-rev-tags"></div>
-                    <input class="ms-input" id="ms-ativ-rev-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
                     <div class="ms-dropdown" id="ms-ativ-rev-drop"></div>
                 </div>
                 <input type="hidden" id="ativRevisor">
-            </div>
-            <div class="field-group">
-                <label>Alerta (Dias antes)</label>
-                <input type="number" id="ativFlagDias" value="3">
-            </div>
-            <div class="field-group">
-                <label>Marcador</label>
-                <div class="select-wrapper">
-                    <select id="ativMarcador"></select>
-                    <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
-                </div>
             </div>
         </div>
         </div><!-- /ativ-panel-info -->
@@ -1348,9 +1358,9 @@
         </div>
     </div><!-- /form-drawer-body -->
     <div class="form-drawer-footer">
-        <button class="btn-duplicate" onclick="duplicateAtividade()">Duplicar</button>
+        <button id="btnDuplicateAtiv" class="btn-duplicate" onclick="duplicateAtividade()">Duplicar</button>
         <button class="btn-cancel" onclick="closeFormDrawer()">Cancelar</button>
-        <button class="btn-save" onclick="saveAtividade()">Salvar Registro</button>
+        <button class="btn-save" onclick="saveAtividade()"><i class="fas fa-floppy-disk"></i> Salvar Registro</button>
     </div>
 </div>
 
@@ -1377,13 +1387,14 @@
         <div class="drawer-tab-panel active" id="doc-panel-info">
         <div class="form-grid">
             <div class="field-group full-width">
-                <label>Título/Nome do Documento</label>
+                <label>Título / Nome do Documento</label>
                 <input id="docTitulo" placeholder="Ex: Procedimento Operacional Padrão 01">
             </div>
             <div class="field-group full-width">
-                <label>Descrição/Resumo</label>
-                <textarea id="docDescricao" rows="2"></textarea>
+                <label>Descrição / Resumo</label>
+                <textarea id="docDescricao" rows="2" placeholder="Descrição opcional..."></textarea>
             </div>
+            <div class="form-section-divider full-width"><span>Classificação</span></div>
             <div class="field-group">
                 <label>Setor</label>
                 <div class="select-wrapper">
@@ -1406,12 +1417,24 @@
                 </div>
             </div>
             <div class="field-group">
+                <label>Marcador</label>
+                <div class="select-wrapper">
+                    <select id="docMarcador"></select>
+                    <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="form-section-divider full-width"><span>Datas &amp; Revisão</span></div>
+            <div class="field-group">
                 <label>Data de Criação</label>
                 <input type="date" id="docDataCriacao" onchange="onDocRotinaChange()">
             </div>
             <div class="field-group">
                 <label>Próxima Revisão</label>
                 <input type="date" id="docDataProximaRevisao">
+            </div>
+            <div class="field-group">
+                <label>Alerta (Dias antes)</label>
+                <input type="number" id="docFlagDias" value="30">
             </div>
             <div class="field-group">
                 <label>Rotina</label>
@@ -1440,34 +1463,24 @@
                     <button type="button" class="wd-btn" data-day="6" onclick="toggleDocWeekday(this)">Sáb</button>
                 </div>
             </div>
-            <div class="field-group">
-                <label>Responsáveis</label>
+            <div class="form-section-divider full-width"><span>Responsabilidade</span></div>
+            <div class="field-group full-width">
+                <label>Responsáveis <span class="req-star">*</span></label>
                 <div class="ms-field" id="ms-doc-resp">
+                    <input class="ms-input" id="ms-doc-resp-input" type="text" placeholder="Buscar e adicionar responsável..." autocomplete="off">
                     <div class="ms-tags" id="ms-doc-resp-tags"></div>
-                    <input class="ms-input" id="ms-doc-resp-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
                     <div class="ms-dropdown" id="ms-doc-resp-drop"></div>
                 </div>
                 <input type="hidden" id="docResponsavel">
             </div>
-            <div class="field-group">
+            <div class="field-group full-width">
                 <label>Revisores</label>
                 <div class="ms-field" id="ms-doc-rev">
+                    <input class="ms-input" id="ms-doc-rev-input" type="text" placeholder="Buscar e adicionar revisor..." autocomplete="off">
                     <div class="ms-tags" id="ms-doc-rev-tags"></div>
-                    <input class="ms-input" id="ms-doc-rev-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
                     <div class="ms-dropdown" id="ms-doc-rev-drop"></div>
                 </div>
                 <input type="hidden" id="docRevisor">
-            </div>
-            <div class="field-group">
-                <label>Alerta (Dias antes da revisão)</label>
-                <input type="number" id="docFlagDias" value="30">
-            </div>
-            <div class="field-group">
-                <label>Marcador</label>
-                <div class="select-wrapper">
-                    <select id="docMarcador"></select>
-                    <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
-                </div>
             </div>
             <div class="field-group full-width sched-status-wrap" id="docSchedStatusWrap">
                 <div class="sched-box">
@@ -1575,9 +1588,9 @@
         </div>
     </div><!-- /form-drawer-body -->
     <div class="form-drawer-footer">
-        <button class="btn-duplicate" onclick="duplicateDocumento()">Duplicar</button>
+        <button id="btnDuplicateDoc" class="btn-duplicate" onclick="duplicateDocumento()">Duplicar</button>
         <button class="btn-cancel" onclick="closeFormDrawer()">Cancelar</button>
-        <button class="btn-save" onclick="saveDocumento()">Salvar Registro</button>
+        <button class="btn-save" onclick="saveDocumento()"><i class="fas fa-floppy-disk"></i> Salvar Registro</button>
     </div>
 </div>
 
@@ -2017,12 +2030,20 @@
                 <div class="um-section">
                     <div class="um-section-title">Segurança</div>
                     <div class="um-grid">
-                        <div class="field-group um-span2">
-                            <label>Senha <span id="cfgPasswordHint" class="um-hint">(deixe em branco para não alterar)</span></label>
+                        <div class="field-group">
+                            <label>Senha <span id="cfgPasswordHint" class="um-hint">(em branco = não alterar)</span></label>
                             <div class="um-pw-wrap">
-                                <input id="cfgPassword" type="password" placeholder="Senha de acesso">
+                                <input id="cfgPassword" type="password" placeholder="Nova senha" oninput="checkPwMatch()">
                                 <button type="button" class="um-pw-eye" onclick="toggleUsrPwVis()" tabindex="-1" title="Mostrar/ocultar"><i class="fas fa-eye" id="umPwEyeIcon"></i></button>
                             </div>
+                        </div>
+                        <div class="field-group">
+                            <label>Confirmar Senha</label>
+                            <div class="um-pw-wrap">
+                                <input id="cfgPasswordConfirm" type="password" placeholder="Repita a senha" oninput="checkPwMatch()">
+                                <button type="button" class="um-pw-eye" onclick="toggleUsrPwConfirmVis()" tabindex="-1" title="Mostrar/ocultar"><i class="fas fa-eye" id="umPwConfirmEyeIcon"></i></button>
+                            </div>
+                            <span id="cfgPwMatchMsg" class="um-pw-match-msg"></span>
                         </div>
                     </div>
                 </div>

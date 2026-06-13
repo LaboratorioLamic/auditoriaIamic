@@ -76,31 +76,31 @@ function _syncPeopleBtnsVisibility() {
     // NOTE: não limpar filtros aqui — toggleMyTasks controla quando setar/limpar
 }
 
-// Extrai todos os nomes de um campo responsável (string simples ou JSON array)
+// Extrai todos os nomes de um campo responsável (resolve IDs para nomes)
 function _parseAllNames(raw) {
-    if (!raw) return [];
+    return typeof _parseUserField === 'function' ? _parseUserField(raw) : [];
+}
+
+// Verifica se um campo (JSON array de IDs ou nomes) referencia o usuário atual
+function _fieldHasCurrentUser(raw) {
+    if (!raw || !currentuser) return false;
+    const meId   = currentuser.id || '';
+    const meName = (currentuser.name || '').trim().toLowerCase();
     try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed.map(n => String(n).toLowerCase().trim()).filter(Boolean);
-        return [String(parsed).toLowerCase().trim()].filter(Boolean);
-    } catch {
-        return [String(raw).toLowerCase().trim()].filter(Boolean);
-    }
+        const arr = JSON.parse(String(raw));
+        const vals = Array.isArray(arr) ? arr : [String(arr)];
+        return vals.some(v => { const vs = String(v).trim(); return (meId && vs === meId) || vs.toLowerCase() === meName; });
+    } catch { const vs = String(raw).trim(); return (meId && vs === meId) || vs.toLowerCase() === meName; }
 }
 
 // Passa no filtro "Minhas Tarefas"
 function passesFbarMyTasks(item) {
     if (!fbarMyTasksActive || !currentuser) return true;
-    const me = (currentuser.name || '').toLowerCase().trim();
-    if (!me) return true;
-
-    const respNames = _parseAllNames(item.responsavelTecnico || item.responsavel || '');
-    const isResp = respNames.some(n => n === me);
-    const isRev  = (item.revisor || '').toLowerCase().trim() === me;
-
+    const isResp = _fieldHasCurrentUser(item.responsavelTecnico || item.responsavel || '');
+    const isRev  = _fieldHasCurrentUser(item.revisor || '');
     if (fbarMyTasksMode === 'responsavel') return isResp;
     if (fbarMyTasksMode === 'revisor')     return isRev;
-    return isResp || isRev; // 'all'
+    return isResp || isRev;
 }
 
 // ── FILTROS POR PESSOA ───────────────────────────────────────────────────────
@@ -147,11 +147,9 @@ function renderPeopleFilterList() {
     items.forEach(item => {
         if (type === 'responsavel') {
             const raw = item.responsavelTecnico || item.responsavel || '';
-            const n = normalizeResponsavel(raw);
-            if (n) names.add(n);
+            _parseAllNames(raw).forEach(n => names.add(n));
         } else {
-            const rev = (item.revisor || '').trim();
-            if (rev) names.add(rev.toLowerCase());
+            _parseAllNames(item.revisor || '').forEach(n => names.add(n));
         }
     });
 
