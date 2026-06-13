@@ -67,6 +67,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
     // --- RENDERIZAÇÃO DE CARDS E FILTROS ---
     function renderCards() {
         if(currentTab === 'backup' || currentTab === 'dashboard') return;
+        if (typeof applyOverdueStatuses === 'function') applyOverdueStatuses();
         if (typeof KANBAN_TABS !== 'undefined' && KANBAN_TABS.includes(currentTab) &&
             typeof isKanbanActive === 'function' && isKanbanActive()) {
             if (typeof renderKanban === 'function') renderKanban();
@@ -432,12 +433,12 @@ function _clDonutHtml(done, total, pct, size, absolute) {
 
                 // 2) Entre itens "abertos" (e recorrentes), os que estão no prazo de alerta vêm primeiro
                 if (!isAClosed && !isBClosed) {
-                    const flagA = a.flagDias || 7;
-                    const flagB = b.flagDias || 7;
+                    const flagA = (a.flagDias === 0 || a.flagDias === '0') ? 0 : (a.flagDias || 7);
+                    const flagB = (b.flagDias === 0 || b.flagDias === '0') ? 0 : (b.flagDias || 7);
                     const dA = daysDiff(getDeadlineDate ? getDeadlineDate(a) : a[dateField]);
                     const dB = daysDiff(getDeadlineDate ? getDeadlineDate(b) : b[dateField]);
-                    const isAAlert = dA <= flagA;
-                    const isBAlert = dB <= flagB;
+                    const isAAlert = flagA > 0 && dA <= flagA;
+                    const isBAlert = flagB > 0 && dB <= flagB;
 
                     if (isAAlert !== isBAlert) {
                         return isAAlert ? -1 : 1;
@@ -471,7 +472,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         const canDelete = userCanDeleteCards(item);
             try {
             const div = document.createElement('div');
-            const flagDays = item.flagDias || 7;
+            const flagDays = (item.flagDias === 0 || item.flagDias === '0') ? 0 : (item.flagDias || 7);
             let targetDate = (getDeadlineDate ? getDeadlineDate(item) : null);
             const fullTitle = item.titulo || '';
             const displayTitle = truncateText(fullTitle, 55);
@@ -483,7 +484,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
             const _skipFlag = item.status === 'Concluído' && !isConcludedRecurring(item, currentTab);
             if (!_skipFlag && d !== Infinity) {
                 if (d < 0) indicatorClass = 'ind-red';
-                else if (d <= flagDays) indicatorClass = 'ind-yellow';
+                else if (flagDays > 0 && d <= flagDays) indicatorClass = 'ind-yellow';
             }
 
             const statusObj = statusList.find(s => s.name === item.status) || { color: 'default' };
@@ -502,9 +503,13 @@ function _clDonutHtml(done, total, pct, size, absolute) {
 
             let specificContent = '';
 
-                // Função para formatar responsável para exibição
+                // Função para formatar responsável para exibição (suporta JSON array)
                 const formatResponsavel = (responsavel) => {
                     if (!responsavel) return '';
+                    try {
+                        const p = JSON.parse(responsavel);
+                        if (Array.isArray(p)) return p.join(', ');
+                    } catch (_) {}
                     return String(responsavel).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                 };
 
@@ -749,11 +754,11 @@ function _clDonutHtml(done, total, pct, size, absolute) {
 
     function _getItemIndicatorClass(item, getDeadlineDate) {
         const d = daysDiff(getDeadlineDate ? getDeadlineDate(item) : null);
-        const flagDays = item.flagDias || 7;
+        const flagDays = (item.flagDias === 0 || item.flagDias === '0') ? 0 : (item.flagDias || 7);
         const _skipFlag = item.status === 'Concluído' && !isConcludedRecurring(item, currentTab);
         if (_skipFlag || d === Infinity) return 'green';
         if (d < 0) return 'red';
-        if (d <= flagDays) return 'yellow';
+        if (flagDays > 0 && d <= flagDays) return 'yellow';
         return 'green';
     }
 
@@ -1062,6 +1067,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
             'audit': 'auditoria',
             'ativ': 'atividades',
             'mant': 'manutencao',
+            'tren': 'treinamentos',
             'doc': 'documentos'
         };
 
@@ -1079,9 +1085,10 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                 activities.map(a => ({ ...a, type: 'ativ', statusType: getStatusType(a.status), dateField: a.dataInicio, deadlineField: a.dataConclusao, color: getStatusColor(a.status, 'ativ') }))
             );
         }
-        if (!allowedTabs || allowedTabs.includes('manutencao')) {
+        if (!allowedTabs || allowedTabs.includes('treinamentos')) {
+            const _trainings = typeof trainings !== 'undefined' ? trainings : [];
             rawItems = rawItems.concat(
-                maintenances.map(m => ({ ...m, type: 'mant', statusType: getStatusType(m.status), dateField: m.ultima, deadlineField: isBlankPeriodicity(m.intervalo) ? null : m.proxima, color: getStatusColor(m.status, 'mant') }))
+                _trainings.map(t => ({ ...t, type: 'tren', statusType: getStatusType(t.status), dateField: t.dataPublicacao || t.dataInicio || t.data || null, deadlineField: t.dataPrevisao || null, color: getStatusColor(t.status, 'tren') }))
             );
         }
         if (!allowedTabs || allowedTabs.includes('documentos')) {
@@ -1201,12 +1208,11 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         // G1: Status Consolidado
         const statusCounts = {};
         activeItems.forEach(item => {
-            const key = `${item.status} (${item.type.toUpperCase()})`;
-            statusCounts[key] = {
-                count: (statusCounts[key]?.count || 0) + 1,
-                color: item.color,
-                type: item.type.toUpperCase()
-            };
+            const key = item.status;
+            if (!statusCounts[key]) {
+                statusCounts[key] = { count: 0, color: item.color, type: item.type.toUpperCase() };
+            }
+            statusCounts[key].count++;
         });
 
         // G2: Distribuição por Setor
@@ -1214,6 +1220,13 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         activeItems.forEach(item => {
             const setor = item.setor || 'Setor Não Definido';
             setorCounts[setor] = (setorCounts[setor] || 0) + 1;
+        });
+
+        // G_CAT: Por Categoria (todos filteredItems)
+        const categoriaCounts = {};
+        filteredItems.forEach(item => {
+            const cat = item.categoria || 'Sem Categoria';
+            categoriaCounts[cat] = (categoriaCounts[cat] || 0) + 1;
         });
 
         // G3: Alerta de Prazos
@@ -1239,127 +1252,990 @@ function _clDonutHtml(done, total, pct, size, absolute) {
             prazoCounts[key].percent = activeDeadlineCount > 0 ? (prazoCounts[key].count / activeDeadlineCount) * 100 : 0;
         });
 
-        return { totalCount, activeCount, completedCount, cancelledCount, standbyCount, overdueCount, statusCounts, setorCounts, prazoCounts };
+        return { totalCount, activeCount, completedCount, cancelledCount, standbyCount, overdueCount, statusCounts, setorCounts, prazoCounts, categoriaCounts, filteredItems, rawItems };
     }
 
     function renderDashboard() {
-        // Atualiza os filtros para mostrar apenas opções com dados disponíveis
+        if (typeof syncDashAreaBtn === 'function') syncDashAreaBtn();
         updateDashboardFilterOptions();
 
-        const { totalCount, activeCount, completedCount, cancelledCount, standbyCount, overdueCount, statusCounts, setorCounts, prazoCounts } = calculateDashboardData();
+        const { totalCount, activeCount, completedCount, cancelledCount, standbyCount, overdueCount, statusCounts, setorCounts, prazoCounts, categoriaCounts, filteredItems, rawItems } = calculateDashboardData();
 
-        // --- Cartões de Resumo ---
-        document.getElementById('summaryTotalCount').textContent = totalCount;
-        document.getElementById('summaryActiveCount').textContent = activeCount;
-        document.getElementById('summaryCompletedCount').textContent = completedCount;
-        document.getElementById('summaryCancelledCount').textContent = cancelledCount;
-        document.getElementById('summaryOverdueCount').textContent = overdueCount;
+        // --- KPI Cards ---
+        const _setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        _setText('summaryTotalCount', totalCount);
+        _setText('summaryActiveCount', activeCount);
+        _setText('summaryCompletedCount', completedCount);
+        _setText('summaryCancelledCount', cancelledCount);
+        _setText('summaryOverdueCount', overdueCount);
 
-        // --- G1: Status Consolidado ---
-        const listStatusConsolidado = document.getElementById('chartStatusConsolidado');
-        listStatusConsolidado.innerHTML = '';
+        const _setBar = (id, pct) => { const el = document.getElementById(id); if (el) el.style.width = pct + '%'; };
+        const completedPct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+        const activePct    = totalCount > 0 ? (activeCount / totalCount) * 100 : 0;
+        const overduePct   = activeCount > 0 ? (overdueCount / activeCount) * 100 : 0;
+        const cancelledPct = totalCount > 0 ? (cancelledCount / totalCount) * 100 : 0;
+        _setBar('scBarCompleted', completedPct);
+        _setBar('scBarActive', activePct);
+        _setBar('scBarOverdue', overduePct);
+        _setBar('scBarCancelled', cancelledPct);
 
-        // Ordena os status ativos por contagem
+        // --- Atividade Mensal (gráfico de linha) ---
+        // Passa rawItems para mostrar todos os meses do ano; filtros de área/cat/responsável
+        // são aplicados internamente, mas o filtro de data é ignorado para exibir o ano completo
+        _initActivityYearSelect(rawItems);
+        _renderAtividadeMensal(rawItems);
+
+        // --- Status por Área (pizza) ---
         const sortedStatus = Object.entries(statusCounts).sort(([, a], [, b]) => b.count - a.count);
+        const badgeStatus = document.getElementById('badgeStatusAtivos');
+        if (badgeStatus) badgeStatus.textContent = activeCount + ' ativos';
+        _renderStatusPizza(sortedStatus, activeCount);
 
-        sortedStatus.forEach(([statusKey, data]) => {
-            const count = data.count;
-            const percentage = activeCount > 0 ? ((count / activeCount) * 100) : 0;
-            const percentageFixed = percentage.toFixed(1);
-            const colorVar = colorMap[data.color] || colorMap['default'];
-
-            listStatusConsolidado.innerHTML += `
-                <li>
-                    <div class="chart-list-header">
-                        <span class="status-info">
-                            <span class="color-dot" style="background-color:${colorVar}"></span>
-                            ${statusKey}
-                        </span>
-                        <div>
-                            <span class="value">${count}</span>
-                            <span class="percent">(${percentageFixed}%)</span>
-                        </div>
-                    </div>
-                    <div class="chart-bar">
-                        <div class="chart-bar-fill" style="width:${percentage}%; background-color:${colorVar}"></div>
-                    </div>
-                </li>
-            `;
-        });
-        if (listStatusConsolidado.innerHTML === '') {
-            listStatusConsolidado.innerHTML = '<li style="text-align:center; padding:20px; flex-direction:row; justify-content:center; border-bottom:none;">Nenhum item ativo encontrado com os filtros atuais.</li>';
-        }
-
-        // --- G2: Distribuição por Setor ---
-        const listDistribuicaoSetor = document.getElementById('chartDistribuicaoSetor');
-        listDistribuicaoSetor.innerHTML = '';
-
+        // --- Por Setor (barras com scroll) ---
+        const listSetor = document.getElementById('chartDistribuicaoSetor');
         const sortedSetores = Object.entries(setorCounts).sort(([, a], [, b]) => b - a);
+        const badgeSetores = document.getElementById('badgeSetores');
+        if (badgeSetores) badgeSetores.textContent = sortedSetores.length + ' setor' + (sortedSetores.length !== 1 ? 'es' : '');
 
-        sortedSetores.forEach(([setor, count]) => {
-            const percentage = activeCount > 0 ? ((count / activeCount) * 100) : 0;
-            const percentageFixed = percentage.toFixed(1);
-            const colorVar = colorMap['default'];
-
-            listDistribuicaoSetor.innerHTML += `
-                <li>
+        const _paletteA = ['#2563eb','#16a34a','#ca8a04','#9333ea','#ea580c','#0369a1','#be123c','#0d9488','#7c3aed','#c026d3'];
+        if (sortedSetores.length === 0) {
+            listSetor.innerHTML = '<div class="chart-empty"><i class="fas fa-building"></i><span>Nenhum dado</span></div>';
+        } else {
+            listSetor.innerHTML = sortedSetores.map(([setor, count], i) => {
+                const pct = activeCount > 0 ? (count / activeCount) * 100 : 0;
+                const color = _paletteA[i % _paletteA.length];
+                return `<li>
                     <div class="chart-list-header">
-                        <span class="status-info"><i class="fas fa-building" style="margin-right:8px; color:${colorVar}"></i>${setor}</span>
-                        <div>
-                            <span class="value">${count}</span>
-                            <span class="percent">(${percentageFixed}%)</span>
-                        </div>
+                        <span class="status-info"><span class="color-dot" style="background:${color}"></span>${setor}</span>
+                        <div><span class="value">${count}</span><span class="percent">(${pct.toFixed(1)}%)</span></div>
                     </div>
-                    <div class="chart-bar">
-                        <div class="chart-bar-fill" style="width:${percentage}%; background-color:var(--accent)"></div>
-                    </div>
-                </li>
-            `;
-        });
-        if (listDistribuicaoSetor.innerHTML === '') {
-            listDistribuicaoSetor.innerHTML = '<li style="text-align:center; padding:20px; flex-direction:row; justify-content:center; border-bottom:none;">Nenhum item ativo encontrado com os filtros atuais.</li>';
+                    <div class="chart-bar"><div class="chart-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+                </li>`;
+            }).join('');
         }
 
+        // --- Por Categoria (barras) ---
+        const listCat = document.getElementById('chartCategoria');
+        const sortedCats = Object.entries(categoriaCounts).sort(([, a], [, b]) => b - a);
+        const badgeCat = document.getElementById('badgeCategorias');
+        if (badgeCat) badgeCat.textContent = sortedCats.length + ' categoria' + (sortedCats.length !== 1 ? 's' : '');
 
-        // --- G3: Alerta de Prazos ---
-        const listAlertaPrazos = document.getElementById('chartAlertaPrazos');
+        const _paletteB = ['#7c3aed','#0369a1','#be123c','#0d9488','#2563eb','#16a34a','#ca8a04','#9333ea','#ea580c'];
+        if (sortedCats.length === 0) {
+            listCat.innerHTML = '<div class="chart-empty"><i class="fas fa-tags"></i><span>Nenhum dado</span></div>';
+        } else {
+            listCat.innerHTML = sortedCats.map(([cat, count], i) => {
+                const pct = totalCount > 0 ? (count / totalCount) * 100 : 0;
+                const color = _paletteB[i % _paletteB.length];
+                return `<li>
+                    <div class="chart-list-header">
+                        <span class="status-info"><span class="color-dot" style="background:${color}"></span>${cat}</span>
+                        <div><span class="value">${count}</span><span class="percent">(${pct.toFixed(1)}%)</span></div>
+                    </div>
+                    <div class="chart-bar"><div class="chart-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+                </li>`;
+            }).join('');
+        }
+
+        // --- Alerta de Prazos ---
+        const listPrazos = document.getElementById('chartAlertaPrazos');
+        const badgeAtrasados = document.getElementById('badgeAtrasados');
+        if (badgeAtrasados) badgeAtrasados.textContent = prazoCounts.atrasados.count + ' atrasado' + (prazoCounts.atrasados.count !== 1 ? 's' : '');
 
         const prazoData = [
-            { label: 'Atrasados (Vencidos)', key: 'atrasados', icon: 'fas fa-exclamation-circle' },
-            { label: 'Críticos (0 a 7 dias)', key: 'criticos', icon: 'fas fa-exclamation-triangle' },
-            { label: 'Curto Prazo (8 a 30 dias)', key: 'curtoPrazo', icon: 'fas fa-hourglass-start' },
-            { label: 'Médio Prazo (31 a 90 dias)', key: 'medioPrazo', icon: 'fas fa-clock' },
-            { label: 'Longo Prazo (> 90 dias)', key: 'longoPrazo', icon: 'fas fa-check-circle' }
+            { label: 'Atrasados', key: 'atrasados', icon: 'fas fa-exclamation-circle', color: 'var(--ind-red)' },
+            { label: 'Críticos (≤ 7d)', key: 'criticos', icon: 'fas fa-exclamation-triangle', color: 'var(--ind-yellow)' },
+            { label: 'Curto (8–30d)', key: 'curtoPrazo', icon: 'fas fa-hourglass-start', color: 'var(--c-orange)' },
+            { label: 'Médio (31–90d)', key: 'medioPrazo', icon: 'fas fa-clock', color: 'var(--c-blue)' },
+            { label: 'Longo (> 90d)', key: 'longoPrazo', icon: 'fas fa-check-circle', color: 'var(--ind-green)' }
         ];
 
-        listAlertaPrazos.innerHTML = prazoData.map(item => {
-            const data = prazoCounts[item.key];
-            const count = data.count;
-            const percentage = data.percent;
-            const percentageFixed = percentage.toFixed(1);
-            const color = data.color;
-            const barColor = item.key === 'atrasados' ? 'var(--ind-red)' : (item.key === 'criticos' ? 'var(--ind-yellow)' : 'var(--c-blue)');
-
-            return `
-                <li>
-                    <div class="chart-list-header">
-                        <span class="status-info"><i class="${item.icon}" style="margin-right:8px; color:${color}"></i> ${item.label}</span>
-                        <div>
-                            <span class="deadline-info" style="color:${color}">${count}</span>
-                            <span class="percent">(${percentageFixed}%)</span>
-                        </div>
-                    </div>
-                    <div class="chart-bar">
-                        <div class="chart-bar-fill" style="width:${percentage}%; background-color:${barColor}"></div>
-                    </div>
-                </li>
-            `;
-        }).join('');
-
         if (activeCount === 0) {
-            listAlertaPrazos.innerHTML = '<li style="text-align:center; padding:20px; flex-direction:row; justify-content:center; border-bottom:none;">Nenhum item ativo para análise de prazos com os filtros atuais.</li>';
+            listPrazos.innerHTML = '<div class="chart-empty"><i class="fas fa-clock"></i><span>Nenhum item ativo</span></div>';
+        } else {
+            listPrazos.innerHTML = prazoData.map(item => {
+                const data = prazoCounts[item.key];
+                const count = data.count;
+                const pct = data.percent;
+                return `<li>
+                    <div class="chart-list-header">
+                        <span class="status-info"><i class="${item.icon}" style="color:${item.color}"></i>${item.label}</span>
+                        <div><span class="deadline-info" style="color:${item.color}">${count}</span><span class="percent">(${pct.toFixed(1)}%)</span></div>
+                    </div>
+                    <div class="chart-bar"><div class="chart-bar-fill" style="width:${pct}%;background:${item.color}"></div></div>
+                </li>`;
+            }).join('');
         }
 
-        // Atualiza contador de notificações
+        // --- Donut por Módulo ---
+        _renderDonutModulo();
+
+        // --- Taxa de Conclusão ---
+        _renderRadialConclusion(totalCount, completedCount, activeCount, cancelledCount);
+
+        // --- Publicações ---
+        _dashPubCurrentPage = 1;
+        _renderDashPublicacoes();
+
+        // --- Minhas Revisões ---
+        _minhasRevisoesPage = 1;
+        _renderMinhasRevisoes();
+
         updateNotificationCount();
+    }
+
+    // ── Status por Área — Pizza ───────────────────────────────────────────
+    var _statusPizzaSlices = [];
+    var _statusPizzaTooltipBound = false;
+
+    function _renderStatusPizza(sortedStatus, activeCount) {
+        const canvas = document.getElementById('chartStatusPizza');
+        const legendEl = document.getElementById('statusPizzaLegend');
+        const totalEl = document.getElementById('statusPizzaTotal');
+        if (totalEl) totalEl.textContent = activeCount;
+
+        if (legendEl) {
+            if (sortedStatus.length === 0) {
+                legendEl.innerHTML = '<div class="chart-empty" style="padding:12px 0"><i class="fas fa-chart-pie"></i><span>Nenhum item ativo</span></div>';
+            } else {
+                legendEl.innerHTML = sortedStatus.map(([key, data]) => {
+                    const colorVar = colorMap[data.color] || colorMap['default'];
+                    const pct = activeCount > 0 ? ((data.count / activeCount) * 100).toFixed(1) : 0;
+                    return `<li><span class="dl-dot" style="background:${colorVar}"></span><span style="flex:1;font-size:12px">${key}</span><span class="dl-count">${data.count}</span><span style="color:var(--text-muted);font-size:11px;margin-left:4px">(${pct}%)</span></li>`;
+                }).join('');
+            }
+        }
+
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const cx = W / 2, cy = H / 2, r = Math.min(W, H) * 0.38, inner = r * 0.58;
+        ctx.clearRect(0, 0, W, H);
+
+        if (activeCount === 0 || sortedStatus.length === 0) {
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = r - inner; ctx.stroke();
+            _statusPizzaSlices = [];
+            return;
+        }
+
+        const gap = 0.03;
+        _statusPizzaSlices = [];
+        let startAngle = -Math.PI / 2;
+        sortedStatus.forEach(([key, data]) => {
+            const slice = (data.count / activeCount) * Math.PI * 2;
+            const colorVar = colorMap[data.color] || colorMap['default'];
+            const resolvedColor = _resolveCssVar(colorVar);
+            const pct = ((data.count / activeCount) * 100).toFixed(1);
+            _statusPizzaSlices.push({ start: startAngle + gap / 2, end: startAngle + slice - gap / 2, color: resolvedColor, label: key, count: data.count, pct });
+            ctx.beginPath(); ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, r, startAngle + gap / 2, startAngle + slice - gap / 2);
+            ctx.closePath(); ctx.fillStyle = resolvedColor; ctx.fill();
+            startAngle += slice;
+        });
+        ctx.beginPath(); ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff'; ctx.fill();
+
+        _initDonutTooltip(canvas, 'statusPizzaTooltip', () => _statusPizzaSlices, cx, cy, r, inner);
+    }
+
+    // Resolve CSS variable to hex for canvas (approximate from known palette)
+    function _resolveCssVar(cssVar) {
+        const map = {
+            'var(--c-blue)': '#2563eb', 'var(--c-green)': '#16a34a', 'var(--c-red)': '#dc2626',
+            'var(--c-orange)': '#ea580c', 'var(--c-yellow)': '#ca8a04', 'var(--c-purple)': '#9333ea',
+            'var(--c-default)': '#64748b', 'var(--ind-green)': '#16a34a', 'var(--ind-yellow)': '#ca8a04',
+            'var(--ind-red)': '#dc2626'
+        };
+        return map[cssVar] || cssVar;
+    }
+
+    // ── Atividade Mensal — gráfico de linha ──────────────────────────────
+    var _dashActivityYear = new Date().getFullYear();
+
+    function _initActivityYearSelect(rawItems) {
+        const sel = document.getElementById('dashActivityYear');
+        if (!sel) return;
+        const years = new Set();
+        const thisYear = new Date().getFullYear();
+        years.add(thisYear); years.add(thisYear - 1); years.add(thisYear - 2);
+        rawItems.forEach(item => {
+            const d = item.dateField;
+            if (d) { const y = parseInt(d.substring(0, 4)); if (y >= 2000 && y <= thisYear + 1) years.add(y); }
+        });
+        const sorted = Array.from(years).sort((a, b) => b - a);
+        // Only rebuild if options changed
+        const current = parseInt(sel.value) || _dashActivityYear;
+        sel.innerHTML = sorted.map(y => `<option value="${y}" ${y === current ? 'selected' : ''}>${y}</option>`).join('');
+        if (!sel.value) sel.value = _dashActivityYear;
+        _dashActivityYear = parseInt(sel.value);
+    }
+
+    window.onDashActivityYearChange = function() {
+        const sel = document.getElementById('dashActivityYear');
+        if (sel) _dashActivityYear = parseInt(sel.value);
+        const { rawItems } = calculateDashboardData();
+        _renderAtividadeMensal(rawItems);
+    };
+
+    // Guarda estado do gráfico para o tooltip
+    var _activityChartState = null;
+
+    function _renderAtividadeMensal(rawItems) {
+        const canvas = document.getElementById('chartAtividadeMensal');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const monthsFull = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        const year = _dashActivityYear;
+
+        const allowedSetores = getAllowedSetores();
+        const _fArea = document.getElementById('fDashArea')?.value || '';
+        const _fCat  = document.getElementById('fDashCat')?.value  || '';
+        const _fResp = (typeof dashRespFilter !== 'undefined') ? dashRespFilter : (document.getElementById('fDashResponsavel')?.value || '');
+        const _fMyTasks = (typeof dashMyTasksActive !== 'undefined') ? dashMyTasksActive : false;
+        const _fMyMode  = (typeof dashMyTasksMode  !== 'undefined') ? dashMyTasksMode  : 'all';
+        const _me = (typeof currentuser !== 'undefined' && currentuser && currentuser.name)
+            ? currentuser.name.toLowerCase().trim() : '';
+        let items = rawItems.filter(item => {
+            if (item.deleted) return false;
+            if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return false;
+            if (_fArea && item.type !== _fArea) return false;
+            if (_fCat  && item.categoria !== _fCat) return false;
+            if (_fResp) {
+                const raw = item.responsavelTecnico || item.responsavel || '';
+                const names = (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map(n=>String(n).toLowerCase().trim()) : [String(p).toLowerCase().trim()]; } catch { return [String(raw).toLowerCase().trim()]; } })().filter(Boolean);
+                if (!names.some(n => n.includes(_fResp.toLowerCase()))) return false;
+            }
+            if (_fMyTasks && _me) {
+                if (_fMyMode === 'revisor') {
+                    if ((item.revisor || '').toLowerCase().trim() !== _me) return false;
+                } else if (_fMyMode === 'responsavel') {
+                    const raw = item.responsavelTecnico || item.responsavel || '';
+                    const names = (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map(n=>String(n).toLowerCase().trim()) : [String(p).toLowerCase().trim()]; } catch { return [String(raw).toLowerCase().trim()]; } })().filter(Boolean);
+                    if (!names.some(n => n === _me)) return false;
+                } else {
+                    const raw = item.responsavelTecnico || item.responsavel || '';
+                    const names = (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map(n=>String(n).toLowerCase().trim()) : [String(p).toLowerCase().trim()]; } catch { return [String(raw).toLowerCase().trim()]; } })().filter(Boolean);
+                    const isResp = names.some(n => n === _me);
+                    const isRev  = (item.revisor || '').toLowerCase().trim() === _me;
+                    if (!isResp && !isRev) return false;
+                }
+            }
+            if (!item.dateField) return false;
+            return parseInt((item.dateField || '').substring(0, 4)) === year;
+        });
+
+        const wrap = canvas.parentElement;
+        const W = wrap ? wrap.clientWidth : 600;
+        const H = wrap ? wrap.clientHeight : 280;
+        canvas.width = W || 600;
+        canvas.height = H || 280;
+        const PAD = { top: 24, right: 24, bottom: 42, left: 46 };
+        const chartW = canvas.width - PAD.left - PAD.right;
+        const chartH = canvas.height - PAD.top - PAD.bottom;
+
+        const counts = Array(12).fill(0);
+        items.forEach(item => {
+            const m = parseInt((item.dateField || '').substring(5, 7)) - 1;
+            if (m >= 0 && m <= 11) counts[m]++;
+        });
+
+        const color = '#2563eb';
+
+        if (counts.every(v => v === 0)) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Nenhum dado para o período', canvas.width / 2, canvas.height / 2);
+            _activityChartState = null;
+            _activityBaseDrawFn = null;
+            return;
+        }
+
+        const maxVal = Math.max(...counts, 1);
+        const nTicks = 5;
+        const rawStep = maxVal / nTicks;
+        const step = rawStep <= 1 ? 1 : Math.ceil(rawStep);
+        const gridMax = step * nTicks;
+
+        const pts = counts.map((v, i) => ({
+            x: PAD.left + (i / 11) * chartW,
+            y: PAD.top + chartH - (v / gridMax) * chartH,
+            v
+        }));
+
+        // Salva estado e função de redraw base (sem highlight)
+        _activityChartState = { pts, counts, PAD, chartW, chartH, color, months: monthsFull, year, gridMax };
+        _activityBaseDrawFn = function() {
+            _drawActivityBase(ctx, canvas, pts, PAD, chartW, chartH, color, gridMax, months, monthsFull);
+        };
+
+        // Renderiza pela primeira vez
+        _activityBaseDrawFn();
+        _initActivityTooltip(canvas);
+    }
+
+    // Guarda a função de redraw base para uso no mousemove
+    var _activityBaseDrawFn = null;
+
+    // Desenha o gráfico base (grid + linha + dots) sem highlight — reutilizável
+    function _drawActivityBase(ctx, canvas, pts, PAD, chartW, chartH, color, gridMax, months, monthsFull) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const nTicks = 5;
+
+        // Grid lines + Y labels
+        for (let i = 0; i <= nTicks; i++) {
+            const cy = PAD.top + chartH - (i / nTicks) * chartH;
+            ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(PAD.left, cy); ctx.lineTo(PAD.left + chartW, cy); ctx.stroke();
+            ctx.fillStyle = '#94a3b8'; ctx.font = '10px Inter,sans-serif'; ctx.textAlign = 'right';
+            ctx.fillText(String(Math.round((i / nTicks) * gridMax)), PAD.left - 8, cy + 3.5);
+        }
+
+        // X month labels
+        ctx.fillStyle = '#94a3b8'; ctx.font = '10px Inter,sans-serif'; ctx.textAlign = 'center';
+        months.forEach((m, i) => {
+            const cx = PAD.left + (i / 11) * chartW;
+            ctx.fillText(m, cx, PAD.top + chartH + 18);
+        });
+
+        function _smoothLine(points) {
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 0; i < points.length - 1; i++) {
+                const cp1x = points[i].x + (points[i + 1].x - points[i].x) * 0.4;
+                const cp1y = points[i].y;
+                const cp2x = points[i + 1].x - (points[i + 1].x - points[i].x) * 0.4;
+                const cp2y = points[i + 1].y;
+                ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, points[i + 1].x, points[i + 1].y);
+            }
+        }
+
+        // Area fill
+        const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + chartH);
+        grad.addColorStop(0, color + '30');
+        grad.addColorStop(1, color + '00');
+        ctx.save();
+        _smoothLine(pts);
+        ctx.lineTo(pts[pts.length - 1].x, PAD.top + chartH);
+        ctx.lineTo(pts[0].x, PAD.top + chartH);
+        ctx.closePath();
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.restore();
+
+        // Line
+        ctx.save();
+        _smoothLine(pts);
+        ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        ctx.stroke();
+        ctx.restore();
+
+        // Dots
+        pts.forEach(p => {
+            ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+            ctx.fillStyle = color; ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+        });
+    }
+
+    // ── Tooltip interativo ───────────────────────────────────────────────
+    var _activityTooltipBound = false;
+    var _activityLastHighlightIdx = -1;
+
+    function _initActivityTooltip(canvas) {
+        if (_activityTooltipBound) return;
+        _activityTooltipBound = true;
+
+        const tooltip = document.getElementById('dashActivityTooltip');
+        if (!tooltip) return;
+
+        function _getHoveredPoint(e) {
+            if (!_activityChartState) return null;
+            const { pts } = _activityChartState;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const mx = (e.clientX - rect.left) * scaleX;
+
+            const colW = pts.length > 1 ? (pts[1].x - pts[0].x) : 60;
+            let best = null, bestDist = Infinity;
+            pts.forEach((p, i) => {
+                const dist = Math.abs(mx - p.x);
+                if (dist < bestDist && dist < colW * 0.7) { bestDist = dist; best = { ...p, i }; }
+            });
+            return best;
+        }
+
+        canvas.addEventListener('mousemove', function(e) {
+            const pt = _getHoveredPoint(e);
+            if (!pt || !_activityChartState) {
+                tooltip.classList.remove('visible');
+                if (_activityLastHighlightIdx !== -1) {
+                    _activityLastHighlightIdx = -1;
+                    if (_activityBaseDrawFn) _activityBaseDrawFn();
+                }
+                return;
+            }
+
+            const { months, year, color, PAD, chartH } = _activityChartState;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = rect.width / canvas.width;
+            const scaleY = rect.height / canvas.height;
+
+            // Só redesenha se mudou de mês — evita flickering desnecessário
+            if (pt.i !== _activityLastHighlightIdx) {
+                _activityLastHighlightIdx = pt.i;
+
+                // Redesenha base limpo primeiro
+                if (_activityBaseDrawFn) _activityBaseDrawFn();
+
+                // Overlay: linha vertical + dot ampliado
+                const ctx = canvas.getContext('2d');
+                ctx.save();
+                ctx.setLineDash([4, 4]);
+                ctx.strokeStyle = color + '55'; ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(pt.x, PAD.top);
+                ctx.lineTo(pt.x, PAD.top + chartH);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.beginPath(); ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
+                ctx.fillStyle = color + '20'; ctx.fill();
+                ctx.beginPath(); ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+                ctx.fillStyle = color; ctx.fill();
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke();
+                ctx.restore();
+            }
+
+            tooltip.innerHTML = `
+                <span class="dash-chart-tooltip-dot" style="background:${color}"></span>
+                <span>${months[pt.i]} ${year}</span>
+                <strong style="margin-left:4px">${pt.v} registro${pt.v !== 1 ? 's' : ''}</strong>`;
+            tooltip.style.left = (pt.x * scaleX) + 'px';
+            tooltip.style.top  = (pt.y * scaleY) + 'px';
+            tooltip.classList.add('visible');
+        });
+
+        canvas.addEventListener('mouseleave', function() {
+            tooltip.classList.remove('visible');
+            _activityLastHighlightIdx = -1;
+            if (_activityBaseDrawFn) _activityBaseDrawFn();
+        });
+    }
+
+    // Redraw activity chart on window resize
+    (function() {
+        var _activityResizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(_activityResizeTimer);
+            _activityResizeTimer = setTimeout(function() {
+                if (document.getElementById('dashboardContent') && document.getElementById('dashboardContent').style.display !== 'none') {
+                    const { rawItems } = calculateDashboardData();
+                    _renderAtividadeMensal(rawItems);
+                }
+            }, 150);
+        });
+    })();
+
+    // ── Donut por Módulo ─────────────────────────────────────────────────
+    var _donutModuloSlices = [];
+
+    function _renderDonutModulo() {
+        const allowedTabs = userAllowedTabs();
+        const moduleData = [];
+        const moduleColors = { audit: '#2563eb', ativ: '#16a34a', mant: '#ca8a04', doc: '#9333ea' };
+        const moduleLabels = { audit: 'Gestão de Rotinas', ativ: 'Atividades', mant: 'Manutenção', doc: 'Documentos' };
+        const moduleIcons  = { audit: 'fas fa-clipboard-check', ativ: 'fas fa-tasks', mant: 'fas fa-wrench', doc: 'fas fa-file-lines' };
+        const sources = [
+            { key: 'audit', arr: typeof audits !== 'undefined' ? audits : [] },
+            { key: 'ativ',  arr: typeof activities !== 'undefined' ? activities : [] },
+            { key: 'mant',  arr: typeof maintenances !== 'undefined' ? maintenances : [] },
+            { key: 'doc',   arr: typeof documents !== 'undefined' ? documents : [] }
+        ];
+
+        sources.forEach(({ key, arr }) => {
+            if (allowedTabs && !allowedTabs.includes(key === 'audit' ? 'auditoria' : key === 'ativ' ? 'atividades' : key === 'mant' ? 'manutencao' : 'documentos')) return;
+            const count = arr.filter(i => !i.deleted).length;
+            if (count > 0) moduleData.push({ key, label: moduleLabels[key], color: moduleColors[key], count, icon: moduleIcons[key] });
+        });
+
+        const total = moduleData.reduce((s, d) => s + d.count, 0);
+        const donutTotal = document.getElementById('donutTotal');
+        if (donutTotal) donutTotal.textContent = total;
+
+        const legend = document.getElementById('donutLegend');
+        if (legend) {
+            legend.innerHTML = moduleData.map(d => `
+                <li>
+                    <span class="dl-dot" style="background:${d.color}"></span>
+                    <i class="${d.icon}" style="color:${d.color};font-size:11px"></i>
+                    <span>${d.label}</span>
+                    <span class="dl-count">${d.count}</span>
+                </li>`).join('');
+        }
+
+        const canvas = document.getElementById('chartDonutModulo');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const cx = W / 2, cy = H / 2, r = Math.min(W, H) * 0.38, inner = r * 0.58;
+        ctx.clearRect(0, 0, W, H);
+
+        if (total === 0) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = r - inner;
+            ctx.stroke();
+            _donutModuloSlices = [];
+            return;
+        }
+
+        _donutModuloSlices = [];
+        let startAngle = -Math.PI / 2;
+        moduleData.forEach(d => {
+            const slice = (d.count / total) * Math.PI * 2;
+            const pct = ((d.count / total) * 100).toFixed(1);
+            _donutModuloSlices.push({ start: startAngle, end: startAngle + slice, color: d.color, label: d.label, count: d.count, pct });
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, r, startAngle, startAngle + slice);
+            ctx.closePath();
+            ctx.fillStyle = d.color;
+            ctx.fill();
+            startAngle += slice;
+        });
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+
+        _initDonutTooltip(canvas, 'donutModuloTooltip', () => _donutModuloSlices, cx, cy, r, inner);
+    }
+
+    // ── Tooltip genérico para gráficos de rosca/pizza ───────────────────
+    var _donutTooltipInstances = {};
+    function _initDonutTooltip(canvas, tooltipId, getSlices, cx, cy, r, inner) {
+        if (_donutTooltipInstances[canvas.id]) return;
+        _donutTooltipInstances[canvas.id] = true;
+
+        // Cria tooltip se não existir
+        let tooltip = document.getElementById(tooltipId);
+        if (!tooltip) {
+            tooltip = document.createElement('div');
+            tooltip.id = tooltipId;
+            tooltip.className = 'dash-chart-tooltip donut-tooltip';
+            document.body.appendChild(tooltip);
+        }
+
+        canvas.style.cursor = 'pointer';
+
+        canvas.addEventListener('mousemove', function(e) {
+            const slices = getSlices();
+            if (!slices.length) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mx = (e.clientX - rect.left) * scaleX;
+            const my = (e.clientY - rect.top) * scaleY;
+            const dx = mx - cx, dy = my - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < inner || dist > r) {
+                tooltip.classList.remove('visible');
+                return;
+            }
+
+            let angle = Math.atan2(dy, dx);
+            // Normalize to same range as drawing (-π/2 start)
+            const found = slices.find(s => {
+                let start = s.start, end = s.end;
+                // atan2 returns [-π, π]; our slices start at -π/2
+                // Normalize angle to [-π/2, 3π/2]
+                let a = angle;
+                if (a < -Math.PI / 2) a += Math.PI * 2;
+                return a >= start && a < end;
+            });
+
+            if (found) {
+                tooltip.innerHTML = `
+                    <span class="dash-chart-tooltip-dot" style="background:${found.color}"></span>
+                    <span>${found.label}</span>
+                    <strong style="margin-left:4px">${found.count} (${found.pct}%)</strong>`;
+                // Position near mouse, offset above
+                const tipX = e.clientX;
+                const tipY = e.clientY;
+                tooltip.style.position = 'fixed';
+                tooltip.style.left = tipX + 'px';
+                tooltip.style.top  = (tipY - 12) + 'px';
+                tooltip.classList.add('visible');
+            } else {
+                tooltip.classList.remove('visible');
+            }
+        });
+
+        canvas.addEventListener('mouseleave', function() {
+            tooltip.classList.remove('visible');
+        });
+    }
+
+    // ── Radial taxa de conclusão ─────────────────────────────────────────
+    function _renderRadialConclusion(total, concluded, active, cancelled) {
+        const pct = total > 0 ? concluded / total : 0;
+        const circumference = 314.16;
+        const offset = circumference - pct * circumference;
+
+        const fill = document.getElementById('radialFill');
+        if (fill) fill.style.strokeDashoffset = offset;
+
+        const pctEl = document.getElementById('radialPct');
+        if (pctEl) pctEl.textContent = Math.round(pct * 100) + '%';
+
+        const _s = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        _s('radialConcluidos', concluded);
+        _s('radialAtivos', active);
+        _s('radialCancelados', cancelled);
+    }
+
+    // ── Dashboard Publicações ────────────────────────────────────────────
+    var _dashPubCurrentPage = 1;
+    var _dashPubTypeFilter = '';
+    var _dashPubSearchQuery = '';
+    var _DASH_PUB_PER_PAGE = 5;
+    var _DASH_PUB_MAX_PAGES = 10;
+
+    window.onDashPubTypeTab = function(btn, type) {
+        document.querySelectorAll('.dpt-tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        _dashPubTypeFilter = type;
+        _dashPubCurrentPage = 1;
+        _renderDashPublicacoes();
+    };
+    window.onDashPubSearchChange = function() {
+        const el = document.getElementById('dashPubSearch');
+        _dashPubSearchQuery = el ? (el.value || '').toLowerCase().trim() : '';
+        _dashPubCurrentPage = 1;
+        _renderDashPublicacoes();
+    };
+    window.goToDashPubPage = function(page) {
+        _dashPubCurrentPage = page;
+        _renderDashPublicacoes();
+    };
+
+    function _collectAllPublicacoes() {
+        const allowedTabs = userAllowedTabs();
+        const allowedSetores = getAllowedSetores();
+        const result = [];
+
+        const sources = [
+            { arr: typeof audits      !== 'undefined' ? audits      : [], tab: 'auditoria',   typeKey: 'audit', label: 'Gestão de Rotinas', icon: 'fas fa-clipboard-check', color: '#2563eb' },
+            { arr: typeof activities  !== 'undefined' ? activities  : [], tab: 'atividades',  typeKey: 'ativ',  label: 'Atividades',        icon: 'fas fa-tasks',           color: '#16a34a' },
+            { arr: typeof trainings   !== 'undefined' ? trainings   : [], tab: 'treinamentos',typeKey: 'tren',  label: 'Treinamentos',      icon: 'fas fa-graduation-cap',  color: '#7c3aed' },
+            { arr: typeof documents   !== 'undefined' ? documents   : [], tab: 'documentos',  typeKey: 'doc',   label: 'Documentos',        icon: 'fas fa-file-lines',      color: '#9333ea' }
+        ];
+
+        sources.forEach(({ arr, tab, typeKey, label, icon, color }) => {
+            if (allowedTabs && !allowedTabs.includes(tab)) return;
+            arr.forEach(item => {
+                if (item.deleted) return;
+                if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return;
+                (item.publicacoes || []).forEach((pub, idx) => {
+                    result.push({ pub, item, tab, typeKey, label, icon, color, idx });
+                });
+            });
+        });
+
+        result.sort((a, b) => {
+            const da = (a.pub.data || '') + (a.pub.hora || '');
+            const db = (b.pub.data || '') + (b.pub.hora || '');
+            return db.localeCompare(da);
+        });
+        return result;
+    }
+
+    // Mostra/oculta tabs de tipo de publicação conforme a área selecionada
+    function _syncPubTypeTabs(area) {
+        // ativ: Comentário, Atualização, Evidência
+        // tren: Treinamento
+        // doc:  Documento
+        // audit: Auditoria (publica como tipo)
+        // '' (todas): mostra tudo
+        const areaTabMap = {
+            'ativ':  ['Comentário','Atualização','Evidência'],
+            'tren':  ['Treinamento'],
+            'doc':   ['Documento'],
+            'audit': ['Auditoria','Comentário','Atualização','Evidência']
+        };
+        const allowed = area ? (areaTabMap[area] || []) : null; // null = todas visíveis
+
+        document.querySelectorAll('#dashPubTypeTabs .dpt-tab[data-type]').forEach(btn => {
+            const type = btn.dataset.type;
+            if (!type) return; // "Todas" sempre visível
+            const visible = !allowed || allowed.includes(type);
+            btn.classList.toggle('dpt-tab--hidden', !visible);
+            // Se o tab ativo ficou oculto, volta para "Todas"
+            if (!visible && btn.classList.contains('active')) {
+                btn.classList.remove('active');
+                _dashPubTypeFilter = '';
+                document.querySelector('#dashPubTypeTabs .dpt-tab[data-type=""]')?.classList.add('active');
+            }
+        });
+    }
+
+    function _renderDashPublicacoes() {
+        const tbody = document.getElementById('dashPubTableBody');
+        const emptyEl = document.getElementById('dashPubEmpty');
+        const countEl = document.getElementById('dashPubCount');
+        const paginationEl = document.getElementById('dashPubPagination');
+        if (!tbody) return;
+
+        let allPubs = _collectAllPublicacoes();
+
+        // Filtro por área selecionada + ajusta tabs visíveis
+        const _fArea = document.getElementById('fDashArea')?.value || '';
+        _syncPubTypeTabs(_fArea);
+        if (_fArea) {
+            allPubs = allPubs.filter(p => p.typeKey === _fArea);
+        }
+
+        // Apply type filter (reset se não é válido para a área)
+        if (_dashPubTypeFilter) {
+            allPubs = allPubs.filter(p => p.pub.tipo === _dashPubTypeFilter);
+        }
+        // Apply search
+        if (_dashPubSearchQuery) {
+            allPubs = allPubs.filter(p => {
+                const haystack = [
+                    p.pub.descricao || '', p.pub.titulo || '', p.item.titulo || '',
+                    p.pub.usuario || '', p.pub.tipo || '', p.item.setor || ''
+                ].join(' ').toLowerCase();
+                return haystack.includes(_dashPubSearchQuery);
+            });
+        }
+
+        const totalPubs = allPubs.length;
+        const maxPages = Math.min(_DASH_PUB_MAX_PAGES, Math.ceil(totalPubs / _DASH_PUB_PER_PAGE));
+        const totalPages = Math.max(1, maxPages);
+        if (_dashPubCurrentPage > totalPages) _dashPubCurrentPage = totalPages;
+
+        const start = (_dashPubCurrentPage - 1) * _DASH_PUB_PER_PAGE;
+        const pagePubs = allPubs.slice(start, start + _DASH_PUB_PER_PAGE);
+
+        if (countEl) countEl.textContent = totalPubs + ' publicaç' + (totalPubs !== 1 ? 'ões' : 'ão');
+
+        const typeChipClass = {
+            'Comentário': 'pub-type-chip--comment',
+            'Atualização': 'pub-type-chip--update',
+            'Evidência':  'pub-type-chip--evidence',
+            'Treinamento':'pub-type-chip--training',
+            'Documento':  'pub-type-chip--document'
+        };
+        const typeIcon = {
+            'Comentário': 'fas fa-comment',
+            'Atualização':'fas fa-rotate',
+            'Evidência':  'fas fa-paperclip',
+            'Treinamento':'fas fa-graduation-cap',
+            'Documento':  'fas fa-file-lines'
+        };
+
+        if (pagePubs.length === 0) {
+            tbody.innerHTML = '';
+            if (emptyEl) emptyEl.style.display = 'flex';
+        } else {
+            if (emptyEl) emptyEl.style.display = 'none';
+            tbody.innerHTML = pagePubs.map(({ pub, item, tab, label, icon, color, idx }) => {
+                const tipo = pub.tipo || 'Comentário';
+                const chipClass = typeChipClass[tipo] || '';
+                const ico = typeIcon[tipo] || 'fas fa-paper-plane';
+                const itemTitulo = item.titulo || '—';
+                const desc = pub.titulo || pub.descricao || '';
+                const setor = item.setor || '—';
+                const usuario = pub.usuario || '—';
+                const initials = usuario.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+                const usuarioShort = _formatResponsavelShort(usuario);
+                const dateBR = pub.data ? pub.data.split('-').reverse().join('/') : '—';
+                const hora = pub.hora ? pub.hora : '';
+                const numAnexos = (pub.anexos || []).length;
+                const anexosBadge = numAnexos > 0
+                    ? `<span class="dash-pub-attach-badge"><i class="fas fa-paperclip"></i>${numAnexos}</span>`
+                    : '<span style="color:var(--text-muted);font-size:12px">—</span>';
+
+                return `<tr onclick="verPublicacao(${item.id},'${tab}',${idx})" title="Ver publicação">
+                    <td><span class="pub-type-chip ${chipClass}"><i class="${ico}"></i>${tipo}</span></td>
+                    <td>
+                        <span class="dash-pub-title">${_escHtml(itemTitulo)}</span>
+                        ${desc ? `<span class="dash-pub-subtitle">${_escHtml(desc)}</span>` : ''}
+                    </td>
+                    <td>
+                        <div class="dash-pub-user">
+                            <span class="dash-pub-avatar">${initials}</span>
+                            <span>${_escHtml(usuarioShort)}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="dash-pub-date">${dateBR}<small>${hora}</small></div>
+                    </td>
+                    <td>${anexosBadge}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // Pagination
+        if (paginationEl) {
+            paginationEl.innerHTML = _buildDashPubPagination(_dashPubCurrentPage, totalPages);
+        }
+    }
+
+    function _escHtml(str) {
+        return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Retorna primeiro + segundo nome, respeitando artigos de ligação (de, da, do, dos, das, e)
+    function _formatResponsavelShort(name) {
+        const articles = new Set(['de','da','do','dos','das','e']);
+        const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+        if (parts.length <= 2) return parts.join(' ');
+        const result = [];
+        for (let i = 0; i < parts.length; i++) {
+            result.push(parts[i]);
+            if (result.length >= 2 && !articles.has(parts[i].toLowerCase())) break;
+        }
+        return result.join(' ');
+    }
+
+    // ── Minhas Revisões ─────────────────────────────────────────────────
+    var _minhasRevisoesPage = 1;
+    var _MINREV_PER_PAGE = 5;
+
+    window.goToMinRevPage = function(page) {
+        _minhasRevisoesPage = page;
+        _renderMinhasRevisoes();
+    };
+
+    function _renderMinhasRevisoes() {
+        const listEl  = document.getElementById('chartMinhasRevisoes');
+        const badgeEl = document.getElementById('badgeMinhasRevisoes');
+        const countEl = document.getElementById('minhasRevisoesCount');
+        const pagEl   = document.getElementById('minhasRevisoesPagination');
+        if (!listEl) return;
+
+        const me = (currentuser && currentuser.name ? currentuser.name : '').toLowerCase().trim();
+        const allowedTabs    = userAllowedTabs();
+        const allowedSetores = getAllowedSetores();
+        const fArea = document.getElementById('fDashArea')?.value || '';
+
+        const sources = [
+            { arr: typeof audits     !== 'undefined' ? audits     : [], tab: 'auditoria',   typeKey: 'audit', tabLabel: 'auditoria',    dateField: 'dataPublicacao' },
+            { arr: typeof activities !== 'undefined' ? activities : [], tab: 'atividades',  typeKey: 'ativ',  tabLabel: 'atividades',   dateField: 'dataInicio'    },
+            { arr: typeof trainings  !== 'undefined' ? trainings  : [], tab: 'treinamentos',typeKey: 'tren',  tabLabel: 'treinamentos', dateField: 'dataPublicacao'},
+            { arr: typeof documents  !== 'undefined' ? documents  : [], tab: 'documentos',  typeKey: 'doc',   tabLabel: 'documentos',   dateField: 'dataCriacao'   }
+        ];
+
+        const canceledTypes = new Set(['Concluído','Concluido','Finalizado','Cancelado','Arquivado']);
+
+        let items = [];
+        sources.forEach(({ arr, tab, typeKey, tabLabel, dateField }) => {
+            if (allowedTabs && !allowedTabs.includes(tab)) return;
+            if (fArea && fArea !== typeKey) return;
+            arr.forEach(item => {
+                if (item.deleted) return;
+                if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return;
+                // Exclui concluídos e cancelados
+                if (canceledTypes.has(item.status)) return;
+                const revisor = (item.revisor || '').toLowerCase().trim();
+                if (!me || !revisor || !revisor.includes(me)) return;
+                items.push({ item, tab: tabLabel, typeKey, dateField });
+            });
+        });
+
+        items.sort((a, b) => {
+            const da = a.item[a.dateField] || '';
+            const db = b.item[b.dateField] || '';
+            return db.localeCompare(da);
+        });
+
+        const total = items.length;
+        const totalPages = Math.max(1, Math.ceil(total / _MINREV_PER_PAGE));
+        if (_minhasRevisoesPage > totalPages) _minhasRevisoesPage = totalPages;
+        const start = (_minhasRevisoesPage - 1) * _MINREV_PER_PAGE;
+        const pageItems = items.slice(start, start + _MINREV_PER_PAGE);
+
+        if (badgeEl) badgeEl.textContent = total + ' ite' + (total !== 1 ? 'ns' : 'm');
+        if (countEl) countEl.textContent = total > 0 ? `${start + 1}–${Math.min(start + _MINREV_PER_PAGE, total)} de ${total}` : '';
+
+        const tabLabels = { audit: 'Rotina', ativ: 'Atividade', tren: 'Treinamento', doc: 'Documento' };
+
+        if (pageItems.length === 0) {
+            listEl.innerHTML = `<div class="chart-empty"><i class="fas fa-user-check"></i><span>${me ? 'Nenhum item pendente de revisão' : 'Usuário não identificado'}</span></div>`;
+        } else {
+            listEl.innerHTML = pageItems.map(({ item, tab, typeKey, dateField }) => {
+                const titulo = _escHtml(item.titulo || item.descricao || '—');
+                const status = _escHtml(item.status || '');
+                const setor  = _escHtml(item.setor || '');
+                const date   = item[dateField] ? item[dateField].substring(0, 10) : '—';
+                const typeL  = tabLabels[typeKey] || typeKey;
+                // Cor baseada no status
+                const isAtrasado = (function() {
+                    const dl = item.dataPrevisao || item.dataConclusao || item.dataProximaRevisao || null;
+                    return dl && typeof daysDiff === 'function' && daysDiff(dl) < 0;
+                })();
+                const color = isAtrasado ? '#dc2626' : '#ca8a04';
+                return `<li style="cursor:pointer;" onclick="openView(${item.id},'${tab}')" title="Abrir card">
+                    <div class="chart-list-header">
+                        <span class="status-info">
+                            <span class="color-dot" style="background:${color}"></span>
+                            <span style="max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${titulo}">${titulo}</span>
+                        </span>
+                        <span style="font-size:10.5px;font-weight:600;color:${color}">${status}</span>
+                    </div>
+                    <div style="display:flex;gap:6px;align-items:center;margin-top:2px;">
+                        <span style="font-size:10px;color:var(--text-muted);background:var(--bg-elevated);padding:1px 6px;border-radius:99px;">${typeL}</span>
+                        <span style="font-size:10px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${setor}</span>
+                        <span style="font-size:10px;color:var(--text-muted)">${date}</span>
+                        <i class="fas fa-chevron-right" style="font-size:9px;color:var(--border-strong);"></i>
+                    </div>
+                </li>`;
+            }).join('');
+        }
+
+        if (pagEl) {
+            if (totalPages <= 1) { pagEl.innerHTML = ''; return; }
+            let html = `<button class="dpg-btn" onclick="goToMinRevPage(${_minhasRevisoesPage - 1})" ${_minhasRevisoesPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<button class="dpg-btn ${i === _minhasRevisoesPage ? 'active' : ''}" onclick="goToMinRevPage(${i})">${i}</button>`;
+            }
+            html += `<button class="dpg-btn" onclick="goToMinRevPage(${_minhasRevisoesPage + 1})" ${_minhasRevisoesPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+            pagEl.innerHTML = html;
+        }
+    }
+
+    function _buildDashPubPagination(current, total) {
+        if (total <= 1) return '';
+        let html = `<button class="dpg-btn" onclick="goToDashPubPage(${current - 1})" ${current === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+
+        const pages = [];
+        if (total <= 7) {
+            for (let i = 1; i <= total; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            if (current > 3) pages.push('...');
+            for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+            if (current < total - 2) pages.push('...');
+            pages.push(total);
+        }
+
+        pages.forEach(p => {
+            if (p === '...') {
+                html += `<span class="dpg-ellipsis">…</span>`;
+            } else {
+                html += `<button class="dpg-btn ${p === current ? 'active' : ''}" onclick="goToDashPubPage(${p})">${p}</button>`;
+            }
+        });
+
+        html += `<button class="dpg-btn" onclick="goToDashPubPage(${current + 1})" ${current === total ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+        return html;
     }

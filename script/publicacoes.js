@@ -194,6 +194,16 @@ window.clearChecklist = function(prefix) {
 window.renderViewChecklist = function(item, tab) {
     const container = document.getElementById('viewChecklistContent');
     if (!container) return;
+
+    // Preserva textarea com foco ativo para não interromper digitação
+    const activeEl = document.activeElement;
+    let _savedFocusId = null, _savedValue = null, _savedStart = null, _savedEnd = null;
+    if (activeEl && activeEl.tagName === 'TEXTAREA' && activeEl.classList.contains('view-checklist-comment-input')) {
+        _savedFocusId = activeEl.closest('[id^="vcl-item-"]')?.id;
+        _savedValue   = activeEl.value;
+        _savedStart   = activeEl.selectionStart;
+        _savedEnd     = activeEl.selectionEnd;
+    }
     const checklist = item.checklist || [];
     if (checklist.length === 0) {
         container.innerHTML = '<div class="pub-empty"><i class="fas fa-list-check"></i><p>Nenhum item de checklist cadastrado.</p></div>';
@@ -260,6 +270,21 @@ window.renderViewChecklist = function(item, tab) {
         </div>
         <div class="view-checklist-list">${itemsHtml}</div>
         <div class="view-checklist-footer">${done}/${checklist.length} itens marcados</div>`;
+
+    // Restaura foco e posição do cursor no textarea que estava sendo editado
+    if (_savedFocusId) {
+        const restoredItem = container.querySelector(`#${_savedFocusId}`);
+        if (restoredItem) {
+            const area = restoredItem.querySelector('.view-checklist-comment-area');
+            if (area) area.classList.add('open');
+            const ta = restoredItem.querySelector('.view-checklist-comment-input');
+            if (ta) {
+                ta.value = _savedValue;
+                ta.focus();
+                try { ta.setSelectionRange(_savedStart, _savedEnd); } catch(e) {}
+            }
+        }
+    }
 };
 
 window.toggleViewChecklistComment = function(itemId) {
@@ -284,6 +309,15 @@ window.saveViewChecklistComment = function(id, tab, index, value) {
     if (!found || !found.checklist || !found.checklist[index]) return;
     if (typeof userCanChecklist === 'function' && !userCanChecklist(found)) return;
     found.checklist[index].comment = value;
+    // Update comment button color immediately
+    const commentBtn = document.querySelector(`#vcl-item-${id}-${index} .view-checklist-comment-btn`);
+    if (commentBtn) {
+        if (value.trim()) {
+            commentBtn.classList.add('has-comment');
+        } else {
+            commentBtn.classList.remove('has-comment');
+        }
+    }
     // Unblock checkbox if required comment is now present
     if (found.checklist[index].requiresComment) {
         const cb = document.querySelector(`#vcl-item-${id}-${index} .view-checklist-cb`);
@@ -763,6 +797,7 @@ window._pubSubtabAtivo = 'Todos';
 
 window.switchPubSubtab = function(tipo, btn) {
     window._pubSubtabAtivo = tipo;
+    _vpPubPage = 1;
     document.querySelectorAll('.pub-subtab').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
     const allItems = [...(audits||[]),...(trainings||[]),...(activities||[]),...(documents||[]),...(maintenances||[])];
@@ -771,12 +806,36 @@ window.switchPubSubtab = function(tipo, btn) {
 };
 
 // ─── RENDER PUBLICAÇÕES (aba view modal) ─────────────────────
+var _vpPubPage = 1;
+var _vpPubSortCol = 'data';
+var _vpPubSortDir = 'desc'; // padrão: mais novo primeiro
+var _VP_PUB_PER_PAGE = 10;
+
+window._vpSortPublicacoes = function(col) {
+    if (_vpPubSortCol === col) {
+        _vpPubSortDir = _vpPubSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        _vpPubSortCol = col;
+        _vpPubSortDir = col === 'data' ? 'desc' : 'asc';
+    }
+    _vpPubPage = 1;
+    const allItems = [...(audits||[]),...(trainings||[]),...(activities||[]),...(documents||[]),...(maintenances||[])];
+    const item = allItems.find(i => i.id === currentViewItemId);
+    if (item) renderViewPublicacoes(item);
+};
+window._vpGoPage = function(page) {
+    _vpPubPage = page;
+    const allItems = [...(audits||[]),...(trainings||[]),...(activities||[]),...(documents||[]),...(maintenances||[])];
+    const item = allItems.find(i => i.id === currentViewItemId);
+    if (item) renderViewPublicacoes(item);
+};
+
 window.renderViewPublicacoes = function(item) {
     const container = document.getElementById('viewPublicacoesContent');
     if (!container) return;
     const allPubs = item.publicacoes || [];
 
-    // Atualiza badges das sub-abas
+    // Badges das sub-abas
     const tiposSubtab = ['Comentário', 'Atualização', 'Evidência'];
     const badgeMap = { 'Comentário': 'pubSubBadgeComentario', 'Atualização': 'pubSubBadgeAtualizacao', 'Evidência': 'pubSubBadgeEvidencia' };
     const badgeTodos = document.getElementById('pubSubBadgeTodos');
@@ -789,24 +848,51 @@ window.renderViewPublicacoes = function(item) {
 
     // Filtra pelo tipo ativo
     const filtroAtivo = window._pubSubtabAtivo || 'Todos';
-    const pubs = filtroAtivo === 'Todos' ? allPubs : allPubs.filter(p => p.tipo === filtroAtivo);
+    let pubs = filtroAtivo === 'Todos' ? allPubs.slice() : allPubs.filter(p => p.tipo === filtroAtivo);
+
+    // Ordena
+    pubs.sort((a, b) => {
+        let va, vb;
+        if (_vpPubSortCol === 'data') {
+            va = (a.data || '') + (a.hora || '');
+            vb = (b.data || '') + (b.hora || '');
+        } else if (_vpPubSortCol === 'tipo') {
+            va = a.tipo || ''; vb = b.tipo || '';
+        } else if (_vpPubSortCol === 'desc') {
+            va = a.titulo || a.descricao || ''; vb = b.titulo || b.descricao || '';
+        } else if (_vpPubSortCol === 'usuario') {
+            va = a.usuario || ''; vb = b.usuario || '';
+        } else {
+            va = ''; vb = '';
+        }
+        const cmp = va.localeCompare(vb);
+        return _vpPubSortDir === 'asc' ? cmp : -cmp;
+    });
 
     if (pubs.length === 0) {
         const msg = filtroAtivo === 'Todos' ? 'Nenhuma publicação registrada ainda.' : `Nenhuma publicação do tipo "${filtroAtivo}" encontrada.`;
         container.innerHTML = `<div class="pub-empty"><i class="fas fa-paper-plane"></i><p>${msg}</p></div>`;
         return;
     }
+
+    const totalPages = Math.max(1, Math.ceil(pubs.length / _VP_PUB_PER_PAGE));
+    if (_vpPubPage > totalPages) _vpPubPage = totalPages;
+
+    const pagePubs = pubs.slice((_vpPubPage - 1) * _VP_PUB_PER_PAGE, _vpPubPage * _VP_PUB_PER_PAGE);
     const _canMgPubs = typeof userCanManagePubs === 'function' ? userCanManagePubs(item) : true;
 
-    const rows = pubs.map((p, _fi) => {
-        // índice real no array original (necessário para editar/excluir)
+    const _sortIcon = (col) => {
+        if (_vpPubSortCol !== col) return '<i class="fas fa-sort" style="opacity:0.3;margin-left:4px;font-size:10px"></i>';
+        return _vpPubSortDir === 'asc'
+            ? '<i class="fas fa-sort-up" style="color:var(--accent);margin-left:4px;font-size:10px"></i>'
+            : '<i class="fas fa-sort-down" style="color:var(--accent);margin-left:4px;font-size:10px"></i>';
+    };
+
+    const rows = pagePubs.map((p) => {
         const i = allPubs.indexOf(p);
         const typeClass = {
-            'Evidência': 'evidencia',
-            'Atualização': 'atualizacao',
-            'Comentário': 'comentario',
-            'Treinamento': 'evidencia',
-            'Documento': 'documento'
+            'Evidência': 'evidencia', 'Atualização': 'atualizacao',
+            'Comentário': 'comentario', 'Treinamento': 'evidencia', 'Documento': 'documento'
         }[p.tipo] || '';
         const dateStr = p.data ? _formatDateBR(p.data) : '–';
         const descPreview = (p.descricao || '').slice(0, 60) + ((p.descricao || '').length > 60 ? '…' : '');
@@ -814,7 +900,7 @@ window.renderViewPublicacoes = function(item) {
         return `<tr onclick="verPublicacao(${item.id},'${window._currentViewTab}',${i})" title="Ver publicação">
             <td><span class="pub-type-badge ${typeClass}">${p.tipo || '–'}</span></td>
             <td>${p.titulo || descPreview || '–'}</td>
-            <td>${dateStr} ${p.hora || ''}</td>
+            <td>${dateStr}${p.hora ? ' ' + p.hora : ''}</td>
             <td>${p.usuario || '–'}</td>
             <td>${nAnexos > 0 ? `<i class="fas fa-paperclip" style="color:#94a3b8"></i> ${nAnexos}` : '–'}</td>
             <td onclick="event.stopPropagation();" style="white-space:nowrap;">
@@ -823,16 +909,39 @@ window.renderViewPublicacoes = function(item) {
             </td>
         </tr>`;
     }).join('');
+
+    // Paginação
+    let paginationHtml = '';
+    if (totalPages > 1) {
+        paginationHtml = `<div class="vp-pub-pagination">
+            <span class="vp-pub-count">${pubs.length} publicaç${pubs.length !== 1 ? 'ões' : 'ão'}</span>
+            <div class="vp-pub-pages">
+                <button class="dpg-btn" onclick="event.stopPropagation();_vpGoPage(${_vpPubPage - 1})" ${_vpPubPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                ${Array.from({length: totalPages}, (_, i) => i + 1).map(p =>
+                    `<button class="dpg-btn ${p === _vpPubPage ? 'active' : ''}" onclick="event.stopPropagation();_vpGoPage(${p})">${p}</button>`
+                ).join('')}
+                <button class="dpg-btn" onclick="event.stopPropagation();_vpGoPage(${_vpPubPage + 1})" ${_vpPubPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>`;
+    } else {
+        paginationHtml = `<div class="vp-pub-pagination"><span class="vp-pub-count">${pubs.length} publicaç${pubs.length !== 1 ? 'ões' : 'ão'}</span></div>`;
+    }
+
     container.innerHTML = `
         <div class="pub-table-wrap">
             <table class="pub-table">
                 <thead><tr>
-                    <th>Tipo</th><th>Descrição</th><th>Data/Hora</th><th>Usuário</th><th>Anexos</th><th></th>
+                    <th style="cursor:pointer" onclick="_vpSortPublicacoes('tipo')">Tipo${_sortIcon('tipo')}</th>
+                    <th style="cursor:pointer" onclick="_vpSortPublicacoes('desc')">Descrição${_sortIcon('desc')}</th>
+                    <th style="cursor:pointer" onclick="_vpSortPublicacoes('data')">Data/Hora${_sortIcon('data')}</th>
+                    <th style="cursor:pointer" onclick="_vpSortPublicacoes('usuario')">Usuário${_sortIcon('usuario')}</th>
+                    <th>Anexos</th><th></th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>
-        </div>`;
-};
+        </div>
+        ${paginationHtml}`
+;};
 
 const _VER_PUB_TYPE_CONFIG = {
     'Comentário':  { icon: 'fas fa-comment-dots', color: '#6366f1', bg: '#eef2ff' },

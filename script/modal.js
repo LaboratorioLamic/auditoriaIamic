@@ -10,11 +10,12 @@ function resetModal(prefix) {
     if (_anexosCont) _anexosCont.innerHTML = '';
     if (typeof clearAnexosUpload === 'function') clearAnexosUpload(prefix);
 
-    // Lida com Responsáveis
+    // Lida com Responsáveis e Revisores (multi-select)
+    var _msPrefix = prefix === 'train' ? 'tren' : prefix;
+    if (typeof msResetPrefix === 'function') msResetPrefix(_msPrefix);
+    // Garante também o hidden input limpo (fallback)
     var respEl = document.getElementById(`${prefix}Responsavel`);
     if (respEl) respEl.value = '';
-
-    // Lida com Revisores (exceto em manutenção)
     if (prefix !== 'mant') {
         const revEl = document.getElementById(`${prefix}Revisor`);
         if (revEl) revEl.value = '';
@@ -24,9 +25,12 @@ function resetModal(prefix) {
         const markEl = document.getElementById(`${prefix}Marcador`);
         if (markEl && markEl.options.length > 0) markEl.selectedIndex = 0;
 
+    // Reset Programação de Status
+    if (typeof setSchedStatusValues === 'function') setSchedStatusValues(prefix, '', '');
+    setTimeout(() => { if (typeof updateSchedStatusVisibility === 'function') updateSchedStatusVisibility(prefix); }, 0);
+
     // Define o Setor
-    var defaultSetor = masterLists.setores[0] || '';
-    document.getElementById(`${prefix}Setor`).value = defaultSetor;
+    document.getElementById(`${prefix}Setor`).value = '';
 
     // Define o Status (seleciona o primeiro, se houver)
     if (document.getElementById(`${prefix}Status`).options.length > 0) {
@@ -38,15 +42,14 @@ function resetModal(prefix) {
     if (prefix === 'audit') {
         document.getElementById('auditDataPublicacao').value = today();
         document.getElementById('auditDataPrevisao').value = today();
-        document.getElementById('auditFlagDias').value = 7;
+        document.getElementById('auditFlagDias').value = '';
         document.getElementById('auditRotina').value = 'pontual';
         document.getElementById('auditFrequencia').value = 1;
         document.getElementById('auditFrequenciaWrap').style.display = 'none';
         document.getElementById('auditDiaSemanaWrap').style.display = 'none';
         document.getElementById('auditDataPrevisao').readOnly = false;
         document.querySelectorAll('#auditWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
-        const defaultAuditCat = masterLists.auditCategorias[0] || '';
-        document.getElementById('auditCategoria').value = defaultAuditCat;
+        document.getElementById('auditCategoria').value = '';
     } else if (prefix === 'train') {
         document.getElementById('trainDataPublicacao').value = today();
         document.getElementById('trainDataPrevisao').value = today();
@@ -56,24 +59,21 @@ function resetModal(prefix) {
         document.getElementById('trainDiaSemanaWrap').style.display = 'none';
         document.getElementById('trainDataPrevisao').readOnly = false;
         document.querySelectorAll('#trainWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('trainFlagDias').value = 7;
-        const defaultTrainCat = masterLists.trainCategorias[0] || '';
-        document.getElementById('trainCategoria').value = defaultTrainCat;
+        document.getElementById('trainFlagDias').value = '';
+        document.getElementById('trainCategoria').value = '';
     } else if (prefix === 'ativ') {
         document.getElementById('ativDataInicio').value = today();
         document.getElementById('ativDataConclusao').value = today();
-        document.getElementById('ativFlagDias').value = 3;
-        const defaultAtivCat = masterLists.ativCategorias[0] || '';
-        document.getElementById('ativCategoria').value = defaultAtivCat;
+        document.getElementById('ativFlagDias').value = '';
+        document.getElementById('ativCategoria').value = '';
     } else if (prefix === 'mant') {
         document.getElementById('mantUltima').value = today();
         document.getElementById('mantIntervalo').value = 30;
         document.getElementById('mantEmpresaResponsavel').value = '';
         document.getElementById('mantResponsavelTecnico').value = '';
         document.getElementById('mantResponsavelManutencao').value = '';
-        document.getElementById('mantFlagDias').value = 7;
-        const defaultMantCat = masterLists.mantCategorias[0] || '';
-        document.getElementById('mantCategoria').value = defaultMantCat;
+        document.getElementById('mantFlagDias').value = '';
+        document.getElementById('mantCategoria').value = '';
         document.getElementById('mantTipo').value = '';
         calculateNextDate('mant');
     } else if (prefix === 'doc') {
@@ -85,10 +85,8 @@ function resetModal(prefix) {
         document.getElementById('docDiaSemanaWrap').style.display = 'none';
         document.getElementById('docDataProximaRevisao').readOnly = false;
         document.querySelectorAll('#docWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('docRevisor').value = '';
-        document.getElementById('docFlagDias').value = 30;
-        const defaultDocCat = masterLists.docCategorias[0] || '';
-        document.getElementById('docCategoria').value = defaultDocCat;
+        document.getElementById('docFlagDias').value = '';
+        document.getElementById('docCategoria').value = '';
     }
 
     // 3. Chamar onCategoryChange após definir a categoria (se a categoria existir)
@@ -222,18 +220,10 @@ function resetModal(prefix) {
             document.getElementById('auditStatus').value = item.status;
             document.getElementById('auditDataPublicacao').value = item.dataPublicacao;
             document.getElementById('auditDataPrevisao').value = item.dataPrevisao;
-            let auditResp = item.responsavel;
-            if (Array.isArray(auditResp)) auditResp = auditResp[0];
-            else if (typeof auditResp === 'string' && auditResp.startsWith('[')) {
-                try { auditResp = JSON.parse(auditResp)[0]; } catch {}
+            if (typeof msSetValue === 'function') {
+                msSetValue('audit-resp', item.responsavel || '');
+                msSetValue('audit-rev',  item.revisor     || '');
             }
-            document.getElementById('auditResponsavel').value = auditResp || '';
-            let auditRev = item.revisor;
-            if (Array.isArray(auditRev)) auditRev = auditRev[0];
-            else if (typeof auditRev === 'string' && auditRev.startsWith('[')) {
-                try { auditRev = JSON.parse(auditRev)[0]; } catch {}
-            }
-            document.getElementById('auditRevisor').value = auditRev || '';
             document.getElementById('auditFlagDias').value = item.flagDias;
             // Rotina
             const rotina = item.rotina || 'pontual';
@@ -249,6 +239,8 @@ function resetModal(prefix) {
             }
             if (typeof onAuditRotinaChange === 'function') onAuditRotinaChange(true);
             document.getElementById('auditMarcador').value = item.marcador || '';
+            if (typeof setSchedStatusValues === 'function') setSchedStatusValues('audit', item.overdueStatus || '', item.alertStatus || '');
+            setTimeout(() => { if (typeof updateSchedStatusVisibility === 'function') updateSchedStatusVisibility('audit'); }, 0);
             restoreAnexos('audit', item.anexos);
             if (typeof restoreChecklist === 'function') restoreChecklist('audit', item.checklist, item.checklistPublicacao);
             openFormDrawer('modalAuditoria');
@@ -264,18 +256,10 @@ function resetModal(prefix) {
             document.getElementById('ativStatus').value = item.status;
             document.getElementById('ativDataInicio').value = item.dataInicio;
             document.getElementById('ativDataConclusao').value = item.dataConclusao;
-            let ativResp = item.responsavel;
-            if (Array.isArray(ativResp)) ativResp = ativResp[0];
-            else if (typeof ativResp === 'string' && ativResp.startsWith('[')) {
-                try { ativResp = JSON.parse(ativResp)[0]; } catch {}
+            if (typeof msSetValue === 'function') {
+                msSetValue('ativ-resp', item.responsavel || '');
+                msSetValue('ativ-rev',  item.revisor     || '');
             }
-            document.getElementById('ativResponsavel').value = ativResp || '';
-            let ativRev = item.revisor;
-            if (Array.isArray(ativRev)) ativRev = ativRev[0];
-            else if (typeof ativRev === 'string' && ativRev.startsWith('[')) {
-                try { ativRev = JSON.parse(ativRev)[0]; } catch {}
-            }
-            document.getElementById('ativRevisor').value = ativRev || '';
             document.getElementById('ativFlagDias').value = item.flagDias;
             document.getElementById('ativMarcador').value = item.marcador || '';
             restoreAnexos('ativ', item.anexos);
@@ -305,20 +289,14 @@ function resetModal(prefix) {
                 });
             }
             if (typeof onTrainRotinaChange === 'function') onTrainRotinaChange(true);
-            let trainResp = item.responsavel;
-            if (Array.isArray(trainResp)) trainResp = trainResp[0];
-            else if (typeof trainResp === 'string' && trainResp.startsWith('[')) {
-                try { trainResp = JSON.parse(trainResp)[0]; } catch {}
+            if (typeof msSetValue === 'function') {
+                msSetValue('tren-resp', item.responsavel || '');
+                msSetValue('tren-rev',  item.revisor     || '');
             }
-            document.getElementById('trainResponsavel').value = trainResp || '';
-            let trainRev = item.revisor;
-            if (Array.isArray(trainRev)) trainRev = trainRev[0];
-            else if (typeof trainRev === 'string' && trainRev.startsWith('[')) {
-                try { trainRev = JSON.parse(trainRev)[0]; } catch {}
-            }
-            document.getElementById('trainRevisor').value = trainRev || '';
             document.getElementById('trainFlagDias').value = item.flagDias;
             document.getElementById('trainMarcador').value = item.marcador || '';
+            if (typeof setSchedStatusValues === 'function') setSchedStatusValues('train', item.overdueStatus || '', item.alertStatus || '');
+            setTimeout(() => { if (typeof updateSchedStatusVisibility === 'function') updateSchedStatusVisibility('train'); }, 0);
             restoreAnexos('train', item.anexos);
             if (typeof restoreChecklist === 'function') restoreChecklist('train', item.checklist, item.checklistPublicacao);
             openFormDrawer('modalTreinamentos');
@@ -374,21 +352,15 @@ function resetModal(prefix) {
                 });
             }
             if (typeof onDocRotinaChange === 'function') onDocRotinaChange(true);
-            let docResp = item.responsavel;
-            if (Array.isArray(docResp)) docResp = docResp[0];
-            else if (typeof docResp === 'string' && docResp.startsWith('[')) {
-                try { docResp = JSON.parse(docResp)[0]; } catch {}
+            if (typeof msSetValue === 'function') {
+                msSetValue('doc-resp', item.responsavel || '');
+                msSetValue('doc-rev',  item.revisor     || '');
             }
-            document.getElementById('docResponsavel').value = docResp || '';
-            let docRev = item.revisor;
-            if (Array.isArray(docRev)) docRev = docRev[0];
-            else if (typeof docRev === 'string' && docRev.startsWith('[')) {
-                try { docRev = JSON.parse(docRev)[0]; } catch {}
-            }
-            document.getElementById('docRevisor').value = docRev || '';
             document.getElementById('docFlagDias').value = item.flagDias;
             restoreAnexos('doc', item.anexos);
             document.getElementById('docMarcador').value = item.marcador || '';
+            if (typeof setSchedStatusValues === 'function') setSchedStatusValues('doc', item.overdueStatus || '', item.alertStatus || '');
+            setTimeout(() => { if (typeof updateSchedStatusVisibility === 'function') updateSchedStatusVisibility('doc'); }, 0);
             if (typeof restoreChecklist === 'function') restoreChecklist('doc', item.checklist, item.checklistPublicacao);
             openFormDrawer('modalDocumentos');
         }
@@ -583,7 +555,7 @@ function resetModal(prefix) {
                         id: a.id,
                         tab: 'auditoria',
                         titulo: a.titulo,
-                        tipo: 'Auditoria',
+                        tipo: 'Rotina',
                         setor: a.setor,
                         deletedAt: a.deletedAt,
                         deletedBy: a.deletedBy,
@@ -721,30 +693,45 @@ function resetModal(prefix) {
             title: '⚠️ Deleção Permanente',
             message: 'O item será <strong>removido para sempre</strong> e não poderá ser recuperado.<br>Esta ação é irreversível.',
             onConfirm: (reason) => {
-                let deleted = false;
+                let deletedItem = null;
+                let tipoLabel = '';
 
                 if (tab === 'auditoria' || tab === 'audit') {
                     const index = audits.findIndex(a => String(a.id) === String(id));
-                    if (index > -1) { audits.splice(index, 1); deleted = true; }
+                    if (index > -1) { deletedItem = audits[index]; tipoLabel = 'Rotina'; audits.splice(index, 1); }
                 }
                 else if (tab === 'treinamentos' || tab === 'train') {
                     const index = trainings.findIndex(t => String(t.id) === String(id));
-                    if (index > -1) { trainings.splice(index, 1); deleted = true; }
+                    if (index > -1) { deletedItem = trainings[index]; tipoLabel = 'Treinamento'; trainings.splice(index, 1); }
                 }
                 else if (tab === 'atividades' || tab === 'ativ') {
                     const index = activities.findIndex(a => String(a.id) === String(id));
-                    if (index > -1) { activities.splice(index, 1); deleted = true; }
+                    if (index > -1) { deletedItem = activities[index]; tipoLabel = 'Atividade'; activities.splice(index, 1); }
                 }
                 else if (tab === 'manutencao' || tab === 'mant') {
                     const index = maintenances.findIndex(m => String(m.id) === String(id));
-                    if (index > -1) { maintenances.splice(index, 1); deleted = true; }
+                    if (index > -1) { deletedItem = maintenances[index]; tipoLabel = 'Manutenção'; maintenances.splice(index, 1); }
                 }
                 else if (tab === 'documentos' || tab === 'doc') {
                     const index = documents.findIndex(d => String(d.id) === String(id));
-                    if (index > -1) { documents.splice(index, 1); deleted = true; }
+                    if (index > -1) { deletedItem = documents[index]; tipoLabel = 'Documento'; documents.splice(index, 1); }
                 }
 
-                if (deleted) {
+                if (deletedItem) {
+                    if (!masterLists.deletionHistory) masterLists.deletionHistory = [];
+                    masterLists.deletionHistory.push({
+                        histId: Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                        titulo: deletedItem.titulo || deletedItem.categoria || '—',
+                        tipo: tipoLabel,
+                        tab: tab,
+                        setor: deletedItem.setor || '',
+                        deletedAt: deletedItem.deletedAt || '',
+                        deletedBy: deletedItem.deletedBy || '',
+                        deletedReason: deletedItem.deletedReason || '',
+                        permanentlyDeletedAt: new Date().toISOString(),
+                        permanentlyDeletedBy: (currentuser && (currentuser.email || currentuser.name)) || 'desconhecido',
+                        permanentReason: reason || ''
+                    });
                     saveAll();
                     openTrashBin();
                     updateTrashBadge();
@@ -753,6 +740,68 @@ function resetModal(prefix) {
             }
         });
     }
+
+    window.openDeletionHistory = function() {
+        const history = (masterLists.deletionHistory || []).slice().reverse();
+        const isAdmin = userIsAdmin();
+        const content = document.getElementById('deletionHistoryContent');
+
+        if (history.length === 0) {
+            content.innerHTML = '<div style="text-align:center; padding:40px; color:#6b7280;"><i class="fas fa-check-circle" style="font-size:48px; margin-bottom:16px; display:block;"></i>Nenhuma exclusão permanente registrada</div>';
+        } else {
+            let html = '<table style="width:100%; border-collapse:collapse; font-size:13px;">';
+            html += '<thead><tr style="border-bottom:2px solid var(--border); background:var(--bg);">';
+            html += '<th style="padding:10px 12px; text-align:left; font-weight:600;">Título</th>';
+            html += '<th style="padding:10px 12px; text-align:left; font-weight:600;">Tipo</th>';
+            html += '<th style="padding:10px 12px; text-align:left; font-weight:600;">Setor</th>';
+            html += '<th style="padding:10px 12px; text-align:left; font-weight:600;">Motivo da exclusão</th>';
+            html += '<th style="padding:10px 12px; text-align:left; font-weight:600;">Excluído por</th>';
+            html += '<th style="padding:10px 12px; text-align:left; font-weight:600;">Data</th>';
+            if (isAdmin) html += '<th style="padding:10px 12px; text-align:center; font-weight:600;">Ações</th>';
+            html += '</tr></thead><tbody>';
+
+            history.forEach(entry => {
+                const dateStr = entry.permanentlyDeletedAt
+                    ? new Date(entry.permanentlyDeletedAt).toLocaleDateString('pt-BR') + ' ' + new Date(entry.permanentlyDeletedAt).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
+                    : '—';
+                const motivo = entry.permanentReason || entry.deletedReason || '—';
+                const motivoHtml = `<span title="${motivo.replace(/"/g,'&quot;')}" style="display:inline-block;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;">${motivo}</span>`;
+                html += `<tr style="border-bottom:1px solid var(--border); transition:background 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.04)'" onmouseout="this.style.background='transparent'">
+                    <td style="padding:10px 12px; font-weight:500;">${entry.titulo}</td>
+                    <td style="padding:10px 12px;"><span style="background:var(--accent); color:white; padding:3px 7px; border-radius:4px; font-size:11px; font-weight:500;">${entry.tipo}</span></td>
+                    <td style="padding:10px 12px; color:#6b7280;">${entry.setor || '—'}</td>
+                    <td style="padding:10px 12px; font-size:12px; color:#374151;">${motivoHtml}</td>
+                    <td style="padding:10px 12px; font-size:12px; color:#6b7280;">${entry.permanentlyDeletedBy}</td>
+                    <td style="padding:10px 12px; font-size:12px; color:#6b7280; white-space:nowrap;">${dateStr}</td>
+                    ${isAdmin ? `<td style="padding:10px 12px; text-align:center;">
+                        <button onclick="removeDeletionHistoryEntry('${entry.histId}')" title="Remover do histórico" style="background:#ef4444; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-size:12px; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </td>` : ''}
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            content.innerHTML = html;
+        }
+
+        document.getElementById('modalDeletionHistory').style.display = 'flex';
+    };
+
+    window.removeDeletionHistoryEntry = function(histId) {
+        if (!userIsAdmin()) return;
+        showConfirmDanger({
+            title: 'Remover do histórico',
+            message: 'Deseja remover este registro do histórico de exclusões?',
+            confirmLabel: 'Remover',
+            onConfirm: () => {
+                masterLists.deletionHistory = (masterLists.deletionHistory || []).filter(e => e.histId !== histId);
+                saveAll();
+                openDeletionHistory();
+                if (typeof showToast === 'function') showToast('Registro removido do histórico.', 'warning');
+            }
+        });
+    };
 
     // Anexos Logic — delegado ao sistema de upload (upload.js)
     function getAnexos(prefix) {
@@ -854,7 +903,7 @@ function renderViewContent(id, tab) {
         manutencao: 'fa-wrench'
     };
     const tabLabelMap = {
-        auditoria: 'Auditoria',
+        auditoria: 'Gestão de Rotinas',
         atividades: 'Atividade',
         treinamentos: 'Treinamento',
         documentos: 'Documento',
@@ -883,12 +932,20 @@ function renderViewContent(id, tab) {
     // ── INFO TAB ──────────────────────────────────────────────
     var detailsCards = '';
     if (finalTab === 'auditoria') {
+        const rotinaLabelAudit = { pontual: 'Pontual', anual: 'Anual', mensal: 'Mensal', semanal: 'Semanal', diasemana: 'Dia da semana' }[item.rotina || 'pontual'] || 'Pontual';
+        const freqUnitAudit = { anual: 'ano(s)', mensal: 'mês(es)', semanal: 'semana(s)' }[item.rotina];
+        const freqLabelAudit = freqUnitAudit && item.frequencia ? `A cada ${item.frequencia} ${freqUnitAudit}` : (item.rotina === 'diasemana' ? 'Semanal (dia fixo)' : null);
         detailsCards = _viewCards([
             ['Setor', item.setor], ['Categoria', item.categoria],
             ['Responsável', item.responsavel], ['Revisor', item.revisor],
-            ['Auditor', item.auditor], ['Publicação', formatBR(item.dataPublicacao)],
+            ['Auditor', item.auditor],
+            ['Rotina', rotinaLabelAudit],
+            ['Frequência', freqLabelAudit],
+            ['Publicação', formatBR(item.dataPublicacao)],
             ['Previsão', formatBR(item.dataPrevisao)],
-            ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
+            ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'],
+            ['Ao Alertar →', item.alertStatus || null],
+            ['Ao Vencer →', item.overdueStatus || null]
         ]);
     } else if (finalTab === 'atividades') {
         detailsCards = _viewCards([
@@ -912,23 +969,33 @@ function renderViewContent(id, tab) {
         ]);
     } else if (finalTab === 'treinamentos') {
         const rotinaLabelTrain = { pontual: 'Pontual', anual: 'Anual', mensal: 'Mensal', semanal: 'Semanal', diasemana: 'Dia da semana' }[item.rotina || 'pontual'] || 'Pontual';
+        const freqUnitTrain = { anual: 'ano(s)', mensal: 'mês(es)', semanal: 'semana(s)' }[item.rotina];
+        const freqLabelTrain = freqUnitTrain && item.frequencia ? `A cada ${item.frequencia} ${freqUnitTrain}` : (item.rotina === 'diasemana' ? 'Semanal (dia fixo)' : null);
         detailsCards = _viewCards([
             ['Setor', item.setor], ['Categoria', item.categoria],
             ['Responsável', item.responsavel], ['Revisor', item.revisor],
             ['Rotina', rotinaLabelTrain],
+            ['Frequência', freqLabelTrain],
             ['Data Publicação', formatBR(item.dataPublicacao)],
             ['Data Previsão', item.dataPrevisao ? formatBR(item.dataPrevisao) : 'N/A'],
-            ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
+            ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'],
+            ['Ao Alertar →', item.alertStatus || null],
+            ['Ao Vencer →', item.overdueStatus || null]
         ]);
     } else if (finalTab === 'documentos') {
         const rotinaLabelDoc = { pontual: 'Pontual', anual: 'Anual', mensal: 'Mensal', semanal: 'Semanal', diasemana: 'Dia da semana' }[item.rotina || 'pontual'] || 'Pontual';
+        const freqUnitDoc = { anual: 'ano(s)', mensal: 'mês(es)', semanal: 'semana(s)' }[item.rotina];
+        const freqLabelDoc = freqUnitDoc && item.frequencia ? `A cada ${item.frequencia} ${freqUnitDoc}` : (item.rotina === 'diasemana' ? 'Semanal (dia fixo)' : null);
         detailsCards = _viewCards([
             ['Setor', item.setor], ['Categoria', item.categoria],
             ['Responsável', item.responsavel], ['Revisor', item.revisor],
             ['Rotina', rotinaLabelDoc],
+            ['Frequência', freqLabelDoc],
             ['Data do Documento', formatBR(item.dataCriacao)],
             ['Próx. Revisão', item.dataProximaRevisao ? formatBR(item.dataProximaRevisao) : 'N/A'],
-            ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
+            ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'],
+            ['Ao Alertar →', item.alertStatus || null],
+            ['Ao Vencer →', item.overdueStatus || null]
         ]);
     }
 
@@ -1003,7 +1070,7 @@ function renderViewContent(id, tab) {
 }
 
 function _viewCards(pairs) {
-    return pairs.map(([label, val]) =>
+    return pairs.filter(([, val]) => val !== null && val !== undefined).map(([label, val]) =>
         `<div class="view-info-card"><label>${label}</label><div>${val || 'ND'}</div></div>`
     ).join('');
 }

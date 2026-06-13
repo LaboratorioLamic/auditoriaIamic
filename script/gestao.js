@@ -7,13 +7,23 @@
         const selectedAtivMarkerName = document.getElementById('ativMarcador').value;
         const ativMarkerObj = (masterLists.ativMarcadores || []).find(m => m.name === selectedAtivMarkerName);
 
-        let responsavel = document.getElementById('ativResponsavel').value || '';
-        let revisor = document.getElementById('ativRevisor').value || '';
+        let responsavel = (typeof msGetValue === 'function') ? msGetValue('ativ-resp') : [];
+        let revisor     = (typeof msGetValue === 'function') ? msGetValue('ativ-rev')  : [];
+        if (!Array.isArray(responsavel)) responsavel = responsavel ? [responsavel] : [];
+        if (!Array.isArray(revisor))     revisor     = revisor     ? [revisor]     : [];
 
         if (!isNew && !userIsAdmin()) {
-            if (!responsavel) responsavel = item.responsavel || '';
-            if (!revisor) revisor = item.revisor || '';
+            if (!responsavel.length) {
+                const prev = item.responsavel;
+                try { responsavel = Array.isArray(prev) ? prev : (prev ? JSON.parse(prev) : []); } catch { responsavel = prev ? [prev] : []; }
+            }
+            if (!revisor.length) {
+                const prev = item.revisor;
+                try { revisor = Array.isArray(prev) ? prev : (prev ? JSON.parse(prev) : []); } catch { revisor = prev ? [prev] : []; }
+            }
         }
+        responsavel = JSON.stringify(responsavel);
+        revisor     = JSON.stringify(revisor);
 
         const newItem = {
             ...item,
@@ -88,8 +98,8 @@
             status: document.getElementById('ativStatus').value,
             dataInicio: document.getElementById('ativDataInicio').value,
             dataConclusao: document.getElementById('ativDataConclusao').value,
-            responsavel: document.getElementById('ativResponsavel').value,
-            revisor: document.getElementById('ativRevisor').value,
+            responsavel: (typeof msGetValue === 'function') ? JSON.stringify(msGetValue('ativ-resp')) : document.getElementById('ativResponsavel').value,
+            revisor:     (typeof msGetValue === 'function') ? JSON.stringify(msGetValue('ativ-rev'))  : document.getElementById('ativRevisor').value,
             flagDias: document.getElementById('ativFlagDias').value,
             marcador: document.getElementById('ativMarcador').value,
             anexos: typeof getAnexos === 'function' ? getAnexos('ativ') : []
@@ -108,8 +118,7 @@
             document.getElementById('ativStatus').value = formData.status;
             document.getElementById('ativDataInicio').value = formData.dataInicio;
             document.getElementById('ativDataConclusao').value = formData.dataConclusao;
-            document.getElementById('ativResponsavel').value = formData.responsavel;
-            document.getElementById('ativRevisor').value = formData.revisor;
+            if (typeof msSetValue === 'function') { msSetValue('ativ-resp', formData.responsavel || ''); msSetValue('ativ-rev', formData.revisor || ''); }
             document.getElementById('ativFlagDias').value = formData.flagDias;
             document.getElementById('ativMarcador').value = formData.marcador;
 

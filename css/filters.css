@@ -129,6 +129,64 @@
 }
 .fbar-people-btn i { font-size: 13px; color: var(--text-muted); }
 .fbar-people-btn.active i { color: var(--accent); }
+
+/* Área — botão + dropdown de chips */
+.fbar-area-wrap { position: relative; }
+.fbar-area-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1.5px solid var(--accent);
+    border-radius: var(--r-md);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    white-space: nowrap;
+    transition: background var(--t-fast), border-color var(--t-fast);
+}
+.fbar-area-btn:hover { background: var(--accent); color: #fff; }
+.fbar-area-btn i:first-child { font-size: 13px; }
+
+.fbar-area-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-md);
+    padding: 6px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 200px;
+}
+.fbar-area-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: var(--r-md);
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    transition: background var(--t-fast), color var(--t-fast);
+    width: 100%;
+}
+.fbar-area-chip:hover { background: var(--accent-soft); color: var(--accent); }
+.fbar-area-chip--active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 .fbar-people-badge {
     background: var(--accent);
     color: #fff;
@@ -504,3 +562,94 @@
 .multi-select-option:last-child { border-bottom: none; }
 .multi-select-option:hover { background: var(--surface-hover); }
 .multi-select-option.selected { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+/* ── Novo Multi-Select (Responsáveis / Revisores nos modais) ── */
+.ms-field {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    min-height: 40px;
+    padding: 6px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-sm);
+    background: var(--surface);
+    cursor: text;
+    transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.ms-field:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.10);
+}
+.ms-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.ms-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--accent);
+    color: #fff;
+    padding: 3px 8px 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.ms-tag button {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.75);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    font-size: 10px;
+    line-height: 1;
+    transition: color var(--t-fast);
+}
+.ms-tag button:hover { color: #fff; }
+.ms-input {
+    flex: 1;
+    min-width: 120px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--text);
+    padding: 2px 0;
+    outline: none;
+}
+.ms-input::placeholder { color: var(--text-muted); }
+.ms-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--card-bg);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-md);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 200;
+    display: none;
+}
+.ms-dropdown.ms-drop--open { display: block; }
+.ms-option {
+    display: flex;
+    align-items: center;
+    padding: 9px 12px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background var(--t-fast);
+}
+.ms-option:last-child { border-bottom: none; }
+.ms-option:hover { background: var(--surface-hover); }
+.ms-option--sel { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.ms-drop-empty { padding: 10px 12px; font-size: 12px; color: var(--text-muted); }

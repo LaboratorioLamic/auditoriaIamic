@@ -310,21 +310,8 @@ function initAllAcFields() {
         }
     });
 
-    // Responsável e Revisor (sem select-wrapper)
-    var RESP_REV_IDS = [
-        'auditResponsavel', 'auditRevisor',
-        'trainResponsavel', 'trainRevisor',
-        'ativResponsavel', 'ativRevisor',
-        'docResponsavel', 'docRevisor'
-    ];
-    RESP_REV_IDS.forEach(function (id) {
-        var sel = document.getElementById(id);
-        if (sel) {
-            initAcFieldDirect(sel, {
-                placeholder: id.includes('Revisor') ? 'Revisor...' : 'Responsável...'
-            });
-        }
-    });
+    // Responsável e Revisor agora são gerenciados pelo multi-select (ms-field)
+    // e os hidden inputs não precisam de autocomplete.
 }
 
 // ── Após populate dos selects, sincroniza o input ─────────────
@@ -347,15 +334,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Responsável e Revisor — re-sincroniza quando options mudam (populateSelects)
-    ['auditResponsavel','auditRevisor','trainResponsavel','trainRevisor','ativResponsavel','ativRevisor','docResponsavel','docRevisor'].forEach(function (id) {
-        var sel = document.getElementById(id);
-        if (!sel) return;
-        var observer = new MutationObserver(function () {
-            if (sel._acSync) sel._acSync();
-        });
-        observer.observe(sel, { childList: true });
-    });
+    // Responsável e Revisor gerenciados pelo ms-field — sem autocomplete aqui.
 });
 
 // Expõe para chamada manual se necessário
@@ -366,10 +345,7 @@ window.acSyncAll = function () {
             if (sel && sel._acSync) sel._acSync();
         });
     });
-    ['auditResponsavel','auditRevisor','trainResponsavel','trainRevisor','ativResponsavel','ativRevisor','docResponsavel','docRevisor'].forEach(function (id) {
-        var sel = document.getElementById(id);
-        if (sel && sel._acSync) sel._acSync();
-    });
+    // Responsável e Revisor: gerenciados pelo ms-field.
 };
 
 })();

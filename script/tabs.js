@@ -23,7 +23,7 @@
     // 2. Atualização de títulos e subtítulos
     var titles = {
         dashboard: 'Dashboard',
-        auditoria: 'Auditoria',
+        auditoria: 'Gestão de Rotinas',
         treinamentos: 'Treinamentos',
         atividades: 'Gestão de Atividades',
         manutencao: 'Manutenção',
@@ -32,7 +32,7 @@
     };
     var subtitles = {
         dashboard: 'Visão geral e indicadores de desempenho',
-        auditoria: 'Planejamento e execução de auditorias',
+        auditoria: 'Planejamento e execução de rotinas',
         treinamentos: 'Planejamento e execução de treinamentos',
         atividades: 'Controle de tarefas, reuniões e projetos',
         manutencao: 'Controle preventivo de equipamentos',

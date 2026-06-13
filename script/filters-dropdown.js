@@ -72,6 +72,67 @@
         renderCards();
     }
 
+    // ── Dropdown de Área do Dashboard ────────────────────────────────────
+    window.toggleDashAreaDropdown = function() {
+        const dd = document.getElementById('fbarAreaDropdown');
+        if (!dd) return;
+        const isOpen = dd.style.display === 'flex' || dd.style.display === 'block';
+        dd.style.display = isOpen ? 'none' : 'flex';
+        if (!isOpen) {
+            // Fecha ao clicar fora
+            setTimeout(() => {
+                function _closeOnOut(e) {
+                    const wrap = document.getElementById('fbarAreaBtn')?.closest('.fbar-area-wrap');
+                    if (wrap && !wrap.contains(e.target)) {
+                        dd.style.display = 'none';
+                        document.removeEventListener('click', _closeOnOut);
+                    }
+                }
+                document.addEventListener('click', _closeOnOut);
+            }, 0);
+        }
+    };
+
+    window.selectDashArea = function(value, label) {
+        // Atualiza selects ocultos
+        const fDashArea = document.getElementById('fDashArea');
+        if (fDashArea) { fDashArea.value = value; }
+        const dropDashArea = document.getElementById('dropDashArea');
+        if (dropDashArea) { dropDashArea.value = value; }
+
+        // Atualiza label do botão
+        const lblEl = document.getElementById('fbarAreaLabel');
+        if (lblEl) lblEl.textContent = label;
+
+        // Atualiza chip ativo
+        document.querySelectorAll('.fbar-area-chip').forEach(c => {
+            c.classList.toggle('fbar-area-chip--active', c.dataset.value === value);
+        });
+
+        // Fecha dropdown
+        const dd = document.getElementById('fbarAreaDropdown');
+        if (dd) dd.style.display = 'none';
+
+        // Dispara filtro
+        onFilterDashboardChange();
+    };
+
+    // Sincroniza o botão de área com o valor atual de fDashArea
+    window.syncDashAreaBtn = function() {
+        const areaEl = document.getElementById('fDashArea');
+        const val = areaEl ? areaEl.value : 'ativ';
+        const labelMap = { ativ: 'Gestão de Atividades', audit: 'Gestão de Rotinas', tren: 'Treinamentos', doc: 'Documentos', '': 'Gestão de Atividades' };
+        const lbl = labelMap[val] || 'Gestão de Atividades';
+        const effectiveVal = val || 'ativ';
+
+        const lblEl = document.getElementById('fbarAreaLabel');
+        if (lblEl) lblEl.textContent = lbl;
+
+        document.querySelectorAll('.fbar-area-chip').forEach(c => {
+            c.classList.toggle('fbar-area-chip--active', c.dataset.value === effectiveVal);
+        });
+    };
+
     function toggleFiltersDropdownDashboard() {
         const dd = document.getElementById('filtersDropdownDashboard');
         if (!dd) return;
@@ -85,12 +146,8 @@
     }
 
     function populateFiltersDropdownDashboard() {
-        // Sincroniza selects do dropdown avançado com os selects ocultos
         const map = {
-            area:     { real: 'fDashArea',   drop: 'dropDashArea'      },
-            setor:    { real: 'fDashSetor',  drop: 'dropDashSetorAdv'  },
-            categoria:{ real: 'fDashCat',    drop: 'dropDashCatAdv'    },
-            status:   { real: 'fDashStatus', drop: 'dropDashStatusAdv' }
+            categoria: { real: 'fDashCat', drop: 'dropDashCatAdv' }
         };
         Object.values(map).forEach(({ real, drop }) => {
             const realEl = document.getElementById(real);
@@ -103,10 +160,8 @@
 
     function onDropdownFilterChangeDashboard(type) {
         const map = {
-            area:     { real: 'fDashArea',   drop: 'dropDashArea'      },
-            setor:    { real: 'fDashSetor',  drop: 'dropDashSetorAdv'  },
-            categoria:{ real: 'fDashCat',    drop: 'dropDashCatAdv'    },
-            status:   { real: 'fDashStatus', drop: 'dropDashStatusAdv' }
+            area:      { real: 'fDashArea', drop: 'dropDashArea'    },
+            categoria: { real: 'fDashCat',  drop: 'dropDashCatAdv'  }
         };
         const entry = map[type];
         if (!entry) return;

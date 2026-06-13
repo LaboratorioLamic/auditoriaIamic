@@ -151,7 +151,7 @@
                     if (JSON.stringify(newUsers) !== JSON.stringify(users)) {
                         users = newUsers;
                         if (currentTab === 'configuracoes') renderusersConfigTable();
-                        initMultiSelectUsers();
+                        msRefreshUsers();
                         populateSelects();
                     }
                 });

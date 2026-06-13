@@ -57,6 +57,9 @@
         // Lista de Responsáveis
         responsaveis: [],
 
+        // Histórico de exclusões permanentes
+        deletionHistory: [],
+
         // O unifiedStatusMap também será removido ou gerado dinamicamente para usar apenas os nomes das listas acima.
     };
 

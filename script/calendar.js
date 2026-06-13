@@ -166,63 +166,60 @@ function _calGetTarefaOccurrences(item, dateField, rangeStart, rangeEnd) {
     return [];
 }
 
-// ── Gera publicações previstas futuras no range (baseadas na última publicação) ─
+// ── Avança data pela rotina/frequência ──────────────────────
+function _calAdvanceByRotina(cur, rotina, freq) {
+    const d = new Date(cur);
+    if (rotina === 'anual')   d.setFullYear(d.getFullYear() + freq);
+    else if (rotina === 'mensal')  d.setMonth(d.getMonth() + freq);
+    else if (rotina === 'semanal') d.setDate(d.getDate() + freq * 7);
+    else if (rotina === 'diario')  d.setDate(d.getDate() + freq);
+    return d;
+}
+
+// ── Gera publicações previstas no range a partir do campo Previsão do card ─
 function _calGetPubPrevistaOccurrences(item, tab, rangeStart, rangeEnd) {
     const rotina = item.rotina || 'pontual';
     if (rotina === 'pontual') return [];
 
-    // Data base = última publicação ou dataPublicacao do item
-    const pubs = (item.publicacoes || []).filter(p => p.data).sort((a,b) => a.data > b.data ? -1 : 1);
-    const lastPubDate = pubs.length > 0 ? pubs[0].data : (
-        tab === 'documentos' ? item.dataCriacao : item.dataPublicacao
-    );
-    if (!lastPubDate) return [];
+    // Âncora = campo Previsão do card (dataPrevisao ou dataProximaRevisao)
+    const anchor = tab === 'documentos' ? item.dataProximaRevisao : item.dataPrevisao;
+    if (!anchor) return [];
 
+    const freq    = Number(item.frequencia) || 1;
     const results = [];
-    const freq = Number(item.frequencia) || 1;
-    const days = Array.isArray(item.diasSemana) ? item.diasSemana : [];
 
     if (rotina === 'diasemana') {
-        // Para diasemana: cada dia da semana no range que cai nos dias configurados
+        const days = Array.isArray(item.diasSemana) ? item.diasSemana : [];
+        if (days.length === 0) return [];
         const d = new Date(rangeStart);
         while (d <= rangeEnd) {
-            if (days.includes(d.getDay())) {
-                const ds = _calDateStr(d);
-                // Só mostra futuras (após a última publicação)
-                if (ds > lastPubDate) results.push(ds);
-            }
+            if (days.includes(d.getDay())) results.push(_calDateStr(d));
             d.setDate(d.getDate() + 1);
         }
         return results;
     }
 
-    // Para anual/mensal/semanal/diario: avança a partir da última publicação
-    let cur = new Date(lastPubDate + 'T00:00:00');
+    // Para rotinas periódicas: âncora é a próxima prevista; projeta para trás e para frente
+    let cur = new Date(anchor + 'T00:00:00');
 
-    // Avança até entrar no range
+    // Recua até antes do rangeStart para capturar ocorrências que caem dentro do range
     let safety = 0;
+    while (cur > rangeStart && safety < 500) {
+        cur = _calAdvanceByRotina(cur, rotina, -freq);
+        safety++;
+    }
+    // Avança até o range
+    safety = 0;
     while (cur < rangeStart && safety < 500) {
-        if (rotina === 'anual') cur.setFullYear(cur.getFullYear() + freq);
-        else if (rotina === 'mensal') cur.setMonth(cur.getMonth() + freq);
-        else if (rotina === 'semanal') cur.setDate(cur.getDate() + freq * 7);
-        else if (rotina === 'diario') cur.setDate(cur.getDate() + freq);
-        else break;
+        cur = _calAdvanceByRotina(cur, rotina, freq);
         safety++;
     }
 
     // Coleta ocorrências no range
     safety = 0;
     while (cur <= rangeEnd && safety < 500) {
-        if (cur >= rangeStart) {
-            const ds = _calDateStr(cur);
-            // Só mostra futuras (após última publicação)
-            if (ds > lastPubDate) results.push(ds);
-        }
-        if (rotina === 'anual') cur.setFullYear(cur.getFullYear() + freq);
-        else if (rotina === 'mensal') cur.setMonth(cur.getMonth() + freq);
-        else if (rotina === 'semanal') cur.setDate(cur.getDate() + freq * 7);
-        else if (rotina === 'diario') cur.setDate(cur.getDate() + freq);
-        else break;
+        results.push(_calDateStr(cur));
+        cur = _calAdvanceByRotina(cur, rotina, freq);
         safety++;
     }
 
@@ -281,17 +278,15 @@ function _calBuildDayMap(rangeStart, rangeEnd) {
                 }
             });
 
-            // Publicações previstas futuras (apenas para itens com rotina)
-            if (item.rotina && item.rotina !== 'pontual') {
-                const previstas = _calGetPubPrevistaOccurrences(item, tab, rangeStart, rangeEnd);
-                previstas.forEach(ds => {
-                    if (!map[ds]) map[ds] = [];
-                    const alreadyReal = (map[ds] || []).some(e => e.item.id === item.id && e.type === 'publicacao' && e.realizada && e.pub && e.pub.data === ds);
-                    if (!alreadyReal) {
-                        map[ds].push({ item, type: 'publicacao', pub: null, pubIdx: null, realizada: false });
-                    }
-                });
-            }
+            // Publicações previstas: âncora = campo Previsão do card, projeta pela rotina
+            const previstas = _calGetPubPrevistaOccurrences(item, tab, rangeStart, rangeEnd);
+            previstas.forEach(ds => {
+                if (!map[ds]) map[ds] = [];
+                const alreadyReal = (map[ds] || []).some(e => e.item.id === item.id && e.type === 'publicacao' && e.realizada && e.pub && e.pub.data === ds);
+                if (!alreadyReal) {
+                    map[ds].push({ item, type: 'publicacao', pub: null, pubIdx: null, realizada: false });
+                }
+            });
         });
     }
 

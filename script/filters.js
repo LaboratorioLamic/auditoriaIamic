@@ -112,47 +112,10 @@
             return true;
         };
 
-        // Atualiza filtro de Área
+        // Área: gerenciada pelo botão/chips (fDashArea é hidden); apenas garantir valor padrão
         {
             const el = document.getElementById('fDashArea');
-            if (el) {
-                const currentValue = el.value || '';
-                const availableAreas = new Set();
-                rawItems.forEach(item => {
-                    if (passesOtherFilters(item, 'area')) {
-                        availableAreas.add(item.type);
-                    }
-                });
-
-                // Ordem das abas conforme aparecem na sidebar
-                const areaOrder = ['audit', 'ativ', 'mant', 'doc'];
-                // Filtra apenas as áreas que o usuário tem permissão e que estão disponíveis
-                const allowedTabs = userAllowedTabs();
-                const areaMapping = {
-                    'audit': 'auditoria',
-                    'ativ': 'atividades',
-                    'mant': 'manutencao',
-                    'doc': 'documentos'
-                };
-
-                const options = areaOrder.filter(area => {
-                    const tabName = areaMapping[area];
-                    return availableAreas.has(area) && (!allowedTabs || allowedTabs.includes(tabName));
-                });
-
-                const labels = {
-                    'audit': 'Auditoria',
-                    'ativ': 'Gestão de Atividades',
-                    'mant': 'Manutenção',
-                    'doc': 'Documentos'
-                };
-
-                const html = '<option value="">Área: Todas</option>' +
-                    options.map(area => `<option value="${area}">${labels[area]}</option>`).join('');
-                el.innerHTML = html;
-                if (currentValue && options.includes(currentValue)) el.value = currentValue;
-                else el.value = '';
-            }
+            if (el && !el.value) el.value = 'ativ';
         }
 
         // Atualiza filtro de Setor
@@ -288,7 +251,7 @@
 
     // Limpa filtros do Dashboard
     function clearDashboardFilters() {
-        document.getElementById('fDashArea').value = "";
+        document.getElementById('fDashArea').value = "ativ";
         document.getElementById('fDashSetor').value = "";
         document.getElementById('fDashCat').value = "";
         document.getElementById('fDashStatus').value = "";
@@ -299,9 +262,12 @@
         document.getElementById('fDashDataFim').value = "";
 
         // Limpa selects do dropdown avançado
-        ['dropDashArea','dropDashSetorAdv','dropDashCatAdv','dropDashStatusAdv'].forEach(id => {
+        ['dropDashArea','dropDashCatAdv'].forEach(id => {
             const el = document.getElementById(id); if (el) el.value = '';
         });
+
+        // Sincroniza botão de área para padrão
+        if (typeof syncDashAreaBtn === 'function') syncDashAreaBtn();
 
         // Reseta Minhas Tarefas e filtros de pessoa do dashboard
         if (typeof dashMyTasksActive !== 'undefined') {
@@ -539,8 +505,8 @@
         const catEl = document.getElementById(`${p}Categoria`);
         const statusEl = document.getElementById(`${p}Status`);
         if (!setorEl || !catEl || !statusEl) return;
-        setorEl.innerHTML = makeOpts(filteredSetores);
-        catEl.innerHTML = makeOpts(masterLists[`${p}Categorias`] || []);
+        setorEl.innerHTML = '<option value=""></option>' + makeOpts(filteredSetores);
+        catEl.innerHTML = '<option value=""></option>' + makeOpts(masterLists[`${p}Categorias`] || []);
         statusEl.innerHTML = makeStatusOpts(masterLists[`${p}Status`] || []);
 
         const markerSelect = document.getElementById(`${p}Marcador`);
@@ -588,8 +554,8 @@
         return aText.localeCompare(bText);
     });
 
-    // Popula os selects de responsáveis e revisores
-    ['auditResponsavel', 'trainResponsavel', 'trainRevisor', 'ativResponsavel', 'mantResponsavelTecnico', 'docResponsavel', 'auditRevisor', 'ativRevisor', 'docRevisor'].forEach(id => {
+    // Popula o select de responsável de manutenção (ainda é select comum)
+    ['mantResponsavelTecnico'].forEach(id => {
         const select = document.getElementById(id);
         if (select) {
             const currentValue = select.value;
@@ -597,6 +563,8 @@
             select.value = currentValue;
         }
     });
+    // Atualiza a lista de usuários do ms-field após populate
+    if (typeof msRefreshUsers === 'function') msRefreshUsers();
 
     // --- FILTROS DAS ABAS ---
     document.getElementById('fAuditSetor').innerHTML = makeFilterOpts(filteredSetores, "Setor: Todos");
@@ -898,12 +866,21 @@
         }
     }
 
-    // 7. Revisor (Exceto para Manutenção e Treinamentos)
-    if (prefix !== 'Mant' && prefix !== 'Train' && !excluded.revisor) {
+    // 7. Revisor (Exceto para Manutenção)
+    if (prefix !== 'Mant' && !excluded.revisor) {
         const filterRev = (document.getElementById(`f${prefix}Revisor`)?.value || '').toLowerCase().trim();
         if (filterRev) {
-            const itemRev = (item.revisor || '').toLowerCase().trim();
-            if (itemRev !== filterRev) return false;
+            const itemRevRaw = item.revisor || '';
+            let revNames = [];
+            try {
+                const parsed = JSON.parse(itemRevRaw);
+                revNames = Array.isArray(parsed)
+                    ? parsed.map(n => String(n).toLowerCase().trim())
+                    : [String(parsed).toLowerCase().trim()];
+            } catch {
+                revNames = [String(itemRevRaw).toLowerCase().trim()];
+            }
+            if (!revNames.some(n => n === filterRev)) return false;
         }
     }
 

@@ -402,11 +402,26 @@ function kbDrop(event, targetStatus) {
     const item = (cfg.getItems() || []).find(a => a.id === _kanbanDragItemId);
     if (!item || item.status === targetStatus) return;
 
+    if (/conclu/i.test(targetStatus) && typeof isItemOverdue === 'function' && (currentTab === 'treinamentos' || currentTab === 'documentos') && isItemOverdue(item, currentTab)) {
+        showOverdueConcluiModal();
+        return;
+    }
     if (/conclu/i.test(targetStatus) && !canSetConcluido(item.checklist)) {
         if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de mover para Concluído.', 'error');
         return;
     }
+    if (/conclu/i.test(targetStatus) && typeof checkSchedWarnBeforeConcluido === 'function') {
+        checkSchedWarnBeforeConcluido(item, currentTab).then(ok => {
+            if (!ok) return;
+            _kbApplyDrop(item, targetStatus);
+        });
+        return;
+    }
 
+    _kbApplyDrop(item, targetStatus);
+}
+
+function _kbApplyDrop(item, targetStatus) {
     const prevStatus = item.status;
     item.status = targetStatus;
 

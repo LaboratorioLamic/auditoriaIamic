@@ -146,6 +146,46 @@ window.showConfirmDanger = function({ title, message, confirmLabel, onConfirm, r
     }
 };
 
+// Modal de aviso: não é possível concluir item atrasado (treinamentos/documentos)
+window.showOverdueConcluiModal = function() {
+    const existing = document.getElementById('overdueConcluiModal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'overdueConcluiModal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(3px);z-index:99999;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease;';
+
+    overlay.innerHTML = `
+        <div style="background:#fff;border-radius:16px;padding:0;width:420px;max-width:92vw;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.18),0 4px 16px rgba(0,0,0,0.1);animation:slideUp .18s ease;">
+            <div style="background:linear-gradient(135deg,#f59e0b,#d97706);padding:22px 24px 18px;display:flex;align-items:center;gap:14px;">
+                <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-hourglass-end" style="color:#fff;font-size:20px;"></i>
+                </div>
+                <div>
+                    <div style="color:#fff;font-size:16px;font-weight:700;line-height:1.2;">Item em Atraso</div>
+                    <div style="color:rgba(255,255,255,0.82);font-size:12px;margin-top:2px;">Ação não permitida</div>
+                </div>
+            </div>
+            <div style="padding:22px 24px;">
+                <p style="margin:0 0 8px;color:#1e293b;font-size:14px;font-weight:600;line-height:1.5;">
+                    Não é possível marcar como <strong>Concluído</strong> um item com prazo vencido.
+                </p>
+                <p style="margin:0 0 20px;color:#64748b;font-size:13px;line-height:1.6;">
+                    Para concluir este item, atualize a data de previsão para uma data futura ou atual antes de alterar o status.
+                </p>
+                <div style="display:flex;justify-content:flex-end;">
+                    <button id="overdueConcluiOkBtn" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;padding:10px 28px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s;box-shadow:0 2px 8px rgba(245,158,11,0.35);">
+                        Entendi
+                    </button>
+                </div>
+            </div>
+        </div>`;
+
+    overlay.querySelector('#overdueConcluiOkBtn').onclick = () => overlay.remove();
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    document.body.appendChild(overlay);
+};
+
 // Remove 'historico' do snapshot para evitar aninhamento exponencial no Firebase
 window._safeSnapshot = function(item) {
     const copy = JSON.parse(JSON.stringify(item));
@@ -173,6 +213,15 @@ window._safeSnapshot = function(item) {
         const d = new Date(dateStr);
         if (Number.isNaN(d.getTime())) return Infinity;
         return Math.ceil((d - new Date()) / (1000*60*60*24));
+    };
+
+    // Retorna true se o item está atrasado (data de previsão/revisão no passado)
+    window.isItemOverdue = function(item, tab) {
+        let dateStr = null;
+        if (tab === 'treinamentos' || tab === 'train') dateStr = item.dataPrevisao;
+        else if (tab === 'documentos' || tab === 'doc') dateStr = item.dataProximaRevisao;
+        if (!dateStr) return false;
+        return daysDiff(dateStr) < 0;
     };
 
     // Função para limpar responsáveis que não são usuários cadastrados

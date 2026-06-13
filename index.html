@@ -68,7 +68,7 @@
         <div class="sidebar-divider"></div>
         <div class="sidebar-group-label">Módulos</div>
         <button id="tabAtividades"><i class="fa-solid fa-list-check"></i> Atividades</button>
-        <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Auditoria</button>
+        <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Gestão de Rotinas</button>
         <button id="tabTreinamentos"><i class="fa-solid fa-graduation-cap"></i> Treinamentos</button>
         <button id="tabDocumentos"><i class="fa-solid fa-file-alt"></i> Documentos</button>
         <div class="sidebar-divider"></div>
@@ -134,8 +134,9 @@
             <!-- Selects ocultos mantidos para compatibilidade com o JS existente -->
             <select id="fDashArea" style="display:none;" onchange="onFilterDashboardChange()">
                 <option value="">Área: Todas</option>
-                <option value="audit">Auditoria</option>
-                <option value="ativ">Gestão de Atividades</option>
+                <option value="ativ" selected>Gestão de Atividades</option>
+                <option value="audit">Gestão de Rotinas</option>
+                <option value="tren">Treinamentos</option>
                 <option value="doc">Documentos</option>
             </select>
             <select id="fDashResponsavel" style="display:none;" onchange="onFilterDashboardChange()"><option value="">Responsável: Todos</option></select>
@@ -147,26 +148,47 @@
             <div id="fDashGroupMonth" style="display:none;"><select id="fDashMonth" onchange="onFilterDashboardChange()"><option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option><option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option><option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option></select><select id="fDashYearForMonth" onchange="onFilterDashboardChange()"></select></div>
             <select id="fDashYearOnly" style="display:none" onchange="onFilterDashboardChange()"></select>
             <div id="fDashGroupCustom" style="display:none;"><input type="date" id="fDashDataIni" onchange="onFilterDashboardChange()"><input type="date" id="fDashDataFim" onchange="onFilterDashboardChange()"></div>
-            <select id="dropDashSetor" style="display:none;" onchange="onDropdownFilterChangeDashboard('setor')"></select>
             <select id="dropDashCat" style="display:none;" onchange="onDropdownFilterChangeDashboard('categoria')"></select>
 
-            <!-- Esquerda: filtros responsável/revisor -->
+            <!-- Esquerda: Área + filtros responsável/revisor -->
+            <!-- Select oculto mantido para compatibilidade com a lógica de filtros -->
+            <select id="dropDashArea" style="display:none;" onchange="onDropdownFilterChangeDashboard('area')">
+                <option value="ativ" selected>Gestão de Atividades</option>
+                <option value="audit">Gestão de Rotinas</option>
+                <option value="tren">Treinamentos</option>
+                <option value="doc">Documentos</option>
+            </select>
+
             <div class="fbar-left">
+                <!-- Botão de área com dropdown de chips -->
+                <div class="fbar-area-wrap" style="position:relative;">
+                    <button class="fbar-area-btn" id="fbarAreaBtn" onclick="toggleDashAreaDropdown()" title="Selecionar área">
+                        <i class="fas fa-layer-group"></i>
+                        <span id="fbarAreaLabel">Gestão de Atividades</span>
+                        <i class="fas fa-caret-down" style="font-size:11px; margin-left:4px;"></i>
+                    </button>
+                    <div class="fbar-area-dropdown" id="fbarAreaDropdown" style="display:none;">
+                        <button class="fbar-area-chip fbar-area-chip--active" data-value="ativ" onclick="selectDashArea('ativ','Gestão de Atividades')"><i class="fas fa-tasks"></i> Gestão de Atividades</button>
+                        <button class="fbar-area-chip" data-value="audit" onclick="selectDashArea('audit','Gestão de Rotinas')"><i class="fas fa-clipboard-check"></i> Gestão de Rotinas</button>
+                        <button class="fbar-area-chip" data-value="tren" onclick="selectDashArea('tren','Treinamentos')"><i class="fas fa-graduation-cap"></i> Treinamentos</button>
+                        <button class="fbar-area-chip" data-value="doc" onclick="selectDashArea('doc','Documentos')"><i class="fas fa-file-lines"></i> Documentos</button>
+                    </div>
+                </div>
                 <button class="fbar-people-btn" id="fbarRespBtnDash" onclick="openPeopleFilterDash('responsavel')" title="Filtrar por Responsável">
                     <i class="fas fa-user"></i>
-                    <span id="fbarRespLabelDash">Filtrar por Responsável</span>
+                    <span id="fbarRespLabelDash">Responsável</span>
                     <span class="fbar-people-badge" id="fbarRespBadgeDash" style="display:none;"></span>
                 </button>
                 <button class="fbar-people-btn" id="fbarRevBtnDash" onclick="openPeopleFilterDash('revisor')" title="Filtrar por Revisor">
                     <i class="fas fa-user-check"></i>
-                    <span id="fbarRevLabelDash">Filtrar por Revisor</span>
+                    <span id="fbarRevLabelDash">Revisor</span>
                     <span class="fbar-people-badge" id="fbarRevBadgeDash" style="display:none;"></span>
                 </button>
             </div>
 
             <!-- Direita: filtros avançados + Minhas Tarefas + limpar -->
             <div class="fbar-right">
-                <!-- Filtros avançados -->
+                <!-- Filtros avançados (sem Área — está na fbar-left) -->
                 <div class="fbar-adv-wrap" style="position:relative;">
                     <button class="fbar-icon-btn" id="filtersToggleBtnDash" onclick="toggleFiltersDropdownDashboard()" title="Filtros avançados">
                         <i class="fas fa-sliders"></i>
@@ -174,25 +196,8 @@
                     <div class="filters-dropdown fbar-adv-dropdown" id="filtersDropdownDashboard" style="display:none;">
                         <div class="fbar-adv-inner">
                             <div class="fbar-adv-row">
-                                <span class="fbar-adv-label">Área</span>
-                                <select class="filter-input fbar-adv-select" id="dropDashArea" onchange="onDropdownFilterChangeDashboard('area')">
-                                    <option value="">Todas</option>
-                                    <option value="audit">Auditoria</option>
-                                    <option value="ativ">Gestão de Atividades</option>
-                                    <option value="doc">Documentos</option>
-                                </select>
-                            </div>
-                            <div class="fbar-adv-row">
-                                <span class="fbar-adv-label">Setor</span>
-                                <select class="filter-input fbar-adv-select" id="dropDashSetorAdv" onchange="onDropdownFilterChangeDashboard('setor')"></select>
-                            </div>
-                            <div class="fbar-adv-row">
                                 <span class="fbar-adv-label">Categoria</span>
                                 <select class="filter-input fbar-adv-select" id="dropDashCatAdv" onchange="onDropdownFilterChangeDashboard('categoria')"></select>
-                            </div>
-                            <div class="fbar-adv-row">
-                                <span class="fbar-adv-label">Status</span>
-                                <select class="filter-input fbar-adv-select" id="dropDashStatusAdv" onchange="onDropdownFilterChangeDashboard('status')"><option value="">Todos</option></select>
                             </div>
                         </div>
                     </div>
@@ -222,72 +227,261 @@
         </div>
 
         <div id="dashboardContent" style="display:flex;">
+
+            <!-- ── KPI Cards ── -->
             <div class="summary-cards">
-                <div class="summary-card">
-                    <div class="icon-header">
-                        <i class="fas fa-chart-pie" style="color:var(--c-blue); background:#eff6ff"></i>
-                        <p>Total de Registros</p>
+                <div class="summary-card summary-card--blue">
+                    <div class="sc-top">
+                        <span class="sc-icon" style="color:#2563eb;background:#eff6ff"><i class="fas fa-layer-group"></i></span>
+                        <span class="sc-trend" id="scTrendTotal"></span>
                     </div>
-                    <h2 id="summaryTotalCount">0</h2>
+                    <div class="sc-value" id="summaryTotalCount">0</div>
+                    <div class="sc-label">Total de Registros</div>
+                    <div class="sc-bar"><div class="sc-bar-fill" style="background:#2563eb;width:100%"></div></div>
                 </div>
-                <div class="summary-card">
-                    <div class="icon-header">
-                        <i class="fas fa-calendar-check" style="color:var(--ind-green); background:#f0fdf4"></i>
-                        <p>Total Concluído</p>
+                <div class="summary-card summary-card--green">
+                    <div class="sc-top">
+                        <span class="sc-icon" style="color:#16a34a;background:#f0fdf4"><i class="fas fa-circle-check"></i></span>
+                        <span class="sc-trend" id="scTrendCompleted"></span>
                     </div>
-                    <h2 id="summaryCompletedCount">0</h2>
+                    <div class="sc-value" id="summaryCompletedCount">0</div>
+                    <div class="sc-label">Concluídos</div>
+                    <div class="sc-bar"><div class="sc-bar-fill" id="scBarCompleted" style="background:#16a34a;width:0%"></div></div>
                 </div>
-                <div class="summary-card">
-                    <div class="icon-header">
-                        <i class="fas fa-ban" style="color:var(--ind-red); background:#fef2f2"></i>
-                        <p>Total Cancelado</p>
+                <div class="summary-card summary-card--yellow">
+                    <div class="sc-top">
+                        <span class="sc-icon" style="color:#ca8a04;background:#fffbeb"><i class="fas fa-hourglass-half"></i></span>
+                        <span class="sc-trend" id="scTrendActive"></span>
                     </div>
-                    <h2 id="summaryCancelledCount">0</h2>
+                    <div class="sc-value" id="summaryActiveCount">0</div>
+                    <div class="sc-label">Em Andamento</div>
+                    <div class="sc-bar"><div class="sc-bar-fill" id="scBarActive" style="background:#ca8a04;width:0%"></div></div>
                 </div>
-                <div class="summary-card">
-                    <div class="icon-header">
-                        <i class="fas fa-hourglass-half" style="color:var(--c-yellow); background:#fffbeb"></i>
-                        <p>Total Ativo</p>
+                <div class="summary-card summary-card--red">
+                    <div class="sc-top">
+                        <span class="sc-icon" style="color:#dc2626;background:#fef2f2"><i class="fas fa-circle-exclamation"></i></span>
+                        <span class="sc-trend" id="scTrendOverdue"></span>
                     </div>
-                    <h2 id="summaryActiveCount">0</h2>
+                    <div class="sc-value" id="summaryOverdueCount">0</div>
+                    <div class="sc-label">Atrasados</div>
+                    <div class="sc-bar"><div class="sc-bar-fill" id="scBarOverdue" style="background:#dc2626;width:0%"></div></div>
                 </div>
-                <div class="summary-card">
-                    <div class="icon-header">
-                        <i class="fas fa-exclamation-triangle" style="color:var(--ind-red); background:#fef2f2"></i>
-                        <p>Total Atrasado</p>
+                <div class="summary-card summary-card--gray">
+                    <div class="sc-top">
+                        <span class="sc-icon" style="color:#64748b;background:#f1f5f9"><i class="fas fa-ban"></i></span>
+                        <span class="sc-trend" id="scTrendCancelled"></span>
                     </div>
-                    <h2 id="summaryOverdueCount">0</h2>
-                </div>
-            </div>
-
-            <div class="dashboard-charts">
-                <div class="chart-card">
-                    <h3><i class="fas fa-thumbtack"></i> Status Consolidado de Itens Ativos</h3>
-                    <div class="chart-content">
-                        <ul class="chart-list" id="chartStatusConsolidado">
-                            </ul>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <h3><i class="fas fa-industry"></i> Distribuição por Setor</h3>
-                    <div class="chart-content">
-                        <ul class="chart-list" id="chartDistribuicaoSetor">
-                            </ul>
-                    </div>
+                    <div class="sc-value" id="summaryCancelledCount">0</div>
+                    <div class="sc-label">Cancelados</div>
+                    <div class="sc-bar"><div class="sc-bar-fill" id="scBarCancelled" style="background:#64748b;width:0%"></div></div>
                 </div>
             </div>
 
-            <div class="dashboard-charts" style="grid-template-columns: 1fr;">
-                <div class="chart-card">
-                    <h3><i class="fas fa-clock"></i> Alerta de Prazos (Itens Ativos)</h3>
-                    <div class="chart-content">
-                        <ul class="chart-list" id="chartAlertaPrazos">
-                            </ul>
+            <!-- ── Layout principal: coluna de conteúdo + coluna de pizzas ── -->
+            <div class="dash-main-layout">
+
+                <!-- Coluna principal (atividade + publicações + barras) -->
+                <div class="dash-main-col">
+
+                <!-- ── Linha 1: Atividade Mensal + Acompanhamento de Revisões ── -->
+                <div class="dash-row-top">
+                    <!-- Atividade Mensal -->
+                    <div class="chart-card dash-activity-card">
+                        <div class="chart-card-header">
+                            <h3><i class="fas fa-chart-line"></i> Atividade Mensal</h3>
+                            <div class="dash-activity-controls">
+                                <select id="dashActivityYear" class="dash-select" onchange="onDashActivityYearChange()"></select>
+                            </div>
+                        </div>
+                        <div class="dash-linechart-wrap">
+                            <canvas id="chartAtividadeMensal"></canvas>
+                            <div class="dash-chart-tooltip" id="dashActivityTooltip"></div>
+                        </div>
+                    </div>
+
+                    <!-- Acompanhamento de Revisões -->
+                    <div class="chart-card dash-activity-card">
+                        <div class="chart-card-header">
+                            <h3><i class="fas fa-user-check"></i> Acompanhamento de Revisões</h3>
+                            <span class="chart-badge" id="badgeMinhasRevisoes">0 itens</span>
+                        </div>
+                        <div class="chart-content chart-content--scroll" id="minhasRevisoesContent" style="flex:1;min-height:0;">
+                            <ul class="chart-list" id="chartMinhasRevisoes"></ul>
+                        </div>
+                        <div class="dash-minrev-footer">
+                            <span class="dash-pub-count" id="minhasRevisoesCount"></span>
+                            <div class="dash-pub-pagination" id="minhasRevisoesPagination"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
+
+                <!-- ── Linha 2: barras ── -->
+                <div class="dash-col-bars">
+
+                    <!-- Alerta de Prazos + Últimas Publicações lado a lado -->
+                    <div class="dash-row-inline" style="align-items:stretch;">
+
+                        <!-- Alerta de Prazos -->
+                        <div class="chart-card" style="flex:0 0 500px;min-width:0;">
+                            <div class="chart-card-header">
+                                <h3><i class="fas fa-clock"></i> Alerta de Prazos</h3>
+                                <span class="chart-badge chart-badge--red" id="badgeAtrasados">0 atrasados</span>
+                            </div>
+                            <div class="chart-content chart-content--scroll">
+                                <ul class="chart-list" id="chartAlertaPrazos"></ul>
+                            </div>
+                        </div>
+
+                        <!-- Últimas Publicações -->
+                        <div class="chart-card dash-pub-card" style="flex:1;min-width:0;">
+                            <div class="chart-card-header">
+                                <h3><i class="fas fa-paper-plane"></i> Últimas Publicações</h3>
+                                <div class="dash-pub-controls">
+                                    <div class="dash-pub-search-wrap">
+                                        <i class="fas fa-magnifying-glass"></i>
+                                        <input type="text" id="dashPubSearch" placeholder="Buscar..." oninput="onDashPubSearchChange()">
+                                    </div>
+                                    <div class="dash-pub-type-tabs" id="dashPubTypeTabs">
+                                        <button class="dpt-tab active" data-type="" onclick="onDashPubTypeTab(this,'')">Todas</button>
+                                        <button class="dpt-tab dpt-tab--ativ" data-type="Comentário" onclick="onDashPubTypeTab(this,'Comentário')"><i class="fas fa-comment"></i></button>
+                                        <button class="dpt-tab dpt-tab--ativ" data-type="Atualização" onclick="onDashPubTypeTab(this,'Atualização')"><i class="fas fa-rotate"></i></button>
+                                        <button class="dpt-tab dpt-tab--ativ" data-type="Evidência" onclick="onDashPubTypeTab(this,'Evidência')"><i class="fas fa-paperclip"></i></button>
+                                        <button class="dpt-tab dpt-tab--tren" data-type="Treinamento" onclick="onDashPubTypeTab(this,'Treinamento')"><i class="fas fa-graduation-cap"></i></button>
+                                        <button class="dpt-tab dpt-tab--doc" data-type="Documento" onclick="onDashPubTypeTab(this,'Documento')"><i class="fas fa-file-lines"></i></button>
+                                        <button class="dpt-tab dpt-tab--audit" data-type="Auditoria" onclick="onDashPubTypeTab(this,'Auditoria')"><i class="fas fa-clipboard-check"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dash-pub-table-wrap">
+                                <table class="dash-pub-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:100px">Tipo</th>
+                                            <th>Card / Comentário</th>
+                                            <th style="width:110px">Responsável</th>
+                                            <th style="width:90px">Data</th>
+                                            <th style="width:44px">Anx.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dashPubTableBody"></tbody>
+                                </table>
+                                <div class="dash-pub-empty" id="dashPubEmpty" style="display:none">
+                                    <i class="fas fa-inbox"></i>
+                                    <p>Nenhuma publicação encontrada</p>
+                                </div>
+                            </div>
+                            <div class="dash-pub-footer">
+                                <span class="dash-pub-count" id="dashPubCount">0 publicações</span>
+                                <div class="dash-pub-pagination" id="dashPubPagination"></div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Por Categoria + Por Setor lado a lado -->
+                    <div class="dash-row-inline">
+                        <div class="chart-card" style="flex:1;min-width:0;">
+                            <div class="chart-card-header">
+                                <h3><i class="fas fa-tags"></i> Por Categoria</h3>
+                                <span class="chart-badge" id="badgeCategorias">0 categorias</span>
+                            </div>
+                            <div class="chart-content chart-content--scroll">
+                                <ul class="chart-list" id="chartCategoria"></ul>
+                            </div>
+                        </div>
+                        <div class="chart-card" style="flex:1;min-width:0;">
+                            <div class="chart-card-header">
+                                <h3><i class="fas fa-building"></i> Por Setor</h3>
+                                <span class="chart-badge" id="badgeSetores">0 setores</span>
+                            </div>
+                            <div class="chart-content chart-content--scroll">
+                                <ul class="chart-list" id="chartDistribuicaoSetor"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+
+                </div><!-- /.dash-main-col -->
+
+                <!-- Coluna direita permanente: pizzas -->
+                <div class="dash-col-pies">
+
+                    <!-- Status por Área (pizza) -->
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <h3><i class="fas fa-chart-pie"></i> Status por Área</h3>
+                            <span class="chart-badge" id="badgeStatusAtivos">0 ativos</span>
+                        </div>
+                        <div class="chart-content chart-content--center">
+                            <div class="donut-wrap">
+                                <canvas id="chartStatusPizza" width="150" height="150"></canvas>
+                                <div class="donut-center">
+                                    <span id="statusPizzaTotal">0</span>
+                                    <small>ativos</small>
+                                </div>
+                            </div>
+                            <ul class="donut-legend" id="statusPizzaLegend"></ul>
+                        </div>
+                    </div>
+
+                    <!-- Por Módulo (pizza) -->
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <h3><i class="fas fa-layer-group"></i> Por Módulo</h3>
+                        </div>
+                        <div class="chart-content chart-content--center">
+                            <div class="donut-wrap">
+                                <canvas id="chartDonutModulo" width="150" height="150"></canvas>
+                                <div class="donut-center">
+                                    <span id="donutTotal">0</span>
+                                    <small>total</small>
+                                </div>
+                            </div>
+                            <ul class="donut-legend" id="donutLegend"></ul>
+                        </div>
+                    </div>
+
+                    <!-- Taxa de Conclusão -->
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <h3><i class="fas fa-percent"></i> Taxa de Conclusão</h3>
+                        </div>
+                        <div class="chart-content chart-content--center">
+                            <div class="radial-wrap">
+                                <svg viewBox="0 0 120 120" class="radial-svg">
+                                    <circle cx="60" cy="60" r="50" class="radial-bg"/>
+                                    <circle cx="60" cy="60" r="50" class="radial-fill" id="radialFill"/>
+                                </svg>
+                                <div class="radial-label">
+                                    <span id="radialPct">0%</span>
+                                    <small>concluídos</small>
+                                </div>
+                            </div>
+                            <div class="radial-stats">
+                                <div class="radial-stat">
+                                    <span id="radialConcluidos">0</span>
+                                    <small>Concluídos</small>
+                                </div>
+                                <div class="radial-stat radial-stat--mid">
+                                    <span id="radialAtivos">0</span>
+                                    <small>Ativos</small>
+                                </div>
+                                <div class="radial-stat">
+                                    <span id="radialCancelados">0</span>
+                                    <small>Cancelados</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- /.dash-col-pies -->
+
+            </div><!-- /.dash-main-layout -->
+
         </div>
-        
+
         <div id="backupContent" style="display:none;">
             <div class="backup-card">
                 <i class="fa-solid fa-cloud-arrow-down fa-3x" style="color:var(--primary); margin-bottom:16px;"></i>
@@ -568,7 +762,7 @@
         <div class="form-drawer-header-left">
             <div class="form-drawer-icon"><i class="fas fa-clipboard-check"></i></div>
             <div>
-                <div class="form-drawer-title">Nova Auditoria</div>
+                <div class="form-drawer-title">Nova Rotina</div>
                 <div class="form-drawer-subtitle" id="drawerSubtitleAuditoria">Preencha os dados abaixo</div>
             </div>
         </div>
@@ -649,16 +843,22 @@
                 </div>
             </div>
             <div class="field-group">
-                <label>Responsável</label>
-                <select id="auditResponsavel">
-                    <option value="">Selecione um responsável...</option>
-                </select>
+                <label>Responsáveis</label>
+                <div class="ms-field" id="ms-audit-resp">
+                    <div class="ms-tags" id="ms-audit-resp-tags"></div>
+                    <input class="ms-input" id="ms-audit-resp-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
+                    <div class="ms-dropdown" id="ms-audit-resp-drop"></div>
+                </div>
+                <input type="hidden" id="auditResponsavel">
             </div>
             <div class="field-group">
-                <label>Revisor</label>
-                <select id="auditRevisor">
-                    <option value="">Selecione um revisor...</option>
-                </select>
+                <label>Revisores</label>
+                <div class="ms-field" id="ms-audit-rev">
+                    <div class="ms-tags" id="ms-audit-rev-tags"></div>
+                    <input class="ms-input" id="ms-audit-rev-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
+                    <div class="ms-dropdown" id="ms-audit-rev-drop"></div>
+                </div>
+                <input type="hidden" id="auditRevisor">
             </div>
             <div class="field-group">
                 <label>Alerta (Dias antes)</label>
@@ -670,6 +870,62 @@
                     <select id="auditMarcador"></select>
                     <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
                 </div>
+            </div>
+            <div class="field-group full-width sched-status-wrap" id="auditSchedStatusWrap">
+                <div class="sched-box">
+                    <div class="sched-box-header">
+                        <div class="sched-box-icon"><i class="fas fa-calendar-check"></i></div>
+                        <div class="sched-box-title-wrap">
+                            <span class="sched-box-title">Programação de Status Concluído</span>
+                            <span class="sched-box-desc">Ao atingir a condição configurada, o status do card será alterado automaticamente</span>
+                        </div>
+                        <button type="button" class="sched-toggle-btn" id="auditSchedToggle" onclick="schedToggleEnabled('audit')" title="Ativar/desativar programação">
+                            <span class="sched-toggle-track"><span class="sched-toggle-thumb"></span></span>
+                        </button>
+                    </div>
+                    <div class="sched-box-body" id="auditSchedBoxBody" style="display:none;">
+                        <div class="sched-row">
+                            <div class="sched-dropdown-wrap" id="auditSchedTypeWrap">
+                                <button type="button" class="sched-dropdown-btn" id="auditSchedTypeBtn" onclick="schedToggleDropdown('audit','type')">
+                                    <span class="sched-btn-icon sched-btn-icon--type" id="auditSchedTypeIcon"><i class="fas fa-calendar-alt"></i></span>
+                                    <span class="sched-btn-text" id="auditSchedTypeText">Selecionar tipo</span>
+                                    <i class="fas fa-chevron-down sched-btn-chevron" id="auditSchedTypeChevron"></i>
+                                </button>
+                                <div class="sched-dropdown-panel" id="auditSchedTypePanel" style="display:none;">
+                                    <div class="sched-dropdown-item" onclick="schedPickType('audit','overdue')">
+                                        <span class="sched-item-icon sched-item-icon--overdue"><i class="fas fa-hourglass-end"></i></span>
+                                        <div class="sched-item-info">
+                                            <span class="sched-item-title">Ao Vencer</span>
+                                            <span class="sched-item-desc">Ao atingir a data prevista</span>
+                                        </div>
+                                        <i class="fas fa-check sched-item-check" id="auditTypeCheckOverdue" style="display:none;"></i>
+                                    </div>
+                                    <div class="sched-dropdown-item" onclick="schedPickType('audit','alert')">
+                                        <span class="sched-item-icon sched-item-icon--alert"><i class="fas fa-bell"></i></span>
+                                        <div class="sched-item-info">
+                                            <span class="sched-item-title">Ao Alertar</span>
+                                            <span class="sched-item-desc">Ao entrar no período de alerta</span>
+                                        </div>
+                                        <i class="fas fa-check sched-item-check" id="auditTypeCheckAlert" style="display:none;"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sched-row-arrow"><i class="fas fa-arrow-right"></i></div>
+                            <div class="sched-dropdown-wrap sched-dropdown-wrap--status" id="auditSchedStatusWrapInner">
+                                <button type="button" class="sched-dropdown-btn sched-dropdown-btn--status" id="auditSchedStatusBtn" onclick="schedToggleDropdown('audit','status')" disabled>
+                                    <span class="sched-btn-icon sched-btn-icon--status"><i class="fas fa-tag"></i></span>
+                                    <span class="sched-btn-text" id="auditSchedStatusText">Selecionar status</span>
+                                    <i class="fas fa-chevron-down sched-btn-chevron" id="auditSchedStatusChevron"></i>
+                                </button>
+                                <div class="sched-dropdown-panel sched-dropdown-panel--right" id="auditSchedStatusPanel" style="display:none;">
+                                    <div class="sched-status-options" id="auditSchedStatusOptions"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" id="auditOverdueStatus" value="">
+                <input type="hidden" id="auditAlertStatus" value="">
             </div>
         </div>
         </div>
@@ -814,16 +1070,22 @@
                 </div>
             </div>
             <div class="field-group">
-                <label>Responsável</label>
-                <select id="trainResponsavel">
-                    <option value="">Selecione um responsável...</option>
-                </select>
+                <label>Responsáveis</label>
+                <div class="ms-field" id="ms-tren-resp">
+                    <div class="ms-tags" id="ms-tren-resp-tags"></div>
+                    <input class="ms-input" id="ms-tren-resp-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
+                    <div class="ms-dropdown" id="ms-tren-resp-drop"></div>
+                </div>
+                <input type="hidden" id="trainResponsavel">
             </div>
             <div class="field-group">
-                <label>Revisor</label>
-                <select id="trainRevisor">
-                    <option value="">Selecione um revisor...</option>
-                </select>
+                <label>Revisores</label>
+                <div class="ms-field" id="ms-tren-rev">
+                    <div class="ms-tags" id="ms-tren-rev-tags"></div>
+                    <input class="ms-input" id="ms-tren-rev-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
+                    <div class="ms-dropdown" id="ms-tren-rev-drop"></div>
+                </div>
+                <input type="hidden" id="trainRevisor">
             </div>
             <div class="field-group">
                 <label>Alerta (Dias antes)</label>
@@ -835,6 +1097,62 @@
                     <select id="trainMarcador"></select>
                     <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
                 </div>
+            </div>
+            <div class="field-group full-width sched-status-wrap" id="trainSchedStatusWrap">
+                <div class="sched-box">
+                    <div class="sched-box-header">
+                        <div class="sched-box-icon"><i class="fas fa-calendar-check"></i></div>
+                        <div class="sched-box-title-wrap">
+                            <span class="sched-box-title">Programação de Status Concluído</span>
+                            <span class="sched-box-desc">Ao atingir a condição configurada, o status do card será alterado automaticamente</span>
+                        </div>
+                        <button type="button" class="sched-toggle-btn" id="trainSchedToggle" onclick="schedToggleEnabled('train')" title="Ativar/desativar programação">
+                            <span class="sched-toggle-track"><span class="sched-toggle-thumb"></span></span>
+                        </button>
+                    </div>
+                    <div class="sched-box-body" id="trainSchedBoxBody" style="display:none;">
+                        <div class="sched-row">
+                            <div class="sched-dropdown-wrap" id="trainSchedTypeWrap">
+                                <button type="button" class="sched-dropdown-btn" id="trainSchedTypeBtn" onclick="schedToggleDropdown('train','type')">
+                                    <span class="sched-btn-icon sched-btn-icon--type" id="trainSchedTypeIcon"><i class="fas fa-calendar-alt"></i></span>
+                                    <span class="sched-btn-text" id="trainSchedTypeText">Selecionar tipo</span>
+                                    <i class="fas fa-chevron-down sched-btn-chevron" id="trainSchedTypeChevron"></i>
+                                </button>
+                                <div class="sched-dropdown-panel" id="trainSchedTypePanel" style="display:none;">
+                                    <div class="sched-dropdown-item" onclick="schedPickType('train','overdue')">
+                                        <span class="sched-item-icon sched-item-icon--overdue"><i class="fas fa-hourglass-end"></i></span>
+                                        <div class="sched-item-info">
+                                            <span class="sched-item-title">Ao Vencer</span>
+                                            <span class="sched-item-desc">Ao atingir a data prevista</span>
+                                        </div>
+                                        <i class="fas fa-check sched-item-check" id="trainTypeCheckOverdue" style="display:none;"></i>
+                                    </div>
+                                    <div class="sched-dropdown-item" onclick="schedPickType('train','alert')">
+                                        <span class="sched-item-icon sched-item-icon--alert"><i class="fas fa-bell"></i></span>
+                                        <div class="sched-item-info">
+                                            <span class="sched-item-title">Ao Alertar</span>
+                                            <span class="sched-item-desc">Ao entrar no período de alerta</span>
+                                        </div>
+                                        <i class="fas fa-check sched-item-check" id="trainTypeCheckAlert" style="display:none;"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sched-row-arrow"><i class="fas fa-arrow-right"></i></div>
+                            <div class="sched-dropdown-wrap sched-dropdown-wrap--status" id="trainSchedStatusWrapInner">
+                                <button type="button" class="sched-dropdown-btn sched-dropdown-btn--status" id="trainSchedStatusBtn" onclick="schedToggleDropdown('train','status')" disabled>
+                                    <span class="sched-btn-icon sched-btn-icon--status"><i class="fas fa-tag"></i></span>
+                                    <span class="sched-btn-text" id="trainSchedStatusText">Selecionar status</span>
+                                    <i class="fas fa-chevron-down sched-btn-chevron" id="trainSchedStatusChevron"></i>
+                                </button>
+                                <div class="sched-dropdown-panel sched-dropdown-panel--right" id="trainSchedStatusPanel" style="display:none;">
+                                    <div class="sched-status-options" id="trainSchedStatusOptions"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" id="trainOverdueStatus" value="">
+                <input type="hidden" id="trainAlertStatus" value="">
             </div>
         </div>
         </div><!-- /train-panel-info -->
@@ -952,16 +1270,22 @@
                 <input type="date" id="ativDataConclusao">
             </div>
             <div class="field-group">
-                <label>Responsável</label>
-                <select id="ativResponsavel">
-                    <option value="">Selecione um responsável...</option>
-                </select>
+                <label>Responsáveis</label>
+                <div class="ms-field" id="ms-ativ-resp">
+                    <div class="ms-tags" id="ms-ativ-resp-tags"></div>
+                    <input class="ms-input" id="ms-ativ-resp-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
+                    <div class="ms-dropdown" id="ms-ativ-resp-drop"></div>
                 </div>
+                <input type="hidden" id="ativResponsavel">
+            </div>
             <div class="field-group">
-                <label>Revisor</label>
-                <select id="ativRevisor">
-                    <option value="">Selecione um revisor...</option>
-                </select>
+                <label>Revisores</label>
+                <div class="ms-field" id="ms-ativ-rev">
+                    <div class="ms-tags" id="ms-ativ-rev-tags"></div>
+                    <input class="ms-input" id="ms-ativ-rev-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
+                    <div class="ms-dropdown" id="ms-ativ-rev-drop"></div>
+                </div>
+                <input type="hidden" id="ativRevisor">
             </div>
             <div class="field-group">
                 <label>Alerta (Dias antes)</label>
@@ -1117,16 +1441,22 @@
                 </div>
             </div>
             <div class="field-group">
-                <label>Responsável</label>
-                <select id="docResponsavel">
-                    <option value="">Selecione um responsável...</option>
-                </select>
+                <label>Responsáveis</label>
+                <div class="ms-field" id="ms-doc-resp">
+                    <div class="ms-tags" id="ms-doc-resp-tags"></div>
+                    <input class="ms-input" id="ms-doc-resp-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
+                    <div class="ms-dropdown" id="ms-doc-resp-drop"></div>
+                </div>
+                <input type="hidden" id="docResponsavel">
             </div>
             <div class="field-group">
-                <label>Revisor</label>
-                <select id="docRevisor">
-                    <option value="">Selecione um revisor...</option>
-                </select>
+                <label>Revisores</label>
+                <div class="ms-field" id="ms-doc-rev">
+                    <div class="ms-tags" id="ms-doc-rev-tags"></div>
+                    <input class="ms-input" id="ms-doc-rev-input" type="text" placeholder="Buscar e adicionar..." autocomplete="off">
+                    <div class="ms-dropdown" id="ms-doc-rev-drop"></div>
+                </div>
+                <input type="hidden" id="docRevisor">
             </div>
             <div class="field-group">
                 <label>Alerta (Dias antes da revisão)</label>
@@ -1138,6 +1468,62 @@
                     <select id="docMarcador"></select>
                     <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
                 </div>
+            </div>
+            <div class="field-group full-width sched-status-wrap" id="docSchedStatusWrap">
+                <div class="sched-box">
+                    <div class="sched-box-header">
+                        <div class="sched-box-icon"><i class="fas fa-calendar-check"></i></div>
+                        <div class="sched-box-title-wrap">
+                            <span class="sched-box-title">Programação de Status Concluído</span>
+                            <span class="sched-box-desc">Ao atingir a condição configurada, o status do card será alterado automaticamente</span>
+                        </div>
+                        <button type="button" class="sched-toggle-btn" id="docSchedToggle" onclick="schedToggleEnabled('doc')" title="Ativar/desativar programação">
+                            <span class="sched-toggle-track"><span class="sched-toggle-thumb"></span></span>
+                        </button>
+                    </div>
+                    <div class="sched-box-body" id="docSchedBoxBody" style="display:none;">
+                        <div class="sched-row">
+                            <div class="sched-dropdown-wrap" id="docSchedTypeWrap">
+                                <button type="button" class="sched-dropdown-btn" id="docSchedTypeBtn" onclick="schedToggleDropdown('doc','type')">
+                                    <span class="sched-btn-icon sched-btn-icon--type" id="docSchedTypeIcon"><i class="fas fa-calendar-alt"></i></span>
+                                    <span class="sched-btn-text" id="docSchedTypeText">Selecionar tipo</span>
+                                    <i class="fas fa-chevron-down sched-btn-chevron" id="docSchedTypeChevron"></i>
+                                </button>
+                                <div class="sched-dropdown-panel" id="docSchedTypePanel" style="display:none;">
+                                    <div class="sched-dropdown-item" onclick="schedPickType('doc','overdue')">
+                                        <span class="sched-item-icon sched-item-icon--overdue"><i class="fas fa-hourglass-end"></i></span>
+                                        <div class="sched-item-info">
+                                            <span class="sched-item-title">Ao Vencer</span>
+                                            <span class="sched-item-desc">Ao atingir a data prevista</span>
+                                        </div>
+                                        <i class="fas fa-check sched-item-check" id="docTypeCheckOverdue" style="display:none;"></i>
+                                    </div>
+                                    <div class="sched-dropdown-item" onclick="schedPickType('doc','alert')">
+                                        <span class="sched-item-icon sched-item-icon--alert"><i class="fas fa-bell"></i></span>
+                                        <div class="sched-item-info">
+                                            <span class="sched-item-title">Ao Alertar</span>
+                                            <span class="sched-item-desc">Ao entrar no período de alerta</span>
+                                        </div>
+                                        <i class="fas fa-check sched-item-check" id="docTypeCheckAlert" style="display:none;"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sched-row-arrow"><i class="fas fa-arrow-right"></i></div>
+                            <div class="sched-dropdown-wrap sched-dropdown-wrap--status" id="docSchedStatusWrapInner">
+                                <button type="button" class="sched-dropdown-btn sched-dropdown-btn--status" id="docSchedStatusBtn" onclick="schedToggleDropdown('doc','status')" disabled>
+                                    <span class="sched-btn-icon sched-btn-icon--status"><i class="fas fa-tag"></i></span>
+                                    <span class="sched-btn-text" id="docSchedStatusText">Selecionar status</span>
+                                    <i class="fas fa-chevron-down sched-btn-chevron" id="docSchedStatusChevron"></i>
+                                </button>
+                                <div class="sched-dropdown-panel sched-dropdown-panel--right" id="docSchedStatusPanel" style="display:none;">
+                                    <div class="sched-status-options" id="docSchedStatusOptions"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" id="docOverdueStatus" value="">
+                <input type="hidden" id="docAlertStatus" value="">
             </div>
         </div>
         </div><!-- /doc-panel-info -->
@@ -1393,7 +1779,12 @@
             <h3 style="margin:0; color:var(--primary); font-size:18px;">
                 <i class="fas fa-trash"></i> Lixeira de Itens Deletados
             </h3>
-            <button class="btn-close" onclick="closeModal('modalTrashBin')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button onclick="openDeletionHistory()" title="Histórico de exclusões permanentes" style="background:none; border:1px solid var(--border); border-radius:6px; padding:5px 9px; cursor:pointer; color:#6b7280; font-size:14px; display:flex; align-items:center; gap:5px; transition:background 0.15s;" onmouseover="this.style.background='rgba(0,0,0,0.05)'" onmouseout="this.style.background='none'">
+                    <i class="fas fa-clock"></i>
+                </button>
+                <button class="btn-close" onclick="closeModal('modalTrashBin')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+            </div>
         </div>
         
         <div id="trashContent" style="margin-bottom:16px;">
@@ -1402,6 +1793,24 @@
         
         <div class="modal-actions">
             <button class="btn-cancel" onclick="closeModal('modalTrashBin')">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL HISTÓRICO DE EXCLUSÕES PERMANENTES -->
+<div class="modal" id="modalDeletionHistory">
+    <div class="modal-content" style="width:860px; max-height:620px; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="margin:0; color:var(--primary); font-size:18px;">
+                <i class="fas fa-clock"></i> Histórico de Exclusões Permanentes
+            </h3>
+            <button class="btn-close" onclick="closeModal('modalDeletionHistory')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+        </div>
+        <div id="deletionHistoryContent">
+            <!-- preenchido dinamicamente -->
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('modalDeletionHistory')">Fechar</button>
         </div>
     </div>
 </div>
@@ -1559,7 +1968,7 @@
                 <div class="um-perm-title"><i class="fas fa-table-columns"></i> Abas permitidas</div>
                 <div class="um-tab-chips">
                     <label class="um-chip"><input type="checkbox" class="cfg-tab" value="dashboard" checked><span>Dashboard</span></label>
-                    <label class="um-chip"><input type="checkbox" class="cfg-tab" value="auditoria" checked><span>Auditoria</span></label>
+                    <label class="um-chip"><input type="checkbox" class="cfg-tab" value="auditoria" checked><span>Gestão de Rotinas</span></label>
                     <label class="um-chip"><input type="checkbox" class="cfg-tab" value="treinamentos"><span>Treinamentos</span></label>
                     <label class="um-chip"><input type="checkbox" class="cfg-tab" value="documentos"><span>Documentos</span></label>
                     <label class="um-chip"><input type="checkbox" class="cfg-tab" value="atividades"><span>Atividades</span></label>
@@ -1732,5 +2141,6 @@
 <script src="script/key.js"></script>
 <script src="script/setor-filter.js"></script>
 <script src="script/fbar-filters.js"></script>
+<script src="script/overdue-status.js"></script>
 </body>
 </html>

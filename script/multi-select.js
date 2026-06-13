@@ -1,275 +1,229 @@
-// === MULTI-SELECT DE RESPONSÁVEIS ===
+// === MULTI-SELECT DE RESPONSÁVEIS E REVISORES ===
+// Campos: audit/ativ/tren/doc × resp/rev
+// Hidden inputs (auditResponsavel, auditRevisor, etc.) armazenam JSON array
 
-    // ========== MULTI-SELECT FUNCTIONS ==========
-    var multiSelectStates = {
-        audit: { selected: [], allUsers: [] },
-        ativ: { selected: [], allUsers: [] },
-        doc: { selected: [], allUsers: [] }
+(function () {
+
+    // Configuração de todos os campos multi-select
+    var MS_FIELDS = [
+        { key: 'audit-resp', hidden: 'auditResponsavel', field: 'ms-audit-resp', tags: 'ms-audit-resp-tags', input: 'ms-audit-resp-input', drop: 'ms-audit-resp-drop' },
+        { key: 'audit-rev',  hidden: 'auditRevisor',     field: 'ms-audit-rev',  tags: 'ms-audit-rev-tags',  input: 'ms-audit-rev-input',  drop: 'ms-audit-rev-drop' },
+        { key: 'ativ-resp',  hidden: 'ativResponsavel',  field: 'ms-ativ-resp',  tags: 'ms-ativ-resp-tags',  input: 'ms-ativ-resp-input',  drop: 'ms-ativ-resp-drop' },
+        { key: 'ativ-rev',   hidden: 'ativRevisor',      field: 'ms-ativ-rev',   tags: 'ms-ativ-rev-tags',   input: 'ms-ativ-rev-input',   drop: 'ms-ativ-rev-drop' },
+        { key: 'tren-resp',  hidden: 'trainResponsavel', field: 'ms-tren-resp',  tags: 'ms-tren-resp-tags',  input: 'ms-tren-resp-input',  drop: 'ms-tren-resp-drop' },
+        { key: 'tren-rev',   hidden: 'trainRevisor',     field: 'ms-tren-rev',   tags: 'ms-tren-rev-tags',   input: 'ms-tren-rev-input',   drop: 'ms-tren-rev-drop' },
+        { key: 'doc-resp',   hidden: 'docResponsavel',   field: 'ms-doc-resp',   tags: 'ms-doc-resp-tags',   input: 'ms-doc-resp-input',   drop: 'ms-doc-resp-drop' },
+        { key: 'doc-rev',    hidden: 'docRevisor',       field: 'ms-doc-rev',    tags: 'ms-doc-rev-tags',    input: 'ms-doc-rev-input',    drop: 'ms-doc-rev-drop' },
+    ];
+
+    // Estado interno: key → array de nomes selecionados
+    var _state = {};
+    MS_FIELDS.forEach(function (f) { _state[f.key] = []; });
+
+    // Lista global de usuários (carregada após dados disponíveis)
+    var _allUsers = [];
+
+    window.msRefreshUsers = function () {
+        var set = new Set();
+        var sources = [
+            { arr: typeof audits     !== 'undefined' ? audits     : [], field: 'responsavel' },
+            { arr: typeof activities !== 'undefined' ? activities : [], field: 'responsavel' },
+            { arr: typeof trainings  !== 'undefined' ? trainings  : [], field: 'responsavel' },
+            { arr: typeof documents  !== 'undefined' ? documents  : [], field: 'responsavel' },
+            { arr: typeof audits     !== 'undefined' ? audits     : [], field: 'revisor' },
+            { arr: typeof activities !== 'undefined' ? activities : [], field: 'revisor' },
+            { arr: typeof trainings  !== 'undefined' ? trainings  : [], field: 'revisor' },
+            { arr: typeof documents  !== 'undefined' ? documents  : [], field: 'revisor' },
+        ];
+        sources.forEach(function (s) {
+            s.arr.forEach(function (item) {
+                var val = item[s.field];
+                if (!val) return;
+                try {
+                    var parsed = JSON.parse(val);
+                    if (Array.isArray(parsed)) { parsed.forEach(function (n) { if (n) set.add(String(n)); }); }
+                    else if (parsed) { set.add(String(parsed)); }
+                } catch (_) { set.add(String(val)); }
+            });
+        });
+        if (typeof masterLists !== 'undefined' && masterLists.responsaveis) {
+            masterLists.responsaveis.forEach(function (r) { if (r) set.add(String(r)); });
+        }
+        if (typeof users !== 'undefined') {
+            users.forEach(function (u) { if (u && u.name) set.add(String(u.name)); });
+        }
+        _allUsers = Array.from(set).filter(Boolean).sort();
     };
 
-    function initMultiSelectUsers() {
-        // Coleta todos os usuários únicos de todos os registros
-        const allResponsaveis = new Set();
-
-        audits.forEach(item => {
-            if (item.responsavel) {
-                try {
-                    const parsed = JSON.parse(item.responsavel);
-                    if (Array.isArray(parsed)) {
-                        parsed.forEach(r => allResponsaveis.add(String(r)));
-                    } else {
-                        allResponsaveis.add(String(item.responsavel));
-                    }
-                } catch {
-                    allResponsaveis.add(String(item.responsavel));
-                }
-            }
-        });
-        activities.forEach(item => {
-            if (item.responsavel) {
-                try {
-                    const parsed = JSON.parse(item.responsavel);
-                    if (Array.isArray(parsed)) {
-                        parsed.forEach(r => allResponsaveis.add(String(r)));
-                    } else {
-                        allResponsaveis.add(String(item.responsavel));
-                    }
-                } catch {
-                    allResponsaveis.add(String(item.responsavel));
-                }
-            }
-        });
-        maintenances.forEach(item => {
-            if (item.responsavelTecnico) {
-                try {
-                    const parsed = JSON.parse(item.responsavelTecnico);
-                    if (Array.isArray(parsed)) {
-                        parsed.forEach(r => allResponsaveis.add(String(r)));
-                    } else {
-                        allResponsaveis.add(String(item.responsavelTecnico));
-                    }
-                } catch {
-                    allResponsaveis.add(String(item.responsavelTecnico));
-                }
-            }
-            // Não inclui responsavelManutenção na lista de usuários do multi-select
-        });
-        documents.forEach(item => {
-            if (item.responsavel) {
-                try {
-                    const parsed = JSON.parse(item.responsavel);
-                    if (Array.isArray(parsed)) {
-                        parsed.forEach(r => allResponsaveis.add(String(r)));
-                    } else {
-                        allResponsaveis.add(String(item.responsavel));
-                    }
-                } catch {
-                    allResponsaveis.add(String(item.responsavel));
-                }
-            }
-        });
-
-        // Adiciona responsáveis da lista mestre
-        if (masterLists.responsaveis) {
-            masterLists.responsaveis.forEach(r => allResponsaveis.add(String(r)));
-        }
-
-        // Também adiciona nomes de usuários cadastrados
-        if (typeof users !== 'undefined') {
-        users.forEach(user => {
-                if (user.name) allResponsaveis.add(String(user.name));
-        });
-        }
-
-        const sortedUsers = Array.from(allResponsaveis).filter(r => r).sort();
-
-        multiSelectStates.audit.allUsers = sortedUsers;
-        multiSelectStates.ativ.allUsers = sortedUsers;
-        multiSelectStates.doc.allUsers = sortedUsers;
-    }
-
-    function toggleMultiSelectDropdown(event, type) {
-        event.stopPropagation();
-        const dropdown = document.getElementById(`${getMultiSelectBaseId(type)}Dropdown`);
-        const container = document.getElementById(`${getMultiSelectBaseId(type)}Container`);
-
-        if (!dropdown || !container) {
-            console.warn(`Multi-select elements not found for type: ${type}`);
-            return;
-        }
-
-        if (dropdown.classList.contains('visible')) {
-            dropdown.classList.remove('visible');
-            container.classList.remove('focused');
-        } else {
-            // Fecha outros dropdowns
-            document.querySelectorAll('.multi-select-dropdown.visible').forEach(d => {
-                d.classList.remove('visible');
-            });
-            document.querySelectorAll('.multi-select.focused').forEach(c => {
-                c.classList.remove('focused');
-            });
-
-            dropdown.classList.add('visible');
-            container.classList.add('focused');
-            renderMultiSelectDropdown(type);
-            document.getElementById(`${getMultiSelectBaseId(type)}Input`).focus();
-        }
-    }
-
-    function getMultiSelectBaseId(type) {
-        if (type === 'audit') return 'auditResponsavel';
-        if (type === 'ativ') return 'ativResponsavel';
-        if (type === 'doc') return 'docResponsavel';
-    }
-
-    function renderMultiSelectDropdown(type) {
-        const baseId = getMultiSelectBaseId(type);
-        const dropdown = document.getElementById(`${baseId}Dropdown`);
-        const state = multiSelectStates[type];
-        const filterText = document.getElementById(`${baseId}Input`).value.toLowerCase();
-
-        const filtered = state.allUsers.filter(user => {
-            const userStr = String(user || '').toLowerCase();
-            return userStr.includes(filterText);
-        });
-
-        dropdown.innerHTML = filtered.map(user => {
-            const userStr = String(user || '');
-            return `
-            <div class="multi-select-option ${state.selected.includes(userStr) ? 'selected' : ''}"
-                 onclick="toggleMultiSelectOption('${type}', '${userStr.replace(/'/g, "\\'")}')">
-                ${userStr}
-            </div>
-        `;
+    // ── Renderiza as tags no campo ───────────────────────────────
+    function _renderTags(cfg) {
+        var tagsEl = document.getElementById(cfg.tags);
+        var hiddenEl = document.getElementById(cfg.hidden);
+        if (!tagsEl) return;
+        var selected = _state[cfg.key];
+        tagsEl.innerHTML = selected.map(function (name) {
+            var safe = name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            return '<span class="ms-tag">'
+                + _escHtml(name)
+                + '<button type="button" onclick="msRemove(\'' + cfg.key + '\',\'' + safe + '\')" title="Remover"><i class="fas fa-times"></i></button>'
+                + '</span>';
         }).join('');
+        if (hiddenEl) hiddenEl.value = JSON.stringify(selected);
     }
 
-    function filterMultiSelectOptions(type) {
-        const baseId = getMultiSelectBaseId(type);
-        const dropdown = document.getElementById(`${baseId}Dropdown`);
-        const input = document.getElementById(`${baseId}Input`);
-
-        // Se há texto no input, garante que o dropdown permaneça aberto
-        if (input.value.trim() !== '') {
-            dropdown.classList.add('visible');
-            document.getElementById(`${baseId}Container`).classList.add('focused');
-        }
-
-            renderMultiSelectDropdown(type);
-    }
-
-    function toggleMultiSelectOption(type, user) {
-        const state = multiSelectStates[type];
-        const idx = state.selected.indexOf(user);
-
-        if (idx > -1) {
-            state.selected.splice(idx, 1);
+    // ── Abre/atualiza o dropdown ─────────────────────────────────
+    function _renderDrop(cfg) {
+        var dropEl = document.getElementById(cfg.drop);
+        var inputEl = document.getElementById(cfg.input);
+        if (!dropEl) return;
+        var q = (inputEl ? inputEl.value : '').toLowerCase().trim();
+        var selected = _state[cfg.key];
+        var filtered = _allUsers.filter(function (u) {
+            return !q || u.toLowerCase().includes(q);
+        });
+        if (!filtered.length) {
+            dropEl.innerHTML = '<div class="ms-drop-empty">Nenhum usuário encontrado</div>';
         } else {
-            state.selected.push(user);
+            dropEl.innerHTML = filtered.map(function (u) {
+                var isSel = selected.includes(u);
+                var safe = u.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                return '<div class="ms-option' + (isSel ? ' ms-option--sel' : '') + '" onclick="msToggle(\'' + cfg.key + '\',\'' + safe + '\')">'
+                    + (isSel ? '<i class="fas fa-check" style="margin-right:6px;font-size:10px;color:var(--accent)"></i>' : '<span style="width:16px;display:inline-block"></span>')
+                    + _escHtml(u)
+                    + '</div>';
+            }).join('');
         }
-
-        updateMultiSelectDisplay(type);
-        renderMultiSelectDropdown(type);
-
-        // Mantém o foco no input para continuar adicionando responsáveis
-        const baseId = getMultiSelectBaseId(type);
-        const inputElement = document.getElementById(`${baseId}Input`);
-        if (inputElement) {
-            inputElement.focus();
-        }
+        dropEl.classList.add('ms-drop--open');
     }
 
-    function updateMultiSelectDisplay(type) {
-        const baseId = getMultiSelectBaseId(type);
-        const container = document.getElementById(`${baseId}Container`);
-        const hiddenInput = document.getElementById(baseId);
-        const state = multiSelectStates[type];
+    function _closeDrop(cfg) {
+        var dropEl = document.getElementById(cfg.drop);
+        if (dropEl) dropEl.classList.remove('ms-drop--open');
+        var inputEl = document.getElementById(cfg.input);
+        if (inputEl) inputEl.value = '';
+    }
 
-        // Limpa os tags anteriores
-        const tags = container.querySelectorAll('.multi-select-tag');
-        tags.forEach(tag => tag.remove());
+    function _escHtml(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
 
-        // Adiciona os novos tags
-        const inputElement = container.querySelector('input[type="text"]');
-        state.selected.forEach(user => {
-            const tag = document.createElement('div');
-            tag.className = 'multi-select-tag';
-            tag.innerHTML = `
-                ${user}
-                <button type="button" onclick="event.stopPropagation(); removeMultiSelectOption('${type}', '${user.replace(/'/g, "\\'")}')" title="Remover">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
-            container.insertBefore(tag, inputElement);
+    // ── API pública ──────────────────────────────────────────────
+    window.msToggle = function (key, name) {
+        var arr = _state[key];
+        var idx = arr.indexOf(name);
+        if (idx > -1) { arr.splice(idx, 1); } else { arr.push(name); }
+        var cfg = MS_FIELDS.find(function (f) { return f.key === key; });
+        if (!cfg) return;
+        _renderTags(cfg);
+        _renderDrop(cfg);
+        var inputEl = document.getElementById(cfg.input);
+        if (inputEl) inputEl.focus();
+    };
+
+    window.msRemove = function (key, name) {
+        var arr = _state[key];
+        var idx = arr.indexOf(name);
+        if (idx > -1) arr.splice(idx, 1);
+        var cfg = MS_FIELDS.find(function (f) { return f.key === key; });
+        if (cfg) _renderTags(cfg);
+    };
+
+    // Carrega dados salvos no hidden input para o estado interno
+    window.msLoad = function (key) {
+        var cfg = MS_FIELDS.find(function (f) { return f.key === key; });
+        if (!cfg) return;
+        var hiddenEl = document.getElementById(cfg.hidden);
+        if (!hiddenEl) return;
+        var val = hiddenEl.value || '';
+        try {
+            var parsed = JSON.parse(val);
+            _state[key] = Array.isArray(parsed) ? parsed.map(String).filter(Boolean)
+                : (parsed ? [String(parsed)] : []);
+        } catch (_) {
+            _state[key] = val ? [val] : [];
+        }
+        _renderTags(cfg);
+    };
+
+    // Reseta um campo (usado em resetModal)
+    window.msReset = function (key) {
+        _state[key] = [];
+        var cfg = MS_FIELDS.find(function (f) { return f.key === key; });
+        if (!cfg) return;
+        _renderTags(cfg);
+        _closeDrop(cfg);
+        var hiddenEl = document.getElementById(cfg.hidden);
+        if (hiddenEl) hiddenEl.value = '';
+    };
+
+    // Reseta todos os campos de um prefixo (audit/ativ/tren/doc)
+    window.msResetPrefix = function (prefix) {
+        MS_FIELDS.forEach(function (f) {
+            if (f.key.startsWith(prefix + '-')) msReset(f.key);
+        });
+    };
+
+    // Lê o valor como array de nomes (para salvar no Firebase)
+    window.msGetValue = function (key) {
+        return _state[key].slice();
+    };
+
+    // Define valor programaticamente (ao abrir edição)
+    window.msSetValue = function (key, value) {
+        var arr;
+        if (Array.isArray(value)) {
+            arr = value.map(String).filter(Boolean);
+        } else if (typeof value === 'string' && value.startsWith('[')) {
+            try { arr = JSON.parse(value).map(String).filter(Boolean); } catch (_) { arr = value ? [value] : []; }
+        } else {
+            arr = value ? [String(value)] : [];
+        }
+        _state[key] = arr;
+        var cfg = MS_FIELDS.find(function (f) { return f.key === key; });
+        if (cfg) {
+            _renderTags(cfg);
+            var hiddenEl = document.getElementById(cfg.hidden);
+            if (hiddenEl) hiddenEl.value = JSON.stringify(arr);
+        }
+    };
+
+    // ── Inicializa eventos de cada campo ─────────────────────────
+    function _initField(cfg) {
+        var fieldEl = document.getElementById(cfg.field);
+        var inputEl = document.getElementById(cfg.input);
+        var dropEl  = document.getElementById(cfg.drop);
+        if (!fieldEl || !inputEl || !dropEl) return;
+
+        // Clique no container abre o dropdown
+        fieldEl.addEventListener('click', function (e) {
+            if (e.target.closest('.ms-tag')) return;
+            if (_allUsers.length === 0) msRefreshUsers();
+            _renderDrop(cfg);
+            inputEl.focus();
         });
 
-        // Salva no hidden input como JSON
-        hiddenInput.value = JSON.stringify(state.selected);
+        // Digitação filtra o dropdown
+        inputEl.addEventListener('input', function () {
+            _renderDrop(cfg);
+        });
+
+        // Tecla Escape fecha
+        inputEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { _closeDrop(cfg); }
+            if (e.key === 'Enter') { e.preventDefault(); }
+        });
     }
 
-    function removeMultiSelectOption(type, user) {
-        const state = multiSelectStates[type];
-        const idx = state.selected.indexOf(user);
-        if (idx > -1) {
-            state.selected.splice(idx, 1);
-        }
-        updateMultiSelectDisplay(type);
-        renderMultiSelectDropdown(type);
-    }
-
-    function loadMultiSelectData(type, dataArray) {
-        const baseId = getMultiSelectBaseId(type);
-        const hiddenInput = document.getElementById(baseId);
-        const state = multiSelectStates[type];
-
-        try {
-            state.selected = JSON.parse(hiddenInput.value || '[]');
-        } catch (e) {
-            state.selected = [];
-        }
-
-        updateMultiSelectDisplay(type);
-    }
-
-    // Fecha dropdown ao clicar fora
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.multi-select')) {
-            // Fecha todos os dropdowns
-            document.querySelectorAll('.multi-select-dropdown').forEach(dropdown => {
-                dropdown.classList.remove('visible');
-            });
+    // Fecha dropdowns ao clicar fora
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.ms-field')) {
+            MS_FIELDS.forEach(function (cfg) { _closeDrop(cfg); });
         }
     });
 
-    // Impede que o dropdown feche ao clicar dentro do multi-select
-    document.addEventListener('click', (e) => {
-        if (e.target.closest('.multi-select')) {
-            e.stopPropagation();
-        }
+    // Inicialização após DOM pronto
+    document.addEventListener('DOMContentLoaded', function () {
+        MS_FIELDS.forEach(_initField);
     });
 
-    // Adiciona evento de teclado para os inputs de multi-select
-    document.addEventListener('keydown', (e) => {
-        if (e.target.classList.contains('multi-select-input')) {
-            const container = e.target.closest('.multi-select');
-            const baseId = container.id.replace('Container', '');
-            const dropdown = document.getElementById(`${baseId}Dropdown`);
-
-            if (e.key === 'Escape') {
-                // Limpa o campo e fecha o dropdown
-                e.target.value = '';
-                dropdown.classList.remove('visible');
-                container.classList.remove('focused');
-            } else if (e.key === 'Enter') {
-                // Impede o submit do formulário
-                e.preventDefault();
-            } else if (e.key !== 'Tab') {
-                // Para qualquer outra tecla, garante que o dropdown permaneça aberto
-                if (e.target.value.trim() !== '') {
-                    dropdown.classList.add('visible');
-                    container.classList.add('focused');
-                }
-            }
-        }
-    });
+})();

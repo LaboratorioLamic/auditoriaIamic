@@ -75,7 +75,7 @@ function _checkTriPerm(permVal, item) {
             });
             
             // Inicializa os usuários no multi-select após carregar
-            initMultiSelectUsers();
+            msRefreshUsers();
         } catch (error) {
             console.error('Erro ao carregar usuários:', error);
             throw new Error('Erro ao carregar usuários: ' + error.message);

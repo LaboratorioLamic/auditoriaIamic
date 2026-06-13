@@ -17,13 +17,24 @@
         const selectedAuditMarkerName = document.getElementById('auditMarcador').value;
         const auditMarkerObj = (masterLists.auditMarcadores || []).find(m => m.name === selectedAuditMarkerName);
 
-        let responsavel = document.getElementById('auditResponsavel').value || '';
-        let revisor = document.getElementById('auditRevisor').value || '';
+        let responsavel = (typeof msGetValue === 'function') ? msGetValue('audit-resp') : [];
+        let revisor     = (typeof msGetValue === 'function') ? msGetValue('audit-rev')  : [];
+        if (!Array.isArray(responsavel)) responsavel = responsavel ? [responsavel] : [];
+        if (!Array.isArray(revisor))     revisor     = revisor     ? [revisor]     : [];
 
         if (!isNew && !userIsAdmin()) {
-            if (!responsavel) responsavel = item.responsavel || '';
-            if (!revisor) revisor = item.revisor || '';
+            if (!responsavel.length) {
+                const prev = item.responsavel;
+                try { responsavel = Array.isArray(prev) ? prev : (prev ? JSON.parse(prev) : []); } catch { responsavel = prev ? [prev] : []; }
+            }
+            if (!revisor.length) {
+                const prev = item.revisor;
+                try { revisor = Array.isArray(prev) ? prev : (prev ? JSON.parse(prev) : []); } catch { revisor = prev ? [prev] : []; }
+            }
         }
+        // Salva como JSON string para manter compatibilidade com o código existente de leitura
+        responsavel = JSON.stringify(responsavel);
+        revisor     = JSON.stringify(revisor);
 
         const rotinaVal = document.getElementById('auditRotina').value;
         const freqVal = Number(document.getElementById('auditFrequencia').value) || 1;
@@ -45,9 +56,11 @@
             rotina: rotinaVal,
             frequencia: freqVal,
             diasSemana: rotinaVal === 'diasemana' ? selectedDays : [],
-            flagDias: Number(document.getElementById('auditFlagDias').value) || 7,
+            flagDias: document.getElementById('auditFlagDias').value === '' ? 0 : Number(document.getElementById('auditFlagDias').value),
             marcador: auditMarkerObj ? auditMarkerObj.name : '',
             marcadorCor: auditMarkerObj ? auditMarkerObj.color : 'default',
+            overdueStatus: document.getElementById('auditOverdueStatus').value || '',
+            alertStatus: document.getElementById('auditAlertStatus')?.value || '',
             anexos: getAnexos('audit'),
             checklist: (typeof getChecklist === 'function') ? getChecklist('audit') : (item.checklist || []),
             checklistPublicacao: (typeof getChecklistPub === 'function') ? getChecklistPub('audit') : (item.checklistPublicacao || [])
@@ -57,6 +70,16 @@
             if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de marcar como Concluído.', 'error');
             return;
         }
+        if (/conclu/i.test(newItem.status) && typeof checkSchedWarnBeforeConcluido === 'function' && !window._schedWarnPassed_audit) {
+            checkSchedWarnBeforeConcluido(newItem, 'auditoria').then(ok => {
+                if (!ok) return;
+                window._schedWarnPassed_audit = true;
+                saveAudit();
+                window._schedWarnPassed_audit = false;
+            });
+            return;
+        }
+        window._schedWarnPassed_audit = false;
 
         const changes = calculateChanges(originalItem || {}, newItem);
 
@@ -109,8 +132,8 @@
             status: document.getElementById('auditStatus').value,
             dataPublicacao: document.getElementById('auditDataPublicacao').value,
             dataPrevisao: document.getElementById('auditDataPrevisao').value,
-            responsavel: document.getElementById('auditResponsavel').value,
-            revisor: document.getElementById('auditRevisor').value,
+            responsavel: (typeof msGetValue === 'function') ? JSON.stringify(msGetValue('audit-resp')) : document.getElementById('auditResponsavel').value,
+            revisor:     (typeof msGetValue === 'function') ? JSON.stringify(msGetValue('audit-rev'))  : document.getElementById('auditRevisor').value,
             rotina: document.getElementById('auditRotina').value,
             frequencia: document.getElementById('auditFrequencia').value,
             diasSemana: Array.from(document.querySelectorAll('#auditWeekdays .wd-btn.active')).map(b => Number(b.dataset.day)),
@@ -132,8 +155,7 @@
             document.getElementById('auditStatus').value = formData.status;
             document.getElementById('auditDataPublicacao').value = formData.dataPublicacao;
             document.getElementById('auditDataPrevisao').value = formData.dataPrevisao;
-            document.getElementById('auditResponsavel').value = formData.responsavel;
-            document.getElementById('auditRevisor').value = formData.revisor;
+            if (typeof msSetValue === 'function') { msSetValue('audit-resp', formData.responsavel || ''); msSetValue('audit-rev', formData.revisor || ''); }
             document.getElementById('auditRotina').value = formData.rotina || 'pontual';
             document.getElementById('auditFrequencia').value = formData.frequencia || 1;
             document.querySelectorAll('#auditWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
@@ -218,10 +240,14 @@ window.calcAuditDataPrevisao = function() {
     dpInput.value = next.toISOString().split('T')[0];
 };
 
-// Recalcular quando data de publicação mudar
+// Recalcular quando data de publicação mudar (change + input para capturar navegação no calendário)
 (function() {
     const dpPub = document.getElementById('auditDataPublicacao');
-    if (dpPub) dpPub.addEventListener('change', () => {
+    const handler = () => {
         if (document.getElementById('auditRotina').value !== 'pontual') calcAuditDataPrevisao();
-    });
+    };
+    if (dpPub) {
+        dpPub.addEventListener('change', handler);
+        dpPub.addEventListener('input', handler);
+    }
 })();

@@ -13,13 +13,23 @@
         const selectedDocMarkerName = document.getElementById('docMarcador').value;
         const docMarkerObj = (masterLists.docMarcadores || []).find(m => m.name === selectedDocMarkerName);
 
-        let responsavel = document.getElementById('docResponsavel').value || '';
-        let revisor = document.getElementById('docRevisor').value || '';
+        let responsavel = (typeof msGetValue === 'function') ? msGetValue('doc-resp') : [];
+        let revisor     = (typeof msGetValue === 'function') ? msGetValue('doc-rev')  : [];
+        if (!Array.isArray(responsavel)) responsavel = responsavel ? [responsavel] : [];
+        if (!Array.isArray(revisor))     revisor     = revisor     ? [revisor]     : [];
 
         if (!isNew && !userIsAdmin()) {
-            if (!responsavel) responsavel = item.responsavel || '';
-            if (!revisor) revisor = item.revisor || '';
+            if (!responsavel.length) {
+                const prev = item.responsavel;
+                try { responsavel = Array.isArray(prev) ? prev : (prev ? JSON.parse(prev) : []); } catch { responsavel = prev ? [prev] : []; }
+            }
+            if (!revisor.length) {
+                const prev = item.revisor;
+                try { revisor = Array.isArray(prev) ? prev : (prev ? JSON.parse(prev) : []); } catch { revisor = prev ? [prev] : []; }
+            }
         }
+        responsavel = JSON.stringify(responsavel);
+        revisor     = JSON.stringify(revisor);
 
         const newItem = {
             ...item,
@@ -39,6 +49,8 @@
             flagDias: +document.getElementById('docFlagDias').value,
             marcador: docMarkerObj ? docMarkerObj.name : '',
             marcadorCor: docMarkerObj ? docMarkerObj.color : 'default',
+            overdueStatus: document.getElementById('docOverdueStatus').value || '',
+            alertStatus: document.getElementById('docAlertStatus')?.value || '',
             anexos: getAnexos('doc'),
             checklist: (typeof getChecklist === 'function') ? getChecklist('doc') : (item.checklist || []),
             checklistPublicacao: (typeof getChecklistPub === 'function') ? getChecklistPub('doc') : (item.checklistPublicacao || []),
@@ -56,10 +68,24 @@
                 newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
             }
 
+            if (/conclu/i.test(newItem.status) && typeof isItemOverdue === 'function' && isItemOverdue(newItem, 'doc')) {
+                showOverdueConcluiModal();
+                return;
+            }
             if (/conclu/i.test(newItem.status) && !canSetConcluido(newItem.checklist)) {
                 if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de marcar como Concluído.', 'error');
                 return;
             }
+            if (/conclu/i.test(newItem.status) && typeof checkSchedWarnBeforeConcluido === 'function' && !window._schedWarnPassed_doc) {
+                checkSchedWarnBeforeConcluido(newItem, 'documentos').then(ok => {
+                    if (!ok) return;
+                    window._schedWarnPassed_doc = true;
+                    saveDocumento();
+                    window._schedWarnPassed_doc = false;
+                });
+                return;
+            }
+            window._schedWarnPassed_doc = false;
 
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0) {
@@ -99,8 +125,8 @@
             rotina: rotinaValDup,
             frequencia: Number(document.getElementById('docFrequencia').value) || 1,
             diasSemana: Array.from(document.querySelectorAll('#docWeekdays .wd-btn.active')).map(b => Number(b.dataset.day)),
-            responsavel: document.getElementById('docResponsavel').value,
-            revisor: document.getElementById('docRevisor').value,
+            responsavel: (typeof msGetValue === 'function') ? JSON.stringify(msGetValue('doc-resp')) : document.getElementById('docResponsavel').value,
+            revisor:     (typeof msGetValue === 'function') ? JSON.stringify(msGetValue('doc-rev'))  : document.getElementById('docRevisor').value,
             flagDias: document.getElementById('docFlagDias').value,
             marcador: document.getElementById('docMarcador').value,
             descricao: document.getElementById('docDescricao').value,
@@ -126,8 +152,7 @@
                 const btn = document.querySelector(`#docWeekdays .wd-btn[data-day="${d}"]`);
                 if (btn) btn.classList.add('active');
             });
-            document.getElementById('docResponsavel').value = formData.responsavel;
-            document.getElementById('docRevisor').value = formData.revisor;
+            if (typeof msSetValue === 'function') { msSetValue('doc-resp', formData.responsavel || ''); msSetValue('doc-rev', formData.revisor || ''); }
             document.getElementById('docFlagDias').value = formData.flagDias;
             document.getElementById('docMarcador').value = formData.marcador;
             document.getElementById('docDescricao').value = formData.descricao;
@@ -203,7 +228,11 @@ window.calcDocDataPrevisao = function() {
 
 (function() {
     const dpCriacao = document.getElementById('docDataCriacao');
-    if (dpCriacao) dpCriacao.addEventListener('change', () => {
+    const handler = () => {
         if (document.getElementById('docRotina').value !== 'pontual') calcDocDataPrevisao();
-    });
+    };
+    if (dpCriacao) {
+        dpCriacao.addEventListener('change', handler);
+        dpCriacao.addEventListener('input', handler);
+    }
 })();

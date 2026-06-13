@@ -21,12 +21,23 @@
         const selectedTrainMarkerName = document.getElementById('trainMarcador').value;
         const trainMarkerObj = (masterLists.trainMarcadores || []).find(m => m.name === selectedTrainMarkerName);
 
-        let responsavel = document.getElementById('trainResponsavel').value || '';
-        let revisor = document.getElementById('trainRevisor').value || '';
+        let responsavel = (typeof msGetValue === 'function') ? msGetValue('tren-resp') : [];
+        let revisor     = (typeof msGetValue === 'function') ? msGetValue('tren-rev')  : [];
+        if (!Array.isArray(responsavel)) responsavel = responsavel ? [responsavel] : [];
+        if (!Array.isArray(revisor))     revisor     = revisor     ? [revisor]     : [];
 
         if (!isNew && !userIsAdmin()) {
-            if (!responsavel) responsavel = item.responsavel || '';
+            if (!responsavel.length) {
+                const prev = item.responsavel;
+                try { responsavel = Array.isArray(prev) ? prev : (prev ? JSON.parse(prev) : []); } catch { responsavel = prev ? [prev] : []; }
+            }
+            if (!revisor.length) {
+                const prev = item.revisor;
+                try { revisor = Array.isArray(prev) ? prev : (prev ? JSON.parse(prev) : []); } catch { revisor = prev ? [prev] : []; }
+            }
         }
+        responsavel = JSON.stringify(responsavel);
+        revisor     = JSON.stringify(revisor);
 
         const rotinaVal = document.getElementById('trainRotina').value;
         const freqVal = Number(document.getElementById('trainFrequencia').value) || 1;
@@ -48,9 +59,11 @@
             diasSemana: rotinaVal === 'diasemana' ? selectedDays : [],
             responsavel: responsavel,
             revisor: revisor,
-            flagDias: Number(document.getElementById('trainFlagDias').value) ?? 7,
+            flagDias: document.getElementById('trainFlagDias').value === '' ? 0 : Number(document.getElementById('trainFlagDias').value),
             marcador: trainMarkerObj ? trainMarkerObj.name : '',
             marcadorCor: trainMarkerObj ? trainMarkerObj.color : 'default',
+            overdueStatus: document.getElementById('trainOverdueStatus').value || '',
+            alertStatus: document.getElementById('trainAlertStatus')?.value || '',
             anexos: getAnexos('train'),
             checklist: (typeof getChecklist === 'function') ? getChecklist('train') : (item.checklist || []),
             checklistPublicacao: (typeof getChecklistPub === 'function') ? getChecklistPub('train') : (item.checklistPublicacao || [])
@@ -75,10 +88,24 @@
                 newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
             }
 
+            if (/conclu/i.test(newItem.status) && typeof isItemOverdue === 'function' && isItemOverdue(newItem, 'train')) {
+                showOverdueConcluiModal();
+                return;
+            }
             if (/conclu/i.test(newItem.status) && !canSetConcluido(newItem.checklist)) {
                 if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de marcar como Concluído.', 'error');
                 return;
             }
+            if (/conclu/i.test(newItem.status) && typeof checkSchedWarnBeforeConcluido === 'function' && !window._schedWarnPassed_train) {
+                checkSchedWarnBeforeConcluido(newItem, 'treinamentos').then(ok => {
+                    if (!ok) return;
+                    window._schedWarnPassed_train = true;
+                    saveTraining();
+                    window._schedWarnPassed_train = false;
+                });
+                return;
+            }
+            window._schedWarnPassed_train = false;
 
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0 || changes.silentChanged) {
@@ -124,9 +151,9 @@
             rotina: rotinaValDup,
             frequencia: Number(document.getElementById('trainFrequencia').value) || 1,
             diasSemana: Array.from(document.querySelectorAll('#trainWeekdays .wd-btn.active')).map(b => Number(b.dataset.day)),
-            responsavel: document.getElementById('trainResponsavel').value || '',
-            revisor: document.getElementById('trainRevisor').value || '',
-            flagDias: Number(document.getElementById('trainFlagDias').value) ?? 7,
+            responsavel: (typeof msGetValue === 'function') ? JSON.stringify(msGetValue('tren-resp')) : document.getElementById('trainResponsavel').value || '',
+            revisor:     (typeof msGetValue === 'function') ? JSON.stringify(msGetValue('tren-rev'))  : document.getElementById('trainRevisor').value || '',
+            flagDias: document.getElementById('trainFlagDias').value === '' ? 0 : Number(document.getElementById('trainFlagDias').value),
             marcador: document.getElementById('trainMarcador').value,
             anexos: typeof getAnexos === 'function' ? getAnexos('train') : []
         };
@@ -151,8 +178,7 @@
                 const btn = document.querySelector(`#trainWeekdays .wd-btn[data-day="${d}"]`);
                 if (btn) btn.classList.add('active');
             });
-            document.getElementById('trainResponsavel').value = formData.responsavel;
-            document.getElementById('trainRevisor').value = formData.revisor;
+            if (typeof msSetValue === 'function') { msSetValue('tren-resp', formData.responsavel || ''); msSetValue('tren-rev', formData.revisor || ''); }
             document.getElementById('trainFlagDias').value = formData.flagDias;
             document.getElementById('trainMarcador').value = formData.marcador;
 
@@ -227,7 +253,11 @@ window.calcTrainDataPrevisao = function() {
 
 (function() {
     const dpPub = document.getElementById('trainDataPublicacao');
-    if (dpPub) dpPub.addEventListener('change', () => {
+    const handler = () => {
         if (document.getElementById('trainRotina').value !== 'pontual') calcTrainDataPrevisao();
-    });
+    };
+    if (dpPub) {
+        dpPub.addEventListener('change', handler);
+        dpPub.addEventListener('input', handler);
+    }
 })();
