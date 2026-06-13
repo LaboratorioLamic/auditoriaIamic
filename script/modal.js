@@ -903,7 +903,7 @@ function renderViewContent(id, tab) {
         manutencao: 'fa-wrench'
     };
     const tabLabelMap = {
-        auditoria: 'Gestão de Rotinas',
+        auditoria: 'Rotinas',
         atividades: 'Atividade',
         treinamentos: 'Treinamento',
         documentos: 'Documento',

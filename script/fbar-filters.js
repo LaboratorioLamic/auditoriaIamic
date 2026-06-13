@@ -43,11 +43,11 @@ function setMyTasksMode(mode) {
 
     if (mode === 'responsavel') {
         fbarMyTasksActive = true;
-        fbarRespFilter = currentuser && currentuser.name ? currentuser.name : '';
+        fbarRespFilter = '';
         fbarRevFilter = '';
     } else if (mode === 'revisor') {
         fbarMyTasksActive = true;
-        fbarRevFilter = currentuser && currentuser.name ? currentuser.name : '';
+        fbarRevFilter = '';
         fbarRespFilter = '';
     } else { // all
         fbarMyTasksActive = false;
@@ -133,7 +133,7 @@ function renderPeopleFilterList() {
     const type  = _peopleFilterType;
     const current = type === 'responsavel' ? fbarRespFilter : fbarRevFilter;
 
-    // Coleta nomes disponíveis dos cards da aba atual
+    // Coleta IDs/nomes dos campos dos cards da aba atual
     const prefix = _tabPrefix();
     let items = [];
     if (prefix === 'Audit')      items = audits || [];
@@ -143,24 +143,37 @@ function renderPeopleFilterList() {
     else if (prefix === 'Doc')   items = documents || [];
     items = items.filter(i => !i.deleted);
 
-    const names = new Set();
+    // Conjunto de usuários válidos (com id e name)
+    const validUsers = (users || []).filter(u => u.id && u.name);
+
+    const resolvedNames = new Set();
     items.forEach(item => {
-        if (type === 'responsavel') {
-            const raw = item.responsavelTecnico || item.responsavel || '';
-            _parseAllNames(raw).forEach(n => names.add(n));
-        } else {
-            _parseAllNames(item.revisor || '').forEach(n => names.add(n));
+        const raw = type === 'responsavel'
+            ? (item.responsavelTecnico || item.responsavel || '')
+            : (item.revisor || '');
+        if (!raw) return;
+        try {
+            const arr = JSON.parse(raw);
+            (Array.isArray(arr) ? arr : [arr]).forEach(val => {
+                const vs = String(val).trim();
+                // Tenta resolver como ID primeiro
+                const byId = validUsers.find(u => u.id === vs);
+                if (byId) { resolvedNames.add(byId.name); return; }
+                // Tenta como nome (legado)
+                const byName = validUsers.find(u => u.name.toLowerCase() === vs.toLowerCase());
+                if (byName) { resolvedNames.add(byName.name); return; }
+                // Ignora valores inválidos (IDs sem usuário correspondente)
+            });
+        } catch (_) {
+            const vs = String(raw).trim();
+            const byId = validUsers.find(u => u.id === vs);
+            if (byId) { resolvedNames.add(byId.name); return; }
+            const byName = validUsers.find(u => u.name.toLowerCase() === vs.toLowerCase());
+            if (byName) resolvedNames.add(byName.name);
         }
     });
 
-    // Mapeia para nomes reais
-    let realNames = [...names].map(normalized => {
-        const user = (users || []).find(u => u.name && u.name.toLowerCase() === normalized);
-        if (user) return user.name;
-        const resp = (masterLists?.responsaveis || []).find(r => r && r.toLowerCase() === normalized);
-        return resp || (normalized.charAt(0).toUpperCase() + normalized.slice(1));
-    });
-    realNames = [...new Set(realNames)].sort((a, b) => a.localeCompare(b));
+    let realNames = [...resolvedNames].sort((a, b) => a.localeCompare(b));
 
     const filtered = query ? realNames.filter(n => n.toLowerCase().includes(query)) : realNames;
 
@@ -638,11 +651,11 @@ function setMyTasksModeDash(mode) {
     const dd = document.getElementById('fbarMyTasksDropdownDash'); if (dd) dd.style.display = 'none';
     if (mode === 'responsavel') {
         dashMyTasksActive = true;
-        dashRespFilter = currentuser && currentuser.name ? currentuser.name : '';
+        dashRespFilter = '';
         dashRevFilter  = '';
     } else if (mode === 'revisor') {
         dashMyTasksActive = true;
-        dashRevFilter  = currentuser && currentuser.name ? currentuser.name : '';
+        dashRevFilter  = '';
         dashRespFilter = '';
     } else {
         dashMyTasksActive = false;
@@ -691,24 +704,32 @@ function _renderDashPeopleList() {
         ...(documents||[]).map(d => ({...d, _dtype:'doc'}))
     ].filter(i => !i.deleted);
 
-    const names = new Set();
+    const validUsers = (users || []).filter(u => u.id && u.name);
+    const resolvedNames = new Set();
     items.forEach(item => {
-        if (type === 'responsavel') {
-            const raw = item.responsavelTecnico || item.responsavel || '';
-            const n = normalizeResponsavel ? normalizeResponsavel(raw) : raw.trim().toLowerCase();
-            if (n) names.add(n);
-        } else {
-            const rev = (item.revisor || '').trim();
-            if (rev) names.add(rev.toLowerCase());
+        const raw = type === 'responsavel'
+            ? (item.responsavelTecnico || item.responsavel || '')
+            : (item.revisor || '');
+        if (!raw) return;
+        try {
+            const arr = JSON.parse(raw);
+            (Array.isArray(arr) ? arr : [arr]).forEach(val => {
+                const vs = String(val).trim();
+                const byId = validUsers.find(u => u.id === vs);
+                if (byId) { resolvedNames.add(byId.name); return; }
+                const byName = validUsers.find(u => u.name.toLowerCase() === vs.toLowerCase());
+                if (byName) resolvedNames.add(byName.name);
+            });
+        } catch (_) {
+            const vs = String(raw).trim();
+            const byId = validUsers.find(u => u.id === vs);
+            if (byId) { resolvedNames.add(byId.name); return; }
+            const byName = validUsers.find(u => u.name.toLowerCase() === vs.toLowerCase());
+            if (byName) resolvedNames.add(byName.name);
         }
     });
 
-    let realNames = [...names].map(normalized => {
-        const user = (users||[]).find(u => u.name && u.name.toLowerCase() === normalized);
-        if (user) return user.name;
-        return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-    });
-    realNames = [...new Set(realNames)].sort((a,b) => a.localeCompare(b));
+    let realNames = [...resolvedNames].sort((a,b) => a.localeCompare(b));
     const filtered = query ? realNames.filter(n => n.toLowerCase().includes(query)) : realNames;
 
     if (!filtered.length) {

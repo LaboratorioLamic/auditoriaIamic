@@ -105,12 +105,15 @@
     color: #64748b;
     line-height: 1.35;
 }
-.card-info-row span:not(.card-resp-extra) {
+.card-info-row span:not(.card-resp-extra):not(.card-resp-wrap):not(.card-resp-name) {
     flex: 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+.card-resp-wrap {
+    flex: 1;
 }
 .card-info-row i {
     width: 13px;
@@ -121,11 +124,11 @@
 }
 .card-info-row strong { color: #334155; font-weight: 600; }
 .card-resp-wrap {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 5px;
     min-width: 0;
-    overflow: hidden;
+    flex: 1;
 }
 .card-resp-name {
     overflow: hidden;

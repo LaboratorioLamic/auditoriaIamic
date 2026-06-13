@@ -121,7 +121,7 @@
     window.syncDashAreaBtn = function() {
         const areaEl = document.getElementById('fDashArea');
         const val = areaEl ? areaEl.value : 'ativ';
-        const labelMap = { ativ: 'Gestão de Atividades', audit: 'Gestão de Rotinas', tren: 'Treinamentos', doc: 'Documentos', '': 'Gestão de Atividades' };
+        const labelMap = { ativ: 'Gestão de Atividades', audit: 'Rotinas', tren: 'Treinamentos', doc: 'Documentos', '': 'Gestão de Atividades' };
         const lbl = labelMap[val] || 'Gestão de Atividades';
         const effectiveVal = val || 'ativ';
 

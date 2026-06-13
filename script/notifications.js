@@ -124,12 +124,13 @@
             // Filtro por Status
             if (filters.status && item.status !== filters.status) return false;
 
-            // Filtro por Responsável (direto, quando não é Minhas Tarefas)
+            // Filtro por Responsável (direto, quando não é Minhas Tarefas) — resolve IDs para nomes
             if (filters.responsavel) {
                 const raw = type === 'mant'
                     ? (item.responsavelTecnico || item.responsavelManutencao || '')
                     : (item.responsavel || '');
-                if (!raw || !raw.includes(filters.responsavel)) return false;
+                const _nr = typeof normalizeResponsavel === 'function' ? normalizeResponsavel(raw) : raw.toLowerCase();
+                if (!_nr || !_nr.includes(filters.responsavel.toLowerCase())) return false;
             }
 
             // Filtro por Revisor
@@ -305,12 +306,28 @@
             return;
         }
 
+        const _fmtNotifResp = (raw) => {
+            if (!raw) return '';
+            const _e = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            try {
+                const p = JSON.parse(raw);
+                if (Array.isArray(p) && p.length > 0) {
+                    const name = (typeof resolveUserId === 'function' ? resolveUserId(p[0]) : null) || p[0] || '';
+                    const extra = p.length - 1;
+                    const badge = extra > 0 ? `<span class="card-resp-extra" style="margin-left:5px">+${extra}</span>` : '';
+                    return `<span style="display:inline-flex;align-items:center">${_e(name)}${badge}</span>`;
+                }
+            } catch (_) {}
+            return _e(String(raw));
+        };
+
         content.innerHTML = notifications.map(notif => {
             const statusColorVar = colorMap[notif.statusColor] || colorMap['default'];
             const indicatorClass = notif.indicatorType === 'overdue' ? 'overdue' : 'alert';
             const subcatDisplay = notif.subcatOrItem ? ` (${notif.subcatOrItem})` : '';
             const marcadorColorVar = colorMap[notif.marcadorCor] || colorMap['default'];
             const marcadorHtml = notif.marcador ? `<div style="background: ${marcadorColorVar}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; width: fit-content; display: flex; align-items: center; gap: 4px;"><i class="fas fa-bookmark" style="color: white; font-size: 10px;"></i>${notif.marcador}</div>` : '';
+            const respHtml = _fmtNotifResp(notif.responsavel);
 
             return `
                 <div class="notification-item ${indicatorClass}" onclick="closeNotificationModal(); currentHistoryPage = 1; openView(${notif.id}, '${notif.type}')">
@@ -327,10 +344,10 @@
                             <i class="fas fa-folder"></i>
                             <span>${notif.categoria || '-'} ${subcatDisplay}</span>
                         </div>
-                        ${notif.responsavel ? `
+                        ${respHtml ? `
                         <div class="notification-item-details-row">
                             <i class="fas fa-user"></i>
-                            <span>${notif.responsavel}</span>
+                            ${respHtml}
                         </div>
                         ` : ''}
                         <div class="notification-item-details-row">

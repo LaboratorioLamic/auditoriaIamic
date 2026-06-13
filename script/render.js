@@ -904,6 +904,21 @@ function _clDonutHtml(done, total, pct, size, absolute) {
             colHeaders = _th('Setor','setor')+_th('Categoria','categoria')+_th('Responsável','responsavel')+_th('Criação','dataCriacao')+_th('Próx. Revisão','dataProximaRevisao');
         }
 
+        const _fmtRespTd = (raw) => {
+            if (!raw) return '-';
+            const _e = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            try {
+                const p = JSON.parse(raw);
+                if (Array.isArray(p) && p.length > 0) {
+                    const name = (typeof resolveUserId === 'function' ? resolveUserId(p[0]) : null) || p[0] || '-';
+                    const extra = p.length - 1;
+                    const badge = extra > 0 ? `<span class="card-resp-extra" style="margin-left:5px">+${extra}</span>` : '';
+                    return `<span style="display:inline-flex;align-items:center;gap:0">${_e(name)}${badge}</span>`;
+                }
+            } catch (_) {}
+            return _e(String(raw));
+        };
+
         let rows = '';
         const indColors = { green: 'lt-ind-green', yellow: 'lt-ind-yellow', red: 'lt-ind-red' };
         data.forEach(item => {
@@ -915,17 +930,17 @@ function _clDonutHtml(done, total, pct, size, absolute) {
 
             let specificCols = '';
             if (currentTab === 'auditoria') {
-                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${item.responsavel||'-'}</td><td>${formatBR(item.dataPublicacao)}</td><td>${formatBR(item.dataPrevisao)}</td>`;
+                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${_fmtRespTd(item.responsavel)}</td><td>${formatBR(item.dataPublicacao)}</td><td>${formatBR(item.dataPrevisao)}</td>`;
             } else if (currentTab === 'treinamentos') {
-                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${item.responsavel||'-'}</td><td>${formatBR(item.dataPublicacao)}</td><td>${formatBR(item.dataPrevisao)||'N/A'}</td>`;
+                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${_fmtRespTd(item.responsavel)}</td><td>${formatBR(item.dataPublicacao)}</td><td>${formatBR(item.dataPrevisao)||'N/A'}</td>`;
             } else if (currentTab === 'atividades') {
-                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${item.responsavel||'-'}</td><td>${formatBR(item.dataInicio)}</td><td>${formatBR(item.dataConclusao)}</td>`;
+                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${_fmtRespTd(item.responsavel)}</td><td>${formatBR(item.dataInicio)}</td><td>${formatBR(item.dataConclusao)}</td>`;
             } else if (currentTab === 'manutencao') {
                 const isNA = isBlankPeriodicity(item.intervalo);
-                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${item.tipo||'-'}</td><td>${item.responsavelTecnico||'-'}</td><td>${isNA?'N/A':formatBR(item.proxima)}</td>`;
+                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${item.tipo||'-'}</td><td>${_fmtRespTd(item.responsavelTecnico)}</td><td>${isNA?'N/A':formatBR(item.proxima)}</td>`;
             } else if (currentTab === 'documentos') {
                 const isPontual = !item.rotina || item.rotina === 'pontual';
-                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${item.responsavel||'-'}</td><td>${formatBR(item.dataCriacao)}</td><td>${isPontual&&!item.dataProximaRevisao?'N/A':formatBR(item.dataProximaRevisao)}</td>`;
+                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${_fmtRespTd(item.responsavel)}</td><td>${formatBR(item.dataCriacao)}</td><td>${isPontual&&!item.dataProximaRevisao?'N/A':formatBR(item.dataProximaRevisao)}</td>`;
             }
 
             rows += `<tr onclick="openView(${item.id},'${currentTab}')">
@@ -1145,15 +1160,13 @@ function _clDonutHtml(done, total, pct, size, absolute) {
             // 3. Filtro por Status Consolidado
             if (fStatus && item.status !== fStatus) return false;
 
-            // 3.2 Filtro por Responsável
+            // 3.2 Filtro por Responsável (manual) — resolve IDs para nomes
             if (fResponsavel) {
-                let itemResponsavel = '';
-                if (item.type === 'mant') {
-                    itemResponsavel = item.responsavelTecnico || item.responsavelManutencao || '';
-                } else {
-                    itemResponsavel = item.responsavel || '';
-                }
-                if (!itemResponsavel || !itemResponsavel.includes(fResponsavel)) return false;
+                const _rawResp = item.type === 'mant'
+                    ? (item.responsavelTecnico || item.responsavelManutencao || '')
+                    : (item.responsavel || '');
+                const _normResp = typeof normalizeResponsavel === 'function' ? normalizeResponsavel(_rawResp) : _rawResp.toLowerCase();
+                if (!_normResp || !_normResp.includes(fResponsavel.toLowerCase())) return false;
             }
 
             // 3.3 Filtro por Revisor
@@ -1162,11 +1175,9 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                 if (!_rv || !_rv.includes(fRevisor.toLowerCase())) return false;
             }
 
-            // 3.4 Filtro "Minhas Tarefas" do dashboard
+            // 3.4 Filtro "Minhas Tarefas" do dashboard — compara por ID
             if (fDashMy && currentuser) {
-                const _hasMe = (raw) => typeof _fieldHasCurrentUser === 'function'
-                    ? _fieldHasCurrentUser(raw)
-                    : _parseUserField(raw).some(n => n === (currentuser.name||'').toLowerCase().trim());
+                const _hasMe = (raw) => typeof _fieldHasCurrentUser === 'function' ? _fieldHasCurrentUser(raw) : false;
                 if (fDashMyMode === 'responsavel') {
                     if (!_hasMe(item.responsavelTecnico || item.responsavel || '')) return false;
                 } else if (fDashMyMode === 'revisor') {
@@ -1758,7 +1769,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         const allowedTabs = userAllowedTabs();
         const moduleData = [];
         const moduleColors = { audit: '#2563eb', ativ: '#16a34a', mant: '#ca8a04', doc: '#9333ea' };
-        const moduleLabels = { audit: 'Gestão de Rotinas', ativ: 'Atividades', mant: 'Manutenção', doc: 'Documentos' };
+        const moduleLabels = { audit: 'Rotinas', ativ: 'Atividades', mant: 'Manutenção', doc: 'Documentos' };
         const moduleIcons  = { audit: 'fas fa-clipboard-check', ativ: 'fas fa-tasks', mant: 'fas fa-wrench', doc: 'fas fa-file-lines' };
         const sources = [
             { key: 'audit', arr: typeof audits !== 'undefined' ? audits : [] },
@@ -1943,7 +1954,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         const result = [];
 
         const sources = [
-            { arr: typeof audits      !== 'undefined' ? audits      : [], tab: 'auditoria',   typeKey: 'audit', label: 'Gestão de Rotinas', icon: 'fas fa-clipboard-check', color: '#2563eb' },
+            { arr: typeof audits      !== 'undefined' ? audits      : [], tab: 'auditoria',   typeKey: 'audit', label: 'Rotinas', icon: 'fas fa-clipboard-check', color: '#2563eb' },
             { arr: typeof activities  !== 'undefined' ? activities  : [], tab: 'atividades',  typeKey: 'ativ',  label: 'Atividades',        icon: 'fas fa-tasks',           color: '#16a34a' },
             { arr: typeof trainings   !== 'undefined' ? trainings   : [], tab: 'treinamentos',typeKey: 'tren',  label: 'Treinamentos',      icon: 'fas fa-graduation-cap',  color: '#7c3aed' },
             { arr: typeof documents   !== 'undefined' ? documents   : [], tab: 'documentos',  typeKey: 'doc',   label: 'Documentos',        icon: 'fas fa-file-lines',      color: '#9333ea' }
@@ -2017,6 +2028,21 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         if (_dashPubTypeFilter) {
             allPubs = allPubs.filter(p => p.pub.tipo === _dashPubTypeFilter);
         }
+
+        // Filtro "Minhas Tarefas" — filtra publicações cujo item tem o usuário como responsável/revisor
+        const _pubMyTasks = (typeof dashMyTasksActive !== 'undefined') ? dashMyTasksActive : false;
+        const _pubMyMode  = (typeof dashMyTasksMode  !== 'undefined') ? dashMyTasksMode  : 'responsavel';
+        if (_pubMyTasks && currentuser) {
+            const _hasMe = (raw) => typeof _fieldHasCurrentUser === 'function' ? _fieldHasCurrentUser(raw) : false;
+            allPubs = allPubs.filter(p => {
+                const rawResp = p.item.responsavelTecnico || p.item.responsavel || '';
+                const rawRev  = p.item.revisor || '';
+                if (_pubMyMode === 'responsavel') return _hasMe(rawResp);
+                if (_pubMyMode === 'revisor')     return _hasMe(rawRev);
+                return _hasMe(rawResp) || _hasMe(rawRev);
+            });
+        }
+
         // Apply search
         if (_dashPubSearchQuery) {
             allPubs = allPubs.filter(p => {

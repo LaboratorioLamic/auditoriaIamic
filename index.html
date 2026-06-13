@@ -68,7 +68,7 @@
         <div class="sidebar-divider"></div>
         <div class="sidebar-group-label">Módulos</div>
         <button id="tabAtividades"><i class="fa-solid fa-list-check"></i> Atividades</button>
-        <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Gestão de Rotinas</button>
+        <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Rotinas</button>
         <button id="tabTreinamentos"><i class="fa-solid fa-graduation-cap"></i> Treinamentos</button>
         <button id="tabDocumentos"><i class="fa-solid fa-file-alt"></i> Documentos</button>
         <div class="sidebar-divider"></div>
@@ -135,7 +135,7 @@
             <select id="fDashArea" style="display:none;" onchange="onFilterDashboardChange()">
                 <option value="">Área: Todas</option>
                 <option value="ativ" selected>Gestão de Atividades</option>
-                <option value="audit">Gestão de Rotinas</option>
+                <option value="audit">Rotinas</option>
                 <option value="tren">Treinamentos</option>
                 <option value="doc">Documentos</option>
             </select>
@@ -154,7 +154,7 @@
             <!-- Select oculto mantido para compatibilidade com a lógica de filtros -->
             <select id="dropDashArea" style="display:none;" onchange="onDropdownFilterChangeDashboard('area')">
                 <option value="ativ" selected>Gestão de Atividades</option>
-                <option value="audit">Gestão de Rotinas</option>
+                <option value="audit">Rotinas</option>
                 <option value="tren">Treinamentos</option>
                 <option value="doc">Documentos</option>
             </select>
@@ -169,7 +169,7 @@
                     </button>
                     <div class="fbar-area-dropdown" id="fbarAreaDropdown" style="display:none;">
                         <button class="fbar-area-chip fbar-area-chip--active" data-value="ativ" onclick="selectDashArea('ativ','Gestão de Atividades')"><i class="fas fa-tasks"></i> Gestão de Atividades</button>
-                        <button class="fbar-area-chip" data-value="audit" onclick="selectDashArea('audit','Gestão de Rotinas')"><i class="fas fa-clipboard-check"></i> Gestão de Rotinas</button>
+                        <button class="fbar-area-chip" data-value="audit" onclick="selectDashArea('audit','Rotinas')"><i class="fas fa-clipboard-check"></i> Rotinas</button>
                         <button class="fbar-area-chip" data-value="tren" onclick="selectDashArea('tren','Treinamentos')"><i class="fas fa-graduation-cap"></i> Treinamentos</button>
                         <button class="fbar-area-chip" data-value="doc" onclick="selectDashArea('doc','Documentos')"><i class="fas fa-file-lines"></i> Documentos</button>
                     </div>
@@ -1981,7 +1981,7 @@
                 <div class="um-perm-title"><i class="fas fa-table-columns"></i> Abas permitidas</div>
                 <div class="um-tab-chips">
                     <label class="um-chip"><input type="checkbox" class="cfg-tab" value="dashboard" checked><span>Dashboard</span></label>
-                    <label class="um-chip"><input type="checkbox" class="cfg-tab" value="auditoria" checked><span>Gestão de Rotinas</span></label>
+                    <label class="um-chip"><input type="checkbox" class="cfg-tab" value="auditoria" checked><span>Rotinas</span></label>
                     <label class="um-chip"><input type="checkbox" class="cfg-tab" value="treinamentos"><span>Treinamentos</span></label>
                     <label class="um-chip"><input type="checkbox" class="cfg-tab" value="documentos"><span>Documentos</span></label>
                     <label class="um-chip"><input type="checkbox" class="cfg-tab" value="atividades"><span>Atividades</span></label>

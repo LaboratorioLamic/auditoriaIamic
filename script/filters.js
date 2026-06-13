@@ -844,14 +844,9 @@
         const filterResp = (document.getElementById(`f${prefix}Responsavel`)?.value || '').toLowerCase().trim();
         if (filterResp) {
             const itemRespRaw = (prefix === 'Mant') ? (item.responsavelTecnico || '') : (item.responsavel || '');
-            // Se o filtro é "Minhas Tarefas" (modo responsável), usa _fieldHasCurrentUser para comparar por ID
-            if (typeof fbarMyTasksActive !== 'undefined' && fbarMyTasksActive && typeof fbarMyTasksMode !== 'undefined' && fbarMyTasksMode === 'responsavel') {
-                if (typeof _fieldHasCurrentUser === 'function' && !_fieldHasCurrentUser(itemRespRaw)) return false;
-            } else {
-                // Filtro manual: resolve IDs para nomes e compara
-                const normResp = typeof normalizeResponsavel === 'function' ? normalizeResponsavel(itemRespRaw) : itemRespRaw.toLowerCase();
-                if (!normResp || !normResp.includes(filterResp)) return false;
-            }
+            // Filtro manual: resolve IDs para nomes e compara
+            const normResp = typeof normalizeResponsavel === 'function' ? normalizeResponsavel(itemRespRaw) : itemRespRaw.toLowerCase();
+            if (!normResp || !normResp.includes(filterResp)) return false;
         }
     }
 

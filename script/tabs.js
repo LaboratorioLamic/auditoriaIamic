@@ -23,7 +23,7 @@
     // 2. Atualização de títulos e subtítulos
     var titles = {
         dashboard: 'Dashboard',
-        auditoria: 'Gestão de Rotinas',
+        auditoria: 'Rotinas',
         treinamentos: 'Treinamentos',
         atividades: 'Gestão de Atividades',
         manutencao: 'Manutenção',
