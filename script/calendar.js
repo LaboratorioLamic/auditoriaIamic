@@ -620,6 +620,8 @@ function _calRenderWeekly(container) {
 
     container.innerHTML = '';
     container.appendChild(grid);
+
+    initCalWeekMobileSwipe();
 }
 
 // ── Chip de evento (mensal) ──────────────────────────────────
@@ -653,8 +655,9 @@ function _calRenderEventChip(entry, canEdit) {
                 e.stopPropagation();
                 e.dataTransfer.setData('text/plain', JSON.stringify({ itemId: item.id, tab: currentTab }));
                 chip.classList.add('cal-dragging');
+                _calAttachEdgeDrag();
             });
-            chip.addEventListener('dragend', () => chip.classList.remove('cal-dragging'));
+            chip.addEventListener('dragend', () => { chip.classList.remove('cal-dragging'); _calDetachEdgeDrag(); });
         }
         chip.onclick = (e) => { e.stopPropagation(); _calOpenItem(item); };
     }
@@ -714,12 +717,15 @@ function _calRenderEventCard(entry, canEdit) {
             ${setor}`;
         if (canEdit) {
             card.draggable = true;
+            card._calItemId  = item.id;
+            card._calItemTab = typeof currentTab !== 'undefined' ? currentTab : null;
             card.addEventListener('dragstart', (e) => {
                 e.stopPropagation();
                 e.dataTransfer.setData('text/plain', JSON.stringify({ itemId: item.id, tab: currentTab }));
                 card.classList.add('cal-dragging');
+                _calAttachEdgeDrag();
             });
-            card.addEventListener('dragend', () => card.classList.remove('cal-dragging'));
+            card.addEventListener('dragend', () => { card.classList.remove('cal-dragging'); _calDetachEdgeDrag(); });
         }
         card.onclick = () => _calOpenItem(item);
     }
@@ -847,3 +853,419 @@ document.addEventListener('click', function(e) {
         }
     }
 });
+
+// ============================================================
+// CALENDÁRIO SEMANAL MOBILE — paginação por swipe (1 dia por vez)
+// ============================================================
+
+var _calMobile = {
+    active: false,
+    currentIdx: 0,
+    touchStartX: 0,
+    touchStartY: 0,
+    dragging: false
+};
+
+function _calIsMobile() {
+    return window.innerWidth <= 768;
+}
+
+function initCalWeekMobileSwipe() {
+    const board = document.getElementById('calendarBoard');
+    if (!board) return;
+
+    if (calViewMode !== 'weekly') {
+        _calDestroyMobileDots();
+        return;
+    }
+
+    _calMobile.active = _calIsMobile();
+    if (!_calMobile.active) {
+        _calDestroyMobileDots();
+        const grid = board.querySelector('.cal-weekly-grid');
+        if (grid) grid.classList.remove('cal-weekly-mobile-paged');
+        const cols = board.querySelectorAll('.cal-week-col');
+        cols.forEach(c => { c.style.transform = ''; c.style.opacity = ''; c.classList.remove('cal-col-active','cal-col-left','cal-col-right'); });
+        return;
+    }
+
+    const grid = board.querySelector('.cal-weekly-grid');
+    if (!grid) return;
+    grid.classList.add('cal-weekly-mobile-paged');
+
+    const today = _calToday();
+    const cols = Array.from(grid.querySelectorAll('.cal-week-col'));
+    let startIdx = 0;
+    cols.forEach((col, i) => {
+        if (col.classList.contains('cal-week-col-today')) startIdx = i;
+    });
+    _calMobile.currentIdx = startIdx;
+    _calMobileShowDay(startIdx, false, grid);
+    _calBuildDayDots(cols.length, grid);
+    _calTouchAttachCards();
+
+    grid.removeEventListener('touchstart', _calTouchStart, { passive: false });
+    grid.removeEventListener('touchmove',  _calTouchMove,  { passive: false });
+    grid.removeEventListener('touchend',   _calTouchEnd);
+    grid.addEventListener('touchstart', _calTouchStart, { passive: true });
+    grid.addEventListener('touchmove',  _calTouchMove,  { passive: false });
+    grid.addEventListener('touchend',   _calTouchEnd);
+}
+
+function _calMobileShowDay(idx, animate, grid) {
+    if (!grid) grid = document.querySelector('#calendarBoard .cal-weekly-grid');
+    if (!grid) return;
+    const cols = Array.from(grid.querySelectorAll('.cal-week-col'));
+    if (!cols.length) return;
+    idx = Math.max(0, Math.min(idx, cols.length - 1));
+    _calMobile.currentIdx = idx;
+
+    cols.forEach((col, i) => {
+        col.classList.remove('cal-col-active', 'cal-col-left', 'cal-col-right');
+        if (animate) col.classList.add('cal-col-anim');
+        else col.classList.remove('cal-col-anim');
+
+        if (i === idx) col.classList.add('cal-col-active');
+        else if (i < idx) col.classList.add('cal-col-left');
+        else col.classList.add('cal-col-right');
+    });
+
+    _calUpdateDayDots(idx, cols.length);
+}
+
+var _calWeekDayNames = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+
+function _calBuildDayDots(total, grid) {
+    _calDestroyMobileDots();
+    if (total <= 1) return;
+
+    const dotsWrap = document.createElement('div');
+    dotsWrap.className = 'cal-day-pills';
+    dotsWrap.id = 'calMobileDots';
+
+    for (let i = 0; i < total; i++) {
+        const pill = document.createElement('button');
+        pill.className = 'cal-day-pill' + (i === _calMobile.currentIdx ? ' cal-day-pill--active' : '');
+        pill.textContent = _calWeekDayNames[i] || String(i + 1);
+        pill.addEventListener('click', () => _calMobileShowDay(i, true));
+        dotsWrap.appendChild(pill);
+    }
+
+    const board = document.getElementById('calendarBoard');
+    if (board) board.appendChild(dotsWrap);
+}
+
+function _calUpdateDayDots(activeIdx, total) {
+    const wrap = document.getElementById('calMobileDots');
+    if (!wrap) return;
+    const pills = wrap.querySelectorAll('.cal-day-pill');
+    pills.forEach((p, i) => p.classList.toggle('cal-day-pill--active', i === activeIdx));
+}
+
+function _calDestroyMobileDots() {
+    const el = document.getElementById('calMobileDots');
+    if (el) el.remove();
+}
+
+function _calTouchStart(e) {
+    if (!_calMobile.active) return;
+    if (_calTouch.active || _calTouch.longPressTimer) return; // card drag tem prioridade
+    const t = e.touches[0];
+    _calMobile.touchStartX = t.clientX;
+    _calMobile.touchStartY = t.clientY;
+    _calMobile.dragging = false;
+}
+
+function _calTouchMove(e) {
+    if (!_calMobile.active) return;
+    if (_calTouch.active || _calTouch.longPressTimer) return;
+    const t = e.touches[0];
+    const dx = t.clientX - _calMobile.touchStartX;
+    const dy = t.clientY - _calMobile.touchStartY;
+    if (!_calMobile.dragging) {
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
+            _calMobile.dragging = true;
+        } else {
+            return;
+        }
+    }
+    e.preventDefault();
+
+    const grid = document.querySelector('#calendarBoard .cal-weekly-grid');
+    if (!grid) return;
+    const cols = Array.from(grid.querySelectorAll('.cal-week-col'));
+    const idx = _calMobile.currentIdx;
+
+    cols.forEach((col, i) => {
+        col.classList.remove('cal-col-anim');
+        let base = (i - idx) * 100;
+        col.style.transform = `translateX(calc(${base}% + ${dx}px))`;
+        if (i === idx) {
+            col.style.opacity = String(Math.max(0.6, 1 - Math.abs(dx) / 300));
+        } else if ((i === idx - 1 && dx > 0) || (i === idx + 1 && dx < 0)) {
+            col.style.opacity = String(Math.min(1, Math.abs(dx) / 200));
+        } else {
+            col.style.opacity = '0';
+        }
+    });
+}
+
+function _calTouchEnd(e) {
+    if (!_calMobile.active || !_calMobile.dragging) return;
+    _calMobile.dragging = false;
+
+    const grid = document.querySelector('#calendarBoard .cal-weekly-grid');
+    if (!grid) return;
+    const cols = Array.from(grid.querySelectorAll('.cal-week-col'));
+    cols.forEach(c => { c.style.transform = ''; c.style.opacity = ''; });
+
+    const dx = e.changedTouches[0].clientX - _calMobile.touchStartX;
+    const threshold = 60;
+    let next = _calMobile.currentIdx;
+    if (dx < -threshold) next = Math.min(_calMobile.currentIdx + 1, cols.length - 1);
+    else if (dx > threshold) next = Math.max(_calMobile.currentIdx - 1, 0);
+
+    _calMobileShowDay(next, true);
+}
+
+window.addEventListener('resize', function() {
+    if (typeof calViewMode !== 'undefined' && calViewMode === 'weekly') {
+        const wasMobile = _calMobile.active;
+        const isMobile = _calIsMobile();
+        if (wasMobile !== isMobile) {
+            initCalWeekMobileSwipe();
+        }
+    }
+});
+
+// ── Edge-scroll durante drag no calendário semanal mobile ────
+var _calEdgeTimer = null;
+var _calEdgeDir   = 0;
+
+function _calClearEdgeTimer() {
+    if (_calEdgeTimer) { clearTimeout(_calEdgeTimer); _calEdgeTimer = null; }
+    _calEdgeDir = 0;
+    document.querySelectorAll('.cal-edge-indicator').forEach(el => el.remove());
+}
+
+function _calEdgeCheck(clientX) {
+    if (!_calMobile.active) return;
+    const grid = document.querySelector('#calendarBoard .cal-weekly-grid');
+    if (!grid) return;
+    const rect = grid.getBoundingClientRect();
+    const zone = rect.width * 0.15;
+    let dir = 0;
+    if (clientX < rect.left + zone) dir = -1;
+    else if (clientX > rect.right - zone) dir = 1;
+
+    if (dir === 0) { _calClearEdgeTimer(); return; }
+    if (dir === _calEdgeDir) return;
+
+    _calClearEdgeTimer();
+    _calEdgeDir = dir;
+    _calShowEdgeIndicator(dir, grid);
+    _calEdgeTimer = setTimeout(() => {
+        const cols = grid.querySelectorAll('.cal-week-col');
+        const next = _calMobile.currentIdx + dir;
+        if (next >= 0 && next < cols.length) {
+            _calMobileShowDay(next, true, grid);
+        }
+        _calClearEdgeTimer();
+    }, 1000);
+}
+
+function _calShowEdgeIndicator(dir, grid) {
+    document.querySelectorAll('.cal-edge-indicator').forEach(el => el.remove());
+    const ind = document.createElement('div');
+    ind.className = 'cal-edge-indicator kb-edge-indicator kb-edge-indicator--' + (dir < 0 ? 'left' : 'right');
+    grid.style.position = 'relative';
+    grid.appendChild(ind);
+}
+
+function _calAttachEdgeDrag() {
+    const board = document.getElementById('calendarBoard');
+    if (!board) return;
+    board._calEdgeDragHandler = (e) => _calEdgeCheck(e.clientX);
+    board.addEventListener('dragover', board._calEdgeDragHandler);
+}
+
+function _calDetachEdgeDrag() {
+    _calClearEdgeTimer();
+    const board = document.getElementById('calendarBoard');
+    if (board && board._calEdgeDragHandler) {
+        board.removeEventListener('dragover', board._calEdgeDragHandler);
+        board._calEdgeDragHandler = null;
+    }
+}
+
+// ============================================================
+// CALENDÁRIO SEMANAL MOBILE — long-press para mover card de dia
+// ============================================================
+
+var _calTouch = {
+    longPressTimer: null,
+    itemId: null,
+    itemTab: null,
+    cardEl: null,
+    ghostEl: null,
+    active: false,
+    startX: 0,
+    startY: 0,
+    edgeTimer: null,
+    edgeDir: 0
+};
+
+var CAL_LONG_PRESS_MS = 500;
+var CAL_EDGE_ZONE     = 0.18;
+var CAL_EDGE_DELAY_MS = 1000;
+
+function _calTouchAttachCards() {
+    const grid = document.querySelector('#calendarBoard .cal-weekly-grid');
+    if (!grid) return;
+    grid.querySelectorAll('.cal-event-card').forEach(card => {
+        card.removeEventListener('touchstart',  _calCardTouchStart);
+        card.removeEventListener('touchmove',   _calCardTouchMove);
+        card.removeEventListener('touchend',    _calCardTouchEnd);
+        card.removeEventListener('touchcancel', _calCardTouchCancel);
+        if (!card.draggable) return;
+        card.addEventListener('touchstart',  _calCardTouchStart,  { passive: false });
+        card.addEventListener('touchmove',   _calCardTouchMove,   { passive: false });
+        card.addEventListener('touchend',    _calCardTouchEnd,    { passive: false });
+        card.addEventListener('touchcancel', _calCardTouchCancel, { passive: true  });
+    });
+}
+
+function _calCardTouchStart(e) {
+    if (!_calMobile.active) return;
+    if (e.touches.length !== 1) return;
+    const card = e.currentTarget;
+    const t = e.touches[0];
+    _calTouch.startX   = t.clientX;
+    _calTouch.startY   = t.clientY;
+    _calTouch.cardEl   = card;
+    _calTouch.active   = false;
+
+    // Recupera itemId e tab a partir do listener de dragstart já existente
+    // clonando o evento artificialmente — usamos dataset se disponível
+    _calTouch.itemId  = card._calItemId  || null;
+    _calTouch.itemTab = card._calItemTab || null;
+
+    _calTouch.longPressTimer = setTimeout(() => {
+        _calActivateDrag(card, t.clientX, t.clientY);
+    }, CAL_LONG_PRESS_MS);
+}
+
+function _calCardTouchMove(e) {
+    if (!_calTouch.cardEl) return;
+    const t = e.touches[0];
+    if (!_calTouch.active) {
+        const dx = Math.abs(t.clientX - _calTouch.startX);
+        const dy = Math.abs(t.clientY - _calTouch.startY);
+        if (dx > 8 || dy > 8) _calCancelTouchDrag();
+        return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    _calMoveGhost(t.clientX, t.clientY);
+    _calTouchEdgeCheck(t.clientX);
+}
+
+function _calCardTouchEnd(e) {
+    if (!_calTouch.active) { _calCancelTouchDrag(); return; }
+    e.preventDefault();
+    e.stopPropagation();
+    _calTouchDrop();
+    _calCancelTouchDrag();
+}
+
+function _calCardTouchCancel() { _calCancelTouchDrag(); }
+
+function _calActivateDrag(card, cx, cy) {
+    _calTouch.active = true;
+    if (navigator.vibrate) navigator.vibrate(40);
+    card.classList.add('kb-touch-holding');
+
+    const ghost = document.createElement('div');
+    ghost.className = 'kb-touch-ghost';
+    ghost.innerHTML = card.innerHTML;
+    ghost.style.width = card.offsetWidth + 'px';
+    document.body.appendChild(ghost);
+    _calTouch.ghostEl = ghost;
+    _calMoveGhost(cx, cy);
+}
+
+function _calMoveGhost(cx, cy) {
+    const g = _calTouch.ghostEl;
+    if (!g) return;
+    g.style.left = (cx - g.offsetWidth / 2) + 'px';
+    g.style.top  = (cy - 30) + 'px';
+}
+
+function _calTouchEdgeCheck(cx) {
+    const grid = document.querySelector('#calendarBoard .cal-weekly-grid');
+    if (!grid) return;
+    const rect = grid.getBoundingClientRect();
+    const zone = rect.width * CAL_EDGE_ZONE;
+    let dir = 0;
+    if (cx < rect.left + zone) dir = -1;
+    else if (cx > rect.right - zone) dir = 1;
+
+    if (dir === 0) { _calTouchClearEdge(); return; }
+    if (dir === _calTouch.edgeDir) return;
+
+    _calTouchClearEdge();
+    _calTouch.edgeDir = dir;
+    _calTouch.edgeTimer = setTimeout(() => {
+        const cols = grid.querySelectorAll('.cal-week-col');
+        const next = _calMobile.currentIdx + dir;
+        if (next >= 0 && next < cols.length) {
+            _calMobileShowDay(next, true, grid);
+            _calTouchAttachCards();
+            if (navigator.vibrate) navigator.vibrate(20);
+        }
+        _calTouch.edgeDir = 0;
+        _calTouch.edgeTimer = null;
+    }, CAL_EDGE_DELAY_MS);
+}
+
+function _calTouchClearEdge() {
+    if (_calTouch.edgeTimer) { clearTimeout(_calTouch.edgeTimer); _calTouch.edgeTimer = null; }
+    _calTouch.edgeDir = 0;
+}
+
+function _calTouchDrop() {
+    const grid = document.querySelector('#calendarBoard .cal-weekly-grid');
+    if (!grid) return;
+    const activeCol = grid.querySelector('.cal-week-col.cal-col-active');
+    if (!activeCol) return;
+    const targetDateStr = activeCol.dataset.date;
+    if (!targetDateStr) return;
+
+    // Recupera item pelo id e tab armazenados no card
+    const itemId  = _calTouch.itemId;
+    const itemTab = _calTouch.itemTab || (typeof currentTab !== 'undefined' ? currentTab : null);
+    if (!itemId || !itemTab) return;
+
+    const cfg = _CAL_MODULES[itemTab];
+    if (!cfg) return;
+    const item = cfg.getItems().find(i => i.id === itemId);
+    if (!item) return;
+
+    if (item[cfg.dateField] === targetDateStr) return;
+
+    item[cfg.dateField] = targetDateStr;
+    if (typeof saveAll === 'function') saveAll();
+    _calRenderGrade();
+    if (typeof renderCards === 'function') renderCards();
+}
+
+function _calCancelTouchDrag() {
+    if (_calTouch.longPressTimer) { clearTimeout(_calTouch.longPressTimer); _calTouch.longPressTimer = null; }
+    _calTouchClearEdge();
+    if (_calTouch.cardEl) _calTouch.cardEl.classList.remove('kb-touch-holding');
+    if (_calTouch.ghostEl) { _calTouch.ghostEl.remove(); _calTouch.ghostEl = null; }
+    _calTouch.active  = false;
+    _calTouch.itemId  = null;
+    _calTouch.itemTab = null;
+    _calTouch.cardEl  = null;
+}

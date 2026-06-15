@@ -528,13 +528,13 @@
         <div id="viewToggleModuleBar" class="view-toggle-bar" style="display:none;">
             <div class="view-module-tabs">
                 <button id="btnViewKanban" class="view-module-tab active" onclick="toggleKanbanView('kanban')">
-                    <i class="fas fa-columns"></i> Kanban
+                    <i class="fas fa-columns"></i><span class="vmt-label"> Kanban</span>
                 </button>
                 <button id="btnViewList" class="view-module-tab" onclick="toggleKanbanView('list')">
-                    <i class="fas fa-list"></i> Lista
+                    <i class="fas fa-list"></i><span class="vmt-label"> Lista</span>
                 </button>
                 <button id="btnViewCalendar" class="view-module-tab" onclick="toggleCalendarView('calendar')">
-                    <i class="fas fa-calendar-days"></i> Calendário
+                    <i class="fas fa-calendar-days"></i><span class="vmt-label"> Calendário</span>
                 </button>
             </div>
             <div class="view-toggle-actions" id="fbarAddcolRow" style="display:none;">
@@ -1639,10 +1639,10 @@
             </div>
             <!-- Tabs -->
             <div class="view-modal-tabs">
-                <button class="view-modal-tab active" onclick="switchViewTab('info',this)"><i class="fas fa-info-circle"></i> Informações</button>
-                <button class="view-modal-tab" onclick="switchViewTab('checklist',this)"><i class="fas fa-check-square"></i> Checklist</button>
-                <button class="view-modal-tab" onclick="switchViewTab('anexos',this)"><i class="fas fa-paperclip"></i> Anexos</button>
-                <button class="view-modal-tab" onclick="switchViewTab('publicacoes',this)"><i class="fas fa-paper-plane"></i> Publicações <span class="view-tab-badge" id="pubTabBadge" style="display:none;"></span></button>
+                <button class="view-modal-tab active" onclick="switchViewTab('info',this)"><i class="fas fa-info-circle"></i><span class="vmt-label"> Informações</span></button>
+                <button class="view-modal-tab" onclick="switchViewTab('checklist',this)"><i class="fas fa-check-square"></i><span class="vmt-label"> Checklist</span></button>
+                <button class="view-modal-tab" onclick="switchViewTab('anexos',this)"><i class="fas fa-paperclip"></i><span class="vmt-label"> Anexos</span></button>
+                <button class="view-modal-tab" onclick="switchViewTab('publicacoes',this)"><i class="fas fa-paper-plane"></i><span class="vmt-label"> Publicações</span> <span class="view-tab-badge" id="pubTabBadge" style="display:none;"></span></button>
             </div>
         </div>
         <!-- Tab panels -->

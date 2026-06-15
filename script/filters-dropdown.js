@@ -93,6 +93,22 @@
         }
     };
 
+    var _dashAreaIconMap = {
+        ativ:  'fa-tasks',
+        audit: 'fa-clipboard-check',
+        tren:  'fa-graduation-cap',
+        doc:   'fa-file-lines'
+    };
+
+    function _updateDashAreaBtnIcon(value) {
+        const btn = document.getElementById('fbarAreaBtn');
+        if (!btn) return;
+        const iconEl = btn.querySelector('i:first-child');
+        if (!iconEl) return;
+        const cls = _dashAreaIconMap[value] || 'fa-layer-group';
+        iconEl.className = 'fas ' + cls;
+    }
+
     window.selectDashArea = function(value, label) {
         // Atualiza selects ocultos
         const fDashArea = document.getElementById('fDashArea');
@@ -103,6 +119,9 @@
         // Atualiza label do botão
         const lblEl = document.getElementById('fbarAreaLabel');
         if (lblEl) lblEl.textContent = label;
+
+        // Atualiza ícone do botão
+        _updateDashAreaBtnIcon(value);
 
         // Atualiza chip ativo
         document.querySelectorAll('.fbar-area-chip').forEach(c => {
@@ -127,6 +146,8 @@
 
         const lblEl = document.getElementById('fbarAreaLabel');
         if (lblEl) lblEl.textContent = lbl;
+
+        _updateDashAreaBtnIcon(effectiveVal);
 
         document.querySelectorAll('.fbar-area-chip').forEach(c => {
             c.classList.toggle('fbar-area-chip--active', c.dataset.value === effectiveVal);

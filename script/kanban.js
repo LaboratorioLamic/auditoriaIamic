@@ -293,6 +293,8 @@ function renderKanban() {
 
         board.appendChild(col);
     });
+
+    initKanbanMobileSwipe();
 }
 
 function _kbNextIsFinalOrEnd(statuses, colIdx) {
@@ -367,16 +369,73 @@ function _kbFormatBR(dateStr) {
 
 // ---- Drag & Drop ----
 
+var _kbEdgeTimer = null;
+var _kbEdgeDir   = 0; // -1 esquerda, +1 direita
+
+function _kbClearEdgeTimer() {
+    if (_kbEdgeTimer) { clearTimeout(_kbEdgeTimer); _kbEdgeTimer = null; }
+    _kbEdgeDir = 0;
+    document.querySelectorAll('.kb-edge-indicator').forEach(el => el.remove());
+}
+
+function _kbEdgeCheck(clientX) {
+    if (!_kbMobile.active || !_kanbanDragItemId) return;
+    const board = document.getElementById('kanbanBoard');
+    if (!board) return;
+    const rect = board.getBoundingClientRect();
+    const zone = rect.width * 0.15;
+    let dir = 0;
+    if (clientX < rect.left + zone) dir = -1;
+    else if (clientX > rect.right - zone) dir = 1;
+
+    if (dir === 0) { _kbClearEdgeTimer(); return; }
+    if (dir === _kbEdgeDir) return; // já aguardando nessa direção
+
+    _kbClearEdgeTimer();
+    _kbEdgeDir = dir;
+    _kbShowEdgeIndicator(dir, board, rect);
+    _kbEdgeTimer = setTimeout(() => {
+        const cols = board.querySelectorAll('.kanban-col');
+        const next = _kbMobile.currentIdx + dir;
+        if (next >= 0 && next < cols.length) {
+            _kbMobileShowCol(next, true);
+        }
+        _kbClearEdgeTimer();
+    }, 1000);
+}
+
+function _kbShowEdgeIndicator(dir, board, rect) {
+    document.querySelectorAll('.kb-edge-indicator').forEach(el => el.remove());
+    const ind = document.createElement('div');
+    ind.className = 'kb-edge-indicator kb-edge-indicator--' + (dir < 0 ? 'left' : 'right');
+    board.style.position = 'relative';
+    board.appendChild(ind);
+}
+
 function kbDragStart(event, itemId) {
     _kanbanDragItemId = itemId;
     event.dataTransfer.effectAllowed = 'move';
     event.currentTarget.classList.add('kb-dragging');
+
+    if (_kbMobile.active) {
+        const board = document.getElementById('kanbanBoard');
+        if (board) {
+            board._kbDragOverHandler = (e) => _kbEdgeCheck(e.clientX);
+            board.addEventListener('dragover', board._kbDragOverHandler);
+        }
+    }
 }
 
 function kbDragEnd(event) {
     _kanbanDragItemId = null;
     event.currentTarget.classList.remove('kb-dragging');
     document.querySelectorAll('.kanban-col-body').forEach(el => el.classList.remove('kb-drag-over'));
+    _kbClearEdgeTimer();
+    const board = document.getElementById('kanbanBoard');
+    if (board && board._kbDragOverHandler) {
+        board.removeEventListener('dragover', board._kbDragOverHandler);
+        board._kbDragOverHandler = null;
+    }
 }
 
 function kbDragOver(event) {
@@ -756,4 +815,369 @@ function toggleKanbanCol(btn, statusName) {
     if (icon) {
         icon.className = collapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
     }
+}
+
+// ============================================================
+// KANBAN MOBILE — paginação por swipe (uma coluna por vez)
+// ============================================================
+
+var _kbMobile = {
+    active: false,
+    currentIdx: 0,
+    touchStartX: 0,
+    touchStartY: 0,
+    dragging: false
+};
+
+function _kbIsMobile() {
+    return window.innerWidth <= 768;
+}
+
+function initKanbanMobileSwipe() {
+    const board = document.getElementById('kanbanBoard');
+    if (!board) return;
+
+    _kbMobile.active = _kbIsMobile();
+    _kbMobile.currentIdx = 0;
+
+    if (!_kbMobile.active) {
+        _kbDestroyMobileDots();
+        board.classList.remove('kanban-mobile-paged');
+        const cols = board.querySelectorAll('.kanban-col');
+        cols.forEach(c => { c.style.transform = ''; c.style.opacity = ''; c.classList.remove('kb-col-active','kb-col-left','kb-col-right'); });
+        return;
+    }
+
+    board.classList.add('kanban-mobile-paged');
+    _kbMobileShowCol(0, false);
+    _kbBuildDots();
+    _kbTouchAttachCards();
+
+    board.removeEventListener('touchstart', _kbTouchStart, { passive: false });
+    board.removeEventListener('touchmove',  _kbTouchMove,  { passive: false });
+    board.removeEventListener('touchend',   _kbTouchEnd);
+    board.addEventListener('touchstart', _kbTouchStart, { passive: true });
+    board.addEventListener('touchmove',  _kbTouchMove,  { passive: false });
+    board.addEventListener('touchend',   _kbTouchEnd);
+}
+
+function _kbMobileShowCol(idx, animate) {
+    const board = document.getElementById('kanbanBoard');
+    if (!board) return;
+    const cols = Array.from(board.querySelectorAll('.kanban-col'));
+    if (!cols.length) return;
+    idx = Math.max(0, Math.min(idx, cols.length - 1));
+    _kbMobile.currentIdx = idx;
+
+    cols.forEach((col, i) => {
+        col.classList.remove('kb-col-active', 'kb-col-left', 'kb-col-right');
+        if (animate) col.classList.add('kb-col-anim');
+        else col.classList.remove('kb-col-anim');
+
+        if (i === idx) {
+            col.classList.add('kb-col-active');
+        } else if (i < idx) {
+            col.classList.add('kb-col-left');
+        } else {
+            col.classList.add('kb-col-right');
+        }
+    });
+
+    _kbUpdateDots(idx, cols.length);
+}
+
+function _kbBuildDots() {
+    _kbDestroyMobileDots();
+    const board = document.getElementById('kanbanBoard');
+    if (!board) return;
+    const cols = board.querySelectorAll('.kanban-col');
+    if (cols.length <= 1) return;
+
+    const dotsWrap = document.createElement('div');
+    dotsWrap.className = 'kb-mobile-dots';
+    dotsWrap.id = 'kbMobileDots';
+    for (let i = 0; i < cols.length; i++) {
+        const dot = document.createElement('span');
+        dot.className = 'kb-mobile-dot' + (i === _kbMobile.currentIdx ? ' kb-dot-active' : '');
+        dot.addEventListener('click', () => _kbMobileShowCol(i, true));
+        dotsWrap.appendChild(dot);
+    }
+    board.parentNode.insertBefore(dotsWrap, board.nextSibling);
+}
+
+function _kbUpdateDots(activeIdx, total) {
+    const wrap = document.getElementById('kbMobileDots');
+    if (!wrap) return;
+    const dots = wrap.querySelectorAll('.kb-mobile-dot');
+    dots.forEach((d, i) => d.classList.toggle('kb-dot-active', i === activeIdx));
+}
+
+function _kbDestroyMobileDots() {
+    const el = document.getElementById('kbMobileDots');
+    if (el) el.remove();
+}
+
+function _kbTouchStart(e) {
+    if (!_kbMobile.active) return;
+    if (_kbTouch.active || _kbTouch.longPressTimer) return; // card drag tem prioridade
+    const t = e.touches[0];
+    _kbMobile.touchStartX = t.clientX;
+    _kbMobile.touchStartY = t.clientY;
+    _kbMobile.dragging = false;
+}
+
+function _kbTouchMove(e) {
+    if (!_kbMobile.active) return;
+    if (_kbTouch.active || _kbTouch.longPressTimer) return; // card drag tem prioridade
+    const t = e.touches[0];
+    const dx = t.clientX - _kbMobile.touchStartX;
+    const dy = t.clientY - _kbMobile.touchStartY;
+    if (!_kbMobile.dragging) {
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
+            _kbMobile.dragging = true;
+        } else {
+            return;
+        }
+    }
+    e.preventDefault();
+
+    const board = document.getElementById('kanbanBoard');
+    if (!board) return;
+    const cols = Array.from(board.querySelectorAll('.kanban-col'));
+    const idx = _kbMobile.currentIdx;
+
+    cols.forEach((col, i) => {
+        col.classList.remove('kb-col-anim');
+        let base = (i - idx) * 100;
+        col.style.transform = `translateX(calc(${base}% + ${dx}px))`;
+        if (i === idx) {
+            col.style.opacity = String(Math.max(0.6, 1 - Math.abs(dx) / 300));
+        } else if ((i === idx - 1 && dx > 0) || (i === idx + 1 && dx < 0)) {
+            col.style.opacity = String(Math.min(1, Math.abs(dx) / 200));
+        } else {
+            col.style.opacity = '0';
+        }
+    });
+}
+
+function _kbTouchEnd(e) {
+    if (!_kbMobile.active || !_kbMobile.dragging) return;
+    _kbMobile.dragging = false;
+
+    const board = document.getElementById('kanbanBoard');
+    if (!board) return;
+    const cols = Array.from(board.querySelectorAll('.kanban-col'));
+    cols.forEach(c => { c.style.transform = ''; c.style.opacity = ''; });
+
+    const dx = e.changedTouches[0].clientX - _kbMobile.touchStartX;
+    const threshold = 60;
+    let next = _kbMobile.currentIdx;
+    if (dx < -threshold) next = Math.min(_kbMobile.currentIdx + 1, cols.length - 1);
+    else if (dx > threshold) next = Math.max(_kbMobile.currentIdx - 1, 0);
+
+    _kbMobileShowCol(next, true);
+}
+
+window.addEventListener('resize', function() {
+    const wasMobile = _kbMobile.active;
+    const isMobile = _kbIsMobile();
+    if (wasMobile !== isMobile) {
+        initKanbanMobileSwipe();
+    }
+});
+
+// ============================================================
+// KANBAN MOBILE — long-press para arrastar card entre colunas
+// ============================================================
+
+var _kbTouch = {
+    longPressTimer: null,
+    itemId: null,
+    cardEl: null,
+    ghostEl: null,
+    active: false,       // true após long press confirmar
+    startX: 0,
+    startY: 0,
+    edgeTimer: null,
+    edgeDir: 0
+};
+
+var KB_LONG_PRESS_MS = 500;
+var KB_EDGE_ZONE     = 0.18; // 18% da largura do board
+var KB_EDGE_DELAY_MS = 1000;
+
+function _kbTouchAttachCards() {
+    const board = document.getElementById('kanbanBoard');
+    if (!board) return;
+    board.querySelectorAll('.kanban-card').forEach(card => {
+        // remove listeners antigos para evitar duplicatas
+        card.removeEventListener('touchstart', _kbCardTouchStart);
+        card.removeEventListener('touchmove',  _kbCardTouchMove);
+        card.removeEventListener('touchend',   _kbCardTouchEnd);
+        card.removeEventListener('touchcancel',_kbCardTouchCancel);
+
+        if (card.getAttribute('draggable') !== 'true') return;
+        card.addEventListener('touchstart',  _kbCardTouchStart,  { passive: false });
+        card.addEventListener('touchmove',   _kbCardTouchMove,   { passive: false });
+        card.addEventListener('touchend',    _kbCardTouchEnd,    { passive: false });
+        card.addEventListener('touchcancel', _kbCardTouchCancel, { passive: true  });
+    });
+}
+
+function _kbCardTouchStart(e) {
+    if (!_kbMobile.active) return;
+    if (e.touches.length !== 1) return;
+
+    const card = e.currentTarget;
+    const t = e.touches[0];
+    _kbTouch.startX = t.clientX;
+    _kbTouch.startY = t.clientY;
+    _kbTouch.cardEl = card;
+    _kbTouch.itemId = parseInt(card.dataset.id, 10);
+    _kbTouch.active = false;
+
+    _kbTouch.longPressTimer = setTimeout(() => {
+        _kbActivateDrag(card, t.clientX, t.clientY);
+    }, KB_LONG_PRESS_MS);
+}
+
+function _kbCardTouchMove(e) {
+    if (!_kbTouch.cardEl) return;
+    const t = e.touches[0];
+
+    if (!_kbTouch.active) {
+        // Se mover mais de 8px antes do long press → cancela
+        const dx = Math.abs(t.clientX - _kbTouch.startX);
+        const dy = Math.abs(t.clientY - _kbTouch.startY);
+        if (dx > 8 || dy > 8) _kbCancelDrag();
+        return;
+    }
+
+    // Drag ativo — previne scroll da página e swipe de coluna
+    e.preventDefault();
+    e.stopPropagation();
+
+    _kbMoveGhost(t.clientX, t.clientY);
+    _kbTouchEdgeCheck(t.clientX);
+}
+
+function _kbCardTouchEnd(e) {
+    if (!_kbTouch.active) { _kbCancelDrag(); return; }
+    e.preventDefault();
+    e.stopPropagation();
+
+    const t = e.changedTouches[0];
+    _kbTouchDrop(t.clientX, t.clientY);
+    _kbCancelDrag();
+}
+
+function _kbCardTouchCancel() {
+    _kbCancelDrag();
+}
+
+function _kbActivateDrag(card, cx, cy) {
+    _kbTouch.active = true;
+
+    // Feedback tátil
+    if (navigator.vibrate) navigator.vibrate(40);
+
+    card.classList.add('kb-touch-holding');
+
+    // Cria ghost visual
+    const ghost = document.createElement('div');
+    ghost.className = 'kb-touch-ghost';
+    ghost.innerHTML = card.innerHTML;
+    ghost.style.width  = card.offsetWidth + 'px';
+    document.body.appendChild(ghost);
+    _kbTouch.ghostEl = ghost;
+    _kbMoveGhost(cx, cy);
+}
+
+function _kbMoveGhost(cx, cy) {
+    const g = _kbTouch.ghostEl;
+    if (!g) return;
+    g.style.left = (cx - g.offsetWidth / 2) + 'px';
+    g.style.top  = (cy - 30) + 'px';
+}
+
+function _kbTouchEdgeCheck(cx) {
+    const board = document.getElementById('kanbanBoard');
+    if (!board) return;
+    const rect = board.getBoundingClientRect();
+    const zone = rect.width * KB_EDGE_ZONE;
+    let dir = 0;
+    if (cx < rect.left + zone) dir = -1;
+    else if (cx > rect.right - zone) dir = 1;
+
+    if (dir === 0) { _kbTouchClearEdge(); return; }
+    if (dir === _kbTouch.edgeDir) return; // já aguardando
+
+    _kbTouchClearEdge();
+    _kbTouch.edgeDir = dir;
+
+    _kbTouch.edgeTimer = setTimeout(() => {
+        const cols = board.querySelectorAll('.kanban-col');
+        const next = _kbMobile.currentIdx + dir;
+        if (next >= 0 && next < cols.length) {
+            _kbMobileShowCol(next, true);
+            // Pequena vibração ao trocar de coluna
+            if (navigator.vibrate) navigator.vibrate(20);
+        }
+        _kbTouch.edgeDir = 0;
+        _kbTouch.edgeTimer = null;
+    }, KB_EDGE_DELAY_MS);
+}
+
+function _kbTouchClearEdge() {
+    if (_kbTouch.edgeTimer) { clearTimeout(_kbTouch.edgeTimer); _kbTouch.edgeTimer = null; }
+    _kbTouch.edgeDir = 0;
+}
+
+function _kbTouchDrop(cx, cy) {
+    if (!_kbTouch.itemId) return;
+
+    // A coluna atual é sempre a ativa
+    const board = document.getElementById('kanbanBoard');
+    if (!board) return;
+    const activeCol = board.querySelector('.kanban-col.kb-col-active');
+    if (!activeCol) return;
+
+    const targetStatus = activeCol.dataset.status;
+    if (!targetStatus) return;
+
+    const cfg = _kbGetConfig();
+    if (!cfg) return;
+    const item = (cfg.getItems() || []).find(a => a.id === _kbTouch.itemId);
+    if (!item) return;
+
+    // Não move se já está nessa coluna
+    if (item.status === targetStatus) return;
+
+    // Reutiliza a lógica de validação e persistência do kbDrop
+    if (/conclu/i.test(targetStatus) && typeof isItemOverdue === 'function' &&
+        (currentTab === 'treinamentos' || currentTab === 'documentos') && isItemOverdue(item, currentTab)) {
+        showOverdueConcluiModal();
+        return;
+    }
+    if (/conclu/i.test(targetStatus) && !canSetConcluido(item.checklist)) {
+        if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de mover para Concluído.', 'error');
+        return;
+    }
+    if (/conclu/i.test(targetStatus) && typeof checkSchedWarnBeforeConcluido === 'function') {
+        checkSchedWarnBeforeConcluido(item, currentTab).then(ok => { if (ok) _kbApplyDrop(item, targetStatus); });
+        return;
+    }
+    _kbApplyDrop(item, targetStatus);
+}
+
+function _kbCancelDrag() {
+    if (_kbTouch.longPressTimer) { clearTimeout(_kbTouch.longPressTimer); _kbTouch.longPressTimer = null; }
+    _kbTouchClearEdge();
+
+    if (_kbTouch.cardEl) _kbTouch.cardEl.classList.remove('kb-touch-holding');
+    if (_kbTouch.ghostEl) { _kbTouch.ghostEl.remove(); _kbTouch.ghostEl = null; }
+
+    _kbTouch.active = false;
+    _kbTouch.itemId = null;
+    _kbTouch.cardEl = null;
 }
