@@ -2223,13 +2223,18 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                     return dl && typeof daysDiff === 'function' && daysDiff(dl) < 0;
                 })();
                 const color = isAtrasado ? '#dc2626' : '#ca8a04';
+                const pubCount = (item.publicacoes || []).length;
+                const pubBadge = pubCount > 0
+                    ? `<span style="display:inline-flex;align-items:center;gap:3px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:9px;font-weight:700;padding:1px 5px 1px 4px;border-radius:99px;line-height:1.4;letter-spacing:0.2px;flex-shrink:0;" title="${pubCount} publicaç${pubCount===1?'ão':'ões'}"><i class="fas fa-layer-group" style="font-size:8px;"></i>${pubCount}</span>`
+                    : '';
                 return `<li style="cursor:pointer;" onclick="openView(${item.id},'${tab}')" title="Abrir card">
                     <div class="chart-list-header">
-                        <span class="status-info">
+                        <span class="status-info" style="min-width:0;flex:1;overflow:hidden;">
                             <span class="color-dot" style="background:${color}"></span>
-                            <span style="max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${titulo}">${titulo}</span>
+                            <span style="max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${titulo}">${titulo}</span>
+                            ${pubBadge}
                         </span>
-                        <span style="font-size:10.5px;font-weight:600;color:${color}">${status}</span>
+                        <span style="font-size:10.5px;font-weight:600;color:${color};flex-shrink:0;">${status}</span>
                     </div>
                     <div style="display:flex;gap:6px;align-items:center;margin-top:2px;">
                         <span style="font-size:10px;color:var(--text-muted);background:var(--bg-elevated);padding:1px 6px;border-radius:99px;">${typeL}</span>
