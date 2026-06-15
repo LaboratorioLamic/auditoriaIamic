@@ -1089,6 +1089,7 @@ window.excluirPublicacao = function(id, tab, index) {
         title: 'Excluir publicação?',
         message: 'Esta publicação será removida permanentemente e não poderá ser recuperada.',
         confirmLabel: 'Excluir',
+        requireReason: false,
         onConfirm: () => {
             item.publicacoes.splice(index, 1);
             saveAll();

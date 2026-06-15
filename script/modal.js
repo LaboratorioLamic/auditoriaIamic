@@ -1534,13 +1534,12 @@ function viewHistoryItem(id, tab, historyIndex) {
     document.getElementById('historyViewModal').style.display = 'flex';
 }
 
-    function deleteHistoryEntry(id, tab, historyIndex) {
-        // Somente admin pode apagar histórico
-        if (!(typeof userIsAdmin === 'function') || !userIsAdmin()) return;
+    window.deleteHistoryEntry = function deleteHistoryEntry(id, tab, historyIndex) {
         showConfirmDanger({
             title: 'Excluir registro do histórico?',
             message: 'Esta entrada será removida permanentemente do histórico de alterações.',
             confirmLabel: 'Excluir',
+            requireReason: false,
             onConfirm: () => _doDeleteHistoryEntry(id, tab, historyIndex)
         });
         return;
@@ -1599,6 +1598,7 @@ function viewHistoryItem(id, tab, historyIndex) {
 
         saveAll();
         renderViewContent(id, tab);
+        if (typeof renderHistoryDrawer === 'function') renderHistoryDrawer();
     }
 
     function editCurrentViewItem() {

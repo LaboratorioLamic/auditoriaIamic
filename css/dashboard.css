@@ -80,7 +80,7 @@
     letter-spacing: 0.4px;
 }
 .sc-bar {
-    height: 3px;
+    height: 8px;
     background: var(--bg-elevated);
     border-radius: var(--r-full);
     overflow: hidden;
@@ -372,7 +372,7 @@
 .chart-list .deadline-info { font-size: 12px; font-weight: 700; }
 
 .chart-bar {
-    height: 5px;
+    height: 15px;
     background: var(--bg-elevated);
     border-radius: var(--r-full);
     overflow: hidden;
