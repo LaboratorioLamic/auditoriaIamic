@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Dashboard – Auditoria LAMIC</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -10,7 +10,7 @@
 <script type="module">
   // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getDatabase, ref, get, set, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  import { getDatabase, ref, get, set, onValue, off, goOnline, goOffline } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
   
   // Your web app's Firebase configuration
   const firebaseConfig = {
@@ -35,6 +35,8 @@
   window.firebaseSet = set;
   window.firebaseOnValue = onValue;
   window.firebaseOff = off;
+  window.firebaseGoOnline = () => goOnline(database);
+  window.firebaseGoOffline = () => goOffline(database);
 </script>
 
 <link rel="stylesheet" href="style.css">
@@ -42,6 +44,28 @@
 </head>
 <body>
 
+
+<!-- ═══ OVERLAY DE SEM CONEXÃO ═══ -->
+<div id="offlineOverlay" class="offline-overlay" style="display:none;">
+    <div class="offline-bg-orb offline-bg-orb--1"></div>
+    <div class="offline-bg-orb offline-bg-orb--2"></div>
+    <div class="offline-box">
+        <div class="offline-icon-wrap" id="offlineIconWrap">
+            <i class="fas fa-triangle-exclamation" id="offlineIcon"></i>
+        </div>
+        <h2 class="offline-title">Sem conexão</h2>
+        <p class="offline-desc">Não foi possível se conectar ao servidor. Verifique sua conexão com a internet e tente novamente.</p>
+        <div class="offline-status" id="offlineStatus">
+            <span class="offline-status-dot" id="offlineStatusDot"></span>
+            <span id="offlineStatusText">Verificando conexão...</span>
+        </div>
+        <button class="offline-btn" id="btnReconnect" onclick="reconnectApp()">
+            <i class="fas fa-rotate-right" id="reconnectIcon"></i>
+            <span>Reconectar</span>
+        </button>
+        <p class="offline-footer">Auditoria LAMIC &mdash; Sistema de Gestão</p>
+    </div>
+</div>
 
 <div id="loginOverlay">
     <div class="login-box" id="loginBox">
@@ -115,6 +139,7 @@
                 <div class="notification-badge hidden" id="notificationBadge">0</div>
             </div>
         </div>
+        </header>
         <div class="notification-modal" id="notificationModal">
             <div class="notification-modal-header">
                 <h3>Notificações</h3>
@@ -125,7 +150,6 @@
             <div class="notification-modal-content" id="notificationModalContent">
             </div>
         </div>
-        </header>
 
     <div class="content">
         
@@ -2137,6 +2161,7 @@
     </div>
 </div>
 
+<script src="script/offline.js"></script>
 <script src="script/firebase.js"></script>
 <script src="script/cache.js"></script>
 <script src="script/state.js"></script>
