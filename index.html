@@ -96,6 +96,9 @@
         <button id="tabTreinamentos"><i class="fa-solid fa-graduation-cap"></i> Treinamentos</button>
         <button id="tabDocumentos"><i class="fa-solid fa-file-alt"></i> Documentos</button>
         <div class="sidebar-divider"></div>
+        <div class="sidebar-group-label">Gestão de N/C</div>
+        <button id="tabOcorrencias"><i class="fa-solid fa-triangle-exclamation"></i> Ocorrências</button>
+        <div class="sidebar-divider"></div>
         <div class="sidebar-group-label">Sistema</div>
         <button id="tabBackup"><i class="fa-solid fa-database"></i> Backup</button>
         <button id="tabConfiguracoes" style="display:none;"><i class="fa-solid fa-gear"></i> Configurações</button>
@@ -134,6 +137,22 @@
                 <span id="setorFilterLabel">Setores</span>
             </button>
 
+            <!-- Filtros exclusivos da aba Ocorrências (substituem a sino de notificações) -->
+            <div class="oc-head-filter" id="ocHeadDateWrap" style="position:relative; display:none;">
+                <button class="btn-setor-filter" id="ocHeadDateBtn" onclick="ocToggleHeadDate()" title="Filtrar por Data">
+                    <i class="fas fa-calendar-days"></i>
+                    <span id="ocHeadDateLabel">Data</span>
+                </button>
+                <div class="oc-head-dropdown" id="ocHeadDateDropdown" style="display:none;"></div>
+            </div>
+            <div class="oc-head-filter" id="ocHeadSetorWrap" style="position:relative; display:none;">
+                <button class="btn-setor-filter" id="ocHeadSetorBtn" onclick="ocToggleHeadSetor()" title="Filtrar por Setor">
+                    <i class="fas fa-building"></i>
+                    <span id="ocHeadSetorLabel">Setores</span>
+                </button>
+                <div class="oc-head-dropdown" id="ocHeadSetorDropdown" style="display:none;"></div>
+            </div>
+
             <div class="notification-container" id="notificationContainer" onclick="toggleNotificationModal()">
                 <i class="notification-icon fas fa-bell"></i>
                 <div class="notification-badge hidden" id="notificationBadge">0</div>
@@ -152,7 +171,17 @@
         </div>
 
     <div class="content">
-        
+
+        <!-- ═══ ABAS DO DASHBOARD: Tarefas / Ocorrências ═══ -->
+        <div class="dash-subtabs-bar" id="dashSubtabsBar" style="display:none;">
+            <button class="dash-subtab active" id="dashSubtabTarefas" onclick="setDashSubtab('tarefas')">
+                <i class="fas fa-list-check"></i> Tarefas
+            </button>
+            <button class="dash-subtab" id="dashSubtabOcorrencias" onclick="setDashSubtab('ocorrencias')">
+                <i class="fas fa-triangle-exclamation"></i> Ocorrências
+            </button>
+        </div>
+
         <div class="filters-bar" id="filtersBarDashboard" style="display:flex; position:relative;">
 
             <!-- Selects ocultos mantidos para compatibilidade com o JS existente -->
@@ -249,6 +278,52 @@
                 </button>
             </div>
         </div>
+
+        <!-- ═══ FILTROS DO DASHBOARD DE OCORRÊNCIAS ═══ -->
+        <div class="filters-bar" id="filtersBarDashOc" style="display:none; position:relative;">
+            <div class="fbar-left">
+                <!-- Tipo dropdown -->
+                <div class="oc-type-wrap">
+                    <button class="oc-type-btn" id="dashOcTypeBtn" onclick="dashOcToggleTypeDropdown()" title="Selecionar tipo de ocorrência">
+                        <i class="fas fa-layer-group"></i>
+                        <span id="dashOcTypeLabel">Tipo: Todas</span>
+                        <i class="fas fa-caret-down"></i>
+                    </button>
+                    <div class="oc-type-dropdown" id="dashOcTypeDropdown"></div>
+                </div>
+                <!-- Categoria dropdown -->
+                <div class="oc-type-wrap" id="dashOcCatWrap">
+                    <button class="oc-icon-btn" id="dashOcCatBtn" onclick="dashOcToggleCatDropdown()" title="Filtrar por categoria">
+                        <i class="fas fa-tags"></i>
+                    </button>
+                    <div class="oc-type-dropdown oc-type-dropdown--right" id="dashOcCatDropdown"></div>
+                </div>
+                <!-- Motivo dropdown (aparece após categoria selecionada) -->
+                <div class="oc-type-wrap" id="dashOcMotivoWrap" style="display:none;">
+                    <button class="oc-icon-btn" id="dashOcMotivoBtn" onclick="dashOcToggleMotivoDropdown()" title="Filtrar por motivo">
+                        <i class="fas fa-circle-dot"></i>
+                    </button>
+                    <div class="oc-type-dropdown oc-type-dropdown--right" id="dashOcMotivoDropdown"></div>
+                </div>
+                <!-- Colaborador -->
+                <div class="oc-type-wrap" id="dashOcColabWrap">
+                    <button class="oc-people-btn" id="dashOcColabBtn" onclick="dashOcToggleColabDropdown()" title="Filtrar por colaborador">
+                        <i class="fas fa-user"></i>
+                        <span id="dashOcColabLabel">Selecionar colaborador</span>
+                        <span class="fbar-people-badge" id="dashOcColabBadge" style="display:none;"></span>
+                    </button>
+                    <div class="oc-type-dropdown" id="dashOcColabDropdown" style="min-width:300px; max-height:340px; overflow-y:auto;"></div>
+                </div>
+            </div>
+            <div class="fbar-right">
+                <button class="fbar-icon-btn" onclick="dashOcClearFilters()" title="Limpar filtros">
+                    <i class="fas fa-rotate-left"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard de Ocorrências -->
+        <div id="dashboardOcContent" style="display:none; flex-direction:column; gap:20px;"></div>
 
         <div id="dashboardContent" style="display:flex;">
 
@@ -771,6 +846,88 @@
                 <p class="usr-note">O usuário <strong>admin</strong> é sempre administrador e não aparece na lista para edição ou exclusão.</p>
             </div>
         </div>
+
+        <!-- ═══ GESTÃO DE N/C — OCORRÊNCIAS ═══ -->
+        <div id="ocorrenciasContent">
+
+            <!-- Linha de filtros -->
+            <div class="oc-filters-bar">
+                <div class="oc-fbar-left">
+                    <div class="oc-type-wrap">
+                        <button class="oc-type-btn" id="ocTypeBtn" onclick="ocToggleTypeDropdown()" title="Selecionar tipo de ocorrência">
+                            <i class="fas fa-layer-group"></i>
+                            <span id="ocTypeLabel">Tipo</span>
+                            <i class="fas fa-caret-down"></i>
+                        </button>
+                        <div class="oc-type-dropdown" id="ocTypeDropdown"></div>
+                    </div>
+                    <button class="oc-type-manage" id="ocTypeManageBtn" onclick="ocOpenManager('tipos')" title="Adicionar, editar ou remover tipos">
+                        <i class="fas fa-pen-to-square"></i>
+                    </button>
+                    <button class="oc-xlsx-btn" id="ocXlsxBtn" onclick="ocOpenXlsx()" title="Exportar / Importar XLSX">
+                        <i class="fas fa-file-excel"></i>
+                    </button>
+
+                    <div class="oc-search">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input type="text" id="ocSearchInput" placeholder="Pesquisar ocorrência..." oninput="ocOnSearch()" autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="oc-fbar-right">
+                    <!-- Filtro por categoria -->
+                    <div class="oc-type-wrap">
+                        <button class="oc-icon-btn" id="ocCatFilterBtn" onclick="ocToggleCatFilter()" title="Filtrar por categoria">
+                            <i class="fas fa-filter"></i>
+                        </button>
+                        <div class="oc-type-dropdown oc-type-dropdown--right" id="ocCatFilterDropdown"></div>
+                    </div>
+                    <div class="oc-type-wrap">
+                        <button class="oc-people-btn active" id="ocMyBtn" onclick="ocToggleMyDropdown()">
+                            <i class="fas fa-user-circle"></i>
+                            <span id="ocMyLabel">Minhas ocorrências</span>
+                            <i class="fas fa-caret-down"></i>
+                        </button>
+                        <div class="oc-mytasks-dropdown" id="ocMyDropdown">
+                            <button id="ocMyResp" class="active" onclick="ocSetMyMode('responsavel')">Como responsável</button>
+                            <button id="ocMyAll" onclick="ocSetMyMode('all')">Visualizar todos</button>
+                        </div>
+                    </div>
+                    <button class="oc-icon-btn" onclick="ocClearFilters()" title="Limpar filtros">
+                        <i class="fas fa-rotate-left"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabela -->
+            <div class="oc-table-card">
+                <div class="oc-table-scroll">
+                    <table class="oc-table">
+                        <thead>
+                            <tr id="ocTableHead">
+                                <th data-col="data" onclick="ocSort('data')">Data <i class="fas fa-sort oc-sort-ico"></i></th>
+                                <th data-col="colaborador" onclick="ocSort('colaborador')">Colaborador <i class="fas fa-sort oc-sort-ico"></i></th>
+                                <th data-col="setor" onclick="ocSort('setor')">Setor <i class="fas fa-sort oc-sort-ico"></i></th>
+                                <th data-col="categoria" onclick="ocSort('categoria')">Categoria <i class="fas fa-sort oc-sort-ico"></i></th>
+                                <th data-col="motivo" onclick="ocSort('motivo')">Motivo <i class="fas fa-sort oc-sort-ico"></i></th>
+                                <th data-col="responsavel" onclick="ocSort('responsavel')">Publicado por <i class="fas fa-sort oc-sort-ico"></i></th>
+                                <th class="no-sort oc-th-attach" title="Anexos"><i class="fas fa-paperclip"></i></th>
+                                <th class="no-sort text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ocTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="oc-empty" id="ocEmpty" style="display:none;">
+                    <i class="fas fa-inbox"></i>
+                    <p>Nenhuma ocorrência encontrada</p>
+                </div>
+                <div class="oc-pagination" id="ocPagination" style="display:none;">
+                    <span class="oc-pag-info" id="ocPagInfo"></span>
+                    <div class="oc-pag-controls" id="ocPagControls"></div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -780,6 +937,225 @@
 </button>
 <div class="form-drawer-backdrop" id="formDrawerBackdrop" onclick="closeFormDrawer()"></div>
 <div id="toastContainer"></div>
+
+<!-- ═══ DRAWER OCORRÊNCIA ═══ -->
+<div class="form-drawer" id="modalOcorrencia">
+    <div class="form-drawer-header">
+        <div class="form-drawer-header-left">
+            <div class="form-drawer-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div>
+                <div class="form-drawer-title" id="ocDrawerTitle">Nova Ocorrência</div>
+                <div class="form-drawer-subtitle" id="ocDrawerSubtitle">Preencha os dados abaixo</div>
+            </div>
+        </div>
+        <button class="history-drawer-close" onclick="ocCloseDrawer()" title="Fechar"><i class="fas fa-times"></i></button>
+    </div>
+    <!-- Drawer tabs -->
+    <div class="drawer-tabs">
+        <button class="drawer-tab active" onclick="switchDrawerTab('oc','info',this)"><i class="fas fa-info-circle"></i> Informações</button>
+        <button class="drawer-tab" onclick="switchDrawerTab('oc','anexos',this)"><i class="fas fa-paperclip"></i> Anexos</button>
+    </div>
+    <div class="form-drawer-body">
+        <!-- Aba Informações -->
+        <div class="drawer-tab-panel active" id="oc-panel-info">
+        <div class="form-grid">
+
+            <div class="field-group">
+                <label>Data <span class="req-star">*</span></label>
+                <input type="date" id="ocFData">
+            </div>
+            <div class="field-group">
+                <label>Colaborador <span class="req-star">*</span></label>
+                <div class="oc-ac-wrap oc-ac-wrap--icon">
+                    <input type="text" id="ocFColab" placeholder="Selecione um colaborador..." autocomplete="off"
+                           oninput="ocColabInput()" onfocus="ocColabInput()" onblur="ocColabBlur()">
+                    <i class="fas fa-chevron-down oc-ac-caret"></i>
+                    <div class="oc-ac-dropdown" id="ocColabDropdown"></div>
+                </div>
+                <div class="oc-colab-loading" id="ocColabLoading" style="display:none;"><i class="fas fa-spinner fa-spin"></i> Carregando colaboradores...</div>
+            </div>
+
+            <div class="form-section-divider full-width"><span>Classificação</span></div>
+
+            <div class="field-group">
+                <label>Setor</label>
+                <div class="oc-field-inline">
+                    <div class="oc-ac-wrap oc-ac-wrap--icon">
+                        <input type="text" id="ocFSetor" placeholder="Digite ou selecione..." autocomplete="off"
+                               oninput="ocSetorInput()" onfocus="ocSetorInput()">
+                        <i class="fas fa-chevron-down oc-ac-caret"></i>
+                        <div class="oc-ac-dropdown" id="ocSetorDropdown"></div>
+                    </div>
+                    <button type="button" class="oc-field-plus" onclick="ocOpenManager('setores')" title="Gerenciar setores"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Categoria <span class="req-star">*</span></label>
+                <div class="oc-field-inline">
+                    <div class="oc-ac-wrap oc-ac-wrap--icon">
+                        <input type="text" id="ocFCategoria" placeholder="Digite ou selecione..." autocomplete="off"
+                               oninput="ocCategoriaInput()" onfocus="ocCategoriaInput()">
+                        <i class="fas fa-chevron-down oc-ac-caret"></i>
+                        <div class="oc-ac-dropdown" id="ocCategoriaDropdown"></div>
+                    </div>
+                    <button type="button" class="oc-field-plus" onclick="ocOpenManager('categorias')" title="Gerenciar categorias"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="field-group full-width" id="ocMotivoWrap" style="display:none;">
+                <label>Motivo</label>
+                <div class="oc-field-inline">
+                    <div class="oc-ac-wrap oc-ac-wrap--icon">
+                        <input type="text" id="ocFMotivo" placeholder="Digite ou selecione o motivo..." autocomplete="off"
+                               oninput="ocMotivoInput()" onfocus="ocMotivoInput()">
+                        <i class="fas fa-chevron-down oc-ac-caret"></i>
+                        <div class="oc-ac-dropdown" id="ocMotivoDropdown"></div>
+                    </div>
+                    <button type="button" class="oc-field-plus" onclick="ocOpenManager('motivos')" title="Gerenciar motivos"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+
+            <div class="form-section-divider full-width"><span>Detalhes</span></div>
+
+            <div class="field-group full-width">
+                <label>Responsável</label>
+                <div class="oc-resp-field">
+                    <i class="fas fa-user-shield"></i>
+                    <input type="text" id="ocFResponsavel" readonly disabled>
+                </div>
+            </div>
+            <div class="field-group full-width">
+                <label>Comentário</label>
+                <textarea id="ocFComentario" rows="4" placeholder="Descreva a ocorrência..."></textarea>
+            </div>
+        </div>
+        </div><!-- /oc-panel-info -->
+        <!-- Aba Anexos -->
+        <div class="drawer-tab-panel" id="oc-panel-anexos">
+            <div id="oc-anexos-list"></div>
+            <div class="upload-widget">
+                <select id="oc-upload-tipo" class="upload-tipo-select" onchange="_onUploadTipoChange('oc')">
+                    <option value="arquivo">Arquivo</option>
+                    <option value="link">Link</option>
+                </select>
+                <input type="text" id="oc-upload-title" class="upload-title-input" placeholder="Nome do arquivo">
+                <button type="button" class="upload-send-btn" id="oc-upload-btn" onclick="submitAnexoUpload('oc')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Enviar
+                </button>
+            </div>
+            <div id="oc-file-preview" style="display:none;"></div>
+            <div id="oc-upload-zone" class="upload-drop-zone">
+                <input type="file" id="oc-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span class="upload-drop-label">Clique ou arraste o arquivo</span>
+                <span class="upload-drop-hint">PDF, imagem, planilha ou slides</span>
+            </div>
+            <div id="oc-link-wrap" style="display:none;">
+                <input type="url" id="oc-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
+            </div>
+        </div>
+    </div><!-- /form-drawer-body -->
+    <div class="form-drawer-footer">
+        <button class="btn-secondary" onclick="ocCloseDrawer()">Cancelar</button>
+        <button class="btn-primary" onclick="ocSaveForm()"><i class="fas fa-check"></i> Salvar</button>
+    </div>
+</div>
+
+<!-- ═══ MODAL GESTÃO DE LISTAS (tipos / setores / categorias / motivos) ═══ -->
+<div class="oc-modal-backdrop" id="ocManagerBackdrop" onclick="if(event.target===this)ocCloseManager()">
+    <div class="oc-modal">
+        <div class="oc-modal-header">
+            <div class="oc-modal-ico"><i class="fas fa-list-ul" id="ocManagerIcon"></i></div>
+            <div>
+                <h3 id="ocManagerTitle">Gerenciar</h3>
+                <small id="ocManagerSub"></small>
+            </div>
+            <button class="oc-modal-close" onclick="ocCloseManager()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="oc-modal-body">
+            <div class="oc-add-row">
+                <input type="text" id="ocManagerInput" placeholder="Novo item..." onkeydown="if(event.key==='Enter')ocManagerAdd()">
+                <button onclick="ocManagerAdd()"><i class="fas fa-plus"></i> Adicionar</button>
+            </div>
+            <div class="oc-list" id="ocManagerList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL VISUALIZAÇÃO OCORRÊNCIA ═══ -->
+<div class="oc-view-backdrop" id="ocViewBackdrop" onclick="if(event.target===this)ocCloseView()">
+    <div class="oc-view-modal">
+        <div class="oc-view-header">
+            <div class="oc-view-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="oc-view-meta">
+                <div class="oc-view-title" id="ocViewTitle">Ocorrência</div>
+                <div class="oc-view-sub" id="ocViewSub"></div>
+            </div>
+            <button class="oc-view-edit" id="ocViewEditBtn" onclick="ocViewEdit()" title="Editar"><i class="fas fa-pen"></i> Editar</button>
+            <button class="oc-view-close" onclick="ocCloseView()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="oc-view-tabs">
+            <button class="oc-view-tab active" onclick="ocSwitchViewTab('info',this)"><i class="fas fa-info-circle"></i> Informações</button>
+            <button class="oc-view-tab" onclick="ocSwitchViewTab('anexos',this)"><i class="fas fa-paperclip"></i> Anexos</button>
+        </div>
+        <div class="oc-view-body">
+            <div class="oc-view-panel active" id="ocViewPanelInfo">
+                <div class="oc-view-grid" id="ocViewGrid"></div>
+                <div class="oc-view-desc-wrap" id="ocViewDescWrap"></div>
+            </div>
+            <div class="oc-view-panel" id="ocViewPanelAnexos">
+                <div id="ocViewAnexosList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL XLSX OCORRÊNCIA ═══ -->
+<div class="oc-modal-backdrop" id="ocXlsxBackdrop">
+    <div class="oc-modal oc-xlsx-modal">
+        <div class="oc-modal-header">
+            <div class="oc-modal-ico"><i class="fas fa-file-excel" style="color:#22c55e;"></i></div>
+            <div><h3>Exportar / Importar XLSX</h3><small id="ocXlsxModalSub">Tipo: —</small></div>
+            <button class="oc-modal-close" id="ocXlsxCloseBtn" onclick="ocCloseXlsx()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="oc-modal-body" style="display:flex;flex-direction:column;gap:16px;">
+            <!-- Exportar -->
+            <div class="oc-xlsx-section">
+                <div class="oc-xlsx-section-title"><i class="fas fa-download"></i> Exportar</div>
+                <p class="oc-xlsx-desc">Baixa todas as ocorrências do tipo selecionado como planilha XLSX.</p>
+                <button class="oc-xlsx-export-btn" onclick="ocXlsxExport()"><i class="fas fa-download"></i> Baixar XLSX</button>
+            </div>
+            <hr style="border:none;border-top:1px solid var(--border);margin:0;">
+            <!-- Importar -->
+            <div class="oc-xlsx-section">
+                <div class="oc-xlsx-section-title"><i class="fas fa-upload"></i> Importar</div>
+                <p class="oc-xlsx-desc">Selecione um arquivo XLSX para importar ocorrências. Apenas linhas com dados válidos (data e colaborador obrigatórios) serão importadas.</p>
+                <div class="oc-xlsx-upload-area" id="ocXlsxUploadArea" onclick="document.getElementById('ocXlsxFileInput').click()">
+                    <i class="fas fa-file-upload"></i>
+                    <span>Clique para selecionar ou arraste o arquivo XLSX</span>
+                    <input type="file" id="ocXlsxFileInput" accept=".xlsx,.xls" style="display:none" onchange="ocXlsxFileChosen(this)">
+                </div>
+                <!-- Preview (hidden until file chosen) -->
+                <div id="ocXlsxPreview" style="display:none;">
+                    <div class="oc-xlsx-preview-header">
+                        <span id="ocXlsxPreviewInfo"></span>
+                        <button class="oc-xlsx-confirm-btn" id="ocXlsxConfirmBtn" onclick="ocXlsxConfirmImport()"><i class="fas fa-check"></i> Confirmar importação</button>
+                    </div>
+                    <div class="oc-xlsx-preview-table-wrap">
+                        <table class="oc-xlsx-preview-table" id="ocXlsxPreviewTable"></table>
+                    </div>
+                </div>
+                <!-- Loading overlay -->
+                <div id="ocXlsxLoading" style="display:none;" class="oc-xlsx-loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span id="ocXlsxLoadingMsg">Processando...</span>
+                </div>
+                <!-- Result -->
+                <div id="ocXlsxResult" style="display:none;" class="oc-xlsx-result"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- DRAWER AUDITORIA -->
 <div class="form-drawer" id="modalAuditoria">
@@ -2047,25 +2423,49 @@
                                 <option value="usuario">Usuário</option>
                             </select>
                         </div>
+                        <div class="um-perm-card">
+                            <button type="button" class="um-perm-info" onclick="togglePermInfo(this,'manageOc')" title="O que significa?"><i class="fas fa-circle-info"></i></button>
+                            <div class="um-perm-card-icon" style="background:#fffbeb;color:#f59e0b"><i class="fas fa-triangle-exclamation"></i></div>
+                            <div class="um-perm-card-label">Gerenciar ocorrências</div>
+                            <select id="cfgCanManageOc" class="um-perm-card-sel">
+                                <option value="total">Total</option>
+                                <option value="parcial">Parcial</option>
+                                <option value="visualizar">Visualizar</option>
+                            </select>
+                        </div>
+                        <div class="um-perm-card">
+                            <button type="button" class="um-perm-info" onclick="togglePermInfo(this,'manageMotivos')" title="O que significa?"><i class="fas fa-circle-info"></i></button>
+                            <div class="um-perm-card-icon" style="background:#f0fdf4;color:#10b981"><i class="fas fa-tags"></i></div>
+                            <div class="um-perm-card-label">Gerenciar motivos</div>
+                            <select id="cfgCanManageMotivos" class="um-perm-card-sel">
+                                <option value="total">Total</option>
+                                <option value="motivo">Apenas Motivo</option>
+                                <option value="nao">Não</option>
+                            </select>
+                        </div>
                     </div>
 
                 </div>
 
                 <!-- Abas + Setores -->
                 <div class="um-section">
-                    <div class="um-section-title"><i class="fas fa-table-columns" style="color:#6366f1;margin-right:6px"></i>Abas Permitidas</div>
-                    <div class="um-tab-chips">
-                        <label class="um-chip"><input type="checkbox" class="cfg-tab" value="dashboard" checked><span>Dashboard</span></label>
-                        <label class="um-chip"><input type="checkbox" class="cfg-tab" value="auditoria" checked><span>Rotinas</span></label>
-                        <label class="um-chip"><input type="checkbox" class="cfg-tab" value="treinamentos"><span>Treinamentos</span></label>
-                        <label class="um-chip"><input type="checkbox" class="cfg-tab" value="documentos"><span>Documentos</span></label>
-                        <label class="um-chip"><input type="checkbox" class="cfg-tab" value="atividades"><span>Atividades</span></label>
-                        <label class="um-chip"><input type="checkbox" class="cfg-tab" value="backup"><span>Backup</span></label>
-                    </div>
+                    <div class="um-section-title"><i class="fas fa-table-columns" style="color:#6366f1;margin-right:6px"></i>Abas e Restrições</div>
 
-                    <button type="button" onclick="openSetoresModal()" class="um-setores-btn">
+                    <button type="button" onclick="openAbasModal()" class="um-setores-btn">
+                        <i class="fas fa-table-columns"></i>
+                        <span id="abasButtonText">Abas Permitidas</span>
+                        <i class="fas fa-chevron-right" style="margin-left:auto;opacity:.5;font-size:11px"></i>
+                    </button>
+
+                    <button type="button" onclick="openSetoresModal()" class="um-setores-btn" style="margin-top:8px">
                         <i class="fas fa-building"></i>
                         <span id="setoresButtonText">Selecionar Setores</span>
+                        <i class="fas fa-chevron-right" style="margin-left:auto;opacity:.5;font-size:11px"></i>
+                    </button>
+
+                    <button type="button" onclick="openTiposOcorrenciasModal()" class="um-setores-btn" style="margin-top:8px">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <span id="tiposOcButtonText">Todos os Tipos de Ocorrências</span>
                         <i class="fas fa-chevron-right" style="margin-left:auto;opacity:.5;font-size:11px"></i>
                     </button>
                 </div>
@@ -2100,6 +2500,52 @@
         <div class="modal-actions" style="margin-top:20px; display:flex; gap:8px; justify-content:flex-end;">
             <button class="btn-cancel" onclick="closeModal('modalSetoresPermissoes')">Cancelar</button>
             <button class="btn-save" onclick="saveSetoresPermissoes()">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalAbasPermissoes">
+    <div class="modal-content" style="width:500px; max-width:90vw;">
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0; color:#1f2937;"><i class="fas fa-table-columns"></i> Abas Permitidas</h3>
+            <button class="btn-close" onclick="closeModal('modalAbasPermissoes')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+        </div>
+        <div style="margin-bottom:16px;">
+            <p style="color:#6b7280; font-size:13px; margin:0 0 12px 0;">Selecione quais abas este usuário pode visualizar na navegação lateral.</p>
+            <div style="display:flex; gap:8px; margin-bottom:12px;">
+                <button type="button" onclick="selectAllAbas()" style="padding:6px 12px; background:#f3f4f6; border:1px solid #d1d5db; border-radius:6px; font-size:12px; cursor:pointer; color:#374151;">Selecionar Todas</button>
+                <button type="button" onclick="deselectAllAbas()" style="padding:6px 12px; background:#f3f4f6; border:1px solid #d1d5db; border-radius:6px; font-size:12px; cursor:pointer; color:#374151;">Desselecionar Todas</button>
+            </div>
+        </div>
+        <div id="modalAbasList" style="max-height:400px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:8px; padding:12px; background:#f9fafb;">
+            <!-- Abas serão renderizadas aqui -->
+        </div>
+        <div class="modal-actions" style="margin-top:20px; display:flex; gap:8px; justify-content:flex-end;">
+            <button class="btn-cancel" onclick="closeModal('modalAbasPermissoes')">Cancelar</button>
+            <button class="btn-save" onclick="saveAbasPermissoes()">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalTiposOcorrencias">
+    <div class="modal-content" style="width:500px; max-width:90vw;">
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0; color:#1f2937;"><i class="fas fa-triangle-exclamation"></i> Tipos de Ocorrências Permitidos</h3>
+            <button class="btn-close" onclick="closeModal('modalTiposOcorrencias')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
+        </div>
+        <div style="margin-bottom:16px;">
+            <p style="color:#6b7280; font-size:13px; margin:0 0 12px 0;">Selecione quais tipos de ocorrências este usuário pode visualizar na aba Ocorrências e no Dashboard.</p>
+            <div style="display:flex; gap:8px; margin-bottom:12px;">
+                <button type="button" onclick="selectAllTiposOc()" style="padding:6px 12px; background:#f3f4f6; border:1px solid #d1d5db; border-radius:6px; font-size:12px; cursor:pointer; color:#374151;">Selecionar Todos</button>
+                <button type="button" onclick="deselectAllTiposOc()" style="padding:6px 12px; background:#f3f4f6; border:1px solid #d1d5db; border-radius:6px; font-size:12px; cursor:pointer; color:#374151;">Desselecionar Todos</button>
+            </div>
+        </div>
+        <div id="modalTiposOcList" style="max-height:400px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:8px; padding:12px; background:#f9fafb;">
+            <!-- Tipos serão renderizados aqui -->
+        </div>
+        <div class="modal-actions" style="margin-top:20px; display:flex; gap:8px; justify-content:flex-end;">
+            <button class="btn-cancel" onclick="closeModal('modalTiposOcorrencias')">Cancelar</button>
+            <button class="btn-save" onclick="saveTiposOcPermissoes()">Salvar</button>
         </div>
     </div>
 </div>
@@ -2186,5 +2632,9 @@
 <script src="script/setor-filter.js"></script>
 <script src="script/fbar-filters.js"></script>
 <script src="script/overdue-status.js"></script>
+<script src="script/ocorrencias.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="script/ocorrencias-dashboard.js"></script>
 </body>
 </html>

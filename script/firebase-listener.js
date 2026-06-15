@@ -7,6 +7,7 @@
             activities = [];
             maintenances = [];
             documents = [];
+            ocorrencias = [];
             users = [];
             masterLists = JSON.parse(JSON.stringify(defaultMasterLists));
             // Invalida o baseline: enquanto não recarregamos, o estado local
@@ -34,6 +35,7 @@
                 activities = record.activities || [];
                 maintenances = record.maintenances || [];
                 documents = record.documents || [];
+                ocorrencias = record.ocorrencias || [];
 
                 if (record.masterLists) {
                     masterLists = { ...defaultMasterLists, ...record.masterLists };
@@ -83,7 +85,7 @@
     }
 
     function isEditingCardOpen() {
-        const drawerIds = ['modalAuditoria', 'modalAtividades', 'modalManutencao', 'modalDocumentos'];
+        const drawerIds = ['modalAuditoria', 'modalAtividades', 'modalManutencao', 'modalDocumentos', 'modalOcorrencia'];
         return drawerIds.some(id => {
             const el = document.getElementById(id);
             return el && el.classList.contains('open');
@@ -116,7 +118,8 @@
                     JSON.stringify(record.trainings) !== JSON.stringify(trainings) ||
                     JSON.stringify(record.activities) !== JSON.stringify(activities) ||
                     JSON.stringify(record.maintenances) !== JSON.stringify(maintenances) ||
-                    JSON.stringify(record.documents) !== JSON.stringify(documents)
+                    JSON.stringify(record.documents) !== JSON.stringify(documents) ||
+                    JSON.stringify(record.ocorrencias) !== JSON.stringify(ocorrencias)
                 );
 
                 if (!listsChanged && !dataChanged) return;
@@ -134,12 +137,14 @@
                     activities = record.activities || [];
                     maintenances = record.maintenances || [];
                     documents = record.documents || [];
+                    ocorrencias = record.ocorrencias || [];
                     // Adotamos o estado remoto: atualiza o baseline do merge.
                     captureSyncBaseline();
                 }
 
                 populateSelects();
-                currentTab === 'dashboard' ? renderDashboard() : renderCards();
+                if (currentTab === 'ocorrencias') { if (typeof window.ocRenderTable === 'function') window.ocRenderTable(); }
+                else currentTab === 'dashboard' ? renderDashboard() : renderCards();
             });
 
             if (!usersListener) {
@@ -215,7 +220,8 @@
             trainings: _deepClone(trainings),
             activities: _deepClone(activities),
             maintenances: _deepClone(maintenances),
-            documents: _deepClone(documents)
+            documents: _deepClone(documents),
+            ocorrencias: _deepClone(ocorrencias)
         };
     }
 
@@ -290,7 +296,7 @@
             // trata como vazio. Assim todo item local vira "novo" (upsert) e
             // NADA é excluído — evita apagar o banco com um estado local parcial.
             const base = _syncBaseline || {
-                audits: [], trainings: [], activities: [], maintenances: [], documents: []
+                audits: [], trainings: [], activities: [], maintenances: [], documents: [], ocorrencias: []
             };
 
             // Relê o estado remoto atual para reconciliar (merge 3-vias).
@@ -311,6 +317,7 @@
             const mergedActivities   = _mergeCollection(activities,   remote.activities,   base.activities);
             const mergedMaintenances = _mergeCollection(maintenances, remote.maintenances, base.maintenances);
             const mergedDocuments    = _mergeCollection(documents,    remote.documents,    base.documents);
+            const mergedOcorrencias  = _mergeCollection(ocorrencias,  remote.ocorrencias,  base.ocorrencias);
 
             // O merge trouxe novidades de outras sessões? (para re-render)
             const pulledRemoteChanges =
@@ -318,7 +325,8 @@
                 JSON.stringify(mergedTrainings)    !== JSON.stringify(trainings) ||
                 JSON.stringify(mergedActivities)   !== JSON.stringify(activities) ||
                 JSON.stringify(mergedMaintenances) !== JSON.stringify(maintenances) ||
-                JSON.stringify(mergedDocuments)    !== JSON.stringify(documents);
+                JSON.stringify(mergedDocuments)    !== JSON.stringify(documents) ||
+                JSON.stringify(mergedOcorrencias)  !== JSON.stringify(ocorrencias);
 
             // Adota o resultado reconciliado como novo estado local + baseline.
             audits = mergedAudits;
@@ -326,6 +334,7 @@
             activities = mergedActivities;
             maintenances = mergedMaintenances;
             documents = mergedDocuments;
+            ocorrencias = mergedOcorrencias;
             captureSyncBaseline();
 
             await update(dbRef(database, "/"), {
@@ -334,6 +343,7 @@
                 '/activities': mergedActivities,
                 '/maintenances': mergedMaintenances,
                 '/documents': mergedDocuments,
+                '/ocorrencias': mergedOcorrencias,
                 '/masterLists': masterLists,
                 '/kanbanOrder': kanbanOrder,
                 '/lastUpdate': new Date().toISOString()
@@ -342,7 +352,8 @@
             // Se incorporamos mudanças de outras sessões, atualiza a UI.
             if (pulledRemoteChanges && !isEditingCardOpen()) {
                 populateSelects();
-                currentTab === 'dashboard' ? renderDashboard() : renderCards();
+                if (currentTab === 'ocorrencias') { if (typeof window.ocRenderTable === 'function') window.ocRenderTable(); }
+                else currentTab === 'dashboard' ? renderDashboard() : renderCards();
             }
 
             if (showAlert) alert("Dados sincronizados com sucesso!");

@@ -486,4 +486,5 @@ document.addEventListener('DOMContentLoaded', function () {
   initUploadZone('train');
   initUploadZone('doc');
   initUploadZone('mant');
+  initUploadZone('oc');
 });

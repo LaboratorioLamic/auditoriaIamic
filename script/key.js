@@ -171,6 +171,40 @@ function _checkTriPerm(permVal, item) {
         });
     }
 
+    function applyOcorrenciasPermissions() {
+        if (!currentuser) return;
+        const isAdmin = userIsAdmin();
+        const canManageLists = isAdmin || currentuser.canManageLists;
+        const canManageOc = isAdmin ? 'total' : (currentuser.canManageOc || 'total');
+        const canManageMotivos = isAdmin ? 'total' : (currentuser.canManageMotivos || 'total');
+
+        // Gate tipo manage button (ocTypeManageBtn) by canManageLists
+        const tipoBtn = document.getElementById('ocTypeManageBtn');
+        if (tipoBtn) tipoBtn.style.display = canManageLists ? '' : 'none';
+
+        // Gate setor + button in edit form by canManageLists
+        // The setor field-plus button: onclick="ocOpenManager('setores')"
+        document.querySelectorAll('.oc-field-plus[onclick*="setores"]').forEach(b => {
+            b.style.display = canManageLists ? '' : 'none';
+        });
+
+        // Gate category + and motivo + buttons by canManageMotivos
+        document.querySelectorAll('.oc-field-plus[onclick*="categorias"]').forEach(b => {
+            b.style.display = (canManageMotivos === 'total') ? '' : 'none';
+        });
+        document.querySelectorAll('.oc-field-plus[onclick*="motivos"]').forEach(b => {
+            b.style.display = (canManageMotivos === 'nao') ? 'none' : '';
+        });
+
+        // Gate XLSX button by canManageOc === 'total'
+        const xlsxBtn = document.getElementById('ocXlsxBtn');
+        if (xlsxBtn) xlsxBtn.style.display = (canManageOc === 'total') ? '' : 'none';
+
+        // Expose to ocorrencias.js for row-level restrictions
+        window._ocUserPerm = canManageOc;
+    }
+    window.applyOcorrenciasPermissions = applyOcorrenciasPermissions;
+
     function applyTaskViewPermission() {
         const restrictToSelf = currentuser && !userIsAdmin() && currentuser.taskView === 'usuario';
         const display = restrictToSelf ? 'none' : '';
@@ -227,6 +261,39 @@ function _checkTriPerm(permVal, item) {
 
     // ── Novas permissões ─────────────────────────────────────────
 
+    // Retorna o nível de permissão de ocorrências do usuário atual
+    window.userOcPerm = function() {
+        if (!currentuser) return 'visualizar';
+        if (userIsAdmin()) return 'total';
+        return currentuser.canManageOc || 'total';
+    };
+
+    // Retorna true se o usuário pode criar/editar a ocorrência (item pode ser null para "novo")
+    window.userCanEditOc = function(item) {
+        const perm = window.userOcPerm();
+        if (perm === 'total') return true;
+        if (perm === 'visualizar') return false;
+        // parcial: só se for o responsável
+        if (!item) return true; // criar novo é sempre permitido em parcial
+        if (!currentuser) return false;
+        const meId = currentuser.id || '';
+        const meName = ((currentuser.name || currentuser.user) || '').trim().toLowerCase();
+        const resp = String(item.responsavel || '').trim();
+        return (meId && resp === meId) || resp.toLowerCase() === meName;
+    };
+
+    // Retorna true se o usuário pode excluir a ocorrência
+    window.userCanDeleteOc = function(item) {
+        return window.userCanEditOc(item) && window.userOcPerm() !== 'visualizar';
+    };
+
+    // Tipos de ocorrência permitidos para o usuário (null = todos)
+    window.userAllowedTiposOc = function() {
+        if (!currentuser) return null;
+        if (userIsAdmin()) return null;
+        return Array.isArray(currentuser.allowedTiposOc) ? currentuser.allowedTiposOc : null;
+    };
+
     // Pode editar/excluir publicações — Total/Parcial/Não
     window.userCanManagePubs = function(item) {
         if (!currentuser) return false;
@@ -254,7 +321,7 @@ function _checkTriPerm(permVal, item) {
         if (!currentuser) return null;
         // Admin tem acesso a todas as abas
         if (userIsAdmin()) {
-            return ['dashboard', 'auditoria', 'treinamentos', 'documentos', 'atividades', 'manutencao', 'backup', 'configuracoes'];
+            return ['dashboard', 'auditoria', 'treinamentos', 'documentos', 'atividades', 'manutencao', 'ocorrencias', 'backup', 'configuracoes'];
         }
         // Se não houver configuração de abas, por segurança libera apenas Dashboard e Auditoria
         if (!Array.isArray(currentuser.tabs) || currentuser.tabs.length === 0) {
@@ -262,6 +329,9 @@ function _checkTriPerm(permVal, item) {
         }
         return currentuser.tabs;
     }
+
+    // Abas que devem ser ocultadas (não apenas desabilitadas) quando não permitidas
+    const TABS_HIDE_WHEN_DENIED = new Set(['configuracoes', 'ocorrencias']);
 
     function applyuserPermissionsToTabs() {
         const allowed = userAllowedTabs();
@@ -272,18 +342,20 @@ function _checkTriPerm(permVal, item) {
             documentos: 'tabDocumentos',
             atividades: 'tabAtividades',
             manutencao: 'tabManutencao',
+            ocorrencias: 'tabOcorrencias',
             backup: 'tabBackup',
             configuracoes: 'tabConfiguracoes'
         };
         Object.entries(tabMap).forEach(([key, btnId]) => {
             const btn = document.getElementById(btnId);
             if (!btn) return;
-            if (key === 'configuracoes') {
-                // Aba Configurações só aparece se permitida
-                btn.style.display = allowed && allowed.includes(key) ? 'block' : 'none';
-            } else if (!allowed || allowed.includes(key)) {
+            const permitted = !allowed || allowed.includes(key);
+            if (TABS_HIDE_WHEN_DENIED.has(key)) {
+                btn.style.display = permitted ? '' : 'none';
+            } else if (permitted) {
                 btn.disabled = false;
                 btn.style.opacity = '1';
+                btn.style.display = '';
             } else {
                 btn.disabled = true;
                 btn.style.opacity = '0.4';
@@ -357,6 +429,7 @@ function _checkTriPerm(permVal, item) {
                     applyuserPermissionsToTabs();
                     applyListManagerPermissions();
                     applyTaskViewPermission();
+                    applyOcorrenciasPermissions();
                     loading.innerHTML = '<i class="fas fa-check"></i> Login realizado. Sincronizando dados...';
                     // PROTEÇÃO: Força sincronização completa com Firebase após login
                     forceFirebaseSync();
@@ -489,6 +562,8 @@ function _checkTriPerm(permVal, item) {
     // --- CONFIGURAÇÕES: GESTÃO DE USUÁRIOS ---
     let editinguserIndex = null;
     let tempSelectedSetores = [];
+    let tempSelectedTiposOc = null; // null = todos permitidos
+    let tempSelectedTabs = ['dashboard', 'auditoria'];
     let currentUserFilter = 'ativos';
 
     // ── Cores para avatar (determinístico por nome) ──────────────
@@ -619,12 +694,15 @@ function _checkTriPerm(permVal, item) {
         set('cfgCanChecklist', 'total');
         set('cfgStatus', 'true');
         set('cfgIsAdmin', 'false');
-        document.querySelectorAll('.cfg-tab').forEach(chk => {
-            chk.checked = (chk.value === 'dashboard' || chk.value === 'auditoria');
-            chk.disabled = false;
-        });
+        tempSelectedTabs = ['dashboard', 'auditoria'];
+        updateAbasButtonText();
         tempSelectedSetores = [];
         updateSetoresButtonText();
+        tempSelectedTiposOc = null;
+        updateTiposOcButtonText();
+        const setOc = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+        setOc('cfgCanManageOc', 'total');
+        setOc('cfgCanManageMotivos', 'total');
         editinguserIndex = null;
     }
 
@@ -723,6 +801,113 @@ function _checkTriPerm(permVal, item) {
         closeModal('modalSetoresPermissoes');
     }
 
+    function openTiposOcorrenciasModal() {
+        const tipos = (typeof masterLists !== 'undefined' && masterLists.ncTipos) ? masterLists.ncTipos : [];
+        const container = document.getElementById('modalTiposOcList');
+        if (!container) return;
+        container.innerHTML = '';
+        if (tipos.length === 0) {
+            container.innerHTML = '<p style="color:#9ca3af; font-size:13px; text-align:center; padding:20px;">Nenhum tipo de ocorrência cadastrado.</p>';
+        } else {
+            const allowed = tempSelectedTiposOc; // null = todos
+            tipos.forEach(t => {
+                const id = t.id || t;
+                const name = t.name || t;
+                const isChecked = allowed === null || allowed.includes(id);
+                const label = document.createElement('label');
+                label.style.cssText = 'display:flex; align-items:center; padding:10px 12px; margin-bottom:6px; background:white; border:1px solid #e5e7eb; border-radius:6px; cursor:pointer; transition:all 0.2s ease;';
+                label.innerHTML = `<input type="checkbox" class="modal-tipo-oc-checkbox" value="${id}" ${isChecked ? 'checked' : ''} style="margin-right:10px; width:18px; height:18px; cursor:pointer;"><span style="flex:1; font-size:14px; color:#1f2937;">${name}</span>`;
+                container.appendChild(label);
+            });
+        }
+        document.getElementById('modalTiposOcorrencias').style.display = 'flex';
+    }
+    window.openTiposOcorrenciasModal = openTiposOcorrenciasModal;
+
+    window.selectAllTiposOc = function() {
+        document.querySelectorAll('.modal-tipo-oc-checkbox').forEach(c => c.checked = true);
+    };
+    window.deselectAllTiposOc = function() {
+        document.querySelectorAll('.modal-tipo-oc-checkbox').forEach(c => c.checked = false);
+    };
+
+    window.saveTiposOcPermissoes = function() {
+        const tipos = (typeof masterLists !== 'undefined' && masterLists.ncTipos) ? masterLists.ncTipos : [];
+        const checked = Array.from(document.querySelectorAll('.modal-tipo-oc-checkbox')).filter(c => c.checked).map(c => c.value);
+        // null = todos permitidos (if all selected)
+        tempSelectedTiposOc = (checked.length === tipos.length) ? null : checked;
+        updateTiposOcButtonText();
+        closeModal('modalTiposOcorrencias');
+    };
+
+    function updateTiposOcButtonText() {
+        const btn = document.getElementById('tiposOcButtonText');
+        if (!btn) return;
+        const tipos = (typeof masterLists !== 'undefined' && masterLists.ncTipos) ? masterLists.ncTipos : [];
+        if (tempSelectedTiposOc === null || tempSelectedTiposOc.length === tipos.length) {
+            btn.textContent = `Todos os Tipos de Ocorrências (${tipos.length})`;
+        } else if (tempSelectedTiposOc.length === 0) {
+            btn.textContent = 'Nenhum Tipo Selecionado';
+        } else {
+            btn.textContent = `${tempSelectedTiposOc.length} de ${tipos.length} Tipos Selecionados`;
+        }
+    }
+
+    const ALL_TABS = [
+        { value: 'dashboard',    label: 'Dashboard',    icon: 'fa-chart-pie' },
+        { value: 'auditoria',    label: 'Rotinas',      icon: 'fa-clipboard-list' },
+        { value: 'treinamentos', label: 'Treinamentos', icon: 'fa-graduation-cap' },
+        { value: 'documentos',   label: 'Documentos',   icon: 'fa-file-lines' },
+        { value: 'atividades',   label: 'Atividades',   icon: 'fa-list-check' },
+        { value: 'ocorrencias',  label: 'Ocorrências',  icon: 'fa-triangle-exclamation' },
+        { value: 'backup',       label: 'Backup',       icon: 'fa-database' },
+    ];
+
+    function openAbasModal() {
+        const container = document.getElementById('modalAbasList');
+        if (!container) return;
+        container.innerHTML = '';
+        ALL_TABS.forEach(t => {
+            const isChecked = tempSelectedTabs.includes(t.value);
+            const label = document.createElement('label');
+            label.style.cssText = 'display:flex; align-items:center; padding:10px 12px; margin-bottom:6px; background:white; border:1px solid #e5e7eb; border-radius:6px; cursor:pointer; transition:all 0.2s ease;';
+            label.onmouseover = function() { this.style.background = '#f9fafb'; };
+            label.onmouseout  = function() { this.style.background = 'white'; };
+            label.innerHTML = `<input type="checkbox" class="modal-aba-checkbox" value="${t.value}" ${isChecked ? 'checked' : ''} style="margin-right:10px; width:18px; height:18px; cursor:pointer;"><i class="fas ${t.icon}" style="margin-right:10px; color:#6366f1; width:16px; text-align:center;"></i><span style="flex:1; font-size:14px; color:#1f2937;">${t.label}</span>`;
+            container.appendChild(label);
+        });
+        document.getElementById('modalAbasPermissoes').style.display = 'flex';
+    }
+    window.openAbasModal = openAbasModal;
+
+    window.selectAllAbas = function() {
+        document.querySelectorAll('.modal-aba-checkbox').forEach(c => c.checked = true);
+    };
+    window.deselectAllAbas = function() {
+        document.querySelectorAll('.modal-aba-checkbox').forEach(c => c.checked = false);
+    };
+
+    window.saveAbasPermissoes = function() {
+        tempSelectedTabs = Array.from(document.querySelectorAll('.modal-aba-checkbox')).filter(c => c.checked).map(c => c.value);
+        updateAbasButtonText();
+        closeModal('modalAbasPermissoes');
+    };
+
+    function updateAbasButtonText() {
+        const btn = document.getElementById('abasButtonText');
+        if (!btn) return;
+        const total = ALL_TABS.length;
+        const count = tempSelectedTabs.length;
+        if (count === 0) {
+            btn.textContent = 'Nenhuma aba selecionada';
+        } else if (count === total) {
+            btn.textContent = `Todas as abas (${total})`;
+        } else {
+            const names = ALL_TABS.filter(t => tempSelectedTabs.includes(t.value)).map(t => t.label);
+            btn.textContent = names.join(', ');
+        }
+    }
+
     function updateSetoresButtonText() {
         const buttonText = document.getElementById('setoresButtonText');
         if (!buttonText) return;
@@ -796,6 +981,22 @@ function _checkTriPerm(permVal, item) {
             items: [
                 ['Todos', 'Visualiza as tarefas de todos os usuários.'],
                 ['Usuário', 'Visualiza apenas as tarefas em que é responsável técnico ou revisor.']
+            ]
+        },
+        manageOc: {
+            title: 'Gerenciar ocorrências',
+            items: [
+                ['Total', 'Pode adicionar, editar e excluir qualquer ocorrência.'],
+                ['Parcial', 'Pode adicionar, editar e excluir apenas ocorrências em que é responsável.'],
+                ['Visualizar', 'Apenas visualiza as ocorrências, sem poder criar ou alterar.']
+            ]
+        },
+        manageMotivos: {
+            title: 'Gerenciar motivos',
+            items: [
+                ['Total', 'Acessa e gerencia os botões "+" de categoria e motivo.'],
+                ['Apenas Motivo', 'Acessa e gerencia apenas o botão "+" de motivo.'],
+                ['Não', 'Não gerencia nenhum campo de "+", ocultando ambos.']
             ]
         }
     };
@@ -919,8 +1120,11 @@ function _checkTriPerm(permVal, item) {
         const taskView = g('cfgTaskView').value || 'todos';
         const isActive = g('cfgStatus').value !== 'false';
         const isAdmin = g('cfgIsAdmin').value === 'true';
-        const tabs = Array.from(document.querySelectorAll('.cfg-tab')).filter(c => c.checked).map(c => c.value);
+        const tabs = tempSelectedTabs.slice();
         let allowedSetores = canManageLists ? (masterLists.setores || []).slice() : tempSelectedSetores.slice();
+        const canManageOc = g('cfgCanManageOc')?.value || 'total';
+        const canManageMotivos = g('cfgCanManageMotivos')?.value || 'total';
+        const allowedTiposOc = tempSelectedTiposOc; // null = all
 
         const passwordConfirm = g('cfgPasswordConfirm')?.value || '';
 
@@ -938,7 +1142,7 @@ function _checkTriPerm(permVal, item) {
             _toast('Já existe um usuário com esse login.', 'error'); return;
         }
 
-        const userData = { name, user, tabs, cpf, cargo, grupo, canEditCards: canEdit, canDeleteCards: canDelete, canManageLists, canManagePubs: canManagePubs, canPublish, canChecklist, taskView, allowedSetores, active: isActive, isAdmin };
+        const userData = { name, user, tabs, cpf, cargo, grupo, canEditCards: canEdit, canDeleteCards: canDelete, canManageLists, canManagePubs: canManagePubs, canPublish, canChecklist, taskView, allowedSetores, canManageOc, canManageMotivos, allowedTiposOc, active: isActive, isAdmin };
 
         // Captura o nome anterior antes de alterar
         let _oldName = null;
@@ -962,6 +1166,7 @@ function _checkTriPerm(permVal, item) {
                 updateCurrentuserUI();
                 applyuserPermissionsToTabs();
                 applyListManagerPermissions();
+                applyOcorrenciasPermissions();
             }
             closeModal('modalUsuario');
             resetConfigForm();
@@ -1043,13 +1248,15 @@ function _checkTriPerm(permVal, item) {
         set('cfgTaskView', u.taskView || 'todos');
         set('cfgStatus', u.active === false ? 'false' : 'true');
         set('cfgIsAdmin', u.isAdmin === true ? 'true' : 'false');
-        const tabs = Array.isArray(u.tabs) && u.tabs.length > 0 ? u.tabs : ['dashboard', 'auditoria'];
-        document.querySelectorAll('.cfg-tab').forEach(chk => {
-            chk.checked = tabs.includes(chk.value);
-            chk.disabled = false;
-        });
+        tempSelectedTabs = Array.isArray(u.tabs) && u.tabs.length > 0 ? u.tabs.slice() : ['dashboard', 'auditoria'];
+        updateAbasButtonText();
         tempSelectedSetores = Array.isArray(u.allowedSetores) ? u.allowedSetores.slice() : [];
         updateSetoresButtonText();
+        tempSelectedTiposOc = Array.isArray(u.allowedTiposOc) ? u.allowedTiposOc.slice() : null;
+        updateTiposOcButtonText();
+        const setOc = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+        setOc('cfgCanManageOc', u.canManageOc || 'total');
+        setOc('cfgCanManageMotivos', u.canManageMotivos || 'total');
     }
 
     async function deleteuserConfig(idx) {

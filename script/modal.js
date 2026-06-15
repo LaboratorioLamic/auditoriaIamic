@@ -122,6 +122,11 @@ function resetModal(prefix) {
 
         const _currentUserName = currentuser ? (currentuser.name || currentuser.user || '') : '';
 
+        if (currentTab === 'ocorrencias') {
+            if (typeof window.ocOpenNew === 'function') window.ocOpenNew();
+            return;
+        }
+
         if (currentTab === 'auditoria') {
             editingAuditId = null;
             resetModal('audit');
@@ -2245,6 +2250,8 @@ function viewHistoryItem(id, tab, historyIndex) {
             const el = document.getElementById(did);
             if (el) el.classList.remove('open');
         });
+        const _oc = document.getElementById('modalOcorrencia');
+        if (_oc) _oc.classList.remove('open');
         const backdrop = document.getElementById('formDrawerBackdrop');
         const fab = document.getElementById('addBtn');
         if (backdrop) backdrop.classList.remove('open');
