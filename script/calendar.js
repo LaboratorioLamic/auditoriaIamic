@@ -672,14 +672,25 @@ function _calRenderEventCard(entry, canEdit) {
     card.style.setProperty('--evt-color', statusColor);
 
     const statusName = item.status || '';
-    const resp = item.responsavelTecnico || item.responsavel || '';
+    const _rawResp = item.responsavelTecnico || item.responsavel || '';
+    var _respNames = [];
+    if (_rawResp) {
+        var _respIds;
+        try { var _rp = JSON.parse(String(_rawResp)); _respIds = Array.isArray(_rp) ? _rp.map(String) : [String(_rp)]; }
+        catch { _respIds = [String(_rawResp)]; }
+        _respNames = _respIds.map(id => (typeof resolveUserId === 'function' ? resolveUserId(id) : null) || id).filter(Boolean);
+    }
+    const resp = _respNames.length > 1
+        ? `${_respNames[0]} +${_respNames.length - 1}`
+        : (_respNames[0] || '');
 
     if (type === 'publicacao') {
         card.classList.add(realizada ? 'cal-evt-pub-done' : 'cal-evt-pub-pending');
         const pubTipo = realizada && pub ? (pub.tipo || 'Publicação') : 'Previsto';
         const pubDesc = realizada && pub ? _calTruncate(pub.descricao || '', 40) : 'Publicação prevista pela rotina';
         const pubDate = realizada && pub ? `<div class="cal-ecard-resp"><i class="fas fa-calendar" style="font-size:10px;"></i> ${pub.data || ''} ${pub.hora || ''}</div>` : '';
-        const pubUser = realizada && pub && pub.usuario ? `<div class="cal-ecard-resp"><i class="fas fa-user" style="font-size:10px;"></i> ${_calEsc(pub.usuario)}</div>` : '';
+        const _pubUsrName = (realizada && pub && pub.usuario) ? ((typeof resolveUserId === 'function' ? resolveUserId(pub.usuario) : null) || pub.usuario) : '';
+        const pubUser = _pubUsrName ? `<div class="cal-ecard-resp"><i class="fas fa-user" style="font-size:10px;"></i> ${_calEsc(_pubUsrName)}</div>` : '';
         card.innerHTML = `
             <div class="cal-ecard-top">
                 <i class="fas fa-${realizada ? 'check-circle' : 'clock'}" style="color:${realizada ? 'var(--c-green)' : 'var(--c-orange)'}"></i>

@@ -652,6 +652,21 @@ window._safeSnapshot = function(item) {
                     displayCurr = current[key] ? formatBR(current[key]) : 'vazio';
                 }
 
+                // Campos de usuário: resolve IDs para nomes legíveis
+                const userFields = ['responsavel', 'revisor', 'responsavelTecnico', 'responsavelManutencao', 'auditor'];
+                if (userFields.includes(key)) {
+                    const _resolveUserDisplay = (raw) => {
+                        if (!raw) return 'vazio';
+                        let ids;
+                        try { const p = JSON.parse(String(raw)); ids = Array.isArray(p) ? p.map(String) : [String(p)]; }
+                        catch { ids = [String(raw)]; }
+                        const names = ids.map(id => (typeof resolveUserId === 'function' ? resolveUserId(id) : null) || id).filter(Boolean);
+                        return names.length ? names.join(', ') : 'vazio';
+                    };
+                    displayOrig = _resolveUserDisplay(original ? original[key] : null);
+                    displayCurr = _resolveUserDisplay(current[key]);
+                }
+
                 changes.push(`${label}: <strong>${displayOrig || 'vazio'}</strong> &rarr; <strong>${displayCurr || 'vazio'}</strong>`);
             }
         }

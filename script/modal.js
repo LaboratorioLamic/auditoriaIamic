@@ -1251,7 +1251,8 @@ window.renderHistoryDrawer = function() {
             var timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             var color = getTypeColor(h.entry.acao);
             var label = getTypeLabel(h.entry.acao);
-            var usuario = h.entry.usuario || '';
+            var _rawUsr = h.entry.usuario || '';
+            var usuario = (_rawUsr && typeof resolveUserId === 'function') ? (resolveUserId(_rawUsr) || _rawUsr) : _rawUsr;
 
             var detailsArray = [];
             if (h.entry.detalhes) {
@@ -1390,20 +1391,28 @@ function viewHistoryItem(id, tab, historyIndex) {
         return str.length > maxLen ? str.slice(0, maxLen) + '…' : str;
     }
     function _date(v) { return v ? formatBR(v) : 'N/A'; }
+    function _valUser(v) {
+        if (!v) return 'N/A';
+        var ids;
+        try { var p = JSON.parse(String(v)); ids = Array.isArray(p) ? p.map(String) : [String(p)]; }
+        catch { ids = [String(v)]; }
+        var names = ids.map(id => (typeof resolveUserId === 'function' ? resolveUserId(id) : null) || id).filter(Boolean);
+        return names.length ? names.join(', ') : 'N/A';
+    }
 
     // Monta pares [label, valor] por tipo
     var pairs = [];
     if (finalTab === 'auditoria') {
         pairs = [
             ['Setor', _val(snap.setor)], ['Categoria', _val(snap.categoria)],
-            ['Responsável', _val(snap.responsavel)], ['Revisor', _val(snap.revisor)],
-            ['Auditor', _val(snap.auditor)], ['Status', _val(snap.status)],
+            ['Responsável', _valUser(snap.responsavel)], ['Revisor', _valUser(snap.revisor)],
+            ['Auditor', _valUser(snap.auditor)], ['Status', _val(snap.status)],
             ['Data Publicação', _date(snap.dataPublicacao)], ['Previsão', _date(snap.dataPrevisao)]
         ];
     } else if (finalTab === 'atividades') {
         pairs = [
             ['Setor', _val(snap.setor)], ['Categoria', _val(snap.categoria)],
-            ['Responsável', _val(snap.responsavel)], ['Revisor', _val(snap.revisor)],
+            ['Responsável', _valUser(snap.responsavel)], ['Revisor', _valUser(snap.revisor)],
             ['Status', _val(snap.status)],
             ['Data Início', _date(snap.dataInicio)], ['Data Conclusão', _date(snap.dataConclusao)]
         ];
@@ -1415,13 +1424,13 @@ function viewHistoryItem(id, tab, historyIndex) {
             ['Status', _val(snap.status)],
             ['Periodicidade', isNA ? 'N/A' : `${snap.intervalo} dias`],
             ['Última Manutenção', _date(snap.ultima)], ['Próxima Manutenção', isNA ? 'N/A' : _date(snap.proxima)],
-            ['Resp. Técnico', _val(snap.responsavelTecnico)], ['Empresa', _val(snap.empresaResponsavel)]
+            ['Resp. Técnico', _valUser(snap.responsavelTecnico)], ['Empresa', _val(snap.empresaResponsavel)]
         ];
     } else if (finalTab === 'treinamentos') {
         const rotinaLabelSnTrain = { pontual: 'Pontual', anual: 'Anual', mensal: 'Mensal', semanal: 'Semanal', diasemana: 'Dia da semana' }[snap.rotina || 'pontual'] || 'Pontual';
         pairs = [
             ['Setor', _val(snap.setor)], ['Categoria', _val(snap.categoria)],
-            ['Responsável', _val(snap.responsavel)], ['Revisor', _val(snap.revisor)],
+            ['Responsável', _valUser(snap.responsavel)], ['Revisor', _valUser(snap.revisor)],
             ['Rotina', rotinaLabelSnTrain], ['Status', _val(snap.status)],
             ['Data Publicação', _date(snap.dataPublicacao)],
             ['Data Previsão', snap.dataPrevisao ? _date(snap.dataPrevisao) : 'N/A']
@@ -1430,7 +1439,7 @@ function viewHistoryItem(id, tab, historyIndex) {
         const rotinaLabelSnDoc = { pontual: 'Pontual', anual: 'Anual', mensal: 'Mensal', semanal: 'Semanal', diasemana: 'Dia da semana' }[snap.rotina || 'pontual'] || 'Pontual';
         pairs = [
             ['Setor', _val(snap.setor)], ['Categoria', _val(snap.categoria)],
-            ['Responsável', _val(snap.responsavel)], ['Revisor', _val(snap.revisor)],
+            ['Responsável', _valUser(snap.responsavel)], ['Revisor', _valUser(snap.revisor)],
             ['Rotina', rotinaLabelSnDoc], ['Status', _val(snap.status)],
             ['Data do Documento', _date(snap.dataCriacao)],
             ['Próx. Revisão', snap.dataProximaRevisao ? _date(snap.dataProximaRevisao) : 'N/A']
@@ -1517,7 +1526,9 @@ function viewHistoryItem(id, tab, historyIndex) {
     // Atualiza título e meta no header
     document.getElementById('historyViewTitle').textContent = snap.titulo || 'Registro';
     var metaEl = document.getElementById('historyViewMeta');
-    if (metaEl) metaEl.textContent = `${h.entry.acao} • ${dateStr} às ${timeStr}${h.entry.usuario ? ' • ' + h.entry.usuario : ''}`;
+    var _snapUsr = h.entry.usuario || '';
+    var _snapUsrName = (_snapUsr && typeof resolveUserId === 'function') ? (resolveUserId(_snapUsr) || _snapUsr) : _snapUsr;
+    if (metaEl) metaEl.textContent = `${h.entry.acao} • ${dateStr} às ${timeStr}${_snapUsrName ? ' • ' + _snapUsrName : ''}`;
 
     document.getElementById('historyViewContent').innerHTML = cardsHtml + descHtml + modHtml + anexosHtml;
     document.getElementById('historyViewModal').style.display = 'flex';

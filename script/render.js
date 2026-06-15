@@ -2091,7 +2091,9 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                 const itemTitulo = item.titulo || '—';
                 const desc = pub.titulo || pub.descricao || '';
                 const setor = item.setor || '—';
-                const usuario = pub.usuario || '—';
+                const _rawUsuario = pub.usuario || '';
+                const _resolvedUsuario = (_rawUsuario && typeof resolveUserId === 'function') ? (resolveUserId(_rawUsuario) || _rawUsuario) : _rawUsuario;
+                const usuario = _resolvedUsuario || '—';
                 const initials = usuario.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
                 const usuarioShort = _formatResponsavelShort(usuario);
                 const dateBR = pub.data ? pub.data.split('-').reverse().join('/') : '—';

@@ -977,7 +977,7 @@ window.verPublicacao = function(id, tab, index) {
     const metaPills = `
         <div class="ver-pub-meta-row">
             <span class="ver-pub-meta-pill"><i class="fas fa-calendar"></i> ${_formatDateBR(pub.data)}${pub.hora ? ' · ' + pub.hora : ''}</span>
-            ${pub.usuario ? `<span class="ver-pub-meta-pill"><i class="fas fa-user"></i> ${pub.usuario}</span>` : ''}
+            ${pub.usuario ? `<span class="ver-pub-meta-pill"><i class="fas fa-user"></i> ${(typeof resolveUserId === 'function' ? resolveUserId(pub.usuario) : null) || pub.usuario}</span>` : ''}
             ${pub.instrutor ? `<span class="ver-pub-meta-pill"><i class="fas fa-chalkboard-user"></i> ${pub.instrutor}</span>` : ''}
             ${pub.cargaHoraria ? `<span class="ver-pub-meta-pill"><i class="fas fa-clock"></i> ${pub.cargaHoraria}</span>` : ''}
             ${pub.localEvento ? `<span class="ver-pub-meta-pill"><i class="fas fa-location-dot"></i> ${pub.localEvento}</span>` : ''}
