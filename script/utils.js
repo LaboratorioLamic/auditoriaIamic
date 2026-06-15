@@ -97,9 +97,7 @@ window.showPermanentDeleteConfirm = function({ title, message, onConfirm } = {})
             <div class="confirm-danger-title">${title || '⚠️ Deleção Permanente'}</div>
             <div class="confirm-danger-message perm-delete-msg">${message || 'Esta ação é <strong>irreversível</strong>. O item será removido para sempre.'}</div>
             <div class="perm-delete-input-wrap">
-                <label class="perm-delete-label">Motivo da exclusão <span style="color:#dc2626;">*</span></label>
-                <textarea id="permDeleteReason" class="perm-delete-input" rows="2" placeholder="Descreva o motivo..." style="font-family:inherit;font-size:13px;letter-spacing:normal;resize:vertical;min-height:60px;font-weight:400;margin-bottom:10px;"></textarea>
-                <label class="perm-delete-label" style="margin-top:4px;">Digite <span class="perm-delete-keyword">SIM</span> para confirmar:</label>
+                <label class="perm-delete-label">Digite <span class="perm-delete-keyword">SIM</span> para confirmar:</label>
                 <input id="permDeleteInput" class="perm-delete-input" type="text" placeholder="SIM" autocomplete="off" spellcheck="false" />
                 <div class="perm-delete-input-hint" id="permDeleteHint"></div>
             </div>
@@ -114,15 +112,13 @@ window.showPermanentDeleteConfirm = function({ title, message, onConfirm } = {})
     document.body.appendChild(overlay);
 
     const input = overlay.querySelector('#permDeleteInput');
-    const reason = overlay.querySelector('#permDeleteReason');
     const btn = overlay.querySelector('#permDeleteOk');
     const hint = overlay.querySelector('#permDeleteHint');
 
     function _checkPermForm() {
         const sim = input.value.trim() === 'SIM';
-        const hasReason = reason.value.trim().length >= 3;
-        btn.disabled = !(sim && hasReason);
-        btn.style.opacity = (sim && hasReason) ? '1' : '0.45';
+        btn.disabled = !sim;
+        btn.style.opacity = sim ? '1' : '0.45';
         if (input.value.trim().length > 0 && !sim) {
             input.classList.add('perm-delete-input--error');
             input.classList.remove('perm-delete-input--ok');
@@ -138,18 +134,16 @@ window.showPermanentDeleteConfirm = function({ title, message, onConfirm } = {})
     }
 
     input.addEventListener('input', _checkPermForm);
-    reason.addEventListener('input', _checkPermForm);
 
     overlay.querySelector('#permDeleteCancel').onclick = () => overlay.remove();
     btn.onclick = () => {
-        if (input.value.trim() !== 'SIM' || reason.value.trim().length < 3) return;
-        const r = reason.value.trim();
+        if (input.value.trim() !== 'SIM') return;
         overlay.remove();
-        if (typeof onConfirm === 'function') onConfirm(r);
+        if (typeof onConfirm === 'function') onConfirm('');
     };
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 
-    setTimeout(() => reason.focus(), 80);
+    setTimeout(() => input.focus(), 80);
 };
 
 // Modal de confirmação de exclusão (vermelho, moderno) com campo de motivo obrigatório
