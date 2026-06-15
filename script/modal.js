@@ -459,6 +459,7 @@ function resetModal(prefix) {
             title: 'Restaurar item?',
             message: 'O item será restaurado da lixeira e voltará a aparecer normalmente.',
             confirmLabel: 'Restaurar',
+            requireReason: false,
             onConfirm: () => _doRestoreDeletedItem(id, tab)
         });
         return;
@@ -794,6 +795,7 @@ function resetModal(prefix) {
             title: 'Remover do histórico',
             message: 'Deseja remover este registro do histórico de exclusões?',
             confirmLabel: 'Remover',
+            requireReason: false,
             onConfirm: () => {
                 masterLists.deletionHistory = (masterLists.deletionHistory || []).filter(e => e.histId !== histId);
                 saveAll();
