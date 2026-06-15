@@ -1031,7 +1031,6 @@
         </div><!-- /oc-panel-info -->
         <!-- Aba Anexos -->
         <div class="drawer-tab-panel" id="oc-panel-anexos">
-            <div id="oc-anexos-list"></div>
             <div class="upload-widget">
                 <select id="oc-upload-tipo" class="upload-tipo-select" onchange="_onUploadTipoChange('oc')">
                     <option value="arquivo">Arquivo</option>
@@ -1053,6 +1052,7 @@
             <div id="oc-link-wrap" style="display:none;">
                 <input type="url" id="oc-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
             </div>
+            <div id="oc-anexos-list"></div>
         </div>
     </div><!-- /form-drawer-body -->
     <div class="form-drawer-footer">
@@ -1085,23 +1085,31 @@
 <!-- ═══ MODAL VISUALIZAÇÃO OCORRÊNCIA ═══ -->
 <div class="oc-view-backdrop" id="ocViewBackdrop" onclick="if(event.target===this)ocCloseView()">
     <div class="oc-view-modal">
-        <div class="oc-view-header">
-            <div class="oc-view-icon"><i class="fas fa-triangle-exclamation"></i></div>
-            <div class="oc-view-meta">
-                <div class="oc-view-title" id="ocViewTitle">Ocorrência</div>
-                <div class="oc-view-sub" id="ocViewSub"></div>
+        <!-- Hero -->
+        <div class="oc-view-hero">
+            <div class="oc-view-hero-top">
+                <div class="oc-view-hero-icon"><i class="fas fa-triangle-exclamation"></i></div>
+                <div class="oc-view-hero-meta">
+                    <div class="oc-view-title" id="ocViewTitle">Ocorrência</div>
+                    <div class="oc-view-sub" id="ocViewSub"></div>
+                </div>
+                <div class="oc-view-hero-actions">
+                    <button class="oc-view-edit" id="ocViewEditBtn" onclick="ocViewEdit()"><i class="fas fa-pen"></i> Editar</button>
+                    <button class="oc-view-close" onclick="ocCloseView()"><i class="fas fa-times"></i></button>
+                </div>
             </div>
-            <button class="oc-view-edit" id="ocViewEditBtn" onclick="ocViewEdit()" title="Editar"><i class="fas fa-pen"></i> Editar</button>
-            <button class="oc-view-close" onclick="ocCloseView()"><i class="fas fa-times"></i></button>
+            <div class="oc-view-hero-chips" id="ocViewHeroChips"></div>
         </div>
+        <!-- Tabs -->
         <div class="oc-view-tabs">
-            <button class="oc-view-tab active" onclick="ocSwitchViewTab('info',this)"><i class="fas fa-info-circle"></i> Informações</button>
-            <button class="oc-view-tab" onclick="ocSwitchViewTab('anexos',this)"><i class="fas fa-paperclip"></i> Anexos</button>
+            <button class="oc-view-tab active" onclick="ocSwitchViewTab('info',this)"><i class="fas fa-circle-info"></i> Informações</button>
+            <button class="oc-view-tab" id="ocViewAnexosTab" onclick="ocSwitchViewTab('anexos',this)"><i class="fas fa-paperclip"></i> Anexos</button>
         </div>
+        <!-- Body -->
         <div class="oc-view-body">
             <div class="oc-view-panel active" id="ocViewPanelInfo">
                 <div class="oc-view-grid" id="ocViewGrid"></div>
-                <div class="oc-view-desc-wrap" id="ocViewDescWrap"></div>
+                <div id="ocViewDescWrap"></div>
             </div>
             <div class="oc-view-panel" id="ocViewPanelAnexos">
                 <div id="ocViewAnexosList"></div>

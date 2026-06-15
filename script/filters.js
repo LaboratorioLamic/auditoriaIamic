@@ -474,8 +474,9 @@
         .map(i => `<option value="${i.name}">${i.name}</option>`)
         .join('');
 
-    // Filtra setores baseado nas permissões do usuário (allowedSetores já declarado acima)
-    var filteredSetores = allowedSetores === null ? setores : setores.filter(s => allowedSetores.includes(s));
+    // Filtra setores baseado nas permissões do usuário e ordena alfabeticamente
+    var filteredSetores = (allowedSetores === null ? setores : setores.filter(s => allowedSetores.includes(s)))
+        .slice().sort((a, b) => String(a).localeCompare(String(b), 'pt'));
 
     // --- FILTROS DASHBOARD ---
     document.getElementById('fDashSetor').innerHTML = makeFilterOpts(filteredSetores, "Setor: Todos");

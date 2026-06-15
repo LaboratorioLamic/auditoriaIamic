@@ -197,14 +197,19 @@
 
         // Maior e menor mês
         var maiorMes = '—', menorMes = '—';
+        var maiorMesSub = '', menorMesSub = '';
         if (months.length) {
             var maxI = counts.indexOf(Math.max.apply(null, counts));
             var minI = counts.indexOf(Math.min.apply(null, counts));
-            maiorMes = formatMonthKey(months[maxI]) + ' (' + counts[maxI] + ')';
-            menorMes = formatMonthKey(months[minI]) + ' (' + counts[minI] + ')';
+            var pctMax = total ? ((counts[maxI] / total) * 100).toFixed(1) : 0;
+            var pctMin = total ? ((counts[minI] / total) * 100).toFixed(1) : 0;
+            maiorMes = formatMonthKey(months[maxI]);
+            maiorMesSub = counts[maxI] + ' ocorrências · ' + pctMax + '% do total';
+            menorMes = formatMonthKey(months[minI]);
+            menorMesSub = counts[minI] + ' ocorrências · ' + pctMin + '% do total';
         }
 
-        return { total: total, media: media, tendStr: tendStr, tendUp: tendUp, tendSub: tendSub, maiorMes: maiorMes, menorMes: menorMes, byMonth: byMonth, months: months, counts: counts };
+        return { total: total, media: media, tendStr: tendStr, tendUp: tendUp, tendSub: tendSub, maiorMes: maiorMes, maiorMesSub: maiorMesSub, menorMes: menorMes, menorMesSub: menorMesSub, byMonth: byMonth, months: months, counts: counts };
     }
 
     function formatMonthKey(key) {
@@ -235,8 +240,8 @@
                     '<div class="oc-dash-kpi-sub">' + (kpis.tendSub || 'últimos 12 meses') + '</div>' +
                 '</div>' +
             '</div>' +
-            kpiCard('fa-arrow-up', 'Maior mês', kpis.maiorMes, '', '#059669', '#f0fdf4') +
-            kpiCard('fa-arrow-down', 'Menor mês', kpis.menorMes, '', '#dc2626', '#fef2f2');
+            kpiCard('fa-arrow-up', 'Maior mês', kpis.maiorMes, kpis.maiorMesSub, '#059669', '#f0fdf4') +
+            kpiCard('fa-arrow-down', 'Menor mês', kpis.menorMes, kpis.menorMesSub, '#dc2626', '#fef2f2');
     }
 
     function kpiCard(icon, label, value, sub, color, bg) {
@@ -256,6 +261,30 @@
     }
     function destroyAllCharts() {
         Object.keys(charts).forEach(destroyChart);
+    }
+
+    // Mostra estado vazio sem destruir o canvas
+    function showEmpty(canvasId, icon, msg) {
+        var canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        var wrap = canvas.parentElement;
+        canvas.style.display = 'none';
+        var existing = wrap.querySelector('.oc-dash-empty-overlay');
+        if (!existing) {
+            var div = document.createElement('div');
+            div.className = 'oc-dash-empty-overlay oc-dash-empty';
+            wrap.appendChild(div);
+            existing = div;
+        }
+        existing.innerHTML = '<i class="fas ' + icon + '"></i><p>' + msg + '</p>';
+        existing.style.display = 'flex';
+    }
+    function hideEmpty(canvasId) {
+        var canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        canvas.style.display = '';
+        var overlay = canvas.parentElement.querySelector('.oc-dash-empty-overlay');
+        if (overlay) overlay.style.display = 'none';
     }
 
     // ── Chart: Linha geral (com linha de tendência e média) ──────────────
@@ -422,10 +451,10 @@
         var colors = labels.map(function (_, i) { return PALETTE[i % PALETTE.length]; });
 
         if (!data.length) {
-            ctx.parentElement.innerHTML = '<div class="oc-dash-empty"><i class="fas fa-chart-pie"></i><p>Sem dados</p></div>';
+            showEmpty('ocDashDonutChart', 'fa-chart-pie', 'Sem dados');
             return;
         }
-
+        hideEmpty('ocDashDonutChart');
         charts['donut'] = new Chart(ctx, {
             type: 'doughnut',
             data: {
@@ -469,10 +498,10 @@
         var total = arr.length;
         var entries = Object.entries(counts).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 12);
         if (!entries.length) {
-            ctx.parentElement.innerHTML = '<div class="oc-dash-empty"><i class="fas fa-chart-bar"></i><p>Sem dados</p></div>';
+            showEmpty('ocDashMotivosChart', 'fa-chart-bar', 'Sem dados');
             return;
         }
-
+        hideEmpty('ocDashMotivosChart');
         var labels = entries.map(function (e) { return e[0]; });
         var data = entries.map(function (e) { return e[1]; });
 
@@ -509,10 +538,10 @@
         var total = arr.length;
         var entries = Object.entries(counts).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 12);
         if (!entries.length) {
-            ctx.parentElement.innerHTML = '<div class="oc-dash-empty"><i class="fas fa-chart-bar"></i><p>Sem dados</p></div>';
+            showEmpty('ocDashSetoresChart', 'fa-chart-bar', 'Sem dados');
             return;
         }
-
+        hideEmpty('ocDashSetoresChart');
         var labels = entries.map(function (e) { return e[0]; });
         var data = entries.map(function (e) { return e[1]; });
 
@@ -569,9 +598,10 @@
         var counts = kpis.counts;
 
         if (months.length < 2) {
-            ctx.parentElement.innerHTML = '<div class="oc-dash-empty"><i class="fas fa-chart-waterfall"></i><p>Dados insuficientes (mínimo 2 meses)</p></div>';
+            showEmpty('ocDashWaterfallChart', 'fa-chart-bar', 'Dados insuficientes (mín. 2 meses)');
             return;
         }
+        hideEmpty('ocDashWaterfallChart');
 
         var labels = [];
         var data = [];
@@ -742,10 +772,9 @@
         var container = document.getElementById('dashboardOcContent');
         if (!container) return;
 
-        // Injeta HTML na primeira vez
-        if (!document.getElementById('ocDashKpiRow')) {
-            container.innerHTML = buildDashboardHTML();
-        }
+        // Destrói todos os charts antes de recriar o HTML para evitar canvas órfão
+        destroyAllCharts();
+        container.innerHTML = buildDashboardHTML();
 
         // Dados filtrados por ano (linha do tempo, KPIs maior/menor mês)
         var arrYear = getOcDashYearFiltered();

@@ -32,6 +32,42 @@
     // Estado do modal de gestão genérico
     var ocManagerKind = null;         // 'tipos' | 'setores' | 'categorias' | 'motivos'
 
+    // ── Confirm modal moderno ──────────────────────────────────────────
+    function ocConfirm(opts, callback) {
+        // opts: { title, message, confirmLabel, confirmClass, icon }
+        var title        = opts.title        || 'Confirmar';
+        var message      = opts.message      || '';
+        var confirmLabel = opts.confirmLabel || 'Confirmar';
+        var confirmClass = opts.confirmClass || 'oc-confirm-btn-danger';
+        var icon         = opts.icon         || 'fa-triangle-exclamation';
+
+        var el = document.getElementById('ocConfirmModal');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'ocConfirmModal';
+            document.body.appendChild(el);
+        }
+        el.innerHTML =
+            '<div class="oc-confirm-backdrop" id="ocConfirmBackdrop">' +
+                '<div class="oc-confirm-box">' +
+                    '<div class="oc-confirm-icon-wrap"><i class="fas ' + esc(icon) + ' oc-confirm-icon"></i></div>' +
+                    '<div class="oc-confirm-title">' + esc(title) + '</div>' +
+                    '<div class="oc-confirm-msg">' + esc(message) + '</div>' +
+                    '<div class="oc-confirm-actions">' +
+                        '<button class="oc-confirm-btn-cancel" onclick="document.getElementById(\'ocConfirmModal\').innerHTML=\'\'">Cancelar</button>' +
+                        '<button class="' + esc(confirmClass) + '" id="ocConfirmOkBtn">' + esc(confirmLabel) + '</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        document.getElementById('ocConfirmOkBtn').onclick = function () {
+            el.innerHTML = '';
+            callback();
+        };
+        el.querySelector('.oc-confirm-backdrop').addEventListener('click', function (e) {
+            if (e.target === e.currentTarget) el.innerHTML = '';
+        });
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────
     function uid() { return 'oc_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
     function esc(s) {
@@ -99,7 +135,7 @@
         if (!Array.isArray(masterLists.ncCategorias[tid])) masterLists.ncCategorias[tid] = [];
         return masterLists.ncCategorias[tid];
     }
-    function getSetores() { ensureLists(); return masterLists.setores; }
+    function getSetores() { ensureLists(); return masterLists.setores.slice().sort(function(a,b){ return String(a).localeCompare(String(b),'pt'); }); }
     function getMotivos(catId) {
         ensureLists();
         if (!catId) return [];
@@ -466,7 +502,14 @@
             var ci = document.getElementById('ocFColab'); if (ci) ci.focus();
             return;
         }
+        if (!setor) { toast('Informe o setor.', 'error'); return; }
+        var setorValido = getSetores().some(function (s) { return String(s).trim().toLowerCase() === setor.toLowerCase(); });
+        if (!setorValido) { toast('Selecione um setor válido da lista.', 'error'); return; }
         if (!categoria) { toast('Informe a categoria.', 'error'); return; }
+        var cat = catByName(categoria);
+        if (!motivo) { toast('Informe o motivo.', 'error'); return; }
+        var motivoValido = cat ? getMotivos(cat.id).some(function (m) { return String(m.name).trim().toLowerCase() === motivo.toLowerCase(); }) : false;
+        if (!motivoValido) { toast('Selecione um motivo válido da lista.', 'error'); return; }
 
         var anexos = (typeof getAnexosUpload === 'function') ? getAnexosUpload('oc') : [];
         ensureLists();
@@ -502,11 +545,17 @@
 
     window.ocDelete = function (id) {
         if (!canEdit()) { toast('Sem permissão para excluir.', 'error'); return; }
-        if (!confirm('Excluir esta ocorrência? Esta ação não pode ser desfeita.')) return;
-        window.ocorrencias = (window.ocorrencias || []).filter(function (x) { return x.id !== id; });
-        persist();
-        renderTable();
-        toast('Ocorrência excluída.', 'info');
+        ocConfirm({
+            title: 'Excluir ocorrência',
+            message: 'Esta ação não pode ser desfeita. Deseja continuar?',
+            confirmLabel: 'Excluir',
+            icon: 'fa-trash'
+        }, function () {
+            window.ocorrencias = (window.ocorrencias || []).filter(function (x) { return x.id !== id; });
+            persist();
+            renderTable();
+            toast('Ocorrência excluída.', 'info');
+        });
     };
 
     // =====================================================================
@@ -514,47 +563,90 @@
     // =====================================================================
     var ocViewingId = null;
 
+    var VIEW_FIELD_ICONS = {
+        'Data': 'fa-calendar', 'Colaborador': 'fa-user', 'Setor': 'fa-building',
+        'Categoria': 'fa-tag', 'Motivo': 'fa-circle-dot', 'Responsável': 'fa-user-shield'
+    };
+
     window.ocOpenView = function (id) {
         var o = (window.ocorrencias || []).find(function (x) { return x.id === id; });
         if (!o) return;
         ocViewingId = id;
 
         var tipo = getTipos().find(function (t) { return t.id === o.tipoId; });
-        document.getElementById('ocViewTitle').textContent = (tipo ? tipo.name : 'Ocorrência') + ' — ' + fmtDate(o.data);
-        document.getElementById('ocViewSub').textContent = [o.colaborador, o.setor].filter(Boolean).join(' · ');
+
+        // Hero
+        document.getElementById('ocViewTitle').textContent = tipo ? tipo.name : 'Ocorrência';
+        var subParts = [];
+        if (o.data) subParts.push('<i class="fas fa-calendar" style="opacity:.7"></i>' + esc(fmtDate(o.data)));
+        if (o.colaborador) subParts.push('<span class="oc-view-sub-dot"></span><i class="fas fa-user" style="opacity:.7"></i>' + esc(o.colaborador));
+        if (o.setor) subParts.push('<span class="oc-view-sub-dot"></span><i class="fas fa-building" style="opacity:.7"></i>' + esc(o.setor));
+        document.getElementById('ocViewSub').innerHTML = subParts.join(' ');
         document.getElementById('ocViewEditBtn').style.display = canEdit() ? '' : 'none';
 
-        // Info grid
+        // Chips de categoria/motivo no hero
+        var chipsEl = document.getElementById('ocViewHeroChips');
+        var chips = [];
+        if (o.categoria) chips.push('<span class="oc-view-chip"><i class="fas fa-tag"></i>' + esc(o.categoria) + '</span>');
+        if (o.motivo) chips.push('<span class="oc-view-chip"><i class="fas fa-circle-dot"></i>' + esc(o.motivo) + '</span>');
+        if (chipsEl) chipsEl.innerHTML = chips.join('');
+
+        // Info grid (excluindo categoria e motivo — já estão nos chips)
         var pairs = [
             ['Data', fmtDate(o.data)],
             ['Colaborador', o.colaborador],
             ['Setor', o.setor],
-            ['Categoria', o.categoria],
-            ['Motivo', o.motivo],
             ['Responsável', o.responsavel]
         ];
-        var gridHtml = pairs.filter(function(p) { return p[1]; }).map(function(p) {
-            return '<div class="oc-view-card"><label>' + esc(p[0]) + '</label><div>' + esc(p[1]) + '</div></div>';
+        var gridHtml = '';
+        gridHtml += pairs.filter(function(p) { return p[1]; }).map(function(p) {
+            var ico = VIEW_FIELD_ICONS[p[0]] || 'fa-circle-info';
+            return '<div class="oc-view-card">' +
+                '<label><i class="fas ' + ico + '"></i>' + esc(p[0]) + '</label>' +
+                '<div>' + esc(p[1]) + '</div>' +
+            '</div>';
         }).join('');
         document.getElementById('ocViewGrid').innerHTML = gridHtml;
 
+        // Comentário
         var descWrap = document.getElementById('ocViewDescWrap');
         if (o.comentario) {
-            descWrap.innerHTML = '<div class="oc-view-desc-label">Comentário</div><div class="oc-view-desc">' + esc(o.comentario).replace(/\n/g, '<br>') + '</div>';
+            descWrap.innerHTML =
+                '<div class="oc-view-desc-block">' +
+                    '<div class="oc-view-desc-block-label"><i class="fas fa-comment-dots"></i> Comentário</div>' +
+                    '<div class="oc-view-desc-text">' + esc(o.comentario).replace(/\n/g, '<br>') + '</div>' +
+                '</div>';
         } else {
             descWrap.innerHTML = '';
         }
 
         // Anexos
-        var anexosList = document.getElementById('ocViewAnexosList');
         var anexos = Array.isArray(o.anexos) ? o.anexos : [];
-        if (anexos.length === 0) {
-            anexosList.innerHTML = '<div class="oc-view-no-anexos"><i class="fas fa-paperclip"></i><p>Nenhum anexo.</p></div>';
+        var anexosList = document.getElementById('ocViewAnexosList');
+        var tabBadge = document.getElementById('ocViewAnexosTab');
+
+        if (tabBadge) {
+            tabBadge.innerHTML = '<i class="fas fa-paperclip"></i> Anexos' +
+                (anexos.length ? ' <span class="oc-view-tab-badge">' + anexos.length + '</span>' : '');
+        }
+
+        if (!anexos.length) {
+            anexosList.innerHTML =
+                '<div class="oc-view-anexos-empty">' +
+                    '<div class="oc-view-anexos-empty-icon"><i class="fas fa-paperclip"></i></div>' +
+                    '<p>Nenhum anexo nesta ocorrência.</p>' +
+                '</div>';
         } else {
             anexosList.innerHTML = '<div class="oc-view-anexos-grid">' + anexos.map(function(a) {
-                var icon = a.tipo === 'link' ? 'fa-link' : 'fa-file';
-                return '<a href="' + esc(a.url) + '" target="_blank" rel="noopener" class="oc-view-anexo-item">' +
-                    '<i class="fas ' + icon + '"></i><span>' + esc(a.titulo || a.url) + '</span></a>';
+                var isLink = a.tipo === 'link';
+                var icon = isLink ? 'fa-link' : 'fa-file-alt';
+                var typeLabel = isLink ? 'Link' : 'Arquivo';
+                var titulo = esc(a.titulo || a.url || 'Anexo');
+                return '<a href="' + esc(a.url) + '" target="_blank" rel="noopener" class="oc-view-anexo-card">' +
+                    '<div class="oc-view-anexo-icon"><i class="fas ' + icon + '"></i></div>' +
+                    '<span class="oc-view-anexo-name">' + titulo + '</span>' +
+                    '<span class="oc-view-anexo-type">' + typeLabel + '</span>' +
+                '</a>';
             }).join('') + '</div>';
         }
 
@@ -578,8 +670,9 @@
 
     window.ocViewEdit = function () {
         if (ocViewingId) {
+            var id = ocViewingId;
             ocCloseView();
-            ocOpenEdit(ocViewingId);
+            ocOpenEdit(id);
         }
     };
 
@@ -658,7 +751,11 @@
             return '<div class="oc-ac-opt" data-i="' + i + '">' + esc(main) + sub + '</div>';
         }).join('');
         Array.prototype.forEach.call(dd.querySelectorAll('.oc-ac-opt'), function (el) {
-            el.onclick = function () { onPick(items[parseInt(el.getAttribute('data-i'), 10)]); };
+            el.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                onPick(items[parseInt(el.getAttribute('data-i'), 10)]);
+                dd.classList.remove('open');
+            });
         });
         dd.classList.add('open');
     }
@@ -790,7 +887,7 @@
         if (ocManagerKind === 'tipos') return getTipos();
         if (ocManagerKind === 'categorias') return getCategorias(ocManagerTipoId);
         if (ocManagerKind === 'motivos') return getMotivos(ocManagerCatId);
-        if (ocManagerKind === 'setores') return getSetores().map(function (s, i) { return { id: 'idx_' + i, name: s, _setor: true }; });
+        if (ocManagerKind === 'setores') return getSetores().map(function (s) { return { id: s, name: s, _setor: true }; });
         return [];
     }
 
@@ -802,16 +899,19 @@
             box.innerHTML = '<div class="oc-list-empty">Nenhum item cadastrado ainda.</div>';
             return;
         }
-        box.innerHTML = items.map(function (it, i) {
-            var name = ocManagerKind === 'setores' ? it.name : it.name;
-            var key = ocManagerKind === 'setores' ? String(i) : it.id;
-            return '<div class="oc-list-item" data-key="' + esc(key) + '">' +
-                '<span class="oc-li-name">' + esc(name) + '</span>' +
+        box.innerHTML = items.map(function (it) {
+            return '<div class="oc-list-item" data-key="' + esc(it.id) + '">' +
+                '<span class="oc-li-name">' + esc(it.name) + '</span>' +
                 '<div class="oc-li-btns">' +
-                '<button onclick="ocManagerEdit(this,\'' + esc(key) + '\')" title="Editar"><i class="fas fa-pen"></i></button>' +
-                '<button class="oc-li-del" onclick="ocManagerRemove(\'' + esc(key) + '\')" title="Remover"><i class="fas fa-trash"></i></button>' +
+                '<button class="oc-li-edit-btn" title="Editar"><i class="fas fa-pen"></i></button>' +
+                '<button class="oc-li-del" title="Remover"><i class="fas fa-trash"></i></button>' +
                 '</div></div>';
         }).join('');
+        Array.prototype.forEach.call(box.querySelectorAll('.oc-list-item'), function (row) {
+            var key = row.getAttribute('data-key');
+            row.querySelector('.oc-li-edit-btn').addEventListener('click', function () { ocManagerEdit(row.querySelector('.oc-li-edit-btn'), key); });
+            row.querySelector('.oc-li-del').addEventListener('click', function () { ocManagerRemove(key); });
+        });
     }
 
     window.ocManagerAdd = function () {
@@ -830,8 +930,8 @@
             if (mo.some(function (m) { return m.name.toLowerCase() === name.toLowerCase(); })) { toast('Motivo já existe.', 'error'); return; }
             mo.push({ id: uid(), name: name });
         } else if (ocManagerKind === 'setores') {
-            if (getSetores().some(function (s) { return String(s).toLowerCase() === name.toLowerCase(); })) { toast('Setor já existe.', 'error'); return; }
-            getSetores().push(name);
+            if (masterLists.setores.some(function (s) { return String(s).toLowerCase() === name.toLowerCase(); })) { toast('Setor já existe.', 'error'); return; }
+            masterLists.setores.push(name);
         }
         input.value = '';
         persist();
@@ -864,10 +964,9 @@
     function ocApplyRename(key, nv) {
         ensureLists();
         if (ocManagerKind === 'setores') {
-            var idx = parseInt(key, 10);
-            var old = getSetores()[idx];
-            getSetores()[idx] = nv;
-            // propaga em ocorrências
+            var old = key;
+            var realIdx = masterLists.setores.indexOf(old);
+            if (realIdx !== -1) masterLists.setores[realIdx] = nv;
             (window.ocorrencias || []).forEach(function (o) { if (o.setor === old) o.setor = nv; });
         } else {
             var list = ocManagerKind === 'tipos' ? getTipos() : (ocManagerKind === 'categorias' ? getCategorias(ocManagerTipoId) : getMotivos(ocManagerCatId));
@@ -887,27 +986,49 @@
     }
 
     window.ocManagerRemove = function (key) {
-        if (!confirm('Remover este item?')) return;
-        ensureLists();
-        if (ocManagerKind === 'tipos') {
-            var t = getTipos().find(function (x) { return String(x.id) === String(key); });
-            var hasOcc = (window.ocorrencias || []).some(function (o) { return t && o.tipoId === t.id; });
-            if (hasOcc && !confirm('Há ocorrências neste tipo. Elas ficarão sem tipo. Continuar?')) return;
-            masterLists.ncTipos = getTipos().filter(function (x) { return String(x.id) !== String(key); });
-            if (t && ocCurrentTipoId === t.id) ocCurrentTipoId = null;
-        } else if (ocManagerKind === 'categorias') {
-            var c = getCategorias(ocManagerTipoId).find(function (x) { return String(x.id) === String(key); });
-            masterLists.ncCategorias[ocManagerTipoId] = getCategorias(ocManagerTipoId).filter(function (x) { return String(x.id) !== String(key); });
-            if (c && masterLists.ncMotivos) delete masterLists.ncMotivos[c.id];
-        } else if (ocManagerKind === 'motivos') {
-            masterLists.ncMotivos[ocManagerCatId] = getMotivos(ocManagerCatId).filter(function (x) { return String(x.id) !== String(key); });
-        } else if (ocManagerKind === 'setores') {
-            var idx = parseInt(key, 10);
-            getSetores().splice(idx, 1);
+        function doRemove() {
+            ensureLists();
+            if (ocManagerKind === 'tipos') {
+                var t = getTipos().find(function (x) { return String(x.id) === String(key); });
+                var hasOcc = (window.ocorrencias || []).some(function (o) { return t && o.tipoId === t.id; });
+                if (hasOcc) {
+                    ocConfirm({
+                        title: 'Tipo com ocorrências',
+                        message: 'Há ocorrências vinculadas a este tipo. Elas ficarão sem tipo. Deseja continuar?',
+                        confirmLabel: 'Remover mesmo assim',
+                        icon: 'fa-triangle-exclamation'
+                    }, function () {
+                        masterLists.ncTipos = getTipos().filter(function (x) { return String(x.id) !== String(key); });
+                        if (t && ocCurrentTipoId === t.id) ocCurrentTipoId = null;
+                        persist();
+                        renderManagerList();
+                        afterListChange();
+                    });
+                    return;
+                }
+                masterLists.ncTipos = getTipos().filter(function (x) { return String(x.id) !== String(key); });
+                if (t && ocCurrentTipoId === t.id) ocCurrentTipoId = null;
+            } else if (ocManagerKind === 'categorias') {
+                var c = getCategorias(ocManagerTipoId).find(function (x) { return String(x.id) === String(key); });
+                masterLists.ncCategorias[ocManagerTipoId] = getCategorias(ocManagerTipoId).filter(function (x) { return String(x.id) !== String(key); });
+                if (c && masterLists.ncMotivos) delete masterLists.ncMotivos[c.id];
+            } else if (ocManagerKind === 'motivos') {
+                masterLists.ncMotivos[ocManagerCatId] = getMotivos(ocManagerCatId).filter(function (x) { return String(x.id) !== String(key); });
+            } else if (ocManagerKind === 'setores') {
+                var ridx = masterLists.setores.indexOf(key);
+                if (ridx !== -1) masterLists.setores.splice(ridx, 1);
+            }
+            persist();
+            renderManagerList();
+            afterListChange();
         }
-        persist();
-        renderManagerList();
-        afterListChange();
+
+        ocConfirm({
+            title: 'Remover item',
+            message: 'Tem certeza que deseja remover este item?',
+            confirmLabel: 'Remover',
+            icon: 'fa-trash'
+        }, doRemove);
     };
 
     // Após alterar qualquer lista, atualiza UI dependente

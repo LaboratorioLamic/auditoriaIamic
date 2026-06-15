@@ -68,11 +68,10 @@ var _getAllowedSetoresBase = null;
 
 function _getVisibleSetores() {
     const all = (masterLists && masterLists.setores) ? [...masterLists.setores] : [];
-    // Usa a função original (antes do patch) para não excluir setores pelo filtro ativo
     const baseFn = _getAllowedSetoresBase || getAllowedSetores;
     const allowed = baseFn();
-    if (allowed === null) return all;
-    return all.filter(s => allowed.includes(s));
+    const result = allowed === null ? all : all.filter(s => allowed.includes(s));
+    return result.sort((a, b) => String(a).localeCompare(String(b), 'pt'));
 }
 
 function _renderSetorFilterGrid(setores) {

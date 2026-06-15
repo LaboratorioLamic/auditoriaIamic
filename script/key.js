@@ -727,8 +727,8 @@ function _checkTriPerm(permVal, item) {
     function renderModalSetores() {
         const container = document.getElementById('modalSetoresList');
         if (!container) return;
-        
-        const setores = masterLists.setores || [];
+
+        const setores = (masterLists.setores || []).slice().sort((a, b) => String(a).localeCompare(String(b), 'pt'));
         const canManageLists = document.getElementById('cfgCanManageLists')?.value === 'true';
         
         container.innerHTML = '';
