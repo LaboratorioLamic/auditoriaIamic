@@ -135,6 +135,7 @@ function _checkTriPerm(permVal, item) {
             box.style.display = 'none';
         }
         applyListManagerPermissions();
+        applyTaskViewPermission();
     }
 
     function applyListManagerPermissions() {
@@ -143,6 +144,21 @@ function _checkTriPerm(permVal, item) {
             btn.style.display = canManage ? 'block' : 'none';
         });
     }
+
+    function applyTaskViewPermission() {
+        const restrictToSelf = currentuser && !userIsAdmin() && currentuser.taskView === 'usuario';
+        const display = restrictToSelf ? 'none' : '';
+        const b1 = document.getElementById('btnViewAllTabs');
+        const b2 = document.getElementById('btnViewAllDash');
+        if (b1) b1.style.display = display;
+        if (b2) b2.style.display = display;
+        // Se o usuário estava em modo 'all' mas agora é restrito, forçar para responsável
+        if (restrictToSelf && typeof fbarMyTasksMode !== 'undefined' && fbarMyTasksMode === 'all') {
+            if (typeof setMyTasksMode === 'function') setMyTasksMode('responsavel');
+            if (typeof setMyTasksModeDash === 'function') setMyTasksModeDash('responsavel');
+        }
+    }
+    window.applyTaskViewPermission = applyTaskViewPermission;
 
     function userIsAdmin() {
         if (!currentuser) return false;
@@ -299,6 +315,7 @@ function _checkTriPerm(permVal, item) {
                     updateCurrentuserUI();
                     applyuserPermissionsToTabs();
                     applyListManagerPermissions();
+                    applyTaskViewPermission();
                     loading.innerHTML = '<i class="fas fa-check"></i> Login realizado. Sincronizando dados...';
                     // PROTEÇÃO: Força sincronização completa com Firebase após login
                     forceFirebaseSync();
@@ -537,6 +554,9 @@ function _checkTriPerm(permVal, item) {
             if (hint) hint.style.display = 'inline';
         }
         updateUsrModalAvatar();
+        // Limpa qualquer descrição de permissão aberta
+        document.querySelectorAll('.um-perm-desc').forEach(d => d.remove());
+        document.querySelectorAll('.um-perm-info.active').forEach(b => b.classList.remove('active'));
         document.getElementById('modalUsuario').style.display = 'flex';
     };
 
@@ -681,6 +701,110 @@ function _checkTriPerm(permVal, item) {
         }
     }
 
+    // Descrições das opções de cada permissão (exibidas ao clicar no ícone de info)
+    const PERM_INFO = {
+        edit: {
+            title: 'Editar registros',
+            items: [
+                ['Total', 'Pode editar qualquer registro do sistema.'],
+                ['Parcial', 'Só pode editar registros em que é responsável técnico ou revisor.'],
+                ['Não', 'Não pode editar nenhum registro (somente leitura).']
+            ]
+        },
+        delete: {
+            title: 'Excluir registros',
+            items: [
+                ['Não', 'Não pode excluir nenhum registro.'],
+                ['Parcial', 'Só pode excluir registros em que é responsável técnico ou revisor.'],
+                ['Total', 'Pode excluir qualquer registro do sistema.']
+            ]
+        },
+        lists: {
+            title: 'Gerenciar listas',
+            items: [
+                ['Sim', 'Pode criar, editar e excluir itens das listas (setores, responsáveis, etc.) e acessa todos os setores.'],
+                ['Não', 'Não pode alterar as listas; o acesso fica restrito aos setores selecionados.']
+            ]
+        },
+        managePubs: {
+            title: 'Gerenciar publicações',
+            items: [
+                ['Total', 'Pode criar e gerenciar qualquer publicação.'],
+                ['Parcial', 'Só pode gerenciar publicações em que é responsável técnico ou revisor.'],
+                ['Não', 'Não pode gerenciar publicações.']
+            ]
+        },
+        publish: {
+            title: 'Realizar publicações',
+            items: [
+                ['Total', 'Pode efetivar a publicação de qualquer registro.'],
+                ['Parcial', 'Só pode publicar registros em que é responsável técnico ou revisor.'],
+                ['Não', 'Não pode realizar publicações.']
+            ]
+        },
+        checklist: {
+            title: 'Preencher checklist',
+            items: [
+                ['Total', 'Pode preencher o checklist de qualquer tarefa.'],
+                ['Parcial', 'Só pode preencher o checklist de tarefas em que é responsável técnico ou revisor.'],
+                ['Não', 'Não pode preencher checklists.']
+            ]
+        },
+        taskView: {
+            title: 'Visualização de tarefas',
+            items: [
+                ['Todos', 'Visualiza as tarefas de todos os usuários.'],
+                ['Usuário', 'Visualiza apenas as tarefas em que é responsável técnico ou revisor.']
+            ]
+        }
+    };
+
+    function togglePermInfo(btn, key) {
+        const wasActive = btn.classList.contains('active');
+        // Fecha qualquer dropdown aberto
+        document.querySelectorAll('.um-perm-info.active').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.um-perm-desc').forEach(d => d.remove());
+        if (wasActive) return;
+
+        const info = PERM_INFO[key];
+        if (!info) return;
+        btn.classList.add('active');
+
+        const box = document.createElement('div');
+        box.className = 'um-perm-desc';
+        const lis = info.items.map(([opt, desc]) => `<li><b>${opt}:</b> ${desc}</li>`).join('');
+        box.innerHTML = `<div class="um-perm-desc-title"><i class="fas fa-circle-info"></i>${info.title}</div><ul>${lis}</ul>`;
+
+        const card = btn.closest('.um-perm-card');
+        const section = btn.closest('.um-section');
+        const wrap = document.querySelector('.um-wrap');
+
+        section.style.position = 'relative';
+        section.appendChild(box);
+
+        // Posiciona abaixo do card, com largura igual ao modal
+        const cardRect = card.getBoundingClientRect();
+        const sectionRect = section.getBoundingClientRect();
+        const wrapWidth = wrap ? wrap.getBoundingClientRect().width : sectionRect.width;
+        const offsetLeft = sectionRect.left - (wrap ? wrap.getBoundingClientRect().left : sectionRect.left);
+
+        box.style.width = wrapWidth + 'px';
+        box.style.left = -offsetLeft + 'px';
+        box.style.top = (cardRect.bottom - sectionRect.top + 8) + 'px';
+        box.style.transform = 'none';
+
+        // Fecha ao clicar fora
+        const outsideClick = (e) => {
+            if (!section.contains(e.target) || (!card.contains(e.target) && !box.contains(e.target))) {
+                box.remove();
+                btn.classList.remove('active');
+                document.removeEventListener('click', outsideClick, true);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', outsideClick, true), 0);
+    }
+    window.togglePermInfo = togglePermInfo;
+
     function renderusersConfigTable() {
         const tbody = document.getElementById('cfgusersTable');
         if (!tbody) return;
@@ -751,6 +875,7 @@ function _checkTriPerm(permVal, item) {
         const canManagePubs = g('cfgCanManagePubs').value || 'total';
         const canPublish = g('cfgCanPublish').value || 'total';
         const canChecklist = g('cfgCanChecklist').value || 'total';
+        const taskView = g('cfgTaskView').value || 'todos';
         const isActive = g('cfgStatus').value !== 'false';
         const isAdmin = g('cfgIsAdmin').value === 'true';
         const tabs = Array.from(document.querySelectorAll('.cfg-tab')).filter(c => c.checked).map(c => c.value);
@@ -772,7 +897,7 @@ function _checkTriPerm(permVal, item) {
             _toast('Já existe um usuário com esse login.', 'error'); return;
         }
 
-        const userData = { name, user, tabs, cpf, cargo, grupo, canEditCards: canEdit, canDeleteCards: canDelete, canManageLists, canManagePubs: canManagePubs, canPublish, canChecklist, allowedSetores, active: isActive, isAdmin };
+        const userData = { name, user, tabs, cpf, cargo, grupo, canEditCards: canEdit, canDeleteCards: canDelete, canManageLists, canManagePubs: canManagePubs, canPublish, canChecklist, taskView, allowedSetores, active: isActive, isAdmin };
 
         // Captura o nome anterior antes de alterar
         let _oldName = null;
@@ -874,6 +999,7 @@ function _checkTriPerm(permVal, item) {
         set('cfgCanManagePubs', _normTriPerm(u.canManagePubs, 'total'));
         set('cfgCanPublish', u.canPublish || 'total');
         set('cfgCanChecklist', u.canChecklist || 'total');
+        set('cfgTaskView', u.taskView || 'todos');
         set('cfgStatus', u.active === false ? 'false' : 'true');
         set('cfgIsAdmin', u.isAdmin === true ? 'true' : 'false');
         const tabs = Array.isArray(u.tabs) && u.tabs.length > 0 ? u.tabs : ['dashboard', 'auditoria'];

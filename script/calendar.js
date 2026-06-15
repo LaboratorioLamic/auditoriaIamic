@@ -387,7 +387,7 @@ function _calBuildViewFilter() {
     const dd = document.createElement('div');
     dd.className = 'filters-dropdown fbar-adv-dropdown';
     dd.id = 'calViewFilterDropdown';
-    dd.style.cssText = 'display:none; position:absolute; right:0; z-index:60; min-width:200px;';
+    dd.style.cssText = 'display:none; position:absolute; z-index:60; min-width:200px;';
 
     const opts = [
         { val: 'tarefas',     label: 'Tarefas',     desc: 'Visualiza as tarefas na agenda' },

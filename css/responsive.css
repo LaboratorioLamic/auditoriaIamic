@@ -293,6 +293,14 @@
     .cal-event-chip { font-size: 10px; padding: 2px 4px; }
 }
 
+/* Dropdown de filtro do calendário: abre à direita no mobile */
+@media (max-width: 768px) {
+    .cal-viewfilter-wrap .fbar-adv-dropdown {
+        left: 0;
+        right: auto;
+    }
+}
+
 @media (max-width: 480px) {
     .cal-nav-title { font-size: 14px; min-width: 110px; }
     .cal-ctrl-area { gap: 6px; }

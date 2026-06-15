@@ -9,6 +9,9 @@
             documents = [];
             users = [];
             masterLists = JSON.parse(JSON.stringify(defaultMasterLists));
+            // Invalida o baseline: enquanto não recarregamos, o estado local
+            // vazio não deve ser interpretado como "tudo excluído" num save.
+            _syncBaseline = null;
             loadCloudData();
         } catch (error) {
             console.error('Erro na sincronização forçada:', error);
@@ -45,6 +48,9 @@
             [audits, trainings, activities, maintenances, documents].forEach(arr => {
                 arr.forEach(item => item.historico = item.historico || []);
             });
+
+            // Baseline para o merge 3-vias: estado remoto recém-adotado.
+            captureSyncBaseline();
 
             await loadusers();
             // Atualiza referência do currentuser para o objeto recém-carregado (com id)
@@ -103,7 +109,9 @@
                     JSON.stringify(record.masterLists) !== JSON.stringify(masterLists) ||
                     JSON.stringify(record.kanbanOrder) !== JSON.stringify(kanbanOrder);
 
-                const dataChanged = !editingCard && (
+                // Não adota o remoto enquanto há edição aberta OU gravação local
+                // pendente: evita sobrescrever alterações locais ainda não salvas.
+                const dataChanged = !editingCard && _pendingSaves === 0 && (
                     JSON.stringify(record.audits) !== JSON.stringify(audits) ||
                     JSON.stringify(record.trainings) !== JSON.stringify(trainings) ||
                     JSON.stringify(record.activities) !== JSON.stringify(activities) ||
@@ -126,6 +134,8 @@
                     activities = record.activities || [];
                     maintenances = record.maintenances || [];
                     documents = record.documents || [];
+                    // Adotamos o estado remoto: atualiza o baseline do merge.
+                    captureSyncBaseline();
                 }
 
                 populateSelects();
@@ -185,10 +195,83 @@
         }
     }
 
-    async function saveAll(showAlert = false) {
+    // === MERGE 3-VIAS / BASELINE (previne perda de dados em edições concorrentes) ===
+    // _syncBaseline guarda um snapshot das coleções no último estado remoto que
+    // adotamos integralmente. Ao salvar, comparamos o estado local com esse
+    // baseline para descobrir o que ESTE usuário realmente alterou (adições,
+    // edições e exclusões) e aplicamos apenas esses deltas sobre o estado remoto
+    // mais recente — sem sobrescrever alterações feitas por outras sessões.
+    var _syncBaseline = null;
+    var _saveAllQueue = Promise.resolve(); // serializa gravações concorrentes
+    var _pendingSaves = 0;                 // nº de saves em andamento (guard do listener)
+
+    function _deepClone(v) {
+        try { return JSON.parse(JSON.stringify(v == null ? [] : v)); } catch (_) { return []; }
+    }
+
+    function captureSyncBaseline() {
+        _syncBaseline = {
+            audits: _deepClone(audits),
+            trainings: _deepClone(trainings),
+            activities: _deepClone(activities),
+            maintenances: _deepClone(maintenances),
+            documents: _deepClone(documents)
+        };
+    }
+
+    // Reconcilia uma coleção: parte do estado REMOTO e reaplica somente as
+    // alterações locais reais (detectadas contra o baseline) por id de item.
+    function _mergeCollection(localArr, remoteArr, baseArr) {
+        localArr  = Array.isArray(localArr)  ? localArr  : [];
+        remoteArr = Array.isArray(remoteArr) ? remoteArr : [];
+        baseArr   = Array.isArray(baseArr)   ? baseArr   : [];
+
+        const hasId = (it) => it && it.id !== undefined && it.id !== null && it.id !== '';
+
+        // Sem ids confiáveis não há como reconciliar com segurança: mantém a
+        // visão local (fallback seguro; não deve ocorrer no fluxo normal).
+        if (localArr.some(it => !hasId(it)) || remoteArr.some(it => !hasId(it))) {
+            return _deepClone(localArr);
+        }
+
+        const baseById  = new Map(baseArr.map(it => [String(it.id), it]));
+        const localById = new Map(localArr.map(it => [String(it.id), it]));
+
+        // Começa do remoto para preservar alterações de outras sessões.
+        const merged = new Map(remoteArr.map(it => [String(it.id), it]));
+
+        // Exclusões locais: itens que existiam no baseline e sumiram do local.
+        baseById.forEach((_v, id) => {
+            if (!localById.has(id)) merged.delete(id);
+        });
+
+        // Adições/edições locais: o item local difere do baseline => local vence.
+        localById.forEach((item, id) => {
+            const base = baseById.get(id);
+            if (!base || JSON.stringify(base) !== JSON.stringify(item)) {
+                merged.set(id, item);
+            }
+        });
+
+        return Array.from(merged.values());
+    }
+
+    // Wrapper público: enfileira as gravações para que duas chamadas de saveAll
+    // não se intercalem (read-merge-write atômico por chamada).
+    function saveAll(showAlert = false) {
+        _pendingSaves++;
+        _saveAllQueue = _saveAllQueue
+            .catch(() => {})
+            .then(() => _saveAllInternal(showAlert))
+            .finally(() => { _pendingSaves = Math.max(0, _pendingSaves - 1); });
+        return _saveAllQueue;
+    }
+
+    async function _saveAllInternal(showAlert = false) {
         try {
             const database = getFirebaseDatabase();
             const dbRef = getFirebaseRef();
+            const dbGet = getFirebaseGet();
             const { update } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
 
             cleanInvalidResponsaveis();
@@ -203,16 +286,64 @@
                 });
             });
 
+            // Baseline ausente (ex.: carregamento ainda não concluído ou falhou):
+            // trata como vazio. Assim todo item local vira "novo" (upsert) e
+            // NADA é excluído — evita apagar o banco com um estado local parcial.
+            const base = _syncBaseline || {
+                audits: [], trainings: [], activities: [], maintenances: [], documents: []
+            };
+
+            // Relê o estado remoto atual para reconciliar (merge 3-vias).
+            let remote = {};
+            try {
+                const snap = await dbGet(dbRef(database, "/"));
+                remote = snap.exists() ? snap.val() : {};
+            } catch (e) {
+                // Sem leitura remota não é seguro fazer merge: aborta a gravação
+                // para não arriscar sobrescrever dados de outras sessões.
+                console.error('saveAll: falha ao ler estado remoto para merge. Gravação cancelada.', e);
+                if (showAlert) alert("Erro ao sincronizar dados. Verifique a conexão.");
+                return;
+            }
+
+            const mergedAudits       = _mergeCollection(audits,       remote.audits,       base.audits);
+            const mergedTrainings    = _mergeCollection(trainings,    remote.trainings,    base.trainings);
+            const mergedActivities   = _mergeCollection(activities,   remote.activities,   base.activities);
+            const mergedMaintenances = _mergeCollection(maintenances, remote.maintenances, base.maintenances);
+            const mergedDocuments    = _mergeCollection(documents,    remote.documents,    base.documents);
+
+            // O merge trouxe novidades de outras sessões? (para re-render)
+            const pulledRemoteChanges =
+                JSON.stringify(mergedAudits)       !== JSON.stringify(audits) ||
+                JSON.stringify(mergedTrainings)    !== JSON.stringify(trainings) ||
+                JSON.stringify(mergedActivities)   !== JSON.stringify(activities) ||
+                JSON.stringify(mergedMaintenances) !== JSON.stringify(maintenances) ||
+                JSON.stringify(mergedDocuments)    !== JSON.stringify(documents);
+
+            // Adota o resultado reconciliado como novo estado local + baseline.
+            audits = mergedAudits;
+            trainings = mergedTrainings;
+            activities = mergedActivities;
+            maintenances = mergedMaintenances;
+            documents = mergedDocuments;
+            captureSyncBaseline();
+
             await update(dbRef(database, "/"), {
-                '/audits': audits,
-                '/trainings': trainings,
-                '/activities': activities,
-                '/maintenances': maintenances,
-                '/documents': documents,
+                '/audits': mergedAudits,
+                '/trainings': mergedTrainings,
+                '/activities': mergedActivities,
+                '/maintenances': mergedMaintenances,
+                '/documents': mergedDocuments,
                 '/masterLists': masterLists,
                 '/kanbanOrder': kanbanOrder,
                 '/lastUpdate': new Date().toISOString()
             });
+
+            // Se incorporamos mudanças de outras sessões, atualiza a UI.
+            if (pulledRemoteChanges && !isEditingCardOpen()) {
+                populateSelects();
+                currentTab === 'dashboard' ? renderDashboard() : renderCards();
+            }
 
             if (showAlert) alert("Dados sincronizados com sucesso!");
 

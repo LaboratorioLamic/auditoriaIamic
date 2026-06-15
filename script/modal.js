@@ -97,26 +97,35 @@ function resetModal(prefix) {
 
     document.getElementById('addBtn').onclick = () => {
         originalItem = null;
+        const _currentUserName = currentuser ? (currentuser.name || currentuser.user || '') : '';
 
         if (currentTab === 'auditoria') {
             editingAuditId = null;
             resetModal('audit');
+            if (_currentUserName && typeof msSetValue === 'function') msSetValue('audit-resp', [_currentUserName]);
             openFormDrawer('modalAuditoria');
         } else if (currentTab === 'treinamentos') {
             editingTrainId = null;
             resetModal('train');
+            if (_currentUserName && typeof msSetValue === 'function') msSetValue('tren-resp', [_currentUserName]);
             openFormDrawer('modalTreinamentos');
         } else if (currentTab === 'atividades') {
             editingAtivId = null;
             resetModal('ativ');
+            if (_currentUserName && typeof msSetValue === 'function') msSetValue('ativ-resp', [_currentUserName]);
             openFormDrawer('modalAtividades');
         } else if (currentTab === 'manutencao') {
             editingMantId = null;
             resetModal('mant');
+            if (_currentUserName) {
+                const mantRespEl = document.getElementById('mantResponsavelTecnico');
+                if (mantRespEl) mantRespEl.value = _currentUserName;
+            }
             openFormDrawer('modalManutencao');
         } else if (currentTab === 'documentos') {
             editingDocId = null;
             resetModal('doc');
+            if (_currentUserName && typeof msSetValue === 'function') msSetValue('doc-resp', [_currentUserName]);
             openFormDrawer('modalDocumentos');
         }
     };
