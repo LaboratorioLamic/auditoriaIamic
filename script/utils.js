@@ -97,6 +97,10 @@ window.showPermanentDeleteConfirm = function({ title, message, onConfirm } = {})
             <div class="confirm-danger-title">${title || '⚠️ Deleção Permanente'}</div>
             <div class="confirm-danger-message perm-delete-msg">${message || 'Esta ação é <strong>irreversível</strong>. O item será removido para sempre.'}</div>
             <div class="perm-delete-input-wrap">
+                <label class="perm-delete-label" style="margin-bottom:6px;">Motivo da exclusão <span style="color:#9ca3af;font-weight:400;">(opcional)</span></label>
+                <textarea id="permDeleteReason" class="perm-delete-input" rows="2" placeholder="Descreva o motivo..." style="resize:vertical;min-height:52px;font-family:inherit;"></textarea>
+            </div>
+            <div class="perm-delete-input-wrap" style="margin-top:10px;">
                 <label class="perm-delete-label">Digite <span class="perm-delete-keyword">SIM</span> para confirmar:</label>
                 <input id="permDeleteInput" class="perm-delete-input" type="text" placeholder="SIM" autocomplete="off" spellcheck="false" />
                 <div class="perm-delete-input-hint" id="permDeleteHint"></div>
@@ -138,8 +142,9 @@ window.showPermanentDeleteConfirm = function({ title, message, onConfirm } = {})
     overlay.querySelector('#permDeleteCancel').onclick = () => overlay.remove();
     btn.onclick = () => {
         if (input.value.trim() !== 'SIM') return;
+        const reason = (overlay.querySelector('#permDeleteReason')?.value || '').trim();
         overlay.remove();
-        if (typeof onConfirm === 'function') onConfirm('');
+        if (typeof onConfirm === 'function') onConfirm(reason);
     };
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 

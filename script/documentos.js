@@ -18,6 +18,8 @@
         if (!Array.isArray(responsavel)) responsavel = responsavel ? [responsavel] : [];
         if (!Array.isArray(revisor))     revisor     = revisor     ? [revisor]     : [];
 
+        if (typeof _checkPartialPermOnSave === 'function' && !_checkPartialPermOnSave(isNew, responsavel, revisor)) return;
+
         if (!isNew && !userIsAdmin()) {
             if (!responsavel.length) {
                 const prev = item.responsavel;
@@ -28,6 +30,7 @@
                 try { revisor = Array.isArray(prev) ? prev : (prev ? JSON.parse(prev) : []); } catch { revisor = prev ? [prev] : []; }
             }
         }
+
         responsavel = JSON.stringify(responsavel);
         revisor     = JSON.stringify(revisor);
 

@@ -239,4 +239,19 @@
         MS_FIELDS.forEach(_initField);
     });
 
+    window.msSetDisabled = function (key, disabled) {
+        var cfg = MS_FIELDS.find(function (f) { return f.key === key; });
+        if (!cfg) return;
+        var fieldEl = document.getElementById(cfg.field);
+        var inputEl = document.getElementById(cfg.input);
+        if (!fieldEl) return;
+        if (disabled) {
+            fieldEl.classList.add('ms-field--disabled');
+            if (inputEl) inputEl.disabled = true;
+        } else {
+            fieldEl.classList.remove('ms-field--disabled');
+            if (inputEl) inputEl.disabled = false;
+        }
+    };
+
 })();

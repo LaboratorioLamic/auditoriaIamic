@@ -17,6 +17,32 @@ window.resolveUserId = function(id) {
     return u ? (u.name || u.user || '') : null;
 };
 
+// Valida permissão parcial/nao ao salvar: usuário deve estar em resp ou revisor.
+// respArr e revArr são arrays já resolvidos (antes de JSON.stringify).
+// Retorna true se pode salvar, false se deve bloquear (e já exibe toast).
+function _checkPartialPermOnSave(isNew, respArr, revArr) {
+    if (!currentuser || userIsAdmin()) return true;
+    const perm = _normTriPerm(currentuser.canEditCards, 'total');
+    if (perm === 'total') return true;
+    if (perm === 'nao') {
+        if (typeof showToast === 'function') showToast('Você não tem permissão para criar ou editar registros.', 'error');
+        return false;
+    }
+    // parcial: deve estar como responsável ou revisor
+    const meId   = String(currentuser.id || '').trim();
+    const meName = String(currentuser.name || currentuser.user || '').trim().toLowerCase();
+    const _hasMe = (arr) => (arr || []).some(v => {
+        const vs = String(v).trim();
+        return (meId && vs === meId) || vs.toLowerCase() === meName;
+    });
+    if (_hasMe(respArr) || _hasMe(revArr)) return true;
+    if (typeof showToast === 'function') {
+        showToast('Permissão insuficiente: você deve estar como Responsável ou Revisor para salvar este registro.', 'error');
+    }
+    return false;
+}
+window._checkPartialPermOnSave = _checkPartialPermOnSave;
+
 // item=undefined → contexto sem card (ex: criar novo) → parcial libera
 function _checkTriPerm(permVal, item) {
     if (permVal === 'total') return true;
@@ -169,7 +195,22 @@ function _checkTriPerm(permVal, item) {
     function userCanDeleteCards(item) {
         if (!currentuser) return false;
         if (userIsAdmin()) return true;
-        return _checkTriPerm(_normTriPerm(currentuser.canDeleteCards, 'nao'), item);
+        const perm = _normTriPerm(currentuser.canDeleteCards, 'nao');
+        if (perm === 'total') return true;
+        if (perm === 'nao')   return false;
+        // parcial: só responsável técnico, não revisor
+        if (!item) return false;
+        const meId   = (currentuser.id || '');
+        const meName = ((currentuser.name || currentuser.user) || '').trim().toLowerCase();
+        const _hasMe = (raw) => {
+            if (!raw) return false;
+            try {
+                const arr = JSON.parse(String(raw));
+                const vals = Array.isArray(arr) ? arr : [String(arr)];
+                return vals.some(v => { const vs = String(v).trim(); return (meId && vs === meId) || vs.toLowerCase() === meName; });
+            } catch { const vs = String(raw).trim(); return (meId && vs === meId) || vs.toLowerCase() === meName; }
+        };
+        return _hasMe(item?.responsavelTecnico || item?.responsavel);
     }
 
     function userCanEditCards(item) {
@@ -707,15 +748,15 @@ function _checkTriPerm(permVal, item) {
             title: 'Editar registros',
             items: [
                 ['Total', 'Pode editar qualquer registro do sistema.'],
-                ['Parcial', 'Só pode editar registros em que é responsável técnico ou revisor.'],
-                ['Não', 'Não pode editar nenhum registro (somente leitura).']
+                ['Parcial', 'Só pode criar ou editar registros em que estiver como Responsável ou Revisor.'],
+                ['Não', 'Somente leitura: não pode criar nem editar nenhum registro.']
             ]
         },
         delete: {
             title: 'Excluir registros',
             items: [
                 ['Não', 'Não pode excluir nenhum registro.'],
-                ['Parcial', 'Só pode excluir registros em que é responsável técnico ou revisor.'],
+                ['Parcial', 'Só pode excluir registros em que é Responsável. Não se aplica se for apenas Revisor.'],
                 ['Total', 'Pode excluir qualquer registro do sistema.']
             ]
         },

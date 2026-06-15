@@ -2,6 +2,27 @@
 
 // --- MODAL & FORM LOGIC (CORRIGIDA) ---
 
+// Bloqueia o campo de responsáveis se o usuário parcial for apenas revisor do item
+function _applyRespFieldLock(respKey, item) {
+    if (typeof msSetDisabled !== 'function') return;
+    if (!currentuser || userIsAdmin()) { msSetDisabled(respKey, false); return; }
+    const perm = _normTriPerm(currentuser.canEditCards, 'total');
+    if (perm !== 'parcial') { msSetDisabled(respKey, false); return; }
+    const meId   = String(currentuser.id || '').trim();
+    const meName = String(currentuser.name || currentuser.user || '').trim().toLowerCase();
+    const _hasMe = (raw) => {
+        if (!raw) return false;
+        try {
+            const arr = JSON.parse(String(raw));
+            const vals = Array.isArray(arr) ? arr : [String(arr)];
+            return vals.some(v => { const vs = String(v).trim(); return (meId && vs === meId) || vs.toLowerCase() === meName; });
+        } catch { const vs = String(raw).trim(); return (meId && vs === meId) || vs.toLowerCase() === meName; }
+    };
+    const isResp = _hasMe(item?.responsavelTecnico || item?.responsavel);
+    // bloqueia se NÃO é responsável (mesmo que seja revisor)
+    msSetDisabled(respKey, !isResp);
+}
+
 function resetModal(prefix) {
     // 1. Resetar campos comuns
     document.getElementById(`${prefix}Titulo`).value = '';
@@ -13,6 +34,7 @@ function resetModal(prefix) {
     // Lida com Responsáveis e Revisores (multi-select)
     var _msPrefix = prefix === 'train' ? 'tren' : prefix;
     if (typeof msResetPrefix === 'function') msResetPrefix(_msPrefix);
+    if (typeof msSetDisabled === 'function') msSetDisabled(_msPrefix + '-resp', false);
     // Garante também o hidden input limpo (fallback)
     var respEl = document.getElementById(`${prefix}Responsavel`);
     if (respEl) respEl.value = '';
@@ -97,6 +119,7 @@ function resetModal(prefix) {
 
     document.getElementById('addBtn').onclick = () => {
         originalItem = null;
+
         const _currentUserName = currentuser ? (currentuser.name || currentuser.user || '') : '';
 
         if (currentTab === 'auditoria') {
@@ -233,6 +256,7 @@ function resetModal(prefix) {
                 msSetValue('audit-resp', item.responsavel || '');
                 msSetValue('audit-rev',  item.revisor     || '');
             }
+            _applyRespFieldLock('audit-resp', item);
             document.getElementById('auditFlagDias').value = item.flagDias;
             // Rotina
             const rotina = item.rotina || 'pontual';
@@ -269,6 +293,7 @@ function resetModal(prefix) {
                 msSetValue('ativ-resp', item.responsavel || '');
                 msSetValue('ativ-rev',  item.revisor     || '');
             }
+            _applyRespFieldLock('ativ-resp', item);
             document.getElementById('ativFlagDias').value = item.flagDias;
             document.getElementById('ativMarcador').value = item.marcador || '';
             restoreAnexos('ativ', item.anexos);
@@ -302,6 +327,7 @@ function resetModal(prefix) {
                 msSetValue('tren-resp', item.responsavel || '');
                 msSetValue('tren-rev',  item.revisor     || '');
             }
+            _applyRespFieldLock('tren-resp', item);
             document.getElementById('trainFlagDias').value = item.flagDias;
             document.getElementById('trainMarcador').value = item.marcador || '';
             if (typeof setSchedStatusValues === 'function') setSchedStatusValues('train', item.overdueStatus || '', item.alertStatus || '');
@@ -365,6 +391,7 @@ function resetModal(prefix) {
                 msSetValue('doc-resp', item.responsavel || '');
                 msSetValue('doc-rev',  item.revisor     || '');
             }
+            _applyRespFieldLock('doc-resp', item);
             document.getElementById('docFlagDias').value = item.flagDias;
             restoreAnexos('doc', item.anexos);
             document.getElementById('docMarcador').value = item.marcador || '';
@@ -647,7 +674,6 @@ function resetModal(prefix) {
             html += '<th style="padding:12px; text-align:left; font-weight:600;">Tipo</th>';
             html += '<th style="padding:12px; text-align:left; font-weight:600;">Setor</th>';
             html += '<th style="padding:12px; text-align:left; font-weight:600;">Deletado por</th>';
-            html += '<th style="padding:12px; text-align:left; font-weight:600;">Motivo</th>';
             html += '<th style="padding:12px; text-align:left; font-weight:600;">Data</th>';
             html += '<th style="padding:12px; text-align:center; font-weight:600;">Ações</th>';
             html += '</tr></thead><tbody>';
@@ -655,16 +681,12 @@ function resetModal(prefix) {
             deletedItems.forEach(item => {
                 const deletedDate = new Date(item.deletedAt).toLocaleDateString('pt-BR') + ' ' + new Date(item.deletedAt).toLocaleTimeString('pt-BR');
                 const isAdmin = userIsAdmin();
-                const reasonHtml = item.deletedReason
-                    ? `<span title="${item.deletedReason.replace(/"/g,'&quot;')}" style="display:inline-block;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;">${item.deletedReason}</span>`
-                    : '<span style="color:#9ca3af;font-style:italic;">—</span>';
 
                 html += `<tr style="border-bottom:1px solid var(--border); transition:background 0.2s;" onmouseover="this.style.background='rgba(37,99,235,0.05)'" onmouseout="this.style.background='transparent'">
                     <td style="padding:12px; font-weight:500;">${item.titulo}</td>
                     <td style="padding:12px;"><span style="background:var(--accent); color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:500;">${item.tipo}</span></td>
                     <td style="padding:12px;">${item.setor || 'ND'}</td>
                     <td style="padding:12px;">${item.deletedBy || 'desconhecido'}</td>
-                    <td style="padding:12px; font-size:12px; color:#374151;">${reasonHtml}</td>
                     <td style="padding:12px; font-size:12px; color:#6b7280;">${deletedDate}</td>
                     <td style="padding:12px; text-align:center; white-space:nowrap;">
                         <button onclick="closeModal('modalTrashBin'); openView(${item.id}, '${item.tab}')" title="Visualizar" style="background:#3b82f6; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:500; margin-right:4px; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">

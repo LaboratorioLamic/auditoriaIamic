@@ -652,6 +652,13 @@
     margin-left: 1px;
 }
 .ms-tag button:hover { background: rgba(255,255,255,0.35); color: #fff; }
+.ms-field--disabled {
+    background: #f1f5f9;
+    cursor: not-allowed;
+    opacity: 0.72;
+    pointer-events: none;
+}
+.ms-field--disabled .ms-tag button { display: none; }
 .ms-dropdown {
     position: absolute;
     top: calc(100% + 6px);
