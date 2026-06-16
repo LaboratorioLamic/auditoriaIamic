@@ -218,12 +218,34 @@
         if (!exists) ocCurrentTipoId = tipos[0].id;
     }
 
+    // No mobile, a barra de filtros tem scroll horizontal — dropdowns absolutos
+    // ficariam presos dentro desse scroll. Promove para position:fixed e calcula
+    // a posição via JS para flutuar livremente sobre a página.
+    function _ocPositionDropdownMobile(btn, dd) {
+        if (!btn || !dd) return;
+        if (window.innerWidth > 768) {
+            dd.classList.remove('oc-dd-fixed');
+            dd.style.top = ''; dd.style.left = ''; dd.style.right = '';
+            return;
+        }
+        var rect = btn.getBoundingClientRect();
+        dd.classList.add('oc-dd-fixed');
+        dd.style.top = (rect.bottom + 8) + 'px';
+        var ddWidth = dd.offsetWidth || 220;
+        var left = rect.right - ddWidth;
+        if (left < 8) left = 8;
+        if (left + ddWidth > window.innerWidth - 8) left = window.innerWidth - 8 - ddWidth;
+        dd.style.left = left + 'px';
+        dd.style.right = 'auto';
+    }
+
     window.ocToggleTypeDropdown = function () {
         var dd = document.getElementById('ocTypeDropdown');
+        var btn = document.getElementById('ocTypeBtn');
         if (!dd) return;
         var open = dd.classList.contains('open');
         ocCloseAllDropdowns();
-        if (!open) { renderTipoDropdown(); dd.classList.add('open'); }
+        if (!open) { renderTipoDropdown(); dd.classList.add('open'); _ocPositionDropdownMobile(btn, dd); }
     };
     window.ocSelectTipo = function (id) {
         ocCurrentTipoId = id;
@@ -236,10 +258,11 @@
 
     window.ocToggleMyDropdown = function () {
         var dd = document.getElementById('ocMyDropdown');
+        var btn = document.getElementById('ocMyBtn');
         if (!dd) return;
         var open = dd.classList.contains('open');
         ocCloseAllDropdowns();
-        if (!open) dd.classList.add('open');
+        if (!open) { dd.classList.add('open'); _ocPositionDropdownMobile(btn, dd); }
     };
     window.ocSetMyMode = function (mode) {
         ocMyMode = mode;
@@ -257,7 +280,13 @@
 
     function ocCloseAllDropdowns() {
         ['ocTypeDropdown', 'ocMyDropdown', 'ocColabDropdown', 'ocSetorDropdown', 'ocCategoriaDropdown', 'ocMotivoDropdown', 'ocCatFilterDropdown']
-            .forEach(function (id) { var el = document.getElementById(id); if (el) el.classList.remove('open'); });
+            .forEach(function (id) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.classList.remove('open');
+                el.classList.remove('oc-dd-fixed');
+                el.style.top = ''; el.style.left = ''; el.style.right = '';
+            });
     }
 
     window.ocOnSearch = function () {
@@ -265,9 +294,22 @@
         ocPage = 1;
         renderTable();
     };
+    window.ocToggleSearch = function () {
+        var wrap = document.getElementById('ocSearchWrap');
+        var input = document.getElementById('ocSearchInput');
+        var btn = document.getElementById('ocSearchToggleBtn');
+        if (!wrap || !input) return;
+        var show = wrap.style.display === 'none';
+        wrap.style.display = show ? '' : 'none';
+        if (btn) btn.classList.toggle('active', show);
+        if (show) input.focus();
+        else { input.value = ''; ocSearch = ''; ocPage = 1; renderTable(); }
+    };
     window.ocClearFilters = function () {
         ocSearch = '';
         var si = document.getElementById('ocSearchInput'); if (si) si.value = '';
+        var sw = document.getElementById('ocSearchWrap'); if (sw) sw.style.display = 'none';
+        var sb = document.getElementById('ocSearchToggleBtn'); if (sb) sb.classList.remove('active');
         ocCurrentTipoId = null;
         ensureValidTipo();
         ocCatFilter = '';
@@ -1141,10 +1183,11 @@
     }
     window.ocToggleCatFilter = function () {
         var dd = document.getElementById('ocCatFilterDropdown');
+        var btn = document.getElementById('ocCatFilterBtn');
         if (!dd) return;
         var open = dd.classList.contains('open');
         ocCloseAllDropdowns();
-        if (!open) { renderCatFilterDropdown(); dd.classList.add('open'); }
+        if (!open) { renderCatFilterDropdown(); dd.classList.add('open'); _ocPositionDropdownMobile(btn, dd); }
     };
     window.ocSelectCatFilter = function (name) {
         ocCatFilter = name || '';

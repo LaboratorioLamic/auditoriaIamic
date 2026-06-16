@@ -892,7 +892,10 @@
                         <i class="fas fa-file-excel"></i>
                     </button>
 
-                    <div class="oc-search">
+                    <button class="oc-icon-btn" id="ocSearchToggleBtn" onclick="ocToggleSearch()" title="Pesquisar ocorrência">
+                        <i class="fas fa-magnifying-glass"></i>
+                    </button>
+                    <div class="oc-search" id="ocSearchWrap" style="display:none;">
                         <i class="fas fa-magnifying-glass"></i>
                         <input type="text" id="ocSearchInput" placeholder="Pesquisar ocorrência..." oninput="ocOnSearch()" autocomplete="off">
                     </div>
@@ -1021,7 +1024,7 @@
                 </div>
                 <div class="rnc-fbar-right">
                     <div class="rnc-manage-wrap">
-                        <button class="rnc-icon-btn" onclick="rncToggleManageDropdown()" title="Gerenciar listas">
+                        <button class="rnc-icon-btn" id="rncManageBtn" onclick="rncToggleManageDropdown()" title="Gerenciar listas">
                             <i class="fas fa-pen-to-square"></i>
                         </button>
                         <div class="rnc-manage-dropdown" id="rncManageDropdown">
@@ -1055,6 +1058,9 @@
                     <button class="rnc-list-subtab active" id="rncSubTabOrigens" onclick="rncSwitchListTab('origens',this)">
                         <i class="fas fa-folder-open"></i> Origens
                     </button>
+                    <button class="rnc-list-subtab" id="rncSubTabDetalhamento" onclick="rncSwitchListTab('detalhamento',this)">
+                        <i class="fas fa-folder-open"></i> Detalhamento
+                    </button>
                     <button class="rnc-list-subtab" id="rncSubTabTable" onclick="rncSwitchListTab('table',this)">
                         <i class="fas fa-table"></i> Tabela
                     </button>
@@ -1064,6 +1070,9 @@
                 </div>
                 <div id="rncListPane-origens">
                     <div id="rncOrigensContent"></div>
+                </div>
+                <div id="rncListPane-detalhamento" style="display:none;">
+                    <div id="rncDetalhamentoContent"></div>
                 </div>
             </div>
 

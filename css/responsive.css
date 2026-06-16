@@ -198,6 +198,28 @@
 
     /* Legado */
     .title-search-dropdown { position: fixed; left: 16px; right: 16px; top: 130px; width: auto; max-width: none; }
+
+    /* --- RNC: filtros apenas com ícone (sem texto) --- */
+    .rnc-filters-bar .oc-people-btn span,
+    .rnc-filters-bar .oc-people-btn .fa-caret-down { display: none; }
+    .rnc-filters-bar .oc-people-btn { padding: 0 10px; min-width: 36px; gap: 0; }
+
+    /* --- Ocorrências: filtros apenas com ícone, todos na mesma linha --- */
+    .oc-filters-bar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .oc-fbar-left, .oc-fbar-right {
+        flex-wrap: nowrap;
+        flex-shrink: 0;
+    }
+    .oc-filters-bar .oc-people-btn span,
+    .oc-filters-bar .oc-people-btn .fa-caret-down { display: none; }
+    .oc-filters-bar .oc-people-btn { padding: 0 10px; min-width: 36px; gap: 0; }
+    .oc-filters-bar .oc-type-btn span,
+    .oc-filters-bar .oc-type-btn .fa-caret-down { display: none; }
+    .oc-filters-bar .oc-type-btn { padding: 0 10px; min-width: 36px; gap: 0; }
 }
 
 /* ── 600px — Smartphone médio ───────────────────────────────────────────── */
@@ -369,6 +391,55 @@
     }
 
     #kanbanBoard.kanban-mobile-paged .kanban-col.kb-col-right {
+        transform: translateX(100%);
+        opacity: 0;
+        visibility: hidden;
+    }
+
+    /* ── RNC Kanban mobile — mesma paginação por swipe ── */
+    #rncKanbanBoard.rnc-kb-mobile-paged {
+        position: relative;
+        overflow-x: clip;
+        overflow-y: visible;
+        flex-wrap: nowrap;
+        min-height: 300px;
+        padding-bottom: 56px;
+    }
+
+    #rncKanbanBoard.rnc-kb-mobile-paged .rnc-kb-col {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        min-width: unset;
+        flex: unset;
+        transition: none;
+        transform: translateX(100%);
+        opacity: 0;
+        pointer-events: none;
+        visibility: hidden;
+    }
+
+    #rncKanbanBoard.rnc-kb-mobile-paged .rnc-kb-col.kb-col-anim {
+        transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+                    opacity 0.32s ease;
+    }
+
+    #rncKanbanBoard.rnc-kb-mobile-paged .rnc-kb-col.kb-col-active {
+        transform: translateX(0);
+        opacity: 1;
+        pointer-events: auto;
+        position: relative;
+        visibility: visible;
+    }
+
+    #rncKanbanBoard.rnc-kb-mobile-paged .rnc-kb-col.kb-col-left {
+        transform: translateX(-100%);
+        opacity: 0;
+        visibility: hidden;
+    }
+
+    #rncKanbanBoard.rnc-kb-mobile-paged .rnc-kb-col.kb-col-right {
         transform: translateX(100%);
         opacity: 0;
         visibility: hidden;
@@ -551,6 +622,81 @@
         opacity: 0;
     }
 
+}
+
+/* ── RNC: Calendário — scroll horizontal e paginação semanal no mobile ──── */
+@media (max-width: 768px) {
+    #rncCalendarBoard { padding: 0 0 60px; overflow-x: hidden; }
+    .rnc-cal-header { gap: 8px; flex-wrap: wrap; }
+    .rnc-cal-nav-title { font-size: 15px; min-width: 130px; }
+
+    .rnc-cal-monthly-grid {
+        min-width: 540px;
+    }
+    .rnc-cal-weekly-grid:not(.rnc-cal-weekly-mobile-paged) {
+        min-width: 540px;
+    }
+    #rncCalGrade {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+    }
+    #rncCalGrade:has(.rnc-cal-weekly-mobile-paged) {
+        overflow-x: hidden;
+    }
+    .rnc-cal-day-cell { min-height: 70px; padding: 4px 3px 6px; }
+    .rnc-cal-wd-header { font-size: 10px; padding: 6px 2px; }
+    .rnc-cal-event-chip { font-size: 10px; padding: 2px 4px; }
+
+    /* Semana paginada — um dia por vez */
+    .rnc-cal-weekly-grid.rnc-cal-weekly-mobile-paged {
+        position: relative;
+        overflow: hidden;
+        display: block;
+        min-width: unset;
+        min-height: 280px;
+        padding-bottom: 0;
+    }
+
+    .rnc-cal-weekly-grid.rnc-cal-weekly-mobile-paged .rnc-cal-week-col {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        transform: translateX(100%);
+        opacity: 0;
+        pointer-events: none;
+        transition: none;
+    }
+
+    .rnc-cal-weekly-grid.rnc-cal-weekly-mobile-paged .rnc-cal-week-col.cal-col-anim {
+        transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+                    opacity 0.32s ease;
+    }
+
+    .rnc-cal-weekly-grid.rnc-cal-weekly-mobile-paged .rnc-cal-week-col.cal-col-active {
+        transform: translateX(0);
+        opacity: 1;
+        pointer-events: auto;
+        position: relative;
+    }
+
+    .rnc-cal-weekly-grid.rnc-cal-weekly-mobile-paged .rnc-cal-week-col.cal-col-left {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+
+    .rnc-cal-weekly-grid.rnc-cal-weekly-mobile-paged .rnc-cal-week-col.cal-col-right {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .rnc-cal-nav-title { font-size: 14px; min-width: 110px; }
+    .rnc-cal-ctrl-area { gap: 6px; }
+    .rnc-cal-today-btn { padding: 5px 10px; font-size: 12px; }
+    .rnc-cal-nav-btn { width: 30px; height: 30px; }
 }
 
 /* Dropdown de filtro do calendário: abre à direita no mobile */

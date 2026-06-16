@@ -1006,7 +1006,7 @@ var _kbTouch = {
 
 var KB_LONG_PRESS_MS = 500;
 var KB_EDGE_ZONE     = 0.18; // 18% da largura do board
-var KB_EDGE_DELAY_MS = 1000;
+var KB_EDGE_DELAY_MS = 350;
 
 function _kbTouchAttachCards() {
     const board = document.getElementById('kanbanBoard');

@@ -358,6 +358,14 @@
 /* Dropdown alinhado à direita (filtro de categoria) */
 .oc-type-dropdown--right { left: auto; right: 0; }
 
+/* No mobile, a barra de filtros tem scroll horizontal — dropdowns absolutos
+   ficariam presos dentro desse scroll. O JS promove esta classe (position:fixed,
+   posição calculada via getBoundingClientRect) para flutuar sobre a página. */
+.oc-dd-fixed {
+    position: fixed !important;
+    z-index: 9000 !important;
+}
+
 /* Dropdowns dos filtros do header (setor / data da aba Ocorrências) */
 .oc-head-filter { display: none; }
 .oc-head-dropdown {

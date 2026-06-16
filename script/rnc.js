@@ -27,6 +27,31 @@
     var rncCalMonth = null;
     var rncManagerKind = null;
 
+    // ── Pastas abertas (Origens/Detalhamento) — persistido em localStorage ──
+    var RNC_OPEN_FOLDERS_KEY = 'rncOpenFolders';
+    function _loadOpenFolders() {
+        try {
+            var raw = localStorage.getItem(RNC_OPEN_FOLDERS_KEY);
+            var data = raw ? JSON.parse(raw) : null;
+            if (!data || typeof data !== 'object') data = {};
+            if (!Array.isArray(data.origens)) data.origens = [];
+            if (!Array.isArray(data.detalhamento)) data.detalhamento = [];
+            return data;
+        } catch (e) {
+            return { origens: [], detalhamento: [] };
+        }
+    }
+    var rncOpenFolders = _loadOpenFolders();
+    function _saveOpenFolders() {
+        try { localStorage.setItem(RNC_OPEN_FOLDERS_KEY, JSON.stringify(rncOpenFolders)); } catch (e) {}
+    }
+    window.rncToggleFolderOpen = function(kind, key) {
+        var list = rncOpenFolders[kind];
+        var idx = list.indexOf(key);
+        if (idx === -1) list.push(key); else list.splice(idx, 1);
+        _saveOpenFolders();
+    };
+
     var MONTH_NAMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
     var MONTH_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -269,6 +294,11 @@
             .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
             .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
+    // Gera um literal de string JS seguro para uso dentro de atributo onclick="..."
+    function attrStr(s) {
+        var jsLit = "'" + String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'") + "'";
+        return esc(jsLit);
+    }
     function fmtDate(d) {
         if (!d) return '—';
         if (typeof formatBR === 'function') return formatBR(d);
@@ -487,6 +517,27 @@
         if (show) input.focus();
         else { input.value = ''; rncSearch = ''; rncPage = 1; renderRnc(); }
     };
+    // No mobile, a barra de filtros tem scroll horizontal — dropdowns absolutos
+    // ficariam presos dentro desse scroll. Promove para position:fixed e calcula
+    // a posição via JS para flutuar livremente sobre a página.
+    function _rncPositionDropdownMobile(btn, dd) {
+        if (!btn || !dd) return;
+        if (window.innerWidth > 768) {
+            dd.classList.remove('rnc-dd-fixed');
+            dd.style.top = ''; dd.style.left = ''; dd.style.right = '';
+            return;
+        }
+        var rect = btn.getBoundingClientRect();
+        dd.classList.add('rnc-dd-fixed');
+        dd.style.top = (rect.bottom + 8) + 'px';
+        var ddWidth = dd.offsetWidth || 220;
+        var left = rect.right - ddWidth;
+        if (left < 8) left = 8;
+        if (left + ddWidth > window.innerWidth - 8) left = window.innerWidth - 8 - ddWidth;
+        dd.style.left = left + 'px';
+        dd.style.right = 'auto';
+    }
+
     var RNC_CLASS_LABELS = { critica: 'NC - Crítica', maior: 'NC - Maior', menor: 'NC - Menor' };
     window.rncToggleClassFilter = function(cls) {
         rncClassFilter = rncClassFilter === cls ? '' : cls;
@@ -503,7 +554,11 @@
     };
     window.rncToggleClassDropdown = function() {
         var dd = document.getElementById('rncClassDropdown');
-        if (dd) dd.classList.toggle('open');
+        var btn = document.getElementById('rncClassBtn');
+        if (!dd) return;
+        var opening = !dd.classList.contains('open');
+        dd.classList.toggle('open', opening);
+        if (opening) _rncPositionDropdownMobile(btn, dd);
     };
 
     // ── Filtros de Origem / Detalhamento (multi-seleção, opções só dos cards publicados) ──
@@ -549,17 +604,21 @@
     }
     window.rncToggleOrigemFilterDropdown = function() {
         var dd = document.getElementById('rncOrigemFilterDropdown');
+        var btn = document.getElementById('rncOrigemBtn');
         if (!dd) return;
         var opening = !dd.classList.contains('open');
         if (opening) _renderRncFilterChecklist('rncOrigemFilterDropdown', rncDistinctValues('origem'), rncOrigemFilter, 'rncToggleOrigemFilterValue');
         dd.classList.toggle('open', opening);
+        if (opening) _rncPositionDropdownMobile(btn, dd);
     };
     window.rncToggleDetFilterDropdown = function() {
         var dd = document.getElementById('rncDetFilterDropdown');
+        var btn = document.getElementById('rncDetBtn');
         if (!dd) return;
         var opening = !dd.classList.contains('open');
         if (opening) _renderRncFilterChecklist('rncDetFilterDropdown', rncDistinctValues('detalhamento'), rncDetFilter, 'rncToggleDetFilterValue');
         dd.classList.toggle('open', opening);
+        if (opening) _rncPositionDropdownMobile(btn, dd);
     };
     window.rncToggleOrigemFilterValue = function(v) {
         var idx = rncOrigemFilter.indexOf(v);
@@ -591,7 +650,11 @@
     };
     window.rncToggleMyDropdown = function() {
         var dd = document.getElementById('rncMyDropdown');
-        if (dd) dd.classList.toggle('open');
+        var btn = document.getElementById('rncMyBtn');
+        if (!dd) return;
+        var opening = !dd.classList.contains('open');
+        dd.classList.toggle('open', opening);
+        if (opening) _rncPositionDropdownMobile(btn, dd);
     };
     window.rncClearFilters = function() {
         rncSearch = ''; var si = document.getElementById('rncSearchInput'); if (si) si.value = '';
@@ -611,7 +674,12 @@
 
     // ── Manage dropdown ──
     window.rncToggleManageDropdown = function() {
-        var dd = document.getElementById('rncManageDropdown'); if (dd) dd.classList.toggle('open');
+        var dd = document.getElementById('rncManageDropdown');
+        var btn = document.getElementById('rncManageBtn');
+        if (!dd) return;
+        var opening = !dd.classList.contains('open');
+        dd.classList.toggle('open', opening);
+        if (opening) _rncPositionDropdownMobile(btn, dd);
     };
     window.rncCloseManageDropdown = function() {
         var dd = document.getElementById('rncManageDropdown'); if (dd) dd.classList.remove('open');
@@ -637,6 +705,7 @@
             var activeSub = document.querySelector('.rnc-list-subtab.active');
             var sub = activeSub ? activeSub.id.replace('rncSubTab','').toLowerCase() : 'origens';
             if (sub === 'table') _renderRncTable();
+            else if (sub === 'detalhamento') _renderRncDetalhamentos();
             else _renderRncOrigens();
         }
         else if (rncView === 'kanban')   renderRncKanban();
@@ -647,12 +716,13 @@
     window.rncSwitchListTab = function(tab, btn) {
         document.querySelectorAll('.rnc-list-subtab').forEach(function(b){ b.classList.remove('active'); });
         if (btn) btn.classList.add('active');
-        ['table','origens'].forEach(function(t){
+        ['table','origens','detalhamento'].forEach(function(t){
             var p = document.getElementById('rncListPane-' + t);
             if (p) p.style.display = t === tab ? '' : 'none';
         });
-        if (tab === 'table')   { _renderRncTable(); }
-        if (tab === 'origens') { _renderRncOrigens(); }
+        if (tab === 'table')         { _renderRncTable(); }
+        if (tab === 'origens')       { _renderRncOrigens(); }
+        if (tab === 'detalhamento')  { _renderRncDetalhamentos(); }
     };
 
     var rncTableCols = [
@@ -747,12 +817,51 @@
         var keys = Object.keys(groups).sort(function(a,b){ return a.localeCompare(b,'pt'); });
         container.innerHTML = keys.map(function(orig) {
             var items = groups[orig];
-            return '<div class="rnc-origem-folder">' +
-                '<div class="rnc-origem-folder-header" onclick="this.parentElement.classList.toggle(\'open\')">' +
+            var isOpen = rncOpenFolders.origens.indexOf(orig) !== -1;
+            return '<div class="rnc-origem-folder' + (isOpen ? ' open' : '') + '">' +
+                '<div class="rnc-origem-folder-header" onclick="rncToggleFolderOpen(\'origens\',' + attrStr(orig) + ');this.parentElement.classList.toggle(\'open\')">' +
                     '<div class="rnc-origem-folder-title">' +
                         '<i class="fas fa-folder rnc-folder-icon-closed"></i>' +
                         '<i class="fas fa-folder-open rnc-folder-icon-open"></i>' +
                         '<span>' + esc(orig) + '</span>' +
+                    '</div>' +
+                    '<span class="rnc-origem-folder-count">' + items.length + '</span>' +
+                '</div>' +
+                '<div class="rnc-origem-folder-body">' +
+                '<div class="rnc-origem-cards-grid">' +
+                items.map(function(r) {
+                    return rncBuildCard(r, { actions: false });
+                }).join('') +
+                '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function _renderRncDetalhamentos() {
+        var container = document.getElementById('rncDetalhamentoContent');
+        if (!container) return;
+        var arr = getFiltered();
+        if (!arr.length) {
+            container.innerHTML = '<div class="rnc-empty"><i class="fas fa-folder-open"></i><p>Nenhuma RNC encontrada.</p></div>';
+            return;
+        }
+        var groups = {};
+        arr.forEach(function(r) {
+            var key = r.detalhamento || 'Sem Detalhamento';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(r);
+        });
+        var keys = Object.keys(groups).sort(function(a,b){ return a.localeCompare(b,'pt'); });
+        container.innerHTML = keys.map(function(det) {
+            var items = groups[det];
+            var isOpen = rncOpenFolders.detalhamento.indexOf(det) !== -1;
+            return '<div class="rnc-origem-folder' + (isOpen ? ' open' : '') + '">' +
+                '<div class="rnc-origem-folder-header" onclick="rncToggleFolderOpen(\'detalhamento\',' + attrStr(det) + ');this.parentElement.classList.toggle(\'open\')">' +
+                    '<div class="rnc-origem-folder-title">' +
+                        '<i class="fas fa-folder rnc-folder-icon-closed"></i>' +
+                        '<i class="fas fa-folder-open rnc-folder-icon-open"></i>' +
+                        '<span>' + esc(det) + '</span>' +
                     '</div>' +
                     '<span class="rnc-origem-folder-count">' + items.length + '</span>' +
                 '</div>' +
@@ -864,6 +973,7 @@
             '</div>';
         }).join('');
         _rncKanbanBindDnd(board);
+        initRncKanbanMobileSwipe();
     }
 
     // ── Ações do cabeçalho da coluna (mover / ocultar) ──
@@ -1174,7 +1284,11 @@
         btn.onclick = function(e){
             e.stopPropagation();
             var dd = document.getElementById('rncCalVfDropdown');
-            if (dd) dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+            if (!dd) return;
+            var opening = dd.style.display !== 'block';
+            dd.style.display = opening ? 'block' : 'none';
+            if (opening) _rncPositionDropdownMobile(btn, dd);
+            else { dd.classList.remove('rnc-dd-fixed'); dd.style.top = ''; dd.style.left = ''; dd.style.right = ''; }
         };
         var dd = document.createElement('div');
         dd.className = 'rnc-cal-vf-dropdown';
@@ -1260,6 +1374,14 @@
                 var entries = map[ds] || [];
                 var cell = document.createElement('div');
                 cell.className = 'rnc-cal-day-cell' + (isToday ? ' rnc-cal-day-today' : '');
+                cell.dataset.date = ds;
+                cell.addEventListener('dragover', function(e){ e.preventDefault(); cell.classList.add('rnc-cal-drag-over'); });
+                cell.addEventListener('dragleave', function(){ cell.classList.remove('rnc-cal-drag-over'); });
+                cell.addEventListener('drop', function(e){
+                    e.preventDefault();
+                    cell.classList.remove('rnc-cal-drag-over');
+                    _rncCalHandleDrop(e, ds);
+                });
 
                 var num = document.createElement('span');
                 num.className = 'rnc-cal-day-num'; num.textContent = dd;
@@ -1289,6 +1411,7 @@
         }
         container.innerHTML = '';
         container.appendChild(grid);
+        _rncCalMonthTouchAttachChips();
     }
 
     // ── Renderização semanal ──
@@ -1308,6 +1431,14 @@
                 var entries = map[ds] || [];
                 var col = document.createElement('div');
                 col.className = 'rnc-cal-week-col' + (isToday ? ' rnc-cal-week-col-today' : '');
+                col.dataset.date = ds;
+                col.addEventListener('dragover', function(e){ e.preventDefault(); col.classList.add('rnc-cal-drag-over'); });
+                col.addEventListener('dragleave', function(){ col.classList.remove('rnc-cal-drag-over'); });
+                col.addEventListener('drop', function(e){
+                    e.preventDefault();
+                    col.classList.remove('rnc-cal-drag-over');
+                    _rncCalHandleDrop(e, ds);
+                });
                 var head = document.createElement('div');
                 head.className = 'rnc-cal-week-col-header';
                 head.innerHTML = '<span class="rnc-cal-wk-dayname">' + RNC_WEEKDAYS[i] + '</span>' +
@@ -1323,6 +1454,7 @@
         }
         container.innerHTML = '';
         container.appendChild(grid);
+        initRncCalWeekMobileSwipe();
     }
 
     // ── Chip de evento (mensal) ──
@@ -1342,6 +1474,16 @@
             chip.innerHTML = '<span class="rnc-cal-evt-dot" style="background:' + ci.color + '"></span>' + esc(_rncTrunc(entry.item.titulo || 'RNC', 16));
             chip.title = entry.item.titulo || 'RNC';
             chip.onclick = function(ev){ ev.stopPropagation(); _rncCalOpenEntry(entry); };
+            if (canEdit(entry.item)) {
+                chip.draggable = true;
+                chip._rncCalItemId = entry.item.id;
+                chip.addEventListener('dragstart', function(ev){
+                    ev.stopPropagation();
+                    ev.dataTransfer.setData('text/plain', JSON.stringify({ rncId: entry.item.id }));
+                    chip.classList.add('rnc-cal-dragging');
+                });
+                chip.addEventListener('dragend', function(){ chip.classList.remove('rnc-cal-dragging'); });
+            }
         }
         return chip;
     }
@@ -1373,9 +1515,38 @@
                 (entry.item.responsavel ? '<div class="rnc-cal-ecard-meta"><i class="fas fa-user"></i> ' + esc(entry.item.responsavel) + '</div>' : '') +
                 (entry.item.setor ? '<div class="rnc-cal-ecard-meta"><i class="fas fa-building"></i> ' + esc(entry.item.setor) + '</div>' : '') +
                 (mk ? '<div class="rnc-cal-ecard-marker" style="background:' + mk.color + '"><i class="fas ' + mk.icon + '"></i> ' + esc(mk.label) + '</div>' : '');
+            if (canEdit(entry.item)) {
+                card.draggable = true;
+                card._rncCalItemId = entry.item.id;
+                card.addEventListener('dragstart', function(ev){
+                    ev.stopPropagation();
+                    ev.dataTransfer.setData('text/plain', JSON.stringify({ rncId: entry.item.id }));
+                    card.classList.add('rnc-cal-dragging');
+                });
+                card.addEventListener('dragend', function(){ card.classList.remove('rnc-cal-dragging'); });
+            }
         }
         card.onclick = function(){ _rncCalOpenEntry(entry); };
         return card;
+    }
+
+    // ── Drag & drop: move a RNC para a data alvo, atualizando dataConclusao ──
+    function _rncCalHandleDrop(e, targetDateStr) {
+        var data;
+        try { data = JSON.parse(e.dataTransfer.getData('text/plain')); } catch (err) { return; }
+        if (!data || !data.rncId) return;
+        _rncCalMoveItemToDate(data.rncId, targetDateStr);
+    }
+
+    function _rncCalMoveItemToDate(rncId, targetDateStr) {
+        var item = (window.rncItems || []).find(function(r){ return r.id === rncId; });
+        if (!item) return;
+        if (!canEdit(item)) return;
+        if ((item.dataConclusao || '').slice(0,10) === targetDateStr) return;
+        item.dataConclusao = targetDateStr;
+        persist();
+        _rncCalRenderGrade();
+        if (rncView === 'cards') renderRnc();
     }
 
     function _rncCalOpenEntry(entry) {
@@ -2610,5 +2781,808 @@
             nm.classList.remove('open');
         }
     });
+
+    // ══════════════════════════════════════════════════════════════════
+    //  KANBAN MOBILE — paginação por swipe (uma coluna por vez)
+    //  Espelha o comportamento de _kbMobile em kanban.js (módulo Atividades)
+    // ══════════════════════════════════════════════════════════════════
+
+    var _rncKbMobile = {
+        active: false,
+        currentIdx: 0,
+        touchStartX: 0,
+        touchStartY: 0,
+        dragging: false
+    };
+
+    function _rncKbIsMobile() {
+        return window.innerWidth <= 768;
+    }
+
+    function initRncKanbanMobileSwipe() {
+        var board = document.getElementById('rncKanbanBoard');
+        if (!board) return;
+
+        _rncKbMobile.active = _rncKbIsMobile();
+        _rncKbMobile.currentIdx = 0;
+
+        if (!_rncKbMobile.active) {
+            _rncKbDestroyMobileDots();
+            board.classList.remove('rnc-kb-mobile-paged');
+            var cols0 = board.querySelectorAll('.rnc-kb-col');
+            cols0.forEach(function(c) {
+                c.style.transform = ''; c.style.opacity = '';
+                c.classList.remove('kb-col-active', 'kb-col-left', 'kb-col-right');
+            });
+            return;
+        }
+
+        board.classList.add('rnc-kb-mobile-paged');
+        _rncKbMobileShowCol(0, false);
+        _rncKbBuildDots();
+        _rncKbTouchAttachCards();
+
+        board.removeEventListener('touchstart', _rncKbTouchStart, { passive: true });
+        board.removeEventListener('touchmove',  _rncKbTouchMove,  { passive: false });
+        board.removeEventListener('touchend',   _rncKbTouchEnd);
+        board.addEventListener('touchstart', _rncKbTouchStart, { passive: true });
+        board.addEventListener('touchmove',  _rncKbTouchMove,  { passive: false });
+        board.addEventListener('touchend',   _rncKbTouchEnd);
+    }
+    window.initRncKanbanMobileSwipe = initRncKanbanMobileSwipe;
+
+    function _rncKbMobileShowCol(idx, animate) {
+        var board = document.getElementById('rncKanbanBoard');
+        if (!board) return;
+        var cols = Array.from(board.querySelectorAll('.rnc-kb-col'));
+        if (!cols.length) return;
+        idx = Math.max(0, Math.min(idx, cols.length - 1));
+        _rncKbMobile.currentIdx = idx;
+
+        cols.forEach(function(col, i) {
+            col.classList.remove('kb-col-active', 'kb-col-left', 'kb-col-right');
+            if (animate) col.classList.add('kb-col-anim');
+            else col.classList.remove('kb-col-anim');
+
+            if (i === idx) col.classList.add('kb-col-active');
+            else if (i < idx) col.classList.add('kb-col-left');
+            else col.classList.add('kb-col-right');
+        });
+
+        _rncKbUpdateDots(idx, cols.length);
+    }
+
+    function _rncKbBuildDots() {
+        _rncKbDestroyMobileDots();
+        var board = document.getElementById('rncKanbanBoard');
+        if (!board) return;
+        var cols = board.querySelectorAll('.rnc-kb-col');
+        if (cols.length <= 1) return;
+
+        var dotsWrap = document.createElement('div');
+        dotsWrap.className = 'kb-mobile-dots';
+        dotsWrap.id = 'rncKbMobileDots';
+        for (var i = 0; i < cols.length; i++) {
+            (function(idx) {
+                var dot = document.createElement('span');
+                dot.className = 'kb-mobile-dot' + (idx === _rncKbMobile.currentIdx ? ' kb-dot-active' : '');
+                dot.addEventListener('click', function() { _rncKbMobileShowCol(idx, true); });
+                dotsWrap.appendChild(dot);
+            })(i);
+        }
+        board.parentNode.insertBefore(dotsWrap, board.nextSibling);
+    }
+
+    function _rncKbUpdateDots(activeIdx) {
+        var wrap = document.getElementById('rncKbMobileDots');
+        if (!wrap) return;
+        var dots = wrap.querySelectorAll('.kb-mobile-dot');
+        dots.forEach(function(d, i) { d.classList.toggle('kb-dot-active', i === activeIdx); });
+    }
+
+    function _rncKbDestroyMobileDots() {
+        var el = document.getElementById('rncKbMobileDots');
+        if (el) el.remove();
+    }
+
+    function _rncKbTouchStart(e) {
+        if (!_rncKbMobile.active) return;
+        if (_rncKbCardTouch.active || _rncKbCardTouch.longPressTimer) return; // card drag tem prioridade
+        var t = e.touches[0];
+        _rncKbMobile.touchStartX = t.clientX;
+        _rncKbMobile.touchStartY = t.clientY;
+        _rncKbMobile.dragging = false;
+    }
+
+    function _rncKbTouchMove(e) {
+        if (!_rncKbMobile.active) return;
+        if (_rncKbCardTouch.active || _rncKbCardTouch.longPressTimer) return; // card drag tem prioridade
+        var t = e.touches[0];
+        var dx = t.clientX - _rncKbMobile.touchStartX;
+        var dy = t.clientY - _rncKbMobile.touchStartY;
+        if (!_rncKbMobile.dragging) {
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
+                _rncKbMobile.dragging = true;
+            } else {
+                return;
+            }
+        }
+        e.preventDefault();
+
+        var board = document.getElementById('rncKanbanBoard');
+        if (!board) return;
+        var cols = Array.from(board.querySelectorAll('.rnc-kb-col'));
+        var idx = _rncKbMobile.currentIdx;
+
+        cols.forEach(function(col, i) {
+            col.classList.remove('kb-col-anim');
+            var base = (i - idx) * 100;
+            col.style.transform = 'translateX(calc(' + base + '% + ' + dx + 'px))';
+            if (i === idx) {
+                col.style.opacity = String(Math.max(0.6, 1 - Math.abs(dx) / 300));
+            } else if ((i === idx - 1 && dx > 0) || (i === idx + 1 && dx < 0)) {
+                col.style.opacity = String(Math.min(1, Math.abs(dx) / 200));
+            } else {
+                col.style.opacity = '0';
+            }
+        });
+    }
+
+    function _rncKbTouchEnd(e) {
+        if (!_rncKbMobile.active || !_rncKbMobile.dragging) return;
+        _rncKbMobile.dragging = false;
+
+        var board = document.getElementById('rncKanbanBoard');
+        if (!board) return;
+        var cols = Array.from(board.querySelectorAll('.rnc-kb-col'));
+        cols.forEach(function(c) { c.style.transform = ''; c.style.opacity = ''; });
+
+        var dx = e.changedTouches[0].clientX - _rncKbMobile.touchStartX;
+        var threshold = 60;
+        var next = _rncKbMobile.currentIdx;
+        if (dx < -threshold) next = Math.min(_rncKbMobile.currentIdx + 1, cols.length - 1);
+        else if (dx > threshold) next = Math.max(_rncKbMobile.currentIdx - 1, 0);
+
+        _rncKbMobileShowCol(next, true);
+    }
+
+    window.addEventListener('resize', function() {
+        if (rncView !== 'kanban') return;
+        var wasMobile = _rncKbMobile.active;
+        var isMobile = _rncKbIsMobile();
+        if (wasMobile !== isMobile) {
+            initRncKanbanMobileSwipe();
+        }
+    });
+
+    // ══════════════════════════════════════════════════════════════════
+    //  KANBAN MOBILE — long-press para arrastar card entre colunas
+    //  Espelha o comportamento de _kbTouch em kanban.js (módulo Atividades)
+    // ══════════════════════════════════════════════════════════════════
+
+    var _rncKbCardTouch = {
+        longPressTimer: null,
+        itemId: null,
+        cardEl: null,
+        ghostEl: null,
+        active: false,
+        startX: 0,
+        startY: 0,
+        edgeTimer: null,
+        edgeDir: 0
+    };
+
+    var RNC_KB_LONG_PRESS_MS = 500;
+    var RNC_KB_EDGE_ZONE     = 0.18;
+    var RNC_KB_EDGE_DELAY_MS = 350;
+
+    function _rncKbTouchAttachCards() {
+        var board = document.getElementById('rncKanbanBoard');
+        if (!board) return;
+        board.querySelectorAll('.rnc-kb-card').forEach(function(card) {
+            card.removeEventListener('touchstart', _rncKbCardTouchStart);
+            card.removeEventListener('touchmove',  _rncKbCardTouchMove);
+            card.removeEventListener('touchend',   _rncKbCardTouchEnd);
+            card.removeEventListener('touchcancel',_rncKbCardTouchCancel);
+
+            if (card.getAttribute('draggable') !== 'true') return;
+            card.addEventListener('touchstart',  _rncKbCardTouchStart,  { passive: false });
+            card.addEventListener('touchmove',   _rncKbCardTouchMove,   { passive: false });
+            card.addEventListener('touchend',    _rncKbCardTouchEnd,    { passive: false });
+            card.addEventListener('touchcancel', _rncKbCardTouchCancel, { passive: true  });
+        });
+    }
+
+    function _rncKbCardTouchStart(e) {
+        if (!_rncKbMobile.active) return;
+        if (e.touches.length !== 1) return;
+
+        var card = e.currentTarget;
+        var t = e.touches[0];
+        _rncKbCardTouch.startX = t.clientX;
+        _rncKbCardTouch.startY = t.clientY;
+        _rncKbCardTouch.cardEl = card;
+        _rncKbCardTouch.itemId = parseInt(card.getAttribute('data-id'), 10);
+        _rncKbCardTouch.active = false;
+
+        _rncKbCardTouch.longPressTimer = setTimeout(function() {
+            _rncKbActivateDrag(card, t.clientX, t.clientY);
+        }, RNC_KB_LONG_PRESS_MS);
+    }
+
+    function _rncKbCardTouchMove(e) {
+        if (!_rncKbCardTouch.cardEl) return;
+        var t = e.touches[0];
+
+        if (!_rncKbCardTouch.active) {
+            var dx0 = Math.abs(t.clientX - _rncKbCardTouch.startX);
+            var dy0 = Math.abs(t.clientY - _rncKbCardTouch.startY);
+            if (dx0 > 8 || dy0 > 8) _rncKbCancelCardDrag();
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        _rncKbMoveGhost(t.clientX, t.clientY);
+        _rncKbTouchEdgeCheck(t.clientX);
+    }
+
+    function _rncKbCardTouchEnd(e) {
+        if (!_rncKbCardTouch.active) { _rncKbCancelCardDrag(); return; }
+        e.preventDefault();
+        e.stopPropagation();
+
+        var t = e.changedTouches[0];
+        _rncKbTouchDrop(t.clientX, t.clientY);
+        _rncKbCancelCardDrag();
+    }
+
+    function _rncKbCardTouchCancel() {
+        _rncKbCancelCardDrag();
+    }
+
+    function _rncKbActivateDrag(card, cx, cy) {
+        _rncKbCardTouch.active = true;
+        if (navigator.vibrate) navigator.vibrate(40);
+
+        card.classList.add('kb-touch-holding');
+
+        var ghost = document.createElement('div');
+        ghost.className = 'kb-touch-ghost';
+        ghost.innerHTML = card.innerHTML;
+        ghost.style.width = card.offsetWidth + 'px';
+        document.body.appendChild(ghost);
+        _rncKbCardTouch.ghostEl = ghost;
+        _rncKbMoveGhost(cx, cy);
+    }
+
+    function _rncKbMoveGhost(cx, cy) {
+        var g = _rncKbCardTouch.ghostEl;
+        if (!g) return;
+        g.style.left = (cx - g.offsetWidth / 2) + 'px';
+        g.style.top  = (cy - 30) + 'px';
+    }
+
+    function _rncKbTouchEdgeCheck(cx) {
+        var board = document.getElementById('rncKanbanBoard');
+        if (!board) return;
+        var rect = board.getBoundingClientRect();
+        var zone = rect.width * RNC_KB_EDGE_ZONE;
+        var dir = 0;
+        if (cx < rect.left + zone) dir = -1;
+        else if (cx > rect.right - zone) dir = 1;
+
+        if (dir === 0) { _rncKbTouchClearEdge(); return; }
+        if (dir === _rncKbCardTouch.edgeDir) return;
+
+        _rncKbTouchClearEdge();
+        _rncKbCardTouch.edgeDir = dir;
+
+        _rncKbCardTouch.edgeTimer = setTimeout(function() {
+            var cols = board.querySelectorAll('.rnc-kb-col');
+            var next = _rncKbMobile.currentIdx + dir;
+            if (next >= 0 && next < cols.length) {
+                _rncKbMobileShowCol(next, true);
+                if (navigator.vibrate) navigator.vibrate(20);
+            }
+            _rncKbCardTouch.edgeDir = 0;
+            _rncKbCardTouch.edgeTimer = null;
+        }, RNC_KB_EDGE_DELAY_MS);
+    }
+
+    function _rncKbTouchClearEdge() {
+        if (_rncKbCardTouch.edgeTimer) { clearTimeout(_rncKbCardTouch.edgeTimer); _rncKbCardTouch.edgeTimer = null; }
+        _rncKbCardTouch.edgeDir = 0;
+    }
+
+    function _rncKbTouchDrop(cx, cy) {
+        if (!_rncKbCardTouch.itemId) return;
+
+        var board = document.getElementById('rncKanbanBoard');
+        if (!board) return;
+        var activeCol = board.querySelector('.rnc-kb-col.kb-col-active');
+        if (!activeCol) return;
+
+        var zone = activeCol.querySelector('.rnc-kb-cards[data-status]');
+        if (!zone) return;
+        var targetStatus = zone.getAttribute('data-status');
+        if (!targetStatus) return;
+
+        _rncMoveCardToStatus(_rncKbCardTouch.itemId, targetStatus);
+    }
+
+    function _rncKbCancelCardDrag() {
+        if (_rncKbCardTouch.longPressTimer) { clearTimeout(_rncKbCardTouch.longPressTimer); _rncKbCardTouch.longPressTimer = null; }
+        _rncKbTouchClearEdge();
+
+        if (_rncKbCardTouch.cardEl) _rncKbCardTouch.cardEl.classList.remove('kb-touch-holding');
+        if (_rncKbCardTouch.ghostEl) { _rncKbCardTouch.ghostEl.remove(); _rncKbCardTouch.ghostEl = null; }
+
+        _rncKbCardTouch.active = false;
+        _rncKbCardTouch.itemId = null;
+        _rncKbCardTouch.cardEl = null;
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  CALENDÁRIO SEMANAL MOBILE — paginação por swipe (1 dia por vez)
+    //  Espelha o comportamento de _calMobile em calendar.js (módulo Atividades)
+    // ══════════════════════════════════════════════════════════════════
+
+    var _rncCalMobile = {
+        active: false,
+        currentIdx: 0,
+        touchStartX: 0,
+        touchStartY: 0,
+        dragging: false
+    };
+
+    function _rncCalIsMobile() {
+        return window.innerWidth <= 768;
+    }
+
+    function initRncCalWeekMobileSwipe() {
+        var board = document.getElementById('rncCalendarBoard');
+        if (!board) return;
+
+        if (rncCalMode !== 'weekly') {
+            _rncCalDestroyMobileDots();
+            return;
+        }
+
+        _rncCalMobile.active = _rncCalIsMobile();
+        var grid = board.querySelector('.rnc-cal-weekly-grid');
+        if (!grid) return;
+
+        if (!_rncCalMobile.active) {
+            _rncCalDestroyMobileDots();
+            grid.classList.remove('rnc-cal-weekly-mobile-paged');
+            var cols0 = grid.querySelectorAll('.rnc-cal-week-col');
+            cols0.forEach(function(c) {
+                c.style.transform = ''; c.style.opacity = '';
+                c.classList.remove('cal-col-active', 'cal-col-left', 'cal-col-right');
+            });
+            return;
+        }
+
+        grid.classList.add('rnc-cal-weekly-mobile-paged');
+
+        var cols = Array.from(grid.querySelectorAll('.rnc-cal-week-col'));
+        var startIdx = 0;
+        cols.forEach(function(col, i) {
+            if (col.classList.contains('rnc-cal-week-col-today')) startIdx = i;
+        });
+        _rncCalMobile.currentIdx = startIdx;
+        _rncCalMobileShowDay(startIdx, false, grid);
+        _rncCalBuildDayDots(cols.length, board);
+        _rncCalTouchAttachCards();
+
+        grid.removeEventListener('touchstart', _rncCalTouchStart, { passive: true });
+        grid.removeEventListener('touchmove',  _rncCalTouchMove,  { passive: false });
+        grid.removeEventListener('touchend',   _rncCalTouchEnd);
+        grid.addEventListener('touchstart', _rncCalTouchStart, { passive: true });
+        grid.addEventListener('touchmove',  _rncCalTouchMove,  { passive: false });
+        grid.addEventListener('touchend',   _rncCalTouchEnd);
+    }
+    window.initRncCalWeekMobileSwipe = initRncCalWeekMobileSwipe;
+
+    function _rncCalMobileShowDay(idx, animate, grid) {
+        if (!grid) grid = document.querySelector('#rncCalendarBoard .rnc-cal-weekly-grid');
+        if (!grid) return;
+        var cols = Array.from(grid.querySelectorAll('.rnc-cal-week-col'));
+        if (!cols.length) return;
+        idx = Math.max(0, Math.min(idx, cols.length - 1));
+        _rncCalMobile.currentIdx = idx;
+
+        cols.forEach(function(col, i) {
+            col.classList.remove('cal-col-active', 'cal-col-left', 'cal-col-right');
+            if (animate) col.classList.add('cal-col-anim');
+            else col.classList.remove('cal-col-anim');
+
+            if (i === idx) col.classList.add('cal-col-active');
+            else if (i < idx) col.classList.add('cal-col-left');
+            else col.classList.add('cal-col-right');
+        });
+
+        _rncCalUpdateDayDots(idx);
+    }
+
+    var _rncCalWeekDayNames = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+
+    function _rncCalBuildDayDots(total, board) {
+        _rncCalDestroyMobileDots();
+        if (total <= 1) return;
+
+        var dotsWrap = document.createElement('div');
+        dotsWrap.className = 'cal-day-pills';
+        dotsWrap.id = 'rncCalMobileDots';
+
+        for (var i = 0; i < total; i++) {
+            (function(idx) {
+                var pill = document.createElement('button');
+                pill.className = 'cal-day-pill' + (idx === _rncCalMobile.currentIdx ? ' cal-day-pill--active' : '');
+                pill.textContent = _rncCalWeekDayNames[idx] || String(idx + 1);
+                pill.addEventListener('click', function() { _rncCalMobileShowDay(idx, true); });
+                dotsWrap.appendChild(pill);
+            })(i);
+        }
+
+        if (board) board.appendChild(dotsWrap);
+    }
+
+    function _rncCalUpdateDayDots(activeIdx) {
+        var wrap = document.getElementById('rncCalMobileDots');
+        if (!wrap) return;
+        var pills = wrap.querySelectorAll('.cal-day-pill');
+        pills.forEach(function(p, i) { p.classList.toggle('cal-day-pill--active', i === activeIdx); });
+    }
+
+    function _rncCalDestroyMobileDots() {
+        var el = document.getElementById('rncCalMobileDots');
+        if (el) el.remove();
+    }
+
+    function _rncCalTouchStart(e) {
+        if (!_rncCalMobile.active) return;
+        if (_rncCalCardTouch.active || _rncCalCardTouch.longPressTimer) return; // card drag tem prioridade
+        var t = e.touches[0];
+        _rncCalMobile.touchStartX = t.clientX;
+        _rncCalMobile.touchStartY = t.clientY;
+        _rncCalMobile.dragging = false;
+    }
+
+    function _rncCalTouchMove(e) {
+        if (!_rncCalMobile.active) return;
+        if (_rncCalCardTouch.active || _rncCalCardTouch.longPressTimer) return; // card drag tem prioridade
+        var t = e.touches[0];
+        var dx = t.clientX - _rncCalMobile.touchStartX;
+        var dy = t.clientY - _rncCalMobile.touchStartY;
+        if (!_rncCalMobile.dragging) {
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
+                _rncCalMobile.dragging = true;
+            } else {
+                return;
+            }
+        }
+        e.preventDefault();
+
+        var grid = document.querySelector('#rncCalendarBoard .rnc-cal-weekly-grid');
+        if (!grid) return;
+        var cols = Array.from(grid.querySelectorAll('.rnc-cal-week-col'));
+        var idx = _rncCalMobile.currentIdx;
+
+        cols.forEach(function(col, i) {
+            col.classList.remove('cal-col-anim');
+            var base = (i - idx) * 100;
+            col.style.transform = 'translateX(calc(' + base + '% + ' + dx + 'px))';
+            if (i === idx) {
+                col.style.opacity = String(Math.max(0.6, 1 - Math.abs(dx) / 300));
+            } else if ((i === idx - 1 && dx > 0) || (i === idx + 1 && dx < 0)) {
+                col.style.opacity = String(Math.min(1, Math.abs(dx) / 200));
+            } else {
+                col.style.opacity = '0';
+            }
+        });
+    }
+
+    function _rncCalTouchEnd(e) {
+        if (!_rncCalMobile.active || !_rncCalMobile.dragging) return;
+        _rncCalMobile.dragging = false;
+
+        var grid = document.querySelector('#rncCalendarBoard .rnc-cal-weekly-grid');
+        if (!grid) return;
+        var cols = Array.from(grid.querySelectorAll('.rnc-cal-week-col'));
+        cols.forEach(function(c) { c.style.transform = ''; c.style.opacity = ''; });
+
+        var dx = e.changedTouches[0].clientX - _rncCalMobile.touchStartX;
+        var threshold = 60;
+        var next = _rncCalMobile.currentIdx;
+        if (dx < -threshold) next = Math.min(_rncCalMobile.currentIdx + 1, cols.length - 1);
+        else if (dx > threshold) next = Math.max(_rncCalMobile.currentIdx - 1, 0);
+
+        _rncCalMobileShowDay(next, true);
+    }
+
+    window.addEventListener('resize', function() {
+        if (rncView === 'calendar' && rncCalMode === 'weekly') {
+            var wasMobile = _rncCalMobile.active;
+            var isMobile = _rncCalIsMobile();
+            if (wasMobile !== isMobile) {
+                initRncCalWeekMobileSwipe();
+            }
+        }
+    });
+
+    // ══════════════════════════════════════════════════════════════════
+    //  CALENDÁRIO SEMANAL MOBILE — long-press para mover card de dia
+    //  Espelha o comportamento de _calTouch em calendar.js (módulo Atividades)
+    // ══════════════════════════════════════════════════════════════════
+
+    var _rncCalCardTouch = {
+        longPressTimer: null,
+        itemId: null,
+        cardEl: null,
+        ghostEl: null,
+        active: false,
+        startX: 0,
+        startY: 0,
+        edgeTimer: null,
+        edgeDir: 0
+    };
+
+    var RNC_CAL_LONG_PRESS_MS = 500;
+    var RNC_CAL_EDGE_ZONE     = 0.18;
+    var RNC_CAL_EDGE_DELAY_MS = 350;
+
+    function _rncCalTouchAttachCards() {
+        var grid = document.querySelector('#rncCalendarBoard .rnc-cal-weekly-grid');
+        if (!grid) return;
+        grid.querySelectorAll('.rnc-cal-event-card').forEach(function(card) {
+            card.removeEventListener('touchstart',  _rncCalCardTouchStart);
+            card.removeEventListener('touchmove',   _rncCalCardTouchMove);
+            card.removeEventListener('touchend',    _rncCalCardTouchEnd);
+            card.removeEventListener('touchcancel', _rncCalCardTouchCancel);
+            if (!card.draggable) return;
+            card.addEventListener('touchstart',  _rncCalCardTouchStart,  { passive: false });
+            card.addEventListener('touchmove',   _rncCalCardTouchMove,   { passive: false });
+            card.addEventListener('touchend',    _rncCalCardTouchEnd,    { passive: false });
+            card.addEventListener('touchcancel', _rncCalCardTouchCancel, { passive: true  });
+        });
+    }
+
+    function _rncCalCardTouchStart(e) {
+        if (!_rncCalMobile.active) return;
+        if (e.touches.length !== 1) return;
+        var card = e.currentTarget;
+        var t = e.touches[0];
+        _rncCalCardTouch.startX = t.clientX;
+        _rncCalCardTouch.startY = t.clientY;
+        _rncCalCardTouch.cardEl = card;
+        _rncCalCardTouch.itemId = card._rncCalItemId || null;
+        _rncCalCardTouch.active = false;
+
+        _rncCalCardTouch.longPressTimer = setTimeout(function() {
+            _rncCalActivateDrag(card, t.clientX, t.clientY);
+        }, RNC_CAL_LONG_PRESS_MS);
+    }
+
+    function _rncCalCardTouchMove(e) {
+        if (!_rncCalCardTouch.cardEl) return;
+        var t = e.touches[0];
+        if (!_rncCalCardTouch.active) {
+            var dx0 = Math.abs(t.clientX - _rncCalCardTouch.startX);
+            var dy0 = Math.abs(t.clientY - _rncCalCardTouch.startY);
+            if (dx0 > 8 || dy0 > 8) _rncCalCancelCardDrag();
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        _rncCalMoveGhost(t.clientX, t.clientY);
+        _rncCalCardTouchEdgeCheck(t.clientX);
+    }
+
+    function _rncCalCardTouchEnd(e) {
+        if (!_rncCalCardTouch.active) { _rncCalCancelCardDrag(); return; }
+        e.preventDefault();
+        e.stopPropagation();
+        _rncCalCardTouchDrop();
+        _rncCalCancelCardDrag();
+    }
+
+    function _rncCalCardTouchCancel() { _rncCalCancelCardDrag(); }
+
+    function _rncCalActivateDrag(card, cx, cy) {
+        _rncCalCardTouch.active = true;
+        if (navigator.vibrate) navigator.vibrate(40);
+        card.classList.add('kb-touch-holding');
+
+        var ghost = document.createElement('div');
+        ghost.className = 'kb-touch-ghost';
+        ghost.innerHTML = card.innerHTML;
+        ghost.style.width = card.offsetWidth + 'px';
+        document.body.appendChild(ghost);
+        _rncCalCardTouch.ghostEl = ghost;
+        _rncCalMoveGhost(cx, cy);
+    }
+
+    function _rncCalMoveGhost(cx, cy) {
+        var g = _rncCalCardTouch.ghostEl;
+        if (!g) return;
+        g.style.left = (cx - g.offsetWidth / 2) + 'px';
+        g.style.top  = (cy - 30) + 'px';
+    }
+
+    function _rncCalCardTouchEdgeCheck(cx) {
+        var grid = document.querySelector('#rncCalendarBoard .rnc-cal-weekly-grid');
+        if (!grid) return;
+        var rect = grid.getBoundingClientRect();
+        var zone = rect.width * RNC_CAL_EDGE_ZONE;
+        var dir = 0;
+        if (cx < rect.left + zone) dir = -1;
+        else if (cx > rect.right - zone) dir = 1;
+
+        if (dir === 0) { _rncCalCardTouchClearEdge(); return; }
+        if (dir === _rncCalCardTouch.edgeDir) return;
+
+        _rncCalCardTouchClearEdge();
+        _rncCalCardTouch.edgeDir = dir;
+        _rncCalCardTouch.edgeTimer = setTimeout(function() {
+            var cols = grid.querySelectorAll('.rnc-cal-week-col');
+            var next = _rncCalMobile.currentIdx + dir;
+            if (next >= 0 && next < cols.length) {
+                _rncCalMobileShowDay(next, true, grid);
+                _rncCalTouchAttachCards();
+                if (navigator.vibrate) navigator.vibrate(20);
+            }
+            _rncCalCardTouch.edgeDir = 0;
+            _rncCalCardTouch.edgeTimer = null;
+        }, RNC_CAL_EDGE_DELAY_MS);
+    }
+
+    function _rncCalCardTouchClearEdge() {
+        if (_rncCalCardTouch.edgeTimer) { clearTimeout(_rncCalCardTouch.edgeTimer); _rncCalCardTouch.edgeTimer = null; }
+        _rncCalCardTouch.edgeDir = 0;
+    }
+
+    function _rncCalCardTouchDrop() {
+        var grid = document.querySelector('#rncCalendarBoard .rnc-cal-weekly-grid');
+        if (!grid) return;
+        var activeCol = grid.querySelector('.rnc-cal-week-col.cal-col-active');
+        if (!activeCol) return;
+        var targetDateStr = activeCol.getAttribute('data-date');
+        if (!targetDateStr) return;
+        if (!_rncCalCardTouch.itemId) return;
+        _rncCalMoveItemToDate(_rncCalCardTouch.itemId, targetDateStr);
+    }
+
+    function _rncCalCancelCardDrag() {
+        if (_rncCalCardTouch.longPressTimer) { clearTimeout(_rncCalCardTouch.longPressTimer); _rncCalCardTouch.longPressTimer = null; }
+        _rncCalCardTouchClearEdge();
+        if (_rncCalCardTouch.cardEl) _rncCalCardTouch.cardEl.classList.remove('kb-touch-holding');
+        if (_rncCalCardTouch.ghostEl) { _rncCalCardTouch.ghostEl.remove(); _rncCalCardTouch.ghostEl = null; }
+        _rncCalCardTouch.active = false;
+        _rncCalCardTouch.itemId = null;
+        _rncCalCardTouch.cardEl = null;
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  CALENDÁRIO MENSAL MOBILE — long-press para mover chip de dia
+    //  Grid completo (sem paginação): o destino é a célula sob o dedo.
+    // ══════════════════════════════════════════════════════════════════
+
+    var _rncCalMonthTouch = {
+        longPressTimer: null,
+        itemId: null,
+        chipEl: null,
+        ghostEl: null,
+        active: false,
+        startX: 0,
+        startY: 0
+    };
+
+    var RNC_CAL_MONTH_LONG_PRESS_MS = 500;
+
+    function _rncCalMonthTouchAttachChips() {
+        var grid = document.querySelector('#rncCalendarBoard .rnc-cal-monthly-grid');
+        if (!grid) return;
+        grid.querySelectorAll('.rnc-cal-event-chip').forEach(function(chip) {
+            chip.removeEventListener('touchstart',  _rncCalMonthChipTouchStart);
+            chip.removeEventListener('touchmove',   _rncCalMonthChipTouchMove);
+            chip.removeEventListener('touchend',     _rncCalMonthChipTouchEnd);
+            chip.removeEventListener('touchcancel',  _rncCalMonthChipTouchCancel);
+            if (!chip.draggable) return;
+            chip.addEventListener('touchstart',  _rncCalMonthChipTouchStart,  { passive: false });
+            chip.addEventListener('touchmove',   _rncCalMonthChipTouchMove,   { passive: false });
+            chip.addEventListener('touchend',    _rncCalMonthChipTouchEnd,    { passive: false });
+            chip.addEventListener('touchcancel', _rncCalMonthChipTouchCancel, { passive: true  });
+        });
+    }
+
+    function _rncCalMonthChipTouchStart(e) {
+        if (window.innerWidth > 768) return;
+        if (e.touches.length !== 1) return;
+        var chip = e.currentTarget;
+        var t = e.touches[0];
+        _rncCalMonthTouch.startX = t.clientX;
+        _rncCalMonthTouch.startY = t.clientY;
+        _rncCalMonthTouch.chipEl = chip;
+        _rncCalMonthTouch.itemId = chip._rncCalItemId || null;
+        _rncCalMonthTouch.active = false;
+
+        _rncCalMonthTouch.longPressTimer = setTimeout(function() {
+            _rncCalMonthActivateDrag(chip, t.clientX, t.clientY);
+        }, RNC_CAL_MONTH_LONG_PRESS_MS);
+    }
+
+    function _rncCalMonthChipTouchMove(e) {
+        if (!_rncCalMonthTouch.chipEl) return;
+        var t = e.touches[0];
+        if (!_rncCalMonthTouch.active) {
+            var dx0 = Math.abs(t.clientX - _rncCalMonthTouch.startX);
+            var dy0 = Math.abs(t.clientY - _rncCalMonthTouch.startY);
+            if (dx0 > 8 || dy0 > 8) _rncCalMonthCancelDrag();
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        _rncCalMonthMoveGhost(t.clientX, t.clientY);
+
+        document.querySelectorAll('.rnc-cal-day-cell.rnc-cal-touch-over').forEach(function(c){ c.classList.remove('rnc-cal-touch-over'); });
+        var under = document.elementFromPoint(t.clientX, t.clientY);
+        var cell = under ? under.closest('.rnc-cal-day-cell[data-date]') : null;
+        if (cell) cell.classList.add('rnc-cal-touch-over');
+    }
+
+    function _rncCalMonthChipTouchEnd(e) {
+        if (!_rncCalMonthTouch.active) { _rncCalMonthCancelDrag(); return; }
+        e.preventDefault();
+        e.stopPropagation();
+        var t = e.changedTouches[0];
+        _rncCalMonthTouchDrop(t.clientX, t.clientY);
+        _rncCalMonthCancelDrag();
+    }
+
+    function _rncCalMonthChipTouchCancel() { _rncCalMonthCancelDrag(); }
+
+    function _rncCalMonthActivateDrag(chip, cx, cy) {
+        _rncCalMonthTouch.active = true;
+        if (navigator.vibrate) navigator.vibrate(40);
+        chip.classList.add('kb-touch-holding');
+
+        var ghost = document.createElement('div');
+        ghost.className = 'kb-touch-ghost';
+        ghost.innerHTML = chip.innerHTML;
+        ghost.style.width = chip.offsetWidth + 'px';
+        document.body.appendChild(ghost);
+        _rncCalMonthTouch.ghostEl = ghost;
+        _rncCalMonthMoveGhost(cx, cy);
+    }
+
+    function _rncCalMonthMoveGhost(cx, cy) {
+        var g = _rncCalMonthTouch.ghostEl;
+        if (!g) return;
+        g.style.left = (cx - g.offsetWidth / 2) + 'px';
+        g.style.top  = (cy - 30) + 'px';
+    }
+
+    function _rncCalMonthTouchDrop(cx, cy) {
+        if (!_rncCalMonthTouch.itemId) return;
+        var under = document.elementFromPoint(cx, cy);
+        var cell = under ? under.closest('.rnc-cal-day-cell[data-date]') : null;
+        if (!cell) return;
+        var targetDateStr = cell.getAttribute('data-date');
+        if (!targetDateStr) return;
+        _rncCalMoveItemToDate(_rncCalMonthTouch.itemId, targetDateStr);
+    }
+
+    function _rncCalMonthCancelDrag() {
+        if (_rncCalMonthTouch.longPressTimer) { clearTimeout(_rncCalMonthTouch.longPressTimer); _rncCalMonthTouch.longPressTimer = null; }
+        document.querySelectorAll('.rnc-cal-day-cell.rnc-cal-touch-over').forEach(function(c){ c.classList.remove('rnc-cal-touch-over'); });
+        if (_rncCalMonthTouch.chipEl) _rncCalMonthTouch.chipEl.classList.remove('kb-touch-holding');
+        if (_rncCalMonthTouch.ghostEl) { _rncCalMonthTouch.ghostEl.remove(); _rncCalMonthTouch.ghostEl = null; }
+        _rncCalMonthTouch.active = false;
+        _rncCalMonthTouch.itemId = null;
+        _rncCalMonthTouch.chipEl = null;
+    }
 
 })();

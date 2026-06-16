@@ -88,6 +88,8 @@
     border-bottom: 1px solid var(--border, #e2e8f0);
     flex-wrap: wrap;
     flex-shrink: 0;
+    position: relative;
+    z-index: 250;
 }
 .rnc-fbar-left, .rnc-fbar-right {
     display: flex;
@@ -546,6 +548,8 @@
     align-items: flex-start;
     height: 100%;
     width: 100%;
+    position: relative;
+    z-index: 1;
 }
 .rnc-kb-col {
     background: #f8fafc;
@@ -948,6 +952,17 @@
     background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
     box-shadow: 0 0 0 2px rgba(37,99,235,.15);
 }
+.rnc-cal-day-cell.rnc-cal-drag-over,
+.rnc-cal-week-col.rnc-cal-drag-over,
+.rnc-cal-day-cell.rnc-cal-touch-over {
+    border-color: var(--accent, #2563eb);
+    background: #eff6ff;
+    box-shadow: 0 0 0 2px rgba(37,99,235,.25);
+}
+.rnc-cal-event-chip.rnc-cal-dragging,
+.rnc-cal-event-card.rnc-cal-dragging { opacity: .4; }
+.rnc-cal-event-chip[draggable="true"],
+.rnc-cal-event-card[draggable="true"] { cursor: grab; }
 .rnc-cal-day-num { font-size: 12px; font-weight: 700; color: #64748b; }
 .rnc-cal-day-today .rnc-cal-day-num { color: var(--accent, #2563eb); }
 .rnc-cal-events-wrap { display: flex; flex-direction: column; gap: 3px; }
@@ -3013,7 +3028,6 @@
     #modalRnc .form-grid { grid-template-columns: 1fr; }
     .rnc-view-fields { grid-template-columns: 1fr; }
     .rnc-class-chips { flex-direction: column; }
-    .rnc-filters-bar { flex-direction: column; align-items: stretch; }
     .rnc-view-modal {
         width: 100vw;
         max-height: 100vh;
@@ -3026,12 +3040,36 @@
     .rnc-manager-box { border-radius: 14px; }
 }
 
-/* Filtro de classificação fica na ponta esquerda da barra: ancorar o dropdown
-   pela esquerda para não cortar com a lateral da página */
 .rnc-class-wrap { position: relative; }
 #rncClassDropdown {
     left: 0;
     right: auto;
+}
+
+/* No mobile, todos os filtros (apenas ícones) ficam na mesma linha com
+   scroll horizontal. Como a barra tem overflow-x, dropdowns "position:absolute"
+   ficariam presos dentro desse scroll — por isso o JS promove a classe
+   .rnc-dd-fixed (position:fixed, posição calculada) para flutuar sobre a página. */
+@media (max-width: 768px) {
+    .rnc-filters-bar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .rnc-fbar-left, .rnc-fbar-right {
+        flex-wrap: nowrap;
+        flex-shrink: 0;
+    }
+    #rncClassDropdown,
+    .rnc-filters-bar .oc-mytasks-dropdown {
+        left: auto;
+        right: 0;
+    }
+}
+
+.rnc-dd-fixed {
+    position: fixed !important;
+    z-index: 9000 !important;
 }
 
 /* Filtros multi-seleção (Origem / Detalhamento) */
