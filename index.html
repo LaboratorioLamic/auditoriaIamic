@@ -920,6 +920,9 @@
                     <button class="oc-icon-btn" onclick="ocClearFilters()" title="Limpar filtros">
                         <i class="fas fa-rotate-left"></i>
                     </button>
+                    <button class="oc-icon-btn oc-icon-btn--danger" id="ocDeleteAllBtn" style="display:none;" onclick="ocDeleteAllOfType()" title="Apagar todos os registros deste tipo">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             </div>
 
@@ -1479,9 +1482,11 @@
 
             <div class="field-group full-width">
                 <label>Responsável</label>
-                <div class="oc-resp-field">
+                <div class="oc-resp-field oc-ac-wrap oc-ac-wrap--icon">
                     <i class="fas fa-user-shield"></i>
-                    <input type="text" id="ocFResponsavel" readonly disabled>
+                    <input type="text" id="ocFResponsavel" readonly disabled autocomplete="off"
+                           oninput="ocResponsavelInput()" onfocus="ocResponsavelInput()">
+                    <div class="oc-ac-dropdown" id="ocResponsavelDropdown"></div>
                 </div>
             </div>
             <div class="field-group full-width">
@@ -2854,6 +2859,25 @@
                             </select>
                         </div>
                         <div class="um-perm-card">
+                            <button type="button" class="um-perm-info" onclick="togglePermInfo(this,'rncEdit')" title="O que significa?"><i class="fas fa-circle-info"></i></button>
+                            <div class="um-perm-card-icon" style="background:#fef2f2;color:#dc2626"><i class="fas fa-file-circle-exclamation"></i></div>
+                            <div class="um-perm-card-label">Gerenciar RNC</div>
+                            <select id="cfgRncCanEdit" class="um-perm-card-sel">
+                                <option value="total">Total</option>
+                                <option value="parcial">Parcial</option>
+                                <option value="nao">Não</option>
+                            </select>
+                        </div>
+                        <div class="um-perm-card">
+                            <button type="button" class="um-perm-info" onclick="togglePermInfo(this,'rncView')" title="O que significa?"><i class="fas fa-circle-info"></i></button>
+                            <div class="um-perm-card-icon" style="background:#eef2ff;color:#4f46e5"><i class="fas fa-eye"></i></div>
+                            <div class="um-perm-card-label">Visualizar RNC</div>
+                            <select id="cfgRncTaskView" class="um-perm-card-sel">
+                                <option value="todos">Todos</option>
+                                <option value="usuario">Usuário</option>
+                            </select>
+                        </div>
+                        <div class="um-perm-card">
                             <button type="button" class="um-perm-info" onclick="togglePermInfo(this,'managePubs')" title="O que significa?"><i class="fas fa-circle-info"></i></button>
                             <div class="um-perm-card-icon" style="background:#ecfeff;color:#06b6d4"><i class="fas fa-newspaper"></i></div>
                             <div class="um-perm-card-label">Gerenciar publicações</div>
@@ -2951,24 +2975,35 @@
 </div>
 
 <div class="modal" id="modalSetoresPermissoes">
-    <div class="modal-content" style="width:500px; max-width:90vw;">
-        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 style="margin:0; color:#1f2937;"><i class="fa-solid fa-building"></i> Selecionar Setores Permitidos</h3>
-            <button class="btn-close" onclick="closeModal('modalSetoresPermissoes')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">×</button>
-        </div>
-        <div style="margin-bottom:16px;">
-            <p style="color:#6b7280; font-size:13px; margin:0 0 12px 0;">Selecione os setores que este usuário pode visualizar nos cadastros e filtros.</p>
-            <div style="display:flex; gap:8px; margin-bottom:12px;">
-                <button type="button" onclick="selectAllSetores()" style="padding:6px 12px; background:#f3f4f6; border:1px solid #d1d5db; border-radius:6px; font-size:12px; cursor:pointer; color:#374151;">Selecionar Todos</button>
-                <button type="button" onclick="deselectAllSetores()" style="padding:6px 12px; background:#f3f4f6; border:1px solid #d1d5db; border-radius:6px; font-size:12px; cursor:pointer; color:#374151;">Desselecionar Todos</button>
+    <div class="modal-content setor-filter-modal">
+        <div class="setor-filter-header">
+            <div class="setor-filter-header-left">
+                <div class="setor-filter-icon"><i class="fa-solid fa-building"></i></div>
+                <div>
+                    <div class="setor-filter-title">Selecionar Setores</div>
+                    <div class="setor-filter-subtitle" id="modalSetoresSubtitle">0 SETORES DISPONÍVEIS</div>
+                </div>
             </div>
+            <button class="btn-close" onclick="closeModal('modalSetoresPermissoes')" style="background:none; border:none; font-size:22px; cursor:pointer; color:#fff; opacity:.85; padding:0; width:28px; height:28px; display:flex; align-items:center; justify-content:center;">×</button>
         </div>
-        <div id="modalSetoresList" style="max-height:400px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:8px; padding:12px; background:#f9fafb;">
+
+        <div id="modalSetoresLockNotice" style="display:none; align-items:center; gap:8px; background:#fffbeb; border-bottom:1px solid #fde68a; color:#92400e; font-size:12.5px; padding:10px 22px;">
+            <i class="fas fa-lock"></i>
+            <span>Setores bloqueados: este usuário tem a permissão "Gerenciar listas" = Sim, que concede acesso automático a todos os setores.</span>
+        </div>
+
+        <div class="setor-filter-controls">
+            <span class="setor-filter-count" id="modalSetoresCount">0 de 0 selecionados</span>
+            <button type="button" class="setor-filter-deselect" id="modalSetoresToggleAllBtn" onclick="toggleAllSetoresModal()"><i class="fas fa-times"></i> Desmarcar todos</button>
+        </div>
+
+        <div class="setor-filter-grid" id="modalSetoresList">
             <!-- Setores serão renderizados aqui -->
         </div>
-        <div class="modal-actions" style="margin-top:20px; display:flex; gap:8px; justify-content:flex-end;">
+
+        <div class="setor-filter-footer">
             <button class="btn-cancel" onclick="closeModal('modalSetoresPermissoes')">Cancelar</button>
-            <button class="btn-save" onclick="saveSetoresPermissoes()">Salvar</button>
+            <button class="btn-save" onclick="saveSetoresPermissoes()"><i class="fas fa-check"></i> Confirmar</button>
         </div>
     </div>
 </div>

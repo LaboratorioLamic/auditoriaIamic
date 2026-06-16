@@ -70,6 +70,9 @@
 
     // Aplica filtros comuns: tipo, categoria, motivo, colaborador, setor
     function applyCommonFilters(arr) {
+        var allowedTipos = (typeof window.userAllowedTiposOc === 'function') ? window.userAllowedTiposOc() : null;
+        if (allowedTipos) arr = arr.filter(function (o) { return allowedTipos.includes(o.tipoId); });
+
         var tipoId = typeof window.dashOcTipoId !== 'undefined' ? window.dashOcTipoId : null;
         if (tipoId) arr = arr.filter(function (o) { return o.tipoId === tipoId; });
 
@@ -483,11 +486,10 @@
         });
     }
 
-    // ── Chart: Bar — motivos ──────────────────────────────────────────────
-    function renderMotivosChart(arr) {
-        destroyChart('motivos');
-        var ctx = document.getElementById('ocDashMotivosChart');
-        if (!ctx) return;
+    // ── Tabela: ranking de motivos ─────────────────────────────────────────
+    function renderMotivosTable(arr) {
+        var tbl = document.getElementById('ocDashMotivosBody');
+        if (!tbl) return;
 
         var counts = {};
         arr.forEach(function (o) {
@@ -495,39 +497,13 @@
             counts[m] = (counts[m] || 0) + 1;
         });
 
-        var total = arr.length;
-        var entries = Object.entries(counts).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 12);
-        if (!entries.length) {
-            showEmpty('ocDashMotivosChart', 'fa-chart-bar', 'Sem dados');
-            return;
-        }
-        hideEmpty('ocDashMotivosChart');
-        var labels = entries.map(function (e) { return e[0]; });
-        var data = entries.map(function (e) { return e[1]; });
-
-        charts['motivos'] = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Quantidade',
-                    data: data,
-                    backgroundColor: labels.map(function (_, i) { return PALETTE[i % PALETTE.length] + 'cc'; }),
-                    borderColor: labels.map(function (_, i) { return PALETTE[i % PALETTE.length]; }),
-                    borderWidth: 1.5,
-                    borderRadius: 6,
-                    borderSkipped: false
-                }]
-            },
-            options: barChartOptions(total, 'Motivos')
-        });
+        renderRankingTable(tbl, counts, arr.length);
     }
 
-    // ── Chart: Bar — setores ──────────────────────────────────────────────
-    function renderSetoresChart(arr) {
-        destroyChart('setores');
-        var ctx = document.getElementById('ocDashSetoresChart');
-        if (!ctx) return;
+    // ── Tabela: ranking de setores ──────────────────────────────────────────
+    function renderSetoresTable(arr) {
+        var tbl = document.getElementById('ocDashSetoresBody');
+        if (!tbl) return;
 
         var counts = {};
         arr.forEach(function (o) {
@@ -535,57 +511,35 @@
             counts[s] = (counts[s] || 0) + 1;
         });
 
-        var total = arr.length;
-        var entries = Object.entries(counts).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 12);
-        if (!entries.length) {
-            showEmpty('ocDashSetoresChart', 'fa-chart-bar', 'Sem dados');
-            return;
-        }
-        hideEmpty('ocDashSetoresChart');
-        var labels = entries.map(function (e) { return e[0]; });
-        var data = entries.map(function (e) { return e[1]; });
-
-        charts['setores'] = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Quantidade',
-                    data: data,
-                    backgroundColor: labels.map(function (_, i) { return PALETTE[(i + 3) % PALETTE.length] + 'cc'; }),
-                    borderColor: labels.map(function (_, i) { return PALETTE[(i + 3) % PALETTE.length]; }),
-                    borderWidth: 1.5,
-                    borderRadius: 6,
-                    borderSkipped: false
-                }]
-            },
-            options: barChartOptions(total, 'Setor')
-        });
+        renderRankingTable(tbl, counts, arr.length);
     }
 
-    function barChartOptions(total, label) {
-        return {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: '#1e293b', titleColor: '#f8fafc', bodyColor: '#cbd5e1', cornerRadius: 8,
-                    callbacks: {
-                        label: function (c) {
-                            var pct = total ? ((c.parsed.x / total) * 100).toFixed(1) : 0;
-                            return ' ' + c.parsed.x + ' (' + pct + '%)';
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { color: '#64748b', font: { size: 12 }, precision: 0 } },
-                y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 11 } } }
-            },
-            animation: { duration: 600, easing: 'easeInOutQuart' }
-        };
+    function renderRankingTable(tbl, counts, total) {
+        var entries = Object.entries(counts).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 20);
+
+        if (!entries.length) {
+            tbl.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:24px;">Sem dados</td></tr>';
+            return;
+        }
+
+        var max = entries[0][1];
+        tbl.innerHTML = entries.map(function (e, i) {
+            var pct = total ? ((e[1] / total) * 100).toFixed(1) : 0;
+            var barW = max ? ((e[1] / max) * 100).toFixed(1) : 0;
+            return '<tr>' +
+                '<td style="font-weight:600;color:var(--text-muted);text-align:center;">' + (i + 1) + '</td>' +
+                '<td>' +
+                    '<div style="font-weight:600;color:var(--text);font-size:13px;">' + esc(e[0]) + '</div>' +
+                    '<div style="margin-top:4px;height:5px;background:var(--surface-muted);border-radius:3px;">' +
+                        '<div style="height:100%;width:' + barW + '%;background:var(--grad-accent);border-radius:3px;transition:width 0.5s;"></div>' +
+                    '</div>' +
+                '</td>' +
+                '<td style="text-align:right;">' +
+                    '<span style="font-weight:700;color:var(--text);">' + e[1] + '</span>' +
+                    '<span style="color:var(--text-muted);font-size:12px;margin-left:4px;">(' + pct + '%)</span>' +
+                '</td>' +
+            '</tr>';
+        }).join('');
     }
 
     // ── Chart: Waterfall — evolução mês a mês ─────────────────────────────
@@ -631,7 +585,6 @@
                 }]
             },
             options: {
-                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
@@ -640,20 +593,20 @@
                         backgroundColor: '#1e293b', titleColor: '#f8fafc', bodyColor: '#cbd5e1', cornerRadius: 8,
                         callbacks: {
                             label: function (c) {
-                                return ' ' + (c.parsed.x >= 0 ? '+' : '') + c.parsed.x + '%';
+                                return ' ' + (c.parsed.y >= 0 ? '+' : '') + c.parsed.y + '%';
                             }
                         }
                     }
                 },
                 scales: {
-                    x: {
+                    x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 11 } } },
+                    y: {
                         grid: { color: 'rgba(0,0,0,0.06)' },
                         ticks: {
                             color: '#64748b', font: { size: 12 },
                             callback: function (v) { return (v >= 0 ? '+' : '') + v + '%'; }
                         }
-                    },
-                    y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 11 } } }
+                    }
                 },
                 animation: { duration: 600, easing: 'easeInOutQuart' }
             }
@@ -731,13 +684,31 @@
                     '<div class="oc-dash-chart-header">' +
                         '<h3><i class="fas fa-chart-bar"></i> Motivos de Ocorrência</h3>' +
                     '</div>' +
-                    '<div class="oc-dash-canvas-wrap" style="height:240px;"><canvas id="ocDashMotivosChart"></canvas></div>' +
+                    '<div style="overflow-y:auto;max-height:240px;">' +
+                        '<table class="oc-dash-ranking-table">' +
+                            '<thead><tr>' +
+                                '<th style="width:40px;">#</th>' +
+                                '<th>Motivo</th>' +
+                                '<th style="text-align:right;">Qtd</th>' +
+                            '</tr></thead>' +
+                            '<tbody id="ocDashMotivosBody"></tbody>' +
+                        '</table>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="oc-dash-chart-card">' +
                     '<div class="oc-dash-chart-header">' +
                         '<h3><i class="fas fa-building"></i> Ocorrência por Setor</h3>' +
                     '</div>' +
-                    '<div class="oc-dash-canvas-wrap" style="height:240px;"><canvas id="ocDashSetoresChart"></canvas></div>' +
+                    '<div style="overflow-y:auto;max-height:240px;">' +
+                        '<table class="oc-dash-ranking-table">' +
+                            '<thead><tr>' +
+                                '<th style="width:40px;">#</th>' +
+                                '<th>Setor</th>' +
+                                '<th style="text-align:right;">Qtd</th>' +
+                            '</tr></thead>' +
+                            '<tbody id="ocDashSetoresBody"></tbody>' +
+                        '</table>' +
+                    '</div>' +
                 '</div>' +
             '</div>' +
 
@@ -786,8 +757,8 @@
         renderKPIs(kpis);
         renderLineChart(arrYear, kpis);
         renderDonutChart(arr);
-        renderMotivosChart(arr);
-        renderSetoresChart(arr);
+        renderMotivosTable(arr);
+        renderSetoresTable(arr);
         renderWaterfallChart(kpis);
         renderRanking(arr);
     };

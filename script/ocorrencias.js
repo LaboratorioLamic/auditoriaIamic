@@ -34,12 +34,13 @@
 
     // ── Confirm modal moderno ──────────────────────────────────────────
     function ocConfirm(opts, callback) {
-        // opts: { title, message, confirmLabel, confirmClass, icon }
+        // opts: { title, message, confirmLabel, confirmClass, icon, requireText }
         var title        = opts.title        || 'Confirmar';
         var message      = opts.message      || '';
         var confirmLabel = opts.confirmLabel || 'Confirmar';
         var confirmClass = opts.confirmClass || 'oc-confirm-btn-danger';
         var icon         = opts.icon         || 'fa-triangle-exclamation';
+        var requireText  = opts.requireText  || null;
 
         var el = document.getElementById('ocConfirmModal');
         if (!el) {
@@ -47,19 +48,32 @@
             el.id = 'ocConfirmModal';
             document.body.appendChild(el);
         }
+        var inputHtml = requireText
+            ? '<input type="text" class="oc-confirm-input" id="ocConfirmInput" autocomplete="off" placeholder="Digite ' + esc(requireText) + '">'
+            : '';
         el.innerHTML =
             '<div class="oc-confirm-backdrop" id="ocConfirmBackdrop">' +
                 '<div class="oc-confirm-box">' +
                     '<div class="oc-confirm-icon-wrap"><i class="fas ' + esc(icon) + ' oc-confirm-icon"></i></div>' +
                     '<div class="oc-confirm-title">' + esc(title) + '</div>' +
                     '<div class="oc-confirm-msg">' + esc(message) + '</div>' +
+                    inputHtml +
                     '<div class="oc-confirm-actions">' +
                         '<button class="oc-confirm-btn-cancel" onclick="document.getElementById(\'ocConfirmModal\').innerHTML=\'\'">Cancelar</button>' +
-                        '<button class="' + esc(confirmClass) + '" id="ocConfirmOkBtn">' + esc(confirmLabel) + '</button>' +
+                        '<button class="' + esc(confirmClass) + '" id="ocConfirmOkBtn"' + (requireText ? ' disabled' : '') + '>' + esc(confirmLabel) + '</button>' +
                     '</div>' +
                 '</div>' +
             '</div>';
-        document.getElementById('ocConfirmOkBtn').onclick = function () {
+        var okBtn = document.getElementById('ocConfirmOkBtn');
+        if (requireText) {
+            var input = document.getElementById('ocConfirmInput');
+            input.addEventListener('input', function () {
+                okBtn.disabled = input.value.trim().toUpperCase() !== requireText.toUpperCase();
+            });
+            setTimeout(function () { input.focus(); }, 50);
+        }
+        okBtn.onclick = function () {
+            if (okBtn.disabled) return;
             el.innerHTML = '';
             callback();
         };
@@ -105,6 +119,23 @@
         if (typeof currentuser === 'undefined' || !currentuser) return '';
         return String(currentuser.name || currentuser.user || '').trim();
     }
+    function canEditResponsavel() {
+        return typeof userOcPerm === 'function' && userOcPerm() === 'total';
+    }
+    function getUserNames() {
+        var u = typeof users !== 'undefined' ? users : [];
+        return u.filter(function (x) { return x && x.name; }).map(function (x) { return x.name; })
+            .sort(function (a, b) { return a.localeCompare(b, 'pt'); });
+    }
+    window.ocResponsavelInput = function () {
+        if (!canEditResponsavel()) return;
+        var q = (document.getElementById('ocFResponsavel').value || '').trim().toLowerCase();
+        var list = getUserNames().filter(function (s) { return !q || s.toLowerCase().indexOf(q) !== -1; }).slice(0, 30);
+        renderAC('ocResponsavelDropdown', list, function (name) {
+            document.getElementById('ocFResponsavel').value = name;
+            document.getElementById('ocResponsavelDropdown').classList.remove('open');
+        }, false);
+    };
     function persist() {
         if (typeof saveAll === 'function') saveAll();
     }
@@ -435,6 +466,7 @@
         document.getElementById('ocFMotivo').value = '';
         document.getElementById('ocFComentario').value = '';
         document.getElementById('ocFResponsavel').value = meName();
+        document.getElementById('ocFResponsavel').disabled = !canEditResponsavel();
         document.getElementById('ocMotivoWrap').style.display = 'none';
         if (typeof clearAnexosUpload === 'function') clearAnexosUpload('oc');
         ocCloseAllDropdowns();
@@ -455,6 +487,7 @@
         document.getElementById('ocFCategoria').value = o.categoria || '';
         document.getElementById('ocFComentario').value = o.comentario || '';
         document.getElementById('ocFResponsavel').value = o.responsavel || meName();
+        document.getElementById('ocFResponsavel').disabled = !canEditResponsavel();
         var cat = catByName(o.categoria, o.tipoId);
         if (cat) {
             document.getElementById('ocMotivoWrap').style.display = '';
@@ -493,6 +526,7 @@
         var categoria = document.getElementById('ocFCategoria').value.trim();
         var motivo = document.getElementById('ocFMotivo').value.trim();
         var comentario = document.getElementById('ocFComentario').value.trim();
+        var responsavel = document.getElementById('ocFResponsavel').value.trim() || meName();
 
         if (!data) { toast('Informe a data.', 'error'); return; }
         if (!colab) { toast('Informe o colaborador.', 'error'); return; }
@@ -518,6 +552,7 @@
             if (o) {
                 o.data = data; o.colaborador = colab; o.setor = setor;
                 o.categoria = categoria; o.motivo = motivo; o.comentario = comentario;
+                o.responsavel = responsavel;
                 o.anexos = anexos;
                 o.updatedAt = new Date().toISOString();
             }
@@ -532,7 +567,7 @@
                 categoria: categoria,
                 motivo: motivo,
                 comentario: comentario,
-                responsavel: meName(),
+                responsavel: responsavel,
                 anexos: anexos,
                 createdAt: new Date().toISOString()
             });
@@ -555,6 +590,31 @@
             persist();
             renderTable();
             toast('Ocorrência excluída.', 'info');
+        });
+    };
+
+    window.ocDeleteAllOfType = function () {
+        if (typeof userIsAdmin !== 'function' || !userIsAdmin()) {
+            toast('Apenas administradores podem apagar todos os registros.', 'error');
+            return;
+        }
+        if (!ocCurrentTipoId) { toast('Selecione um tipo de ocorrência.', 'error'); return; }
+        var tipo = getTipos().find(function (t) { return t.id === ocCurrentTipoId; });
+        var tipoNome = tipo ? tipo.name : '';
+        var count = (window.ocorrencias || []).filter(function (x) { return x.tipoId === ocCurrentTipoId; }).length;
+        if (!count) { toast('Não há registros deste tipo para apagar.', 'info'); return; }
+        ocConfirm({
+            title: 'Apagar todos os registros',
+            message: 'Esta ação é irreversível e vai apagar ' + count + ' registro(s) do tipo "' + tipoNome + '". Digite SIM para confirmar.',
+            confirmLabel: 'Apagar tudo',
+            icon: 'fa-trash',
+            requireText: 'SIM'
+        }, function () {
+            window.ocorrencias = (window.ocorrencias || []).filter(function (x) { return x.tipoId !== ocCurrentTipoId; });
+            persist();
+            ocPage = 1;
+            renderTable();
+            toast('Todos os registros do tipo "' + tipoNome + '" foram apagados.', 'info');
         });
     };
 
@@ -1574,6 +1634,29 @@
         XLSX.writeFile(wb, 'ocorrencias_' + (tipo ? tipo.name : 'export').replace(/\s+/g, '_') + '.xlsx');
     };
 
+    // Converte data vinda do Excel (serial numérico, Date ou texto DD/MM/YYYY) para YYYY-MM-DD.
+    function _ocParseXlsxDate(v) {
+        if (v == null || v === '') return '';
+        if (v instanceof Date) {
+            if (isNaN(v.getTime())) return '';
+            var yy = v.getFullYear(), mm = String(v.getMonth() + 1).padStart(2, '0'), dd = String(v.getDate()).padStart(2, '0');
+            return yy + '-' + mm + '-' + dd;
+        }
+        if (typeof v === 'number') {
+            var parsed = (typeof XLSX !== 'undefined' && XLSX.SSF) ? XLSX.SSF.parse_date_code(v) : null;
+            if (parsed) {
+                return parsed.y + '-' + String(parsed.m).padStart(2, '0') + '-' + String(parsed.d).padStart(2, '0');
+            }
+            return '';
+        }
+        var s = String(v).trim();
+        if (!s) return '';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        var m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (m) return m[3] + '-' + m[2] + '-' + m[1];
+        return '';
+    }
+
     window.ocXlsxFileChosen = function (input) {
         var file = input.files && input.files[0];
         if (!file) return;
@@ -1599,12 +1682,9 @@
                 });
                 var valid = [], invalid = 0;
                 rows.slice(1).forEach(function (row, idx) {
-                    var dataVal = colMap.data >= 0 ? String(row[colMap.data] || '').trim() : '';
+                    var dataRaw = colMap.data >= 0 ? row[colMap.data] : '';
+                    var dataVal = _ocParseXlsxDate(dataRaw);
                     var colab = colMap.colaborador >= 0 ? String(row[colMap.colaborador] || '').trim() : '';
-                    // Normalise date formats DD/MM/YYYY → YYYY-MM-DD
-                    if (dataVal && dataVal.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-                        var p = dataVal.split('/'); dataVal = p[2] + '-' + p[1] + '-' + p[0];
-                    }
                     if (!dataVal || !colab) { invalid++; return; }
                     valid.push({
                         _rowNum: idx + 2,

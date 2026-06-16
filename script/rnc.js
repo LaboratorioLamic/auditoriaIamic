@@ -289,7 +289,8 @@
     function toast(msg, type) {
         if (typeof window.showToast === 'function') window.showToast(msg, type || 'info');
     }
-    function canEdit() { return typeof userCanEditCards !== 'function' || userCanEditCards(); }
+    function canEdit(item) { return typeof userCanEditRnc !== 'function' || userCanEditRnc(item); }
+    function canDeleteRnc() { return typeof userIsAdmin === 'function' && userIsAdmin() || (typeof currentuser !== 'undefined' && currentuser && _normTriPerm(currentuser.rncCanEdit, 'total') === 'total'); }
     function canManage() { return typeof userCanManageLists !== 'function' || userCanManageLists(); }
     function meName() {
         if (typeof currentuser === 'undefined' || !currentuser) return '';
@@ -366,10 +367,12 @@
 
     function getFiltered() {
         var arr = (window.rncItems || []).filter(function(r){ return r && !r.deleted; });
-        if (rncMyMode === 'responsavel') {
+        var restrictToSelf = (typeof userRncTaskView === 'function') && userRncTaskView() === 'usuario';
+        var effMode = (restrictToSelf && rncMyMode === 'all') ? 'responsavel' : rncMyMode;
+        if (effMode === 'responsavel') {
             var me = meName().toLowerCase();
             arr = arr.filter(function(r){ return String(r.responsavel || '').trim().toLowerCase() === me; });
-        } else if (rncMyMode === 'revisor') {
+        } else if (effMode === 'revisor') {
             var me2 = meName().toLowerCase();
             arr = arr.filter(function(r){ return String(r.revisor || '').trim().toLowerCase() === me2; });
         }
@@ -427,10 +430,10 @@
         var cl  = Array.isArray(r.checklist) ? r.checklist : [];
         var clD = cl.filter(function(c){ return c.checked; }).length;
         var donut = cl.length > 0 ? rncDonutHtml(clD, cl.length, 46) : '';
-        var actions = (opts.actions && canEdit()) ?
+        var actions = (opts.actions && (canEdit(r) || canDeleteRnc())) ?
             '<div class="rnc-card-actions" onclick="event.stopPropagation()">' +
-                '<i class="fas fa-pen" onclick="rncOpenEdit(' + r.id + ')" title="Editar"></i>' +
-                '<i class="fas fa-trash danger" onclick="rncDelete(' + r.id + ')" title="Excluir"></i>' +
+                (canEdit(r) ? '<i class="fas fa-pen" onclick="rncOpenEdit(' + r.id + ')" title="Editar"></i>' : '') +
+                (canDeleteRnc() ? '<i class="fas fa-trash danger" onclick="rncDelete(' + r.id + ')" title="Excluir"></i>' : '') +
             '</div>' : '';
         return '<div class="rnc-card' + rncAlertClass(r) + (donut ? ' has-donut' : '') + '" onclick="rncOpenView(' + r.id + ')" style="--rnc-card-accent:' + ci.color + '">' +
             '<div class="rnc-card-main">' +
@@ -600,11 +603,8 @@
         rncSetorFilter = []; rncDateFilter = { type:'all', month:null, year:null, ini:'', fim:'' };
         rncOrigemFilter = []; rncDetFilter = [];
         updateRncOrigemFilterLabel(); updateRncDetFilterLabel();
-        rncMyMode = 'all';
-        var btn = document.getElementById('rncMyBtn'); if (btn) btn.classList.remove('active');
-        var lbl = document.getElementById('rncMyLabel'); if (lbl) lbl.textContent = "Todas RNC's";
-        var mdd = document.getElementById('rncMyDropdown');
-        if (mdd) mdd.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-mode') === 'all'); });
+        var restrictToSelf = (typeof userRncTaskView === 'function') && userRncTaskView() === 'usuario';
+        window.rncSetMyMode(restrictToSelf ? 'responsavel' : 'all');
         updateRncSetorHeadLabel(); updateRncDateHeadLabel();
         rncPage = 1; renderRnc();
     };
@@ -720,9 +720,9 @@
                     '<td>' + (r.dataConclusao ? esc(fmtDate(r.dataConclusao)) : '<span style="color:#cbd5e1">—</span>') + '</td>' +
                     '<td>' + (r.status ? '<span class="rnc-card-status" style="' + rncStatusColorStyle(r.status) + '">' + esc(r.status) + '</span>' : '<span style="color:#cbd5e1">—</span>') + '</td>' +
                     '<td onclick="event.stopPropagation()">' +
-                        (canEdit() ? '<div style="display:flex;gap:4px">' +
-                            '<button class="rnc-tbl-btn" onclick="rncOpenEdit(' + r.id + ')" title="Editar"><i class="fas fa-pen"></i></button>' +
-                            '<button class="rnc-tbl-btn danger" onclick="rncDelete(' + r.id + ')" title="Excluir"><i class="fas fa-trash"></i></button>' +
+                        ((canEdit(r) || canDeleteRnc()) ? '<div style="display:flex;gap:4px">' +
+                            (canEdit(r) ? '<button class="rnc-tbl-btn" onclick="rncOpenEdit(' + r.id + ')" title="Editar"><i class="fas fa-pen"></i></button>' : '') +
+                            (canDeleteRnc() ? '<button class="rnc-tbl-btn danger" onclick="rncDelete(' + r.id + ')" title="Excluir"><i class="fas fa-trash"></i></button>' : '') +
                         '</div>' : '') +
                     '</td>' +
                 '</tr>';
@@ -805,7 +805,6 @@
                 '</div>';
             return;
         }
-        var canDrag = canEdit();
         var canMng = canManage();
         board.innerHTML = statuses.map(function(s, idx) {
             var color = rncResolveColor(s.color);
@@ -838,13 +837,14 @@
                             var cl  = Array.isArray(r.checklist) ? r.checklist : [];
                             var clD = cl.filter(function(c){ return c.checked; }).length;
                             var donut = cl.length > 0 ? rncDonutHtml(clD, cl.length, 38) : '';
-                            var kbActions = canEdit() ?
+                            var canEditCard = canEdit(r);
+                            var kbActions = (canEditCard || canDeleteRnc()) ?
                                 '<div class="rnc-kb-card-actions" onclick="event.stopPropagation()">' +
-                                    '<button class="rnc-kb-card-act" onclick="rncOpenEdit(' + r.id + ')" title="Editar"><i class="fas fa-pen"></i></button>' +
-                                    '<button class="rnc-kb-card-act danger" onclick="rncDelete(' + r.id + ')" title="Excluir"><i class="fas fa-trash"></i></button>' +
+                                    (canEditCard ? '<button class="rnc-kb-card-act" onclick="rncOpenEdit(' + r.id + ')" title="Editar"><i class="fas fa-pen"></i></button>' : '') +
+                                    (canDeleteRnc() ? '<button class="rnc-kb-card-act danger" onclick="rncDelete(' + r.id + ')" title="Excluir"><i class="fas fa-trash"></i></button>' : '') +
                                 '</div>' : '';
                             return '<div class="rnc-kb-card' + rncAlertClass(r) + (donut ? ' has-donut' : '') + (mk ? ' has-marker' : '') + '"' +
-                                (canDrag ? ' draggable="true"' : '') + ' data-id="' + r.id + '"' +
+                                (canEditCard ? ' draggable="true"' : '') + ' data-id="' + r.id + '"' +
                                 ' onclick="rncOpenView(' + r.id + ')" style="--rnc-kb-card-color:' + ci.color + '">' +
                                 '<div class="rnc-kb-card-main">' +
                                     '<div class="rnc-kb-card-title-row">' +
@@ -863,7 +863,7 @@
                 ) +
             '</div>';
         }).join('');
-        if (canDrag) _rncKanbanBindDnd(board);
+        _rncKanbanBindDnd(board);
     }
 
     // ── Ações do cabeçalho da coluna (mover / ocultar) ──
@@ -1039,7 +1039,7 @@
     function _rncMoveCardToStatus(id, newStatus) {
         var r = (window.rncItems || []).find(function(x){ return x.id === id; });
         if (!r || r.status === newStatus) return;
-        if (!canEdit()) { toast('Sem permissão para mover este card.', 'error'); return; }
+        if (!canEdit(r)) { toast('Sem permissão para mover este card.', 'error'); return; }
         r.status = newStatus;
         r.updatedAt = new Date().toISOString();
         persist();
@@ -1698,6 +1698,13 @@
 
     function getRncNotifications() {
         var arr = (window.rncItems || []).filter(function(r){ return r && !r.deleted; });
+        if (typeof userRncTaskView === 'function' && userRncTaskView() === 'usuario') {
+            var me = meName().toLowerCase();
+            arr = arr.filter(function(r){
+                return String(r.responsavel || '').trim().toLowerCase() === me ||
+                       String(r.revisor || '').trim().toLowerCase() === me;
+            });
+        }
         var notifs = [];
         arr.forEach(function(r) {
             var a = rncAlertState(r);
@@ -1719,6 +1726,7 @@
         badge.textContent = n;
         badge.style.display = n > 0 ? '' : 'none';
     }
+    window.updateRncNotificationBell = updateRncNotificationBell;
 
     window.rncToggleNotifications = function() {
         var modal = document.getElementById('rncNotificationModal');
@@ -1774,10 +1782,10 @@
     };
 
     window.rncOpenEdit = function(id) {
-        if (!canEdit()) { toast('Você não tem permissão para editar.', 'error'); return; }
         id = Number(id);
         var r = (window.rncItems || []).find(function(x){ return x.id === id; });
         if (!r) return;
+        if (!canEdit(r)) { toast('Você não tem permissão para editar.', 'error'); return; }
         ensureLists();
         rncEditingId = id;
         document.getElementById('rncDrawerTitle').textContent = 'Editar RNC';
@@ -1802,6 +1810,8 @@
         setVal('rncFDataInicio', todayVal);
         setVal('rncFDataConclusao', '');
         setVal('rncFResponsavel', meName());
+        var respInput = document.getElementById('rncFResponsavel');
+        if (respInput) respInput.disabled = false;
         setVal('rncFRevisor', '');
         setVal('rncFAlerta', '');
         setVal('rncFMarcador', '');
@@ -1829,6 +1839,9 @@
         document.querySelectorAll('.rnc-class-chip').forEach(function(b){
             b.classList.toggle('active', b.getAttribute('data-cls') === (r.classificacao || 'critica'));
         });
+        var respLocked = (typeof userRncResponsavelLocked === 'function') && userRncResponsavelLocked(r);
+        var respInput = document.getElementById('rncFResponsavel');
+        if (respInput) respInput.disabled = respLocked;
     }
 
     function openRncDrawer() {
@@ -1899,6 +1912,9 @@
         if (rncEditingId) {
             var r = (window.rncItems || []).find(function(x){ return x.id === rncEditingId; });
             if (r) {
+                if (typeof userRncResponsavelLocked === 'function' && userRncResponsavelLocked(r)) {
+                    responsavel = r.responsavel;
+                }
                 r.titulo = titulo; r.setor = setor; r.classificacao = classificacao;
                 r.origem = origem; r.detalhamento = detalhamento; r.descricao = descricao;
                 r.planoAcao = planoAcao; r.status = status; r.marcador = marcador;
@@ -1936,7 +1952,7 @@
 
     window.rncDelete = function(id) {
         id = Number(id);
-        if (!canEdit()) { toast('Sem permissão para excluir.', 'error'); return; }
+        if (!canDeleteRnc()) { toast('Sem permissão para excluir.', 'error'); return; }
         rncConfirm({
             title: 'Excluir RNC',
             message: 'Esta RNC será removida permanentemente.',
@@ -2076,7 +2092,8 @@
         if (panel) panel.classList.add('active');
         // FAB "Nova Publicação" fixo no rodapé: visível apenas na aba de Dados
         var fab = document.getElementById('rncViewPubFab');
-        if (fab) fab.style.display = (panelId === 'rnc-vinfo' && canEdit()) ? '' : 'none';
+        var fabItem = (typeof window.rncViewEditId !== 'undefined') ? (window.rncItems || []).find(function(x){ return x.id === window.rncViewEditId; }) : null;
+        if (fab) fab.style.display = (panelId === 'rnc-vinfo' && canEdit(fabItem)) ? '' : 'none';
     };
     function rncSwitchViewTab(panelId, btn) { window.rncSwitchViewTab(panelId, btn); }
 
@@ -2091,7 +2108,7 @@
         var hicon = document.getElementById('rncViewHeaderIcon');
         if (hicon) hicon.innerHTML = '<i class="fas ' + ci.icon + '"></i>';
         var hedit = document.getElementById('rncViewHeaderEdit');
-        if (hedit) hedit.style.display = canEdit() ? '' : 'none';
+        if (hedit) hedit.style.display = canEdit(r) ? '' : 'none';
 
         // Título
         var t = document.getElementById('rncViewTitle'); if (t) t.textContent = r.titulo || 'RNC';
@@ -2205,7 +2222,7 @@
                 '<span class="rnc-view-cl-count">' + done + '/' + cl.length + ' (' + pct + '%)</span>' +
             '</div>' +
             cl.map(function(item, i) {
-                var disabled = !canEdit() || (!item.checked && item.requiresComment && !(item.comment||'').trim());
+                var disabled = !canEdit(r) || (!item.checked && item.requiresComment && !(item.comment||'').trim());
                 return '<div class="rnc-view-cl-item' + (item.checked?' checked':'') + '" id="rncvcl-' + r.id + '-' + i + '">' +
                     '<input type="checkbox" ' + (item.checked?'checked':'') + (disabled?' disabled':'') +
                         ' onchange="rncToggleCl(' + r.id + ',' + i + ')">' +
@@ -2219,7 +2236,7 @@
         var r = (window.rncItems||[]).find(function(x){ return x.id===id; });
         if (!r || !r.checklist) return;
         var c = r.checklist[idx]; if (!c) return;
-        if (!canEdit()) return;
+        if (!canEdit(r)) return;
         if (!c.checked && c.requiresComment && !(c.comment||'').trim()) return;
         c.checked = !c.checked;
         persist();
@@ -2258,7 +2275,7 @@
         var container = document.getElementById('rncViewPubContent');
         if (!container) return;
         var pubs = r.publicacoes || [];
-        var canMg = canEdit();
+        var canMg = canEdit(r);
 
         // Conta por tipo (mapeia tipos legados para "Comentário")
         function tipoOf(p) {
@@ -2522,9 +2539,37 @@
         updateRncSetorHeadLabel();
         updateRncDateHeadLabel();
         updateRncNotificationBell();
+        applyRncTaskViewPermission();
+        applyRncManagePermission();
         // Reset view toggle
         window.switchRncView(rncView);
     };
+
+    // Oculta os botões de gerenciar/adicionar listas (origens, detalhamentos, kanban, marcadores) sem permissão.
+    function applyRncManagePermission() {
+        var allowed = canManage();
+        var wrap = document.querySelector('.rnc-manage-wrap');
+        if (wrap) wrap.style.display = allowed ? '' : 'none';
+        document.querySelectorAll('.rnc-field-plus[onclick*="rncOpenManager"]').forEach(function(b){
+            b.style.display = allowed ? '' : 'none';
+        });
+    }
+    window.applyRncManagePermission = applyRncManagePermission;
+
+    // Restringe a visualização de RNC conforme permissão "Visualizar RNC" (cfgRncTaskView).
+    // 'usuario': remove a opção "Todas RNC's" e força modo "Como responsável" por padrão.
+    function applyRncTaskViewPermission() {
+        var restrict = (typeof userRncTaskView === 'function') && userRncTaskView() === 'usuario';
+        var dd = document.getElementById('rncMyDropdown');
+        if (dd) {
+            var allBtn = dd.querySelector('button[data-mode="all"]');
+            if (allBtn) allBtn.style.display = restrict ? 'none' : '';
+        }
+        if (restrict && rncMyMode === 'all') {
+            window.rncSetMyMode('responsavel');
+        }
+    }
+    window.applyRncTaskViewPermission = applyRncTaskViewPermission;
 
     // Expõe para o listener do Firebase
     window.rncRenderTable = renderRnc;

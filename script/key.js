@@ -101,6 +101,8 @@ function _checkTriPerm(permVal, item) {
                     canManagePubs:  _normTriPerm(u.canManagePubs,  'total'),
                     canPublish: u.canPublish || 'total',
                     canChecklist: u.canChecklist || 'total',
+                    rncCanEdit: _normTriPerm(u.rncCanEdit, 'total'),
+                    rncTaskView: u.rncTaskView || 'todos',
                     isAdmin: !!u.isAdmin || normalizedUser === 'admin'
                 };
             });
@@ -169,6 +171,7 @@ function _checkTriPerm(permVal, item) {
         document.querySelectorAll('button[onclick*="openListManager"]').forEach(btn => {
             btn.style.display = canManage ? 'block' : 'none';
         });
+        if (typeof applyRncManagePermission === 'function') applyRncManagePermission();
     }
 
     function applyOcorrenciasPermissions() {
@@ -199,6 +202,10 @@ function _checkTriPerm(permVal, item) {
         // Gate XLSX button by canManageOc === 'total'
         const xlsxBtn = document.getElementById('ocXlsxBtn');
         if (xlsxBtn) xlsxBtn.style.display = (canManageOc === 'total') ? '' : 'none';
+
+        // Gate "apagar todos" button — visível apenas para administradores
+        const deleteAllBtn = document.getElementById('ocDeleteAllBtn');
+        if (deleteAllBtn) deleteAllBtn.style.display = isAdmin ? '' : 'none';
 
         // Expose to ocorrencias.js for row-level restrictions
         window._ocUserPerm = canManageOc;
@@ -258,6 +265,35 @@ function _checkTriPerm(permVal, item) {
         if (userIsAdmin()) return true;
         return currentuser.canManageLists === true;
     }
+
+    // ── Permissões específicas de RNC ──
+    function userCanEditRnc(item) {
+        if (!currentuser) return false;
+        if (userIsAdmin()) return true;
+        return _checkTriPerm(_normTriPerm(currentuser.rncCanEdit, 'total'), item);
+    }
+    window.userCanEditRnc = userCanEditRnc;
+
+    // true se o usuário só pode editar como Revisor (não é Responsável) — bloqueia campo Responsável
+    function userRncResponsavelLocked(item) {
+        if (!currentuser || userIsAdmin()) return false;
+        const perm = _normTriPerm(currentuser.rncCanEdit, 'total');
+        if (perm !== 'parcial' || !item) return false;
+        const meId   = (currentuser.id || '');
+        const meName = ((currentuser.name || currentuser.user) || '').trim().toLowerCase();
+        const isResp = [item.responsavel].some(v => {
+            const vs = String(v || '').trim();
+            return (meId && vs === meId) || vs.toLowerCase() === meName;
+        });
+        return !isResp;
+    }
+    window.userRncResponsavelLocked = userRncResponsavelLocked;
+
+    function userRncTaskView() {
+        if (!currentuser || userIsAdmin()) return 'todos';
+        return currentuser.rncTaskView || 'todos';
+    }
+    window.userRncTaskView = userRncTaskView;
 
     // ── Novas permissões ─────────────────────────────────────────
 
@@ -321,7 +357,7 @@ function _checkTriPerm(permVal, item) {
         if (!currentuser) return null;
         // Admin tem acesso a todas as abas
         if (userIsAdmin()) {
-            return ['dashboard', 'auditoria', 'treinamentos', 'documentos', 'atividades', 'manutencao', 'ocorrencias', 'backup', 'configuracoes'];
+            return ['dashboard', 'auditoria', 'treinamentos', 'documentos', 'atividades', 'manutencao', 'ocorrencias', 'rnc', 'backup', 'configuracoes'];
         }
         // Se não houver configuração de abas, por segurança libera apenas Dashboard e Auditoria
         if (!Array.isArray(currentuser.tabs) || currentuser.tabs.length === 0) {
@@ -331,7 +367,7 @@ function _checkTriPerm(permVal, item) {
     }
 
     // Abas que devem ser ocultadas (não apenas desabilitadas) quando não permitidas
-    const TABS_HIDE_WHEN_DENIED = new Set(['configuracoes', 'ocorrencias']);
+    const TABS_HIDE_WHEN_DENIED = new Set(['configuracoes', 'ocorrencias', 'rnc']);
 
     function applyuserPermissionsToTabs() {
         const allowed = userAllowedTabs();
@@ -343,6 +379,7 @@ function _checkTriPerm(permVal, item) {
             atividades: 'tabAtividades',
             manutencao: 'tabManutencao',
             ocorrencias: 'tabOcorrencias',
+            rnc: 'tabRnc',
             backup: 'tabBackup',
             configuracoes: 'tabConfiguracoes'
         };
@@ -692,6 +729,8 @@ function _checkTriPerm(permVal, item) {
         set('cfgCanManagePubs', 'true');
         set('cfgCanPublish', 'total');
         set('cfgCanChecklist', 'total');
+        set('cfgRncCanEdit', 'total');
+        set('cfgRncTaskView', 'todos');
         set('cfgStatus', 'true');
         set('cfgIsAdmin', 'false');
         tempSelectedTabs = ['dashboard', 'auditoria'];
@@ -720,6 +759,8 @@ function _checkTriPerm(permVal, item) {
             }
         }
         
+        const notice = document.getElementById('modalSetoresLockNotice');
+        if (notice) notice.style.display = canManageLists ? 'flex' : 'none';
         renderModalSetores();
         document.getElementById('modalSetoresPermissoes').style.display = 'flex';
     }
@@ -730,63 +771,84 @@ function _checkTriPerm(permVal, item) {
 
         const setores = (masterLists.setores || []).slice().sort((a, b) => String(a).localeCompare(String(b), 'pt'));
         const canManageLists = document.getElementById('cfgCanManageLists')?.value === 'true';
-        
+
+        const subtitle = document.getElementById('modalSetoresSubtitle');
+        if (subtitle) subtitle.textContent = `${setores.length} SETOR${setores.length !== 1 ? 'ES' : ''} DISPONÍVE${setores.length !== 1 ? 'IS' : 'L'}`;
+
         container.innerHTML = '';
-        
+
         if (setores.length === 0) {
             container.innerHTML = '<p style="color:#9ca3af; font-size:13px; text-align:center; padding:20px;">Nenhum setor cadastrado. Adicione setores primeiro.</p>';
+            updateModalSetoresCount();
             return;
         }
-        
+
         setores.forEach(setor => {
             const isChecked = tempSelectedSetores.includes(setor);
-            const checkbox = document.createElement('label');
-            checkbox.style.cssText = 'display:flex; align-items:center; padding:10px 12px; margin-bottom:6px; background:white; border:1px solid #e5e7eb; border-radius:6px; cursor:pointer; transition:all 0.2s ease;';
-            checkbox.onmouseover = function() { if (!canManageLists) this.style.background = '#f9fafb'; };
-            checkbox.onmouseout = function() { this.style.background = 'white'; };
-            checkbox.innerHTML = `
-                <input type="checkbox" class="modal-setor-checkbox" value="${setor}" ${isChecked ? 'checked' : ''} ${canManageLists ? 'disabled' : ''} style="margin-right:10px; width:18px; height:18px; cursor:pointer;">
-                <span style="flex:1; font-size:14px; color:#1f2937;">${setor}</span>
+            const chip = document.createElement('div');
+            chip.className = 'setor-chip' + (isChecked ? ' selected' : '') + (canManageLists ? ' disabled' : '');
+            chip.dataset.setor = setor;
+            chip.innerHTML = `
+                <div class="setor-chip-check"><i class="fas fa-check"></i></div>
+                <span class="setor-chip-label" title="${setor}">${setor}</span>
             `;
             if (!canManageLists) {
-                checkbox.onclick = function(e) {
-                    if (e.target.type !== 'checkbox') {
-                        const checkbox = this.querySelector('input[type="checkbox"]');
-                        checkbox.checked = !checkbox.checked;
-                        updateTempSelectedSetores();
-                    } else {
-                        updateTempSelectedSetores();
-                    }
-                };
+                chip.onclick = function () { toggleSetorChipModal(setor); };
+            } else {
+                chip.style.cursor = 'default';
+                chip.style.opacity = '0.7';
             }
-            container.appendChild(checkbox);
+            container.appendChild(chip);
         });
+
+        updateModalSetoresCount();
     }
 
-    function updateTempSelectedSetores() {
-        tempSelectedSetores = Array.from(document.querySelectorAll('.modal-setor-checkbox'))
-            .filter(chk => chk.checked && !chk.disabled)
-            .map(chk => chk.value);
+    function toggleSetorChipModal(setor) {
+        const canManageLists = document.getElementById('cfgCanManageLists')?.value === 'true';
+        if (canManageLists) return;
+        const idx = tempSelectedSetores.indexOf(setor);
+        if (idx === -1) tempSelectedSetores.push(setor);
+        else tempSelectedSetores.splice(idx, 1);
+        renderModalSetores();
+    }
+
+    function updateModalSetoresCount() {
+        const setores = masterLists.setores || [];
+        const countEl = document.getElementById('modalSetoresCount');
+        const btn = document.getElementById('modalSetoresToggleAllBtn');
+        if (countEl) countEl.textContent = `${tempSelectedSetores.length} de ${setores.length} selecionados`;
+        if (btn) {
+            const allSelected = setores.length > 0 && tempSelectedSetores.length === setores.length;
+            btn.innerHTML = allSelected
+                ? '<i class="fas fa-times"></i> Desmarcar todos'
+                : '<i class="fas fa-check"></i> Marcar todos';
+        }
+    }
+
+    function toggleAllSetoresModal() {
+        const canManageLists = document.getElementById('cfgCanManageLists')?.value === 'true';
+        if (canManageLists) return;
+        const setores = masterLists.setores || [];
+        if (tempSelectedSetores.length === setores.length) {
+            deselectAllSetores();
+        } else {
+            selectAllSetores();
+        }
     }
 
     function selectAllSetores() {
         const canManageLists = document.getElementById('cfgCanManageLists')?.value === 'true';
         if (canManageLists) return; // Não faz nada se canManageLists está marcado
-        
-        document.querySelectorAll('.modal-setor-checkbox').forEach(chk => {
-            if (!chk.disabled) chk.checked = true;
-        });
-        updateTempSelectedSetores();
+        tempSelectedSetores = (masterLists.setores || []).slice();
+        renderModalSetores();
     }
 
     function deselectAllSetores() {
         const canManageLists = document.getElementById('cfgCanManageLists')?.value === 'true';
         if (canManageLists) return; // Não faz nada se canManageLists está marcado
-        
-        document.querySelectorAll('.modal-setor-checkbox').forEach(chk => {
-            if (!chk.disabled) chk.checked = false;
-        });
-        updateTempSelectedSetores();
+        tempSelectedSetores = [];
+        renderModalSetores();
     }
 
     function saveSetoresPermissoes() {
@@ -794,8 +856,6 @@ function _checkTriPerm(permVal, item) {
         if (canManageLists) {
             // Se canManageLists está marcado, todos os setores são permitidos
             tempSelectedSetores = (masterLists.setores || []).slice();
-        } else {
-            updateTempSelectedSetores();
         }
         updateSetoresButtonText();
         closeModal('modalSetoresPermissoes');
@@ -860,6 +920,7 @@ function _checkTriPerm(permVal, item) {
         { value: 'documentos',   label: 'Documentos',   icon: 'fa-file-lines' },
         { value: 'atividades',   label: 'Atividades',   icon: 'fa-list-check' },
         { value: 'ocorrencias',  label: 'Ocorrências',  icon: 'fa-triangle-exclamation' },
+        { value: 'rnc',          label: 'RNC',           icon: 'fa-file-circle-exclamation' },
         { value: 'backup',       label: 'Backup',       icon: 'fa-database' },
     ];
 
@@ -950,6 +1011,21 @@ function _checkTriPerm(permVal, item) {
             items: [
                 ['Sim', 'Pode criar, editar e excluir itens das listas (setores, responsáveis, etc.) e acessa todos os setores.'],
                 ['Não', 'Não pode alterar as listas; o acesso fica restrito aos setores selecionados.']
+            ]
+        },
+        rncEdit: {
+            title: 'Gerenciar RNC',
+            items: [
+                ['Total', 'Pode criar e editar qualquer RNC.'],
+                ['Parcial', 'Só pode criar ou editar RNC em que estiver como Responsável ou Revisor. Se for apenas Revisor, o campo Responsável fica bloqueado.'],
+                ['Não', 'Somente leitura: não pode criar nem editar nenhuma RNC.']
+            ]
+        },
+        rncView: {
+            title: 'Visualizar RNC',
+            items: [
+                ['Todos', 'Visualiza todas as RNCs cadastradas.'],
+                ['Usuário', 'Visualiza apenas as RNCs como Responsável ou como Revisor (sem opção "Todas RNC\'s"). Não pode excluir cards.']
             ]
         },
         managePubs: {
@@ -1118,6 +1194,8 @@ function _checkTriPerm(permVal, item) {
         const canPublish = g('cfgCanPublish').value || 'total';
         const canChecklist = g('cfgCanChecklist').value || 'total';
         const taskView = g('cfgTaskView').value || 'todos';
+        const rncCanEdit = g('cfgRncCanEdit')?.value || 'total';
+        const rncTaskView = g('cfgRncTaskView')?.value || 'todos';
         const isActive = g('cfgStatus').value !== 'false';
         const isAdmin = g('cfgIsAdmin').value === 'true';
         const tabs = tempSelectedTabs.slice();
@@ -1142,7 +1220,7 @@ function _checkTriPerm(permVal, item) {
             _toast('Já existe um usuário com esse login.', 'error'); return;
         }
 
-        const userData = { name, user, tabs, cpf, cargo, grupo, canEditCards: canEdit, canDeleteCards: canDelete, canManageLists, canManagePubs: canManagePubs, canPublish, canChecklist, taskView, allowedSetores, canManageOc, canManageMotivos, allowedTiposOc, active: isActive, isAdmin };
+        const userData = { name, user, tabs, cpf, cargo, grupo, canEditCards: canEdit, canDeleteCards: canDelete, canManageLists, canManagePubs: canManagePubs, canPublish, canChecklist, taskView, rncCanEdit, rncTaskView, allowedSetores, canManageOc, canManageMotivos, allowedTiposOc, active: isActive, isAdmin };
 
         // Captura o nome anterior antes de alterar
         let _oldName = null;
@@ -1167,6 +1245,8 @@ function _checkTriPerm(permVal, item) {
                 applyuserPermissionsToTabs();
                 applyListManagerPermissions();
                 applyOcorrenciasPermissions();
+                if (typeof applyRncTaskViewPermission === 'function') applyRncTaskViewPermission();
+                if (typeof updateRncNotificationBell === 'function') updateRncNotificationBell();
             }
             closeModal('modalUsuario');
             resetConfigForm();
@@ -1246,6 +1326,8 @@ function _checkTriPerm(permVal, item) {
         set('cfgCanPublish', u.canPublish || 'total');
         set('cfgCanChecklist', u.canChecklist || 'total');
         set('cfgTaskView', u.taskView || 'todos');
+        set('cfgRncCanEdit', _normTriPerm(u.rncCanEdit, 'total'));
+        set('cfgRncTaskView', u.rncTaskView || 'todos');
         set('cfgStatus', u.active === false ? 'false' : 'true');
         set('cfgIsAdmin', u.isAdmin === true ? 'true' : 'false');
         tempSelectedTabs = Array.isArray(u.tabs) && u.tabs.length > 0 ? u.tabs.slice() : ['dashboard', 'auditoria'];
