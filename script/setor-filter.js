@@ -36,8 +36,8 @@ function confirmSetorFilter() {
     }
     closeSetorFilterModal();
     _updateSetorFilterBtn();
-    renderCards();
-    if (typeof renderDashboard === 'function' && currentTab === 'dashboard') renderDashboard();
+    try { if (typeof renderCards === 'function') renderCards(); } catch (err) { console.error('confirmSetorFilter/renderCards', err); }
+    try { if (typeof renderDashboard === 'function' && currentTab === 'dashboard') renderDashboard(); } catch (err) { console.error('confirmSetorFilter/renderDashboard', err); }
 }
 
 function setorFilterDeselectAll() {

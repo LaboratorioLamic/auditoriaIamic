@@ -40,6 +40,12 @@ window.switchViewTab = function(tabName, btn) {
     btn.classList.add('active');
     const panel = document.getElementById(`view-panel-${tabName}`);
     if (panel) panel.classList.add('active');
+
+    const btnPublicar = document.getElementById('btnPublicar');
+    if (btnPublicar) {
+        const _canShow = btnPublicar.dataset.canPub !== 'false';
+        btnPublicar.style.display = (tabName === 'publicacoes' && _canShow) ? 'inline-flex' : 'none';
+    }
 };
 
 // ─── CHECKLIST EDITOR ────────────────────────────────────────
@@ -306,6 +312,7 @@ window.saveViewChecklistComment = function(id, tab, index, value) {
     else if (finalTab === 'atividades') found = activities.find(i => i.id === id);
     else if (finalTab === 'treinamentos') found = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') found = documents.find(i => i.id === id);
+    else if (finalTab === 'rnc') found = (window.rncItems || []).find(i => i.id === id);
     if (!found || !found.checklist || !found.checklist[index]) return;
     if (typeof userCanChecklist === 'function' && !userCanChecklist(found)) return;
     found.checklist[index].comment = value;
@@ -335,6 +342,7 @@ window.selectAllViewChecklist = function(id, tab) {
     else if (finalTab === 'atividades') found = activities.find(i => i.id === id);
     else if (finalTab === 'treinamentos') found = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') found = documents.find(i => i.id === id);
+    else if (finalTab === 'rnc') found = (window.rncItems || []).find(i => i.id === id);
     if (!found || !found.checklist) return;
     if (typeof userCanChecklist === 'function' && !userCanChecklist(found)) return;
     const allDone = found.checklist.every(c => c.checked);
@@ -356,6 +364,7 @@ window.toggleViewChecklistItem = function(id, tab, index) {
     else if (finalTab === 'atividades') found = activities.find(i => i.id === id);
     else if (finalTab === 'treinamentos') found = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') found = documents.find(i => i.id === id);
+    else if (finalTab === 'rnc') found = (window.rncItems || []).find(i => i.id === id);
     if (!found) return;
     if (!found.checklist) found.checklist = [];
     const c = found.checklist[index];
@@ -456,6 +465,7 @@ window.openPublicacaoModal = function(editIndex) {
     else if (finalTab === 'atividades') item = activities.find(i => i.id === id);
     else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
+    else if (finalTab === 'rnc') item = (window.rncItems || []).find(i => i.id === id);
     if (!item) return;
 
     // Verificar permissão de publicação
@@ -623,6 +633,7 @@ window.confirmarPublicacao = function() {
     else if (finalTab === 'atividades') item = activities.find(i => i.id === id);
     else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
+    else if (finalTab === 'rnc') item = (window.rncItems || []).find(i => i.id === id);
     if (!item) return;
 
     const isEditing = window._editingPubIndex !== null && window._editingPubIndex !== undefined;
@@ -706,6 +717,11 @@ window.confirmarPublicacao = function() {
     saveAll();
     closeModal('modalPublicacao');
 
+    if (finalTab === 'rnc') {
+        if (typeof window.rncRefreshViewPubs === 'function') window.rncRefreshViewPubs();
+        if (typeof showToast === 'function') showToast(isEditing ? 'Publicação atualizada com sucesso!' : 'Publicação registrada com sucesso!', 'success');
+        return;
+    }
     if (typeof renderViewContent === 'function') renderViewContent(id, finalTab);
     const pubTab = document.querySelector('.view-modal-tab:last-child');
     if (pubTab) switchViewTab('publicacoes', pubTab);
@@ -958,6 +974,7 @@ window.verPublicacao = function(id, tab, index) {
     else if (finalTab === 'atividades') item = activities.find(i => i.id === id);
     else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
+    else if (finalTab === 'rnc') item = (window.rncItems || []).find(i => i.id === id);
     if (!item) return;
     const pub = (item.publicacoes || [])[index];
     if (!pub) return;
@@ -1061,6 +1078,7 @@ window.verPublicacao = function(id, tab, index) {
     else if (_vpTab === 'atividades') _vpItem = activities.find(i => i.id === id);
     else if (_vpTab === 'treinamentos') _vpItem = trainings.find(i => i.id === id);
     else if (_vpTab === 'documentos') _vpItem = documents.find(i => i.id === id);
+    else if (_vpTab === 'rnc') _vpItem = (window.rncItems || []).find(i => i.id === id);
     const _canMgPubs = typeof userCanManagePubs === 'function' ? userCanManagePubs(_vpItem) : true;
     const footerEl = document.getElementById('verPubFooter');
     if (footerEl) {
@@ -1080,6 +1098,7 @@ window.excluirPublicacao = function(id, tab, index) {
     else if (finalTab === 'atividades') item = activities.find(i => i.id === id);
     else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
+    else if (finalTab === 'rnc') item = (window.rncItems || []).find(i => i.id === id);
     if (!item || !item.publicacoes) return;
     if (typeof userCanManagePubs === 'function' && !userCanManagePubs(item)) {
         if (typeof showToast === 'function') showToast('Você não tem permissão para excluir publicações.', 'error');

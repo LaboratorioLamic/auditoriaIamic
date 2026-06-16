@@ -41,6 +41,7 @@
 
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="css/calendar.css">
+<link rel="stylesheet" href="css/rnc.css">
 </head>
 <body>
 
@@ -98,6 +99,7 @@
         <div class="sidebar-divider"></div>
         <div class="sidebar-group-label">Gestão de N/C</div>
         <button id="tabOcorrencias"><i class="fa-solid fa-triangle-exclamation"></i> Ocorrências</button>
+        <button id="tabRnc"><i class="fa-solid fa-circle-exclamation"></i> RNC</button>
         <div class="sidebar-divider"></div>
         <div class="sidebar-group-label">Sistema</div>
         <button id="tabBackup"><i class="fa-solid fa-database"></i> Backup</button>
@@ -153,9 +155,31 @@
                 <div class="oc-head-dropdown" id="ocHeadSetorDropdown" style="display:none;"></div>
             </div>
 
+            <!-- Filtros exclusivos da aba RNC -->
+            <div class="rnc-head-filter" id="rncHeadDateWrap" style="position:relative; display:none;">
+                <button class="btn-setor-filter" id="rncHeadDateBtn" onclick="rncToggleHeadDate()" title="Filtrar por Data">
+                    <i class="fas fa-calendar-days"></i>
+                    <span id="rncHeadDateLabel">Data</span>
+                </button>
+                <div class="oc-head-dropdown" id="rncHeadDateDropdown" style="display:none;"></div>
+            </div>
+            <div class="rnc-head-filter" id="rncHeadSetorWrap" style="position:relative; display:none;">
+                <button class="btn-setor-filter" id="rncHeadSetorBtn" onclick="rncToggleHeadSetor()" title="Filtrar por Setor">
+                    <i class="fas fa-building"></i>
+                    <span id="rncHeadSetorLabel">Setores</span>
+                </button>
+                <div class="oc-head-dropdown" id="rncHeadSetorDropdown" style="display:none;"></div>
+            </div>
+
             <div class="notification-container" id="notificationContainer" onclick="toggleNotificationModal()">
                 <i class="notification-icon fas fa-bell"></i>
                 <div class="notification-badge hidden" id="notificationBadge">0</div>
+            </div>
+
+            <!-- Sino exclusivo da aba RNC -->
+            <div class="notification-container" id="rncNotificationContainer" style="display:none;" onclick="rncToggleNotifications()">
+                <i class="notification-icon fas fa-bell"></i>
+                <div class="notification-badge" id="rncNotificationBadge" style="display:none;">0</div>
             </div>
         </div>
         </header>
@@ -928,8 +952,445 @@
                 </div>
             </div>
         </div>
+
+        <!-- ═══ GESTÃO DE N/C — RNC ═══ -->
+        <div id="rncContent" style="display:none; flex-direction:column; gap:0; height:100%;">
+
+            <!-- View toggle bar -->
+            <div class="rnc-view-toggle-bar">
+                <div class="rnc-view-btns">
+                    <button class="rnc-view-btn active" id="rncViewBtn-kanban" onclick="switchRncView('kanban')" title="Kanban">
+                        <i class="fas fa-columns"></i> Kanban
+                    </button>
+                    <button class="rnc-view-btn" id="rncViewBtn-cards" onclick="switchRncView('cards')" title="Lista (cards)">
+                        <i class="fas fa-th-large"></i> Lista
+                    </button>
+                    <button class="rnc-view-btn" id="rncViewBtn-calendar" onclick="switchRncView('calendar')" title="Calendário">
+                        <i class="fas fa-calendar-alt"></i> Calendário
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="rnc-filters-bar">
+                <div class="rnc-fbar-left">
+                    <div class="rnc-class-wrap">
+                        <button class="oc-people-btn" id="rncClassBtn" onclick="rncToggleClassDropdown()">
+                            <i class="fas fa-filter"></i>
+                            <span id="rncClassLabel">Classificação</span>
+                            <i class="fas fa-caret-down"></i>
+                        </button>
+                        <div class="oc-mytasks-dropdown" id="rncClassDropdown">
+                            <button data-cls="critica" onclick="rncToggleClassFilter('critica')">
+                                <i class="fas fa-circle-exclamation" style="color:#dc2626"></i> NC - Crítica
+                            </button>
+                            <button data-cls="maior" onclick="rncToggleClassFilter('maior')">
+                                <i class="fas fa-triangle-exclamation" style="color:#d97706"></i> NC - Maior
+                            </button>
+                            <button data-cls="menor" onclick="rncToggleClassFilter('menor')">
+                                <i class="fas fa-circle-info" style="color:#2563eb"></i> NC - Menor
+                            </button>
+                        </div>
+                    </div>
+                    <div class="rnc-class-wrap">
+                        <button class="oc-people-btn" id="rncOrigemBtn" onclick="rncToggleOrigemFilterDropdown()">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span id="rncOrigemFilterLabel">Origem</span>
+                            <i class="fas fa-caret-down"></i>
+                        </button>
+                        <div class="oc-mytasks-dropdown rnc-filter-checklist" id="rncOrigemFilterDropdown"></div>
+                    </div>
+                    <div class="rnc-class-wrap">
+                        <button class="oc-people-btn" id="rncDetBtn" onclick="rncToggleDetFilterDropdown()">
+                            <i class="fas fa-list"></i>
+                            <span id="rncDetFilterLabel">Detalhamento</span>
+                            <i class="fas fa-caret-down"></i>
+                        </button>
+                        <div class="oc-mytasks-dropdown rnc-filter-checklist" id="rncDetFilterDropdown"></div>
+                    </div>
+                    <button class="rnc-icon-btn" id="rncSearchToggleBtn" onclick="rncToggleSearch()" title="Pesquisar RNC">
+                        <i class="fas fa-magnifying-glass"></i>
+                    </button>
+                    <div class="rnc-search" id="rncSearchWrap" style="display:none;">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input type="text" id="rncSearchInput" placeholder="Pesquisar RNC..." oninput="rncOnSearch()" autocomplete="off">
+                    </div>
+                </div>
+                <div class="rnc-fbar-right">
+                    <div class="rnc-manage-wrap">
+                        <button class="rnc-icon-btn" onclick="rncToggleManageDropdown()" title="Gerenciar listas">
+                            <i class="fas fa-pen-to-square"></i>
+                        </button>
+                        <div class="rnc-manage-dropdown" id="rncManageDropdown">
+                            <button onclick="rncCloseManageDropdown();rncOpenManager('origens')"><i class="fas fa-map-marker-alt"></i> Origens</button>
+                            <button onclick="rncCloseManageDropdown();rncOpenManager('detalhamentos')"><i class="fas fa-list"></i> Detalhamentos</button>
+                            <button onclick="rncCloseManageDropdown();rncOpenManager('status')"><i class="fas fa-columns"></i> Status (Kanban)</button>
+                        </div>
+                    </div>
+                    <div class="rnc-my-wrap">
+                        <button class="oc-people-btn" id="rncMyBtn" onclick="rncToggleMyDropdown()">
+                            <i class="fas fa-user-circle"></i>
+                            <span id="rncMyLabel">Todas RNCs</span>
+                            <i class="fas fa-caret-down"></i>
+                        </button>
+                        <div class="oc-mytasks-dropdown" id="rncMyDropdown">
+                            <button data-mode="responsavel" onclick="rncSetMyMode('responsavel')"><i class="fas fa-user-tie"></i> Como responsável</button>
+                            <button data-mode="revisor" onclick="rncSetMyMode('revisor')"><i class="fas fa-user-check"></i> Como revisor</button>
+                            <button data-mode="all" class="active" onclick="rncSetMyMode('all')"><i class="fas fa-users"></i> Todas RNC's</button>
+                        </div>
+                    </div>
+                    <button class="rnc-icon-btn" onclick="rncClearFilters()" title="Limpar filtros">
+                        <i class="fas fa-rotate-left"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vista: Cards / Lista -->
+            <div id="rncPane-cards" style="display:none; flex:1; overflow-y:auto; padding:16px;">
+                <!-- Sub-abas da lista -->
+                <div class="rnc-list-subtabs">
+                    <button class="rnc-list-subtab active" id="rncSubTabOrigens" onclick="rncSwitchListTab('origens',this)">
+                        <i class="fas fa-folder-open"></i> Origens
+                    </button>
+                    <button class="rnc-list-subtab" id="rncSubTabTable" onclick="rncSwitchListTab('table',this)">
+                        <i class="fas fa-table"></i> Tabela
+                    </button>
+                </div>
+                <div id="rncListPane-table" style="display:none;">
+                    <div id="rncTableContent"></div>
+                </div>
+                <div id="rncListPane-origens">
+                    <div id="rncOrigensContent"></div>
+                </div>
+            </div>
+
+            <!-- Vista: Kanban -->
+            <div id="rncPane-kanban" style="flex:1; overflow:auto; padding:16px;">
+                <div class="rnc-kanban-board" id="rncKanbanBoard"></div>
+            </div>
+
+            <!-- Vista: Calendário -->
+            <div id="rncPane-calendar" style="display:none; flex:1; overflow:auto; padding:16px;">
+                <div id="rncCalendarBoard"></div>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- ═══ RNC — SINO DE NOTIFICAÇÕES ═══ -->
+<div class="rnc-notification-modal" id="rncNotificationModal">
+    <div class="rnc-notification-header">
+        <h3><i class="fas fa-bell"></i> Alertas RNC</h3>
+        <button onclick="rncCloseNotifications()"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="rncNotifContent" class="rnc-notification-body"></div>
+</div>
+
+<!-- ═══ RNC — DRAWER FORMULÁRIO ═══ -->
+<div class="form-drawer" id="modalRnc">
+    <div class="form-drawer-header">
+        <div class="form-drawer-header-left">
+            <div class="form-drawer-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div>
+                <div class="form-drawer-title" id="rncDrawerTitle">Nova RNC</div>
+                <div class="form-drawer-subtitle" id="rncDrawerSubtitle">Preencha os dados abaixo</div>
+            </div>
+        </div>
+        <button class="history-drawer-close" onclick="rncCloseDrawer()" title="Fechar"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="drawer-tabs">
+        <button class="drawer-tab active" onclick="switchDrawerTab('rnc','info',this)">
+            <i class="fas fa-info-circle"></i> Dados
+        </button>
+        <button class="drawer-tab" onclick="switchDrawerTab('rnc','anexos',this)">
+            <i class="fas fa-paperclip"></i> Anexos
+        </button>
+        <button class="drawer-tab" onclick="switchDrawerTab('rnc','checklist',this)">
+            <i class="fas fa-list-check"></i> Checklist
+        </button>
+    </div>
+    <div class="drawer-tab-panel active" id="rnc-panel-info" style="overflow-y:auto; flex:1; padding:16px 20px;">
+        <div class="field-group">
+            <label class="field-label">Título <span class="req-star">*</span></label>
+            <input type="text" id="rncFTitulo" class="form-input" placeholder="Título da RNC">
+        </div>
+        <div class="field-group">
+            <label class="field-label">Setor <span class="req-star">*</span></label>
+            <div class="rnc-ac-wrap">
+                <input type="text" id="rncFSetor" class="form-input" placeholder="Digite ou selecione o setor..." oninput="rncSetorInput()" onclick="rncSetorInput()" autocomplete="off">
+                <i class="fas fa-chevron-down rnc-ac-caret"></i>
+                <div class="rnc-ac-dropdown" id="rncSetorDropdown"></div>
+            </div>
+        </div>
+        <div class="form-section-divider full-width rnc-divider-blank"></div>
+        <div class="field-group">
+            <label class="field-label">Classificação <span class="req-star">*</span></label>
+            <div class="rnc-class-chips">
+                <button type="button" class="rnc-class-chip rnc-class-chip--critica active" data-cls="critica" onclick="rncSelectClass('critica')">
+                    <i class="fas fa-circle-exclamation"></i> NC - Crítica
+                </button>
+                <button type="button" class="rnc-class-chip rnc-class-chip--maior" data-cls="maior" onclick="rncSelectClass('maior')">
+                    <i class="fas fa-triangle-exclamation"></i> NC - Maior
+                </button>
+                <button type="button" class="rnc-class-chip rnc-class-chip--menor" data-cls="menor" onclick="rncSelectClass('menor')">
+                    <i class="fas fa-circle-info"></i> NC - Menor
+                </button>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="field-group">
+                <label class="field-label">Origem <span class="req-star">*</span></label>
+                <div class="rnc-ac-wrap">
+                    <div class="rnc-field-inline">
+                        <input type="text" id="rncFOrigem" class="form-input" placeholder="Origem..." oninput="rncOrigemInput()" onclick="rncOrigemInput()" autocomplete="off">
+                        <button type="button" class="rnc-field-plus" onclick="rncOpenManager('origens')" title="Gerenciar origens"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="rnc-ac-dropdown" id="rncOrigemDropdown"></div>
+                </div>
+            </div>
+            <div class="field-group">
+                <label class="field-label">Detalhamento <span class="req-star">*</span></label>
+                <div class="rnc-ac-wrap">
+                    <div class="rnc-field-inline">
+                        <input type="text" id="rncFDetalhamento" class="form-input" placeholder="Detalhamento..." oninput="rncDetalhamentoInput()" onclick="rncDetalhamentoInput()" autocomplete="off">
+                        <button type="button" class="rnc-field-plus" onclick="rncOpenManager('detalhamentos')" title="Gerenciar detalhamentos"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="rnc-ac-dropdown" id="rncDetalhamentoDropdown"></div>
+                </div>
+            </div>
+        </div>
+        <div class="field-group">
+            <label class="field-label">Descrição do Ocorrido <span class="req-star">*</span></label>
+            <textarea id="rncFDescricao" class="form-input" rows="4" placeholder="Descreva o que ocorreu em detalhes..."></textarea>
+        </div>
+        <div class="field-group">
+            <label class="field-label">Plano de Ação</label>
+            <textarea id="rncFPlanoAcao" class="form-input" rows="3" placeholder="Ações corretivas e preventivas..."></textarea>
+        </div>
+        <div class="form-section-divider full-width rnc-divider-blank"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="field-group">
+                <label class="field-label">Data de Início</label>
+                <input type="date" id="rncFDataInicio" class="form-input">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Conclusão Prevista</label>
+                <input type="date" id="rncFDataConclusao" class="form-input">
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="field-group">
+                <label class="field-label">Status</label>
+                <div class="rnc-ac-wrap">
+                    <div class="rnc-field-inline">
+                        <input type="text" id="rncFStatus" class="form-input" placeholder="Status atual..." oninput="rncStatusInput()" onclick="rncStatusInput()" autocomplete="off">
+                        <button type="button" class="rnc-field-plus" onclick="rncOpenManager('status')" title="Gerenciar status"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="rnc-ac-dropdown" id="rncStatusDropdown"></div>
+                </div>
+            </div>
+            <div class="field-group">
+                <label class="field-label">Marcador</label>
+                <div class="rnc-ac-wrap">
+                    <div class="rnc-field-inline">
+                        <div class="rnc-marker-trigger" id="rncFMarcadorTrigger" onclick="rncToggleMarkerDropdown()">
+                            <span id="rncFMarcadorDisplay"><span style="color:#94a3b8">Nenhum</span></span>
+                            <i class="fas fa-chevron-down" style="color:#94a3b8;font-size:11px;margin-left:auto;flex-shrink:0"></i>
+                        </div>
+                        <button type="button" class="rnc-field-plus" onclick="rncOpenMarkerManager()" title="Gerenciar marcadores"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <input type="hidden" id="rncFMarcador" value="">
+                    <div class="rnc-ac-dropdown" id="rncMarkerDropdown"></div>
+                </div>
+            </div>
+        </div>
+        <div class="form-section-divider full-width rnc-divider-blank"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="field-group">
+                <label class="field-label">Responsável</label>
+                <div class="rnc-ac-wrap">
+                    <input type="text" id="rncFResponsavel" class="form-input" placeholder="Nome do responsável..." oninput="rncResponsavelInput()" onclick="rncResponsavelInput()" autocomplete="off">
+                    <i class="fas fa-chevron-down rnc-ac-caret"></i>
+                    <div class="rnc-ac-dropdown" id="rncResponsavelDropdown"></div>
+                </div>
+            </div>
+            <div class="field-group">
+                <label class="field-label">Revisor</label>
+                <div class="rnc-ac-wrap">
+                    <input type="text" id="rncFRevisor" class="form-input" placeholder="Nome do revisor..." oninput="rncRevisorInput()" onclick="rncRevisorInput()" autocomplete="off">
+                    <i class="fas fa-chevron-down rnc-ac-caret"></i>
+                    <div class="rnc-ac-dropdown" id="rncRevisorDropdown"></div>
+                </div>
+            </div>
+        </div>
+        <div class="field-group" style="margin-top:12px;">
+            <label class="field-label"><i class="fas fa-bell" style="color:#f59e0b;margin-right:5px;"></i> Alerta (dias antes da conclusão)</label>
+            <input type="number" id="rncFAlerta" class="form-input" min="0" step="1" placeholder="Ex.: 3 — acende o alerta 3 dias antes da data de conclusão">
+            <span style="font-size:11px;color:#94a3b8;margin-top:4px;display:block;">Quando o prazo se aproximar, o card acende um alerta e aparece nas notificações como alerta ou atrasado.</span>
+        </div>
+    </div>
+    <div class="drawer-tab-panel" id="rnc-panel-anexos">
+        <div class="upload-widget">
+            <select id="rnc-upload-tipo" class="upload-tipo-select" onchange="_onUploadTipoChange('rnc')">
+                <option value="arquivo">Arquivo</option>
+                <option value="link">Link</option>
+            </select>
+            <input type="text" id="rnc-upload-title" class="upload-title-input" placeholder="Nome do arquivo">
+            <button type="button" class="upload-send-btn" id="rnc-upload-btn" onclick="submitAnexoUpload('rnc')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Enviar
+            </button>
+        </div>
+        <div id="rnc-file-preview" style="display:none;"></div>
+        <div id="rnc-upload-zone" class="upload-drop-zone">
+            <input type="file" id="rnc-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span class="upload-drop-label">Clique ou arraste o arquivo</span>
+            <span class="upload-drop-hint">PDF, imagem, planilha ou slides</span>
+        </div>
+        <div id="rnc-link-wrap" style="display:none;">
+            <input type="url" id="rnc-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
+        </div>
+        <div id="rnc-anexos-list"></div>
+    </div>
+    <div class="drawer-tab-panel" id="rnc-panel-checklist">
+        <div class="cl-subtabs">
+            <button class="cl-subtab active" onclick="switchClSubtab('rnc','geral',this)"><i class="fas fa-list-check"></i> Geral</button>
+            <button class="cl-subtab" onclick="switchClSubtab('rnc','pub',this)"><i class="fas fa-paper-plane"></i> Publicação</button>
+        </div>
+        <div class="cl-subpanel active" id="rnc-clpanel-geral">
+            <div class="checklist-add-row">
+                <input type="text" id="rnc-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('rnc')">
+                <button class="checklist-add-btn" onclick="addChecklistItem('rnc')"><i class="fas fa-plus"></i> Adicionar</button>
+            </div>
+            <div class="checklist-editor" id="rnc-checklist-editor"></div>
+        </div>
+        <div class="cl-subpanel" id="rnc-clpanel-pub">
+            <div class="checklist-add-row">
+                <input type="text" id="rnc-pub-checklist-input" class="checklist-new-input" placeholder="Novo item de publicação..." onkeydown="if(event.key==='Enter')addChecklistItem('rnc-pub')">
+                <button class="checklist-add-btn" onclick="addChecklistItem('rnc-pub')"><i class="fas fa-plus"></i> Adicionar</button>
+            </div>
+            <div class="checklist-editor" id="rnc-pub-checklist-editor"></div>
+        </div>
+    </div>
+    <div class="form-drawer-footer">
+        <button class="btn-cancel" onclick="rncCloseDrawer()">Cancelar</button>
+        <button class="btn-save" onclick="rncSaveForm()"><i class="fas fa-save"></i> Salvar RNC</button>
+    </div>
+</div>
+
+<!-- ═══ RNC — MODAL DE VISUALIZAÇÃO ═══ -->
+<div class="rnc-view-modal-backdrop" id="rncViewBackdrop" onclick="rncCloseView()"></div>
+<div class="rnc-view-modal" id="rncViewModal">
+    <div class="rnc-view-modal-header" id="rncViewHeader">
+        <div class="rnc-view-header-icon" id="rncViewHeaderIcon"><i class="fas fa-triangle-exclamation"></i></div>
+        <div class="rnc-view-header-main">
+            <h2 id="rncViewTitle">RNC</h2>
+            <div class="rnc-view-header-meta" id="rncViewSubtitle"></div>
+            <div class="rnc-view-header-chips" id="rncViewHeaderChips"></div>
+        </div>
+        <div class="rnc-view-header-actions">
+            <button class="rnc-view-header-edit" id="rncViewHeaderEdit" onclick="rncCloseView();rncOpenEdit(rncViewEditId)"><i class="fas fa-pen"></i> Editar</button>
+            <button class="rnc-view-modal-close" onclick="rncCloseView()"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+    <div class="rnc-view-tabs">
+        <button class="rnc-view-tab active" onclick="rncSwitchViewTab('rnc-vinfo',this)">
+            <i class="fas fa-info-circle"></i> Dados
+        </button>
+        <button class="rnc-view-tab" onclick="rncSwitchViewTab('rnc-vcl',this)">
+            <i class="fas fa-list-check"></i> Checklist
+            <span class="rnc-view-tab-badge" id="rncViewClBadge" style="display:none;"></span>
+        </button>
+        <button class="rnc-view-tab" onclick="rncSwitchViewTab('rnc-vpub',this)">
+            <i class="fas fa-paper-plane"></i> Publicações
+            <span class="rnc-view-tab-badge" id="rncViewPubBadge" style="display:none;"></span>
+        </button>
+        <button class="rnc-view-tab" onclick="rncSwitchViewTab('rnc-vax',this)">
+            <i class="fas fa-paperclip"></i> Anexos
+            <span class="rnc-view-tab-badge" id="rncViewAxBadge" style="display:none;"></span>
+        </button>
+    </div>
+    <div class="rnc-view-panel active" id="rnc-vinfo" style="overflow-y:auto; flex:1; padding:20px 20px 70px;">
+        <div id="rncViewInfoContent"></div>
+    </div>
+    <div class="rnc-view-panel" id="rnc-vcl" style="overflow-y:auto; flex:1; padding:20px;">
+        <div id="rncViewClContent"></div>
+    </div>
+    <div class="rnc-view-panel" id="rnc-vpub" style="overflow-y:auto; flex:1; padding:20px;">
+        <div id="rncViewPubContent"></div>
+    </div>
+    <div class="rnc-view-panel" id="rnc-vax" style="overflow-y:auto; flex:1; padding:20px;">
+        <div id="rncViewAxContent"></div>
+    </div>
+    <button class="rnc-view-fab" id="rncViewPubFab" style="display:none;" onclick="rncOpenPubModal()">
+        <i class="fas fa-paper-plane"></i> Nova Publicação
+    </button>
+</div>
+
+<!-- ═══ RNC — GERENCIADOR DE LISTAS ═══ -->
+<div class="rnc-manager-overlay" id="rncManagerModal" style="display:none;" onclick="if(event.target===this)rncCloseManager()">
+    <div class="rnc-manager-box">
+        <div class="rnc-manager-header">
+            <h3 id="rncManagerTitle">Gerenciar</h3>
+            <button onclick="rncCloseManager()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="rnc-manager-add">
+            <input type="text" id="rncManagerInput" placeholder="Novo item..." onkeydown="if(event.key==='Enter')rncManagerAdd()">
+            <button onclick="rncManagerAdd()"><i class="fas fa-plus"></i> Adicionar</button>
+        </div>
+        <div class="rnc-color-picker" id="rncManagerColorPicker" style="display:none;"></div>
+        <div id="rncManagerList" class="rnc-manager-list"></div>
+        <div class="rnc-manager-footer">
+            <button class="btn-cancel" onclick="rncCloseManager()">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ RNC — EDITOR DE MARCADORES (criar/editar) ═══ -->
+<div class="rnc-mk-overlay" id="rncMarkerEditorModal" style="display:none;" onclick="if(event.target===this)rncCloseMarkerEditor()">
+    <div class="rnc-mk-box">
+        <div class="rnc-mk-header">
+            <div class="rnc-mk-header-title">
+                <i class="fas fa-tags"></i>
+                <h3 id="rncMkEditorTitle">Marcadores</h3>
+            </div>
+            <button class="rnc-mk-close" onclick="rncCloseMarkerEditor()"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="rnc-mk-body">
+            <!-- Lista de marcadores existentes -->
+            <div class="rnc-mk-existing" id="rncMkExisting"></div>
+
+            <!-- Formulário criar/editar -->
+            <div class="rnc-mk-form">
+                <div class="rnc-mk-form-title" id="rncMkFormTitle">Novo marcador</div>
+
+                <!-- Preview -->
+                <div class="rnc-mk-preview-row">
+                    <span class="rnc-mk-preview" id="rncMkPreview"><i class="fas fa-tag"></i> Marcador</span>
+                </div>
+
+                <label class="rnc-mk-label">Nome</label>
+                <input type="text" id="rncMkName" class="rnc-mk-input" placeholder="Ex.: Urgente" oninput="rncMkUpdatePreview()" autocomplete="off">
+
+                <label class="rnc-mk-label">Cor</label>
+                <div class="rnc-mk-colors" id="rncMkColors"></div>
+
+                <label class="rnc-mk-label">Ícone</label>
+                <div class="rnc-mk-icons" id="rncMkIcons"></div>
+
+                <div class="rnc-mk-form-actions">
+                    <button class="rnc-mk-btn-cancel" id="rncMkCancelBtn" onclick="rncMkResetForm()" style="display:none;">Cancelar edição</button>
+                    <button class="rnc-mk-btn-save" id="rncMkSaveBtn" onclick="rncMkSave()"><i class="fas fa-check"></i> <span id="rncMkSaveLabel">Adicionar marcador</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ RNC — CONFIRM MODAL ═══ -->
+<div id="rncConfirmModal"></div>
 
 <!-- FAB NOVO REGISTRO -->
 <button class="fab-add" id="addBtn" title="Novo Registro" style="display:none;">
@@ -2613,6 +3074,34 @@
     </div>
 </div>
 
+<div class="modal" id="modalRncSetorFilter">
+    <div class="modal-content setor-filter-modal">
+        <div class="setor-filter-header">
+            <div class="setor-filter-header-left">
+                <div class="setor-filter-icon"><i class="fas fa-building"></i></div>
+                <div>
+                    <div class="setor-filter-title">Selecionar Setores</div>
+                    <div class="setor-filter-subtitle" id="rncSetorFilterSubtitle">Selecione ao menos 1 setor</div>
+                </div>
+            </div>
+            <button class="btn-close" onclick="rncCloseSetorModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="setor-filter-controls">
+            <span class="setor-filter-count" id="rncSetorFilterCount">0 selecionados</span>
+            <button class="setor-filter-deselect" id="rncSetorFilterToggleAllBtn" onclick="rncSetorFilterToggleAll()">
+                <i class="fas fa-times"></i> Desmarcar todos
+            </button>
+        </div>
+        <div class="setor-filter-grid" id="rncSetorFilterGrid">
+            <!-- chips dos setores -->
+        </div>
+        <div class="setor-filter-footer">
+            <button class="btn-cancel" onclick="rncCloseSetorModal()">Cancelar</button>
+            <button class="btn-save" onclick="rncConfirmSetorFilter()"><i class="fas fa-check"></i> Confirmar</button>
+        </div>
+    </div>
+</div>
+
 <script src="script/offline.js"></script>
 <script src="script/firebase.js"></script>
 <script src="script/cache.js"></script>
@@ -2641,6 +3130,7 @@
 <script src="script/fbar-filters.js"></script>
 <script src="script/overdue-status.js"></script>
 <script src="script/ocorrencias.js"></script>
+<script src="script/rnc.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="script/ocorrencias-dashboard.js"></script>

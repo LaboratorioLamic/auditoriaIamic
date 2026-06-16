@@ -552,6 +552,9 @@
 }
 .modal[style*="flex"] { display: flex !important; }
 #modalListManager { z-index: 1200; }
+/* Modal de publicação deve ficar à frente do modal de visualização da RNC (z-index 1101) */
+#modalPublicacao { z-index: 1300; }
+#modalVerPublicacao { z-index: 1300; }
 
 .modal-content {
     background: #fff;

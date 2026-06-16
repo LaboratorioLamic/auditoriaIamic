@@ -29,7 +29,9 @@ const _uploadQueues = {
   ativ:       { file: null, dataUrl: null },
   train:      { file: null, dataUrl: null },
   doc:        { file: null, dataUrl: null },
-  mant:       { file: null, dataUrl: null }
+  mant:       { file: null, dataUrl: null },
+  oc:         { file: null, dataUrl: null },
+  rnc:        { file: null, dataUrl: null }
 };
 
 // Botões de salvar/confirmar bloqueados durante upload
@@ -487,4 +489,5 @@ document.addEventListener('DOMContentLoaded', function () {
   initUploadZone('doc');
   initUploadZone('mant');
   initUploadZone('oc');
+  initUploadZone('rnc');
 });

@@ -14,6 +14,7 @@
     var maintenances = [];
     var documents = [];
     var ocorrencias = [];      // Gestão de N/C — registros de ocorrências
+    var rncItems = [];         // Gestão de N/C — Relatórios de Não Conformidade
     var users = [];            // usuários carregados do bin de usuários
     var currentuser = null;    // usuário atualmente logado
 
@@ -62,6 +63,11 @@
         ncTipos: [],         // [{ id, name }]  — cada tipo é uma "sub-aba"
         ncCategorias: [],    // [{ id, name }]
         ncMotivos: {},       // { [categoriaId]: [{ id, name }] }
+
+        // Gestão de N/C — RNC
+        rncOrigens: [],       // [{ id, name }]
+        rncDetalhamentos: [], // [{ id, name }]
+        rncStatus: [],        // [{ id, name }]  — usado no Kanban
 
         // Histórico de exclusões permanentes
         deletionHistory: [],

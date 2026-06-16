@@ -126,6 +126,10 @@ function resetModal(prefix) {
             if (typeof window.ocOpenNew === 'function') window.ocOpenNew();
             return;
         }
+        if (currentTab === 'rnc') {
+            if (typeof window.rncOpenNew === 'function') window.rncOpenNew();
+            return;
+        }
 
         if (currentTab === 'auditoria') {
             editingAuditId = null;
@@ -965,7 +969,13 @@ function renderViewContent(id, tab) {
     // ── Publicar button ───────────────────────────────────────
     var btnPublicar = document.getElementById('btnPublicar');
     var _canPub = typeof userCanPublish === 'function' ? userCanPublish(item) : true;
-    if (btnPublicar) btnPublicar.style.display = (finalTab !== 'manutencao' && !item.deleted && _canPub) ? 'inline-flex' : 'none';
+    var _showPublish = finalTab !== 'manutencao' && !item.deleted && _canPub;
+    if (btnPublicar) {
+        btnPublicar.dataset.canPub = _showPublish ? 'true' : 'false';
+        var _activeTab = document.querySelector('.view-modal-tab.active');
+        var _activeTabName = _activeTab ? _activeTab.getAttribute('onclick').match(/switchViewTab\('(\w+)'/)[1] : 'info';
+        btnPublicar.style.display = (_showPublish && _activeTabName === 'publicacoes') ? 'inline-flex' : 'none';
+    }
 
     // ── INFO TAB ──────────────────────────────────────────────
     var detailsCards = '';
@@ -2252,6 +2262,8 @@ function viewHistoryItem(id, tab, historyIndex) {
         });
         const _oc = document.getElementById('modalOcorrencia');
         if (_oc) _oc.classList.remove('open');
+        const _rnc = document.getElementById('modalRnc');
+        if (_rnc) _rnc.classList.remove('open');
         const backdrop = document.getElementById('formDrawerBackdrop');
         const fab = document.getElementById('addBtn');
         if (backdrop) backdrop.classList.remove('open');

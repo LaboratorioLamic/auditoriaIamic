@@ -8,6 +8,7 @@
             maintenances = [];
             documents = [];
             ocorrencias = [];
+            rncItems = [];
             users = [];
             masterLists = JSON.parse(JSON.stringify(defaultMasterLists));
             // Invalida o baseline: enquanto não recarregamos, o estado local
@@ -36,6 +37,8 @@
                 maintenances = record.maintenances || [];
                 documents = record.documents || [];
                 ocorrencias = record.ocorrencias || [];
+                rncItems = record.rncItems || [];
+                if (typeof window.rncItems !== 'undefined') window.rncItems = rncItems;
 
                 if (record.masterLists) {
                     masterLists = { ...defaultMasterLists, ...record.masterLists };
@@ -85,7 +88,7 @@
     }
 
     function isEditingCardOpen() {
-        const drawerIds = ['modalAuditoria', 'modalAtividades', 'modalManutencao', 'modalDocumentos', 'modalOcorrencia'];
+        const drawerIds = ['modalAuditoria', 'modalAtividades', 'modalManutencao', 'modalDocumentos', 'modalOcorrencia', 'modalRnc'];
         return drawerIds.some(id => {
             const el = document.getElementById(id);
             return el && el.classList.contains('open');
@@ -119,7 +122,8 @@
                     JSON.stringify(record.activities) !== JSON.stringify(activities) ||
                     JSON.stringify(record.maintenances) !== JSON.stringify(maintenances) ||
                     JSON.stringify(record.documents) !== JSON.stringify(documents) ||
-                    JSON.stringify(record.ocorrencias) !== JSON.stringify(ocorrencias)
+                    JSON.stringify(record.ocorrencias) !== JSON.stringify(ocorrencias) ||
+                    JSON.stringify(record.rncItems) !== JSON.stringify(rncItems)
                 );
 
                 if (!listsChanged && !dataChanged) return;
@@ -138,12 +142,15 @@
                     maintenances = record.maintenances || [];
                     documents = record.documents || [];
                     ocorrencias = record.ocorrencias || [];
+                    rncItems = record.rncItems || [];
+                    if (typeof window.rncItems !== 'undefined') window.rncItems = rncItems;
                     // Adotamos o estado remoto: atualiza o baseline do merge.
                     captureSyncBaseline();
                 }
 
                 populateSelects();
                 if (currentTab === 'ocorrencias') { if (typeof window.ocRenderTable === 'function') window.ocRenderTable(); }
+                else if (currentTab === 'rnc') { if (typeof window.rncRenderTable === 'function') window.rncRenderTable(); }
                 else currentTab === 'dashboard' ? renderDashboard() : renderCards();
             });
 
@@ -221,7 +228,8 @@
             activities: _deepClone(activities),
             maintenances: _deepClone(maintenances),
             documents: _deepClone(documents),
-            ocorrencias: _deepClone(ocorrencias)
+            ocorrencias: _deepClone(ocorrencias),
+            rncItems: _deepClone(rncItems)
         };
     }
 
@@ -296,7 +304,7 @@
             // trata como vazio. Assim todo item local vira "novo" (upsert) e
             // NADA é excluído — evita apagar o banco com um estado local parcial.
             const base = _syncBaseline || {
-                audits: [], trainings: [], activities: [], maintenances: [], documents: [], ocorrencias: []
+                audits: [], trainings: [], activities: [], maintenances: [], documents: [], ocorrencias: [], rncItems: []
             };
 
             // Relê o estado remoto atual para reconciliar (merge 3-vias).
@@ -318,6 +326,7 @@
             const mergedMaintenances = _mergeCollection(maintenances, remote.maintenances, base.maintenances);
             const mergedDocuments    = _mergeCollection(documents,    remote.documents,    base.documents);
             const mergedOcorrencias  = _mergeCollection(ocorrencias,  remote.ocorrencias,  base.ocorrencias);
+            const mergedRncItems     = _mergeCollection(rncItems,     remote.rncItems,     base.rncItems);
 
             // O merge trouxe novidades de outras sessões? (para re-render)
             const pulledRemoteChanges =
@@ -326,7 +335,8 @@
                 JSON.stringify(mergedActivities)   !== JSON.stringify(activities) ||
                 JSON.stringify(mergedMaintenances) !== JSON.stringify(maintenances) ||
                 JSON.stringify(mergedDocuments)    !== JSON.stringify(documents) ||
-                JSON.stringify(mergedOcorrencias)  !== JSON.stringify(ocorrencias);
+                JSON.stringify(mergedOcorrencias)  !== JSON.stringify(ocorrencias) ||
+                JSON.stringify(mergedRncItems)     !== JSON.stringify(rncItems);
 
             // Adota o resultado reconciliado como novo estado local + baseline.
             audits = mergedAudits;
@@ -335,6 +345,8 @@
             maintenances = mergedMaintenances;
             documents = mergedDocuments;
             ocorrencias = mergedOcorrencias;
+            rncItems = mergedRncItems;
+            if (typeof window.rncItems !== 'undefined') window.rncItems = rncItems;
             captureSyncBaseline();
 
             await update(dbRef(database, "/"), {
@@ -344,6 +356,7 @@
                 '/maintenances': mergedMaintenances,
                 '/documents': mergedDocuments,
                 '/ocorrencias': mergedOcorrencias,
+                '/rncItems': mergedRncItems,
                 '/masterLists': masterLists,
                 '/kanbanOrder': kanbanOrder,
                 '/lastUpdate': new Date().toISOString()
@@ -353,6 +366,7 @@
             if (pulledRemoteChanges && !isEditingCardOpen()) {
                 populateSelects();
                 if (currentTab === 'ocorrencias') { if (typeof window.ocRenderTable === 'function') window.ocRenderTable(); }
+                else if (currentTab === 'rnc') { if (typeof window.rncRenderTable === 'function') window.rncRenderTable(); }
                 else currentTab === 'dashboard' ? renderDashboard() : renderCards();
             }
 

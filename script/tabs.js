@@ -29,6 +29,7 @@
         manutencao: 'Manutenção',
         documentos: 'Documentos',
         ocorrencias: 'Ocorrências',
+        rnc: 'RNC',
         backup: 'Backup do Sistema'
     };
     var subtitles = {
@@ -39,6 +40,7 @@
         manutencao: 'Controle preventivo de equipamentos',
         documentos: 'Gerenciamento e controle de revisões',
         ocorrencias: 'Gestão de N/C — registro de ocorrências',
+        rnc: 'Gestão de N/C — relatórios de não conformidade',
         backup: 'Segurança dos dados'
     };
 
@@ -50,12 +52,13 @@
     var isDashboard = tab === 'dashboard';
     var isConfig = tab === 'configuracoes';
     var isOcorrencias = tab === 'ocorrencias';
+    var isRnc = tab === 'rnc';
 
     // Garante que a busca por título só atue quando o campo estiver ativo/visível
     if (isDashboard) setTitleSearchEnabled('cards', false);
     else setTitleSearchEnabled('dash', false);
 
-    document.getElementById('filtersBarWrap').style.display = (isBackup || isDashboard || isConfig || isOcorrencias) ? 'none' : 'flex';
+    document.getElementById('filtersBarWrap').style.display = (isBackup || isDashboard || isConfig || isOcorrencias || isRnc) ? 'none' : 'flex';
     // Abas Tarefas/Ocorrências do dashboard
     var _dsb = document.getElementById('dashSubtabsBar');
     if (_dsb) _dsb.style.display = isDashboard ? 'flex' : 'none';
@@ -69,8 +72,8 @@
     var _hasKanban = typeof KANBAN_TABS !== 'undefined' && KANBAN_TABS.includes(tab);
     var _isKanbanMode = _hasKanban && typeof isKanbanActive === 'function' && isKanbanActive(tab);
     var _isCalMode = _hasKanban && typeof isCalendarActive === 'function' && isCalendarActive(tab);
-    var _hideGrid = isBackup || isDashboard || isConfig || isOcorrencias || _isKanbanMode || _isCalMode;
-    var _showListMode = !isBackup && !isDashboard && !isConfig && !isOcorrencias && !_isKanbanMode && !_isCalMode;
+    var _hideGrid = isBackup || isDashboard || isConfig || isOcorrencias || isRnc || _isKanbanMode || _isCalMode;
+    var _showListMode = !isBackup && !isDashboard && !isConfig && !isOcorrencias && !isRnc && !_isKanbanMode && !_isCalMode;
     document.getElementById('cardsGrid').style.display = (_hideGrid || currentListSubtab !== 'cards') ? 'none' : 'grid';
     var _lsBar = document.getElementById('listSubtabsBar');
     if (_lsBar) _lsBar.style.display = _showListMode ? 'flex' : 'none';
@@ -94,9 +97,10 @@
     var addColRow  = document.getElementById('fbarAddcolRow');
     var _isKanbanNow = _isKanbanMode;
     var canUserEdit  = userCanEditCards();
-    var showActions  = (!isBackup && !isDashboard && !isConfig && !isOcorrencias && canUserEdit)
-                       || (isOcorrencias && canUserEdit);
-    var showAddCol   = showActions && _isKanbanNow && !isOcorrencias;
+    var showActions  = (!isBackup && !isDashboard && !isConfig && !isOcorrencias && !isRnc && canUserEdit)
+                       || (isOcorrencias && canUserEdit)
+                       || (isRnc && canUserEdit);
+    var showAddCol   = showActions && _isKanbanNow && !isOcorrencias && !isRnc;
 
     if (addBtn)    addBtn.style.display   = showActions ? 'flex' : 'none';
     if (addColRow) addColRow.style.display = showAddCol ? 'flex' : 'none';
@@ -104,8 +108,8 @@
     // --- Controle do botão de LIXEIRA ---
     var trashBtn = document.getElementById('trashBtn');
     if (trashBtn) {
-        // O botão de lixeira aparece se NÃO for backup/dash/config/ocorrências
-        if (!isBackup && !isDashboard && !isConfig && !isOcorrencias) {
+        // O botão de lixeira aparece se NÃO for backup/dash/config/ocorrências/rnc
+        if (!isBackup && !isDashboard && !isConfig && !isOcorrencias && !isRnc) {
             trashBtn.style.display = 'flex';
         } else {
             trashBtn.style.display = 'none';
@@ -121,13 +125,17 @@
     document.getElementById('dashboardContent').style.display = isDashboard ? 'flex' : 'none';
     var ocEl = document.getElementById('ocorrenciasContent');
     if (ocEl) ocEl.style.display = isOcorrencias ? 'flex' : 'none';
-    // Na aba de Ocorrências, oculta filtros de setor/data padrão do header (não se aplicam)
-    if (isOcorrencias) {
+    var rncEl = document.getElementById('rncContent');
+    if (rncEl) rncEl.style.display = isRnc ? 'flex' : 'none';
+    // Na aba de Ocorrências ou RNC, oculta filtros de setor/data padrão do header
+    if (isOcorrencias || isRnc) {
         var _sf = document.getElementById('btnSetorFilter'); if (_sf) _sf.style.display = 'none';
         var _df = document.getElementById('fbarDateBtn'); if (_df) _df.style.display = 'none';
     }
     // Mostra os filtros próprios de Ocorrências (e o sino) conforme a aba
     if (typeof window.ocSetHeaderFilters === 'function') window.ocSetHeaderFilters(isOcorrencias);
+    // Mostra os filtros próprios de RNC (e o sino RNC) conforme a aba
+    if (typeof window.rncSetHeaderFilters === 'function') window.rncSetHeaderFilters(isRnc);
     var cfgEl = document.getElementById('configContent');
     if (cfgEl) {
         cfgEl.style.display = isConfig ? 'block' : 'none';
@@ -152,6 +160,8 @@
         if (typeof window.applyDashSubtab === 'function') window.applyDashSubtab();
     } else if(isOcorrencias) {
         if (typeof window.ocActivateTab === 'function') window.ocActivateTab();
+    } else if(isRnc) {
+        if (typeof window.rncActivateTab === 'function') window.rncActivateTab();
     } else if(!isBackup && !isConfig) {
         if (_isCalMode && typeof renderCalendar === 'function') {
             renderCalendar();
@@ -173,6 +183,7 @@
     document.getElementById('tabAtividades').onclick = () => switchTab('atividades');
     document.getElementById('tabDocumentos').onclick = () => switchTab('documentos');
     document.getElementById('tabOcorrencias').onclick = () => switchTab('ocorrencias');
+    document.getElementById('tabRnc').onclick = () => switchTab('rnc');
     document.getElementById('tabBackup').onclick = () => switchTab('backup');
     document.getElementById('tabConfiguracoes').onclick = () => {
         if (!userIsAdmin()) {
