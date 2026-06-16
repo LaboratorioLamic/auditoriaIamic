@@ -40,9 +40,14 @@
         var nc = masterLists.ncCategorias;
         if (!nc || typeof nc !== 'object') return [];
         if (tipoId) return Array.isArray(nc[tipoId]) ? nc[tipoId] : [];
-        // Sem tipo: todas as categorias
+        // Sem tipo selecionado: apenas categorias dos tipos que o usuário pode visualizar
+        var allowedTipos = (typeof window.userAllowedTiposOc === 'function') ? window.userAllowedTiposOc() : null;
         var all = [];
-        Object.values(nc).forEach(function (arr) { if (Array.isArray(arr)) all = all.concat(arr); });
+        Object.keys(nc).forEach(function (tid) {
+            if (allowedTipos && !allowedTipos.includes(tid)) return;
+            var arr = nc[tid];
+            if (Array.isArray(arr)) all = all.concat(arr);
+        });
         return all;
     }
 
