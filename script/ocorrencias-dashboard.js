@@ -560,13 +560,19 @@
         var labels = [];
         var data = [];
         var colors = [];
+        var pcts = [];
+        var subtotals = [];
+        var base = 0;
         for (var i = 1; i < months.length; i++) {
             var prev = counts[i - 1];
             var curr = counts[i];
             var delta = curr - prev;
             var pct = prev > 0 ? parseFloat(((delta / prev) * 100).toFixed(1)) : (curr > 0 ? 100 : 0);
             labels.push(formatMonthKey(months[i - 1]) + ' → ' + formatMonthKey(months[i]));
-            data.push(pct);
+            data.push([base, base + pct]);
+            pcts.push(pct);
+            base += pct;
+            subtotals.push(parseFloat(base.toFixed(1)));
             colors.push(delta >= 0 ? 'rgba(220,38,38,0.82)' : 'rgba(22,163,74,0.82)');
         }
 
@@ -593,7 +599,9 @@
                         backgroundColor: '#1e293b', titleColor: '#f8fafc', bodyColor: '#cbd5e1', cornerRadius: 8,
                         callbacks: {
                             label: function (c) {
-                                return ' ' + (c.parsed.y >= 0 ? '+' : '') + c.parsed.y + '%';
+                                var pct = pcts[c.dataIndex];
+                                var pctLabel = ' ' + (pct >= 0 ? '+' : '') + pct + '%';
+                                return [pctLabel, ' Subtotal: ' + subtotals[c.dataIndex] + '%'];
                             }
                         }
                     }

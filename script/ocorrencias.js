@@ -144,6 +144,7 @@
     function ensureLists() {
         if (typeof masterLists === 'undefined' || !masterLists) return;
         if (!Array.isArray(masterLists.ncTipos)) masterLists.ncTipos = [];
+        masterLists.ncTipos.sort(function (a, b) { return String(a.name).localeCompare(String(b.name), 'pt'); });
         // ncCategorias agora é um objeto { [tipoId]: [{id,name},...] }
         // Migração automática: se for array global, converte para objeto vazio
         if (Array.isArray(masterLists.ncCategorias)) masterLists.ncCategorias = {};
@@ -152,8 +153,9 @@
         if (typeof masterLists.ncMotivos !== 'object' || masterLists.ncMotivos === null || Array.isArray(masterLists.ncMotivos)) masterLists.ncMotivos = {};
         if (!Array.isArray(masterLists.setores)) masterLists.setores = [];
     }
+    function sortByName(arr) { arr.sort(function (a, b) { return String(a.name).localeCompare(String(b.name), 'pt'); }); return arr; }
     function getTipos() { ensureLists(); return masterLists.ncTipos; }
-    // Retorna categorias do tipo ativo (ou do tipoId fornecido)
+    // Retorna categorias do tipo ativo (ou do tipoId fornecido), em ordem alfabética
     function getCategorias(tipoId) {
         ensureLists();
         var tid = tipoId !== undefined ? tipoId : ocCurrentTipoId;
@@ -161,7 +163,7 @@
             // Sem tipo selecionado: retorna todas as categorias de todos os tipos (para filtros)
             var all = [];
             Object.values(masterLists.ncCategorias).forEach(function(arr) { if (Array.isArray(arr)) all = all.concat(arr); });
-            return all;
+            return sortByName(all);
         }
         if (!Array.isArray(masterLists.ncCategorias[tid])) masterLists.ncCategorias[tid] = [];
         return masterLists.ncCategorias[tid];
@@ -183,7 +185,7 @@
     //  RENDER — Sub-abas de Tipo (dropdown)
     // =====================================================================
     function getAllowedTipos() {
-        var all = getTipos();
+        var all = getTipos().slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name), 'pt'); });
         var allowed = (typeof window.userAllowedTiposOc === 'function') ? window.userAllowedTiposOc() : null;
         if (!allowed) return all;
         return all.filter(function(t) { return allowed.includes(t.id); });
@@ -1038,13 +1040,16 @@
         if (ocManagerKind === 'tipos') {
             if (getTipos().some(function (t) { return t.name.toLowerCase() === name.toLowerCase(); })) { toast('Tipo já existe.', 'error'); return; }
             getTipos().push({ id: uid(), name: name });
+            sortByName(getTipos());
         } else if (ocManagerKind === 'categorias') {
             if (getCategorias(ocManagerTipoId).some(function (c) { return c.name.toLowerCase() === name.toLowerCase(); })) { toast('Categoria já existe.', 'error'); return; }
-            getCategorias(ocManagerTipoId).push({ id: uid(), name: name });
+            masterLists.ncCategorias[ocManagerTipoId].push({ id: uid(), name: name });
+            sortByName(masterLists.ncCategorias[ocManagerTipoId]);
         } else if (ocManagerKind === 'motivos') {
             var mo = getMotivos(ocManagerCatId);
             if (mo.some(function (m) { return m.name.toLowerCase() === name.toLowerCase(); })) { toast('Motivo já existe.', 'error'); return; }
             mo.push({ id: uid(), name: name });
+            sortByName(mo);
         } else if (ocManagerKind === 'setores') {
             if (masterLists.setores.some(function (s) { return String(s).toLowerCase() === name.toLowerCase(); })) { toast('Setor já existe.', 'error'); return; }
             masterLists.setores.push(name);
@@ -1090,6 +1095,7 @@
             if (item) {
                 var oldName = item.name;
                 item.name = nv;
+                sortByName(list);
                 if (ocManagerKind === 'categorias') {
                     (window.ocorrencias || []).forEach(function (o) { if (o.categoria === oldName) o.categoria = nv; });
                 } else if (ocManagerKind === 'motivos') {

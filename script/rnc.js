@@ -2074,10 +2074,12 @@
         var origens = getOrigens();
         if (!origens.some(function(o){ return String(o.name).trim().toLowerCase() === origem.toLowerCase(); })) {
             origens.push({ id: Date.now() + '_o', name: origem });
+            origens.sort(function(a,b){ return String(a.name).localeCompare(String(b.name), 'pt'); });
         }
         var dets = getDetalhamentos();
         if (!dets.some(function(d){ return String(d.name).trim().toLowerCase() === detalhamento.toLowerCase(); })) {
             dets.push({ id: Date.now() + '_d', name: detalhamento });
+            dets.sort(function(a,b){ return String(a.name).localeCompare(String(b.name), 'pt'); });
         }
 
         if (rncEditingId) {
@@ -2591,6 +2593,12 @@
         if (rncManagerKind === 'status')        return masterLists.rncStatus;
         return [];
     }
+    // Origens/Detalhamentos ficam em ordem alfabética; Status (Kanban) mantém a ordem manual.
+    function _sortManagerListIfNeeded() {
+        if (rncManagerKind === 'origens' || rncManagerKind === 'detalhamentos') {
+            _getManagerList().sort(function(a,b){ return String(a.name).localeCompare(String(b.name), 'pt'); });
+        }
+    }
 
     var RNC_PALETTE = [
         { key:'default', hex:'#94a3b8' }, { key:'blue',   hex:'#3b82f6' },
@@ -2670,6 +2678,7 @@
         var item = { id: String(Date.now()), name: name };
         if (rncManagerKind === 'status')    item.color = _rncManagerNewColor;
         list.push(item);
+        _sortManagerListIfNeeded();
         input.value = ''; input.focus();
         persist(); _renderRncManagerList();
         toast('Item adicionado.', 'success');
@@ -2681,6 +2690,7 @@
         var newName = prompt('Editar: ' + item.name, item.name);
         if (!newName || !newName.trim()) return;
         item.name = newName.trim();
+        _sortManagerListIfNeeded();
         persist(); _renderRncManagerList(); renderRnc();
         toast('Item atualizado.', 'success');
     };
