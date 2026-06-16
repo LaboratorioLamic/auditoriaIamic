@@ -398,6 +398,7 @@ function _checkTriPerm(permVal, item) {
                 btn.style.opacity = '0.4';
             }
         });
+        if (typeof window.applyDashAreaPermissions === 'function') window.applyDashAreaPermissions();
     }
 
     function logout() {

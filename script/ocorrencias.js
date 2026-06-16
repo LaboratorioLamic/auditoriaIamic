@@ -1541,7 +1541,7 @@
     function renderDashOcTypeDropdown() {
         var dd = document.getElementById('dashOcTypeDropdown');
         if (!dd) return;
-        var tipos = getTipos();
+        var tipos = getAllowedTipos();
         var html = '<button class="oc-type-option' + (dashOcTipoId === null ? ' active' : '') +
             '" onclick="dashOcSelectTipo(null)"><i class="fas fa-border-all"></i> Todas as ocorrências</button>';
         if (tipos.length === 0) {
@@ -1557,8 +1557,11 @@
     function updateDashOcTypeLabel() {
         var lbl = document.getElementById('dashOcTypeLabel');
         if (!lbl) return;
+        if (dashOcTipoId !== null && !getAllowedTipos().some(function (x) { return x.id === dashOcTipoId; })) {
+            dashOcTipoId = null;
+        }
         if (dashOcTipoId === null) { lbl.textContent = 'Tipo: Todas'; return; }
-        var t = getTipos().find(function (x) { return x.id === dashOcTipoId; });
+        var t = getAllowedTipos().find(function (x) { return x.id === dashOcTipoId; });
         lbl.textContent = t ? t.name : 'Tipo';
     }
     window.dashOcToggleTypeDropdown = function () {

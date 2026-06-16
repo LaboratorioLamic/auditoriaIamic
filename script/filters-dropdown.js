@@ -73,10 +73,30 @@
     }
 
     // ── Dropdown de Área do Dashboard ────────────────────────────────────
+    var _dashAreaTabMap = { ativ: 'atividades', audit: 'auditoria', tren: 'treinamentos', doc: 'documentos' };
+
+    window.applyDashAreaPermissions = function() {
+        const allowed = (typeof userAllowedTabs === 'function') ? userAllowedTabs() : null;
+        const chips = document.querySelectorAll('.fbar-area-chip');
+        let activeStillAllowed = false;
+        let firstAllowed = null;
+        chips.forEach(chip => {
+            const tab = _dashAreaTabMap[chip.dataset.value];
+            const permitted = !allowed || allowed.includes(tab);
+            chip.style.display = permitted ? '' : 'none';
+            if (permitted && !firstAllowed) firstAllowed = chip;
+            if (permitted && chip.classList.contains('fbar-area-chip--active')) activeStillAllowed = true;
+        });
+        if (!activeStillAllowed && firstAllowed) {
+            selectDashArea(firstAllowed.dataset.value, firstAllowed.textContent.trim());
+        }
+    };
+
     window.toggleDashAreaDropdown = function() {
         const dd = document.getElementById('fbarAreaDropdown');
         if (!dd) return;
         const isOpen = dd.style.display === 'flex' || dd.style.display === 'block';
+        if (!isOpen) applyDashAreaPermissions();
         dd.style.display = isOpen ? 'none' : 'flex';
         if (!isOpen) {
             // Fecha ao clicar fora
