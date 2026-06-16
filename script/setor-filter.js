@@ -82,6 +82,24 @@ function _getVisibleSetores() {
         result = result.filter(s => window.dashboardAvailableSetores.has(s));
     }
 
+    // Nas abas de atividades, rotinas (auditoria), treinamentos e documentos, restringe
+    // aos setores que efetivamente têm dados na aba (respeitando os demais filtros ativos)
+    const tabToFilterPrefix = {
+        auditoria: 'Audit',
+        treinamentos: 'Train',
+        atividades: 'Ativ',
+        manutencao: 'Mant',
+        documentos: 'Doc'
+    };
+    const _prefix = tabToFilterPrefix[currentTab];
+    if (_prefix) {
+        if (typeof updateFilterFacetOptions === 'function') updateFilterFacetOptions(_prefix);
+        const available = window.tabAvailableSetores && window.tabAvailableSetores[_prefix];
+        if (available instanceof Set) {
+            result = result.filter(s => available.has(s));
+        }
+    }
+
     return result.sort((a, b) => String(a).localeCompare(String(b), 'pt'));
 }
 

@@ -950,6 +950,9 @@
             const ordered = master.filter(v => present.has(v));
             const extras = [...present].filter(v => !master.includes(v)).sort();
             setSelectOptions(el, 'Setor: Todos', [...ordered, ...extras], currentValue);
+            // Exposto globalmente para o filtro de header (setor-filter.js) só listar setores com dados
+            window.tabAvailableSetores = window.tabAvailableSetores || {};
+            window.tabAvailableSetores[prefix] = present;
         }
 
         // Categoria
