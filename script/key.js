@@ -1368,9 +1368,15 @@ function _checkTriPerm(permVal, item) {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (confirm('Deseja realmente sair do sistema?')) {
-                logout();
-            }
+            _showConfirmDialog({
+                title: 'Sair do sistema',
+                message: 'Deseja realmente sair do sistema?',
+                confirmLabel: 'Sair',
+                confirmClass: 'confirm-dlg-btn--primary',
+                iconClass: 'confirm-dlg-icon--info',
+                icon: 'fa-right-from-bracket',
+                onConfirm: logout
+            });
         });
     }
 

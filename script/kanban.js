@@ -213,6 +213,7 @@ function renderKanban() {
     const statuses = _kbGetSortedStatuses(cfg);
     const data     = _kbGetFilteredItems();
     const canEdit  = typeof userCanEditCards === 'function' ? userCanEditCards() : false;
+    const canManageLists = typeof userCanManageLists === 'function' ? userCanManageLists() : false;
     const dateFld  = cfg.sortDateField;
 
     board.innerHTML = '';
@@ -256,6 +257,7 @@ function renderKanban() {
                 </div>
                 <div class="kanban-col-bottom">
                     <div class="kanban-col-ctrl">
+                        ${canManageLists ? `
                         ${!isFinal ? `
                             <button class="kanban-ctrl-btn" title="Mover esquerda"
                                 onclick="moveKanbanColumn('${_kbHtml(status.name)}', -1)"
@@ -271,11 +273,11 @@ function renderKanban() {
                         <button class="kanban-ctrl-btn" title="Editar coluna" onclick="startKanbanRename('${_kbHtml(status.name)}')">
                             <i class="fas fa-pen"></i>
                         </button>
-                        ${canEdit ? `
                         <button class="kanban-ctrl-btn kanban-ctrl-delete" title="Excluir coluna"
                             onclick="openKanbanDeleteCol('${_kbHtml(status.name)}')">
                             <i class="fas fa-trash"></i>
-                        </button>` : ''}
+                        </button>
+                        ` : (isFinal ? '<span class="kanban-locked-badge"><i class="fas fa-lock"></i></span>' : '')}
                     </div>
                     <button class="kanban-ctrl-btn kanban-collapse-btn" title="Expandir/Recolher"
                         onclick="toggleKanbanCol(this, '${_kbHtml(status.name)}')">

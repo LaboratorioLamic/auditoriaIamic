@@ -16,7 +16,7 @@
     var ocPerPage = 20;
     var ocSort = { col: 'data', dir: 'desc' };   // padrão: data, mais recente primeiro
     var ocSearch = '';
-    var ocMyMode = 'responsavel';     // 'responsavel' | 'all'
+    var ocMyMode = localStorage.getItem('ocMyMode') || 'responsavel';     // 'responsavel' | 'all'
     var ocEditingId = null;
 
     // Filtros adicionais
@@ -243,6 +243,7 @@
     };
     window.ocSetMyMode = function (mode) {
         ocMyMode = mode;
+        localStorage.setItem('ocMyMode', mode);
         ocPage = 1;
         document.getElementById('ocMyResp').classList.toggle('active', mode === 'responsavel');
         document.getElementById('ocMyAll').classList.toggle('active', mode === 'all');
@@ -342,8 +343,21 @@
         return arr;
     }
 
+    function syncMyModeUI() {
+        var resp = document.getElementById('ocMyResp');
+        var all = document.getElementById('ocMyAll');
+        var btn = document.getElementById('ocMyBtn');
+        var lbl = document.getElementById('ocMyLabel');
+        if (!resp || !all || !btn || !lbl) return;
+        resp.classList.toggle('active', ocMyMode === 'responsavel');
+        all.classList.toggle('active', ocMyMode === 'all');
+        if (ocMyMode === 'all') { lbl.textContent = 'Visualizar todos'; btn.classList.remove('active'); }
+        else { lbl.textContent = 'Minhas ocorrências'; btn.classList.add('active'); }
+    }
+
     function renderTable() {
         if (typeof masterLists === 'undefined') return;
+        syncMyModeUI();
         // Se o dashboard de ocorrências estiver visível, re-renderiza ele também
         var ocDashContent = document.getElementById('dashboardOcContent');
         if (ocDashContent && ocDashContent.style.display !== 'none' &&

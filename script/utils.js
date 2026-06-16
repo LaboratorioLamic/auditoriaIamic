@@ -50,7 +50,7 @@ window.showToast = function(msg, type = 'info', duration = 3500) {
 
 // Diálogo de confirmação elegante (substitui window.confirm)
 // _showConfirmDialog({ title, message, confirmLabel, confirmClass, cancelLabel, onConfirm })
-window._showConfirmDialog = function({ title = 'Confirmar', message = '', confirmLabel = 'Confirmar', confirmClass = '', cancelLabel = 'Cancelar', onConfirm } = {}) {
+window._showConfirmDialog = function({ title = 'Confirmar', message = '', confirmLabel = 'Confirmar', confirmClass = '', cancelLabel = 'Cancelar', iconClass = 'confirm-dlg-icon--warn', icon = 'fa-exclamation-triangle', onConfirm } = {}) {
     const existing = document.getElementById('_confirmDlgOverlay');
     if (existing) existing.remove();
 
@@ -59,8 +59,8 @@ window._showConfirmDialog = function({ title = 'Confirmar', message = '', confir
     overlay.className = 'confirm-dlg-overlay';
     overlay.innerHTML = `
         <div class="confirm-dlg-box">
-            <div class="confirm-dlg-icon confirm-dlg-icon--warn">
-                <i class="fas fa-exclamation-triangle"></i>
+            <div class="confirm-dlg-icon ${iconClass}">
+                <i class="fas ${icon}"></i>
             </div>
             <div class="confirm-dlg-title">${title}</div>
             <div class="confirm-dlg-message">${message}</div>
