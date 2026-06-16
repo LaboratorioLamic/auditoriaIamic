@@ -336,7 +336,7 @@
     // =====================================================================
     //  RENDER — Tabela
     // =====================================================================
-    function getFiltered() {
+    function getFiltered(skipSetor) {
         var arr = (window.ocorrencias || []).filter(function (o) { return o && !o.deleted; });
 
         // Restrição de tipos permitidos para o usuário
@@ -357,7 +357,7 @@
         }
 
         // Filtro por setor (multi-seleção; vazio = todos)
-        if (ocSetorFilter.length) {
+        if (!skipSetor && ocSetorFilter.length) {
             var setSet = ocSetorFilter.map(function (s) { return s.trim().toLowerCase(); });
             arr = arr.filter(function (o) { return setSet.indexOf(String(o.setor || '').trim().toLowerCase()) !== -1; });
         }
@@ -385,6 +385,27 @@
             return (String(b.createdAt || '') > String(a.createdAt || '') ? 1 : -1);
         });
         return arr;
+    }
+
+    // Setores presentes na tabela de ocorrências, respeitando os demais filtros ativos
+    // (tipo, "meus/todos", categoria, data, busca) mas ignorando o próprio filtro de setor.
+    function getAvailableSetoresTable() {
+        var arr = getFiltered(true);
+        var set = {};
+        arr.forEach(function (o) {
+            var s = String(o.setor || '').trim();
+            if (s) set[s] = true;
+        });
+        return Object.keys(set);
+    }
+
+    // Escolhe a fonte de setores disponíveis conforme a visão ativa (tabela ou dashboard de ocorrências)
+    function getAvailableSetores() {
+        var isDashOc = (typeof currentTab !== 'undefined' && currentTab === 'dashboard' && dashSubtab === 'ocorrencias');
+        if (isDashOc && typeof window.getOcDashAvailableSetores === 'function') {
+            return window.getOcDashAvailableSetores().sort(function (a, b) { return String(a).localeCompare(String(b), 'pt'); });
+        }
+        return getAvailableSetoresTable().sort(function (a, b) { return String(a).localeCompare(String(b), 'pt'); });
     }
 
     function syncMyModeUI() {
@@ -1241,9 +1262,9 @@
         var countEl = document.getElementById('ocSetorSelCount');
         var toggleLbl = document.getElementById('ocSetorToggleAllLbl');
         if (!body) return;
-        var setores = getSetores();
+        var setores = getAvailableSetores();
         if (!setores.length) {
-            body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">Nenhum setor cadastrado.</div>';
+            body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">Nenhum setor com ocorrências para os filtros atuais.</div>';
             return;
         }
         body.innerHTML = setores.map(function (s) {
@@ -1264,16 +1285,16 @@
         ocRenderSetorModalBody();
     };
     window.ocToggleAllSetores = function () {
-        var setores = getSetores();
+        var setores = getAvailableSetores();
         var allSel = _ocSetorPending.length === setores.length;
         _ocSetorPending = allSel ? [] : setores.slice();
         ocRenderSetorModalBody();
     };
     window.ocToggleHeadSetor = function () {
         ocEnsureSetorModal();
-        var setores = getSetores();
-        // Abre com seleção igual ao filtro atual (ou todos se vazio)
-        _ocSetorPending = ocSetorFilter.length ? ocSetorFilter.slice() : setores.slice();
+        var setores = getAvailableSetores();
+        // Abre com seleção igual ao filtro atual restrito aos setores disponíveis (ou todos se vazio)
+        _ocSetorPending = ocSetorFilter.length ? ocSetorFilter.filter(function (s) { return setores.indexOf(s) !== -1; }) : setores.slice();
         ocRenderSetorModalBody();
         document.getElementById('ocSetorBackdrop').classList.add('open');
     };
@@ -1282,7 +1303,7 @@
         if (bd) bd.classList.remove('open');
     };
     window.ocApplySetorModal = function () {
-        var setores = getSetores();
+        var setores = getAvailableSetores();
         // Se todos selecionados, equivale a "sem filtro"
         ocSetorFilter = (_ocSetorPending.length === setores.length) ? [] : _ocSetorPending.slice();
         ocPage = 1;

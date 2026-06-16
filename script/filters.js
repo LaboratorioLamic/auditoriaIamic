@@ -120,16 +120,19 @@
 
         // Atualiza filtro de Setor
         {
+            const availableSetores = new Set();
+            rawItems.forEach(item => {
+                if (passesOtherFilters(item, 'setor')) {
+                    const setor = item.setor || 'Setor Não Definido';
+                    availableSetores.add(setor);
+                }
+            });
+            // Exposto globalmente para o filtro de header (setor-filter.js) só listar setores com dados
+            window.dashboardAvailableSetores = availableSetores;
+
             const el = document.getElementById('fDashSetor');
             if (el) {
                 const currentValue = el.value || '';
-                const availableSetores = new Set();
-                rawItems.forEach(item => {
-                    if (passesOtherFilters(item, 'setor')) {
-                        const setor = item.setor || 'Setor Não Definido';
-                        availableSetores.add(setor);
-                    }
-                });
                 const masterSetores = getMasterSetores();
                 const ordered = masterSetores.filter(s => availableSetores.has(s));
                 const extras = [...availableSetores].filter(s => !masterSetores.includes(s)).sort();

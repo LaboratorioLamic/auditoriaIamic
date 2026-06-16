@@ -11,6 +11,10 @@ function openSetorFilterModal() {
     const modal = document.getElementById('modalSetorFilter');
     if (!modal) return;
 
+    if (currentTab === 'dashboard' && typeof updateDashboardFilterOptions === 'function') {
+        updateDashboardFilterOptions();
+    }
+
     const setores = _getVisibleSetores();
     _tempSetorSelection = activeSetorFilter ? [...activeSetorFilter] : setores.slice(); // cópia
 
@@ -70,7 +74,14 @@ function _getVisibleSetores() {
     const all = (masterLists && masterLists.setores) ? [...masterLists.setores] : [];
     const baseFn = _getAllowedSetoresBase || getAllowedSetores;
     const allowed = baseFn();
-    const result = allowed === null ? all : all.filter(s => allowed.includes(s));
+    let result = allowed === null ? all : all.filter(s => allowed.includes(s));
+
+    // Na aba dashboard, restringe aos setores que efetivamente têm dados
+    // (respeitando os demais filtros ativos: área, categoria, status, responsável, período, título)
+    if (currentTab === 'dashboard' && window.dashboardAvailableSetores instanceof Set) {
+        result = result.filter(s => window.dashboardAvailableSetores.has(s));
+    }
+
     return result.sort((a, b) => String(a).localeCompare(String(b), 'pt'));
 }
 

@@ -72,6 +72,7 @@
             restoreFiltersFromFirebase();
 
             currentTab === 'dashboard' ? renderDashboard() : renderCards();
+            if (typeof window.updateRncNotificationBell === 'function') window.updateRncNotificationBell();
 
             startFirebaseListener();
 
@@ -152,6 +153,7 @@
                 if (currentTab === 'ocorrencias') { if (typeof window.ocRenderTable === 'function') window.ocRenderTable(); }
                 else if (currentTab === 'rnc') { if (typeof window.rncRenderTable === 'function') window.rncRenderTable(); }
                 else currentTab === 'dashboard' ? renderDashboard() : renderCards();
+                if (typeof window.updateRncNotificationBell === 'function') window.updateRncNotificationBell();
             });
 
             if (!usersListener) {
@@ -368,6 +370,7 @@
                 if (currentTab === 'ocorrencias') { if (typeof window.ocRenderTable === 'function') window.ocRenderTable(); }
                 else if (currentTab === 'rnc') { if (typeof window.rncRenderTable === 'function') window.rncRenderTable(); }
                 else currentTab === 'dashboard' ? renderDashboard() : renderCards();
+                if (typeof window.updateRncNotificationBell === 'function') window.updateRncNotificationBell();
             }
 
             if (showAlert) alert("Dados sincronizados com sucesso!");

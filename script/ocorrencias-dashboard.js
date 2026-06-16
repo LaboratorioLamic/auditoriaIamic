@@ -69,7 +69,7 @@
     }
 
     // Aplica filtros comuns: tipo, categoria, motivo, colaborador, setor
-    function applyCommonFilters(arr) {
+    function applyCommonFilters(arr, skipSetor) {
         var allowedTipos = (typeof window.userAllowedTiposOc === 'function') ? window.userAllowedTiposOc() : null;
         if (allowedTipos) arr = arr.filter(function (o) { return allowedTipos.includes(o.tipoId); });
 
@@ -91,13 +91,40 @@
 
         // Filtro de setor global
         var setorFilter = window.ocSetorFilter;
-        if (Array.isArray(setorFilter) && setorFilter.length) {
+        if (!skipSetor && Array.isArray(setorFilter) && setorFilter.length) {
             var setSet = setorFilter.map(function (s) { return s.trim().toLowerCase(); });
             arr = arr.filter(function (o) { return setSet.indexOf(String(o.setor || '').trim().toLowerCase()) !== -1; });
         }
 
         return arr;
     }
+
+    // Setores presentes nos dados do dashboard, respeitando os demais filtros ativos
+    // (tipo, categoria, motivo, colaborador, data) mas ignorando o próprio filtro de setor.
+    window.getOcDashAvailableSetores = function () {
+        var arr = (window.ocorrencias || []).filter(function (o) { return o && !o.deleted; });
+        arr = applyCommonFilters(arr, true);
+
+        var df = window.ocDateFilter;
+        if (df && df.type !== 'all') {
+            var year = getRefYear();
+            arr = arr.filter(function (o) {
+                return o.data && parseInt(String(o.data).split('-')[0], 10) === year;
+            });
+        } else {
+            var now = new Date();
+            var cutoff = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+            var cutoffStr = cutoff.getFullYear() + '-' + String(cutoff.getMonth() + 1).padStart(2, '0') + '-01';
+            arr = arr.filter(function (o) { return o.data && o.data >= cutoffStr; });
+        }
+
+        var set = {};
+        arr.forEach(function (o) {
+            var s = String(o.setor || '').trim();
+            if (s) set[s] = true;
+        });
+        return Object.keys(set);
+    };
 
     // Filtragem por ano/últimos 12 meses — usada por TODOS os gráficos do dashboard.
     // - filtro 'all': últimos 12 meses a partir de hoje
@@ -127,6 +154,26 @@
     // Alias — gráfico de linha e KPIs usam o mesmo conjunto de dados
     function getOcDashYearFiltered() {
         return getOcDashFiltered();
+    }
+
+    // Filtragem precisa pelo filtro de data ativo (respeita mês/intervalo, não só o ano).
+    // Usada pelos gráficos que não são de tendência mensal: categoria, motivos, setores e ranking.
+    function getOcDashPreciseFiltered() {
+        var arr = (window.ocorrencias || []).filter(function (o) { return o && !o.deleted; });
+        arr = applyCommonFilters(arr);
+
+        var df = window.ocDateFilter;
+        if (!df || df.type === 'all') {
+            var now = new Date();
+            var cutoff = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+            var cutoffStr = cutoff.getFullYear() + '-' +
+                String(cutoff.getMonth() + 1).padStart(2, '0') + '-01';
+            arr = arr.filter(function (o) { return o.data && o.data >= cutoffStr; });
+        } else {
+            arr = arr.filter(function (o) { return dateMatchesDash(o.data, df); });
+        }
+
+        return arr;
     }
 
     function dateMatchesDash(dateStr, f) {
@@ -558,30 +605,41 @@
         hideEmpty('ocDashWaterfallChart');
 
         var labels = [];
-        var data = [];
         var colors = [];
+        var deltas = [];
         var pcts = [];
         var subtotals = [];
-        var base = 0;
+        var bases = [];
+        var base = counts[0];
         for (var i = 1; i < months.length; i++) {
             var prev = counts[i - 1];
             var curr = counts[i];
             var delta = curr - prev;
+            // Variação % apenas informativa (não acumulada), pois % relativo não é somável de forma justa
             var pct = prev > 0 ? parseFloat(((delta / prev) * 100).toFixed(1)) : (curr > 0 ? 100 : 0);
             labels.push(formatMonthKey(months[i - 1]) + ' → ' + formatMonthKey(months[i]));
-            data.push([base, base + pct]);
+            bases.push(base);
+            deltas.push(delta);
             pcts.push(pct);
-            base += pct;
-            subtotals.push(parseFloat(base.toFixed(1)));
-            colors.push(delta >= 0 ? 'rgba(220,38,38,0.82)' : 'rgba(22,163,74,0.82)');
+            base += delta;
+            subtotals.push(base);
+            colors.push(delta > 0 ? 'rgba(220,38,38,0.82)' : (delta < 0 ? 'rgba(22,163,74,0.82)' : 'rgba(148,163,184,0.82)'));
         }
+
+        // Garante altura mínima visível quando não há variação (delta = 0),
+        // já que Chart.js não renderiza barras com [base, base] (altura zero)
+        var maxVal = Math.max.apply(null, counts.concat(subtotals));
+        var minBarHeight = maxVal * 0.02;
+        var data = bases.map(function (b, i) {
+            return (deltas[i] === 0) ? [b, b + minBarHeight] : [b, b + deltas[i]];
+        });
 
         charts['waterfall'] = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Variação %',
+                    label: 'Variação',
                     data: data,
                     backgroundColor: colors,
                     borderColor: colors.map(function (c) { return c.replace('0.82', '1'); }),
@@ -599,9 +657,10 @@
                         backgroundColor: '#1e293b', titleColor: '#f8fafc', bodyColor: '#cbd5e1', cornerRadius: 8,
                         callbacks: {
                             label: function (c) {
+                                var delta = deltas[c.dataIndex];
                                 var pct = pcts[c.dataIndex];
-                                var pctLabel = ' ' + (pct >= 0 ? '+' : '') + pct + '%';
-                                return [pctLabel, ' Subtotal: ' + subtotals[c.dataIndex] + '%'];
+                                var deltaLabel = ' ' + (delta >= 0 ? '+' : '') + delta + ' ocorrências (' + (pct >= 0 ? '+' : '') + pct + '%)';
+                                return [deltaLabel];
                             }
                         }
                     }
@@ -611,8 +670,7 @@
                     y: {
                         grid: { color: 'rgba(0,0,0,0.06)' },
                         ticks: {
-                            color: '#64748b', font: { size: 12 },
-                            callback: function (v) { return (v >= 0 ? '+' : '') + v + '%'; }
+                            color: '#64748b', font: { size: 12 }
                         }
                     }
                 },
@@ -724,7 +782,7 @@
             '<div class="oc-dash-charts-row" style="grid-template-columns:1fr 1fr;">' +
                 '<div class="oc-dash-chart-card">' +
                     '<div class="oc-dash-chart-header">' +
-                        '<h3><i class="fas fa-chart-waterfall"></i> Evolução Mensal (%)</h3>' +
+                        '<h3><i class="fas fa-chart-waterfall"></i> Evolução Mensal (Nº Ocorrências)</h3>' +
                     '</div>' +
                     '<div class="oc-dash-canvas-wrap" style="height:240px;"><canvas id="ocDashWaterfallChart"></canvas></div>' +
                 '</div>' +
@@ -759,8 +817,8 @@
         var arrYear = getOcDashYearFiltered();
         var kpis = computeKPIs(arrYear);
 
-        // Dados com filtro completo de data (demais gráficos)
-        var arr = getOcDashFiltered();
+        // Dados com filtro preciso de data (respeita mês/intervalo, não só o ano)
+        var arr = getOcDashPreciseFiltered();
 
         renderKPIs(kpis);
         renderLineChart(arrYear, kpis);
