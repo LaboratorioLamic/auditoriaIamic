@@ -121,6 +121,23 @@
     opacity: 0.9;
     transform: translateY(-1px);
 }
+.oc-confirm-btn-primary {
+    flex: 1;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+    transition: opacity 0.15s, transform 0.12s;
+}
+.oc-confirm-btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
 
 #ocorrenciasContent {
     display: none;

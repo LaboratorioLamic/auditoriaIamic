@@ -2232,12 +2232,20 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                 const setor  = _escHtml(item.setor || '');
                 const date   = item[dateField] ? item[dateField].substring(0, 10) : '—';
                 const typeL  = tabLabels[typeKey] || typeKey;
-                // Cor baseada no status
-                const isAtrasado = (function() {
-                    const dl = item.dataPrevisao || item.dataConclusao || item.dataProximaRevisao || null;
-                    return dl && typeof daysDiff === 'function' && daysDiff(dl) < 0;
-                })();
-                const color = isAtrasado ? '#dc2626' : '#ca8a04';
+                // Flags de prazo
+                const _dl = item.dataPrevisao || item.dataConclusao || item.dataProximaRevisao || null;
+                const _d  = (_dl && typeof daysDiff === 'function') ? daysDiff(_dl) : Infinity;
+                const isAtrasado = _d < 0;
+                const _flagDays = (item.flagDias === 0 || item.flagDias === '0') ? 0 : (item.flagDias || 7);
+                const isAlerta = !isAtrasado && _flagDays > 0 && _d !== Infinity && _d <= _flagDays;
+                const color = isAtrasado ? '#dc2626' : isAlerta ? '#ca8a04' : '#64748b';
+                const _dAbs = _d === Infinity ? 0 : Math.abs(Math.round(_d));
+                const overdueFlag = isAtrasado
+                    ? `<span style="display:inline-flex;align-items:center;gap:2px;background:#dc2626;color:#fff;font-size:9px;font-weight:700;padding:1px 5px 1px 4px;border-radius:99px;line-height:1.4;flex-shrink:0;" title="Vencido"><i class="fas fa-exclamation-circle" style="font-size:8px;"></i>Vencido há ${_dAbs}d</span>`
+                    : '';
+                const alertaFlag = isAlerta
+                    ? `<span style="display:inline-flex;align-items:center;gap:2px;background:#ca8a04;color:#fff;font-size:9px;font-weight:700;padding:1px 5px 1px 4px;border-radius:99px;line-height:1.4;flex-shrink:0;" title="Prazo de alerta"><i class="fas fa-exclamation-triangle" style="font-size:8px;"></i>${Math.round(_d) === 0 ? 'Vence hoje' : 'Vence em ' + Math.round(_d) + 'd'}</span>`
+                    : '';
                 const pubCount = (item.publicacoes || []).length;
                 const pubBadge = pubCount > 0
                     ? `<span style="display:inline-flex;align-items:center;gap:3px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:9px;font-weight:700;padding:1px 5px 1px 4px;border-radius:99px;line-height:1.4;letter-spacing:0.2px;flex-shrink:0;" title="${pubCount} publicaç${pubCount===1?'ão':'ões'}"><i class="fas fa-layer-group" style="font-size:8px;"></i>${pubCount}</span>`
@@ -2249,7 +2257,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                             <span style="max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${titulo}">${titulo}</span>
                             ${pubBadge}
                         </span>
-                        <span style="font-size:10.5px;font-weight:600;color:${color};flex-shrink:0;">${status}</span>
+                        <span style="display:inline-flex;align-items:center;gap:4px;flex-shrink:0;">${overdueFlag}${alertaFlag}<span style="font-size:10.5px;font-weight:600;color:${color};">${status}</span></span>
                     </div>
                     <div style="display:flex;gap:6px;align-items:center;margin-top:2px;">
                         <span style="font-size:10px;color:var(--text-muted);background:var(--bg-elevated);padding:1px 6px;border-radius:99px;">${typeL}</span>

@@ -1041,6 +1041,10 @@
                     <button class="rnc-icon-btn" onclick="rncClearFilters()" title="Limpar filtros">
                         <i class="fas fa-rotate-left"></i>
                     </button>
+                    <button class="rnc-icon-btn rnc-trash-btn" id="rncTrashBtn" onclick="rncOpenTrash()" title="Lixeira de RNCs">
+                        <i class="fas fa-trash-can"></i>
+                        <span class="rnc-trash-badge" id="rncTrashBadge" style="display:none;"></span>
+                    </button>
                 </div>
             </div>
 
@@ -1390,6 +1394,69 @@
                     <button class="rnc-mk-btn-save" id="rncMkSaveBtn" onclick="rncMkSave()"><i class="fas fa-check"></i> <span id="rncMkSaveLabel">Adicionar marcador</span></button>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ RNC — LIXEIRA MODAL ═══ -->
+<div class="rnc-trash-overlay" id="rncTrashModal" style="display:none;" onclick="if(event.target===this)rncCloseTrash()">
+    <div class="rnc-trash-box">
+        <div class="rnc-trash-header">
+            <div class="rnc-trash-header-left">
+                <div class="rnc-trash-header-icon"><i class="fas fa-trash-can"></i></div>
+                <div>
+                    <h3 class="rnc-trash-title">Lixeira de RNCs</h3>
+                    <p class="rnc-trash-subtitle" id="rncTrashSubtitle">Itens excluídos</p>
+                </div>
+            </div>
+            <button class="rnc-trash-close" onclick="rncCloseTrash()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="rnc-trash-body">
+            <div id="rncTrashList" class="rnc-trash-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ RNC — VISUALIZAÇÃO DE ITEM DA LIXEIRA ═══ -->
+<div class="rnc-trash-view-overlay" id="rncTrashViewModal" style="display:none;" onclick="if(event.target===this)rncCloseTrashView()">
+    <div class="rnc-trash-view-box">
+        <div class="rnc-trash-view-header" id="rncTrashViewHeader">
+            <div class="rnc-trash-view-hicon" id="rncTrashViewHIcon"><i class="fas fa-triangle-exclamation"></i></div>
+            <div class="rnc-trash-view-hmain">
+                <div class="rnc-trash-view-hlabel">Item excluído</div>
+                <h2 class="rnc-trash-view-htitle" id="rncTrashViewTitle">RNC</h2>
+                <div class="rnc-trash-view-hmeta" id="rncTrashViewMeta"></div>
+            </div>
+            <button class="rnc-trash-view-hclose" onclick="rncCloseTrashView()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="rnc-trash-view-tabs">
+            <button class="rnc-tv-tab active" onclick="rncSwitchTrashViewTab('rnctv-info',this)">
+                <i class="fas fa-info-circle"></i> Dados
+            </button>
+            <button class="rnc-tv-tab" onclick="rncSwitchTrashViewTab('rnctv-cl',this)">
+                <i class="fas fa-list-check"></i> Checklist
+                <span class="rnc-tv-tab-badge" id="rncTvClBadge" style="display:none;"></span>
+            </button>
+            <button class="rnc-tv-tab" onclick="rncSwitchTrashViewTab('rnctv-pub',this)">
+                <i class="fas fa-paper-plane"></i> Publicações
+                <span class="rnc-tv-tab-badge" id="rncTvPubBadge" style="display:none;"></span>
+            </button>
+            <button class="rnc-tv-tab" onclick="rncSwitchTrashViewTab('rnctv-ax',this)">
+                <i class="fas fa-paperclip"></i> Anexos
+                <span class="rnc-tv-tab-badge" id="rncTvAxBadge" style="display:none;"></span>
+            </button>
+        </div>
+        <div class="rnc-tv-panel active" id="rnctv-info">
+            <div id="rncTrashViewBody"></div>
+        </div>
+        <div class="rnc-tv-panel" id="rnctv-cl">
+            <div id="rncTvClContent"></div>
+        </div>
+        <div class="rnc-tv-panel" id="rnctv-pub">
+            <div id="rncTvPubContent"></div>
+        </div>
+        <div class="rnc-tv-panel" id="rnctv-ax">
+            <div id="rncTvAxContent"></div>
         </div>
     </div>
 </div>

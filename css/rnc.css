@@ -3092,3 +3092,593 @@
     font-size: 13px;
     color: #94a3b8;
 }
+
+/* ══════════════════════════════════════════════════════
+   LIXEIRA — botão na barra de filtros
+   ══════════════════════════════════════════════════════ */
+.rnc-trash-btn {
+    position: relative;
+    color: var(--text-secondary, #64748b);
+    transition: color .18s, background .18s;
+}
+.rnc-trash-btn:hover {
+    color: #ef4444;
+    background: #fef2f2;
+    border-color: #fca5a5 !important;
+}
+.rnc-trash-btn--has-items {
+    color: #ef4444 !important;
+}
+.rnc-trash-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    border-radius: 999px;
+    text-align: center;
+    pointer-events: none;
+    border: 1.5px solid #fff;
+}
+
+/* ══════════════════════════════════════════════════════
+   LIXEIRA — modal principal
+   ══════════════════════════════════════════════════════ */
+.rnc-trash-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,.45);
+    backdrop-filter: blur(4px);
+    z-index: 1200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity .28s ease;
+}
+.rnc-trash-overlay.open {
+    opacity: 1;
+}
+.rnc-trash-overlay.open .rnc-trash-box {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+.rnc-trash-box {
+    background: var(--bg, #fff);
+    border-radius: 20px;
+    box-shadow: 0 24px 80px rgba(15,23,42,.22), 0 4px 16px rgba(15,23,42,.08);
+    width: 100%;
+    max-width: 680px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateY(24px) scale(0.97);
+    opacity: 0;
+    transition: transform .28s cubic-bezier(.22,1,.36,1), opacity .28s ease;
+}
+.rnc-trash-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #fff5f5 0%, #fef2f2 100%);
+}
+.rnc-trash-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.rnc-trash-header-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 4px 12px rgba(239,68,68,.35);
+    flex-shrink: 0;
+}
+.rnc-trash-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text, #1e293b);
+    margin: 0 0 2px;
+    letter-spacing: -.01em;
+}
+.rnc-trash-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary, #64748b);
+    margin: 0;
+    font-weight: 400;
+}
+.rnc-trash-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: rgba(0,0,0,.06);
+    color: var(--text-secondary, #64748b);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s, color .15s;
+    flex-shrink: 0;
+}
+.rnc-trash-close:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+.rnc-trash-body {
+    overflow-y: auto;
+    flex: 1;
+    padding: 12px;
+}
+
+/* ── Lista de itens da lixeira ── */
+.rnc-trash-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.rnc-trash-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--border, #e2e8f0);
+    background: var(--bg, #fff);
+    transition: box-shadow .18s, border-color .18s;
+}
+.rnc-trash-item:hover {
+    box-shadow: 0 2px 12px rgba(15,23,42,.07);
+    border-color: #cbd5e1;
+}
+.rnc-trash-item-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1.5px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+.rnc-trash-item-info {
+    flex: 1;
+    min-width: 0;
+}
+.rnc-trash-item-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text, #1e293b);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+}
+.rnc-trash-item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary, #64748b);
+    margin-bottom: 4px;
+}
+.rnc-trash-item-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.rnc-trash-item-deleted {
+    font-size: 11.5px;
+    color: #94a3b8;
+}
+.rnc-trash-item-deleted strong {
+    color: #64748b;
+    font-weight: 600;
+}
+.rnc-trash-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.rnc-trash-act-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    border: 1.5px solid var(--border, #e2e8f0);
+    background: var(--bg, #fff);
+    color: var(--text-secondary, #64748b);
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .18s;
+}
+.rnc-trash-act-view:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #2563eb;
+}
+.rnc-trash-act-restore:hover {
+    background: #f0fdf4;
+    border-color: #86efac;
+    color: #16a34a;
+}
+.rnc-trash-act-delete:hover {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+/* ── Estado vazio ── */
+.rnc-trash-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 56px 24px;
+    gap: 10px;
+    text-align: center;
+}
+.rnc-trash-empty-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    background: #f1f5f9;
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    margin-bottom: 4px;
+}
+.rnc-trash-empty-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text, #1e293b);
+    margin: 0;
+}
+.rnc-trash-empty-sub {
+    font-size: 13px;
+    color: #94a3b8;
+    margin: 0;
+}
+
+/* ══════════════════════════════════════════════════════
+   LIXEIRA — modal de visualização de item excluído
+   ══════════════════════════════════════════════════════ */
+.rnc-trash-view-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,.5);
+    backdrop-filter: blur(5px);
+    z-index: 1300;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity .28s ease;
+}
+.rnc-trash-view-overlay.open {
+    opacity: 1;
+}
+.rnc-trash-view-overlay.open .rnc-trash-view-box {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+.rnc-trash-view-box {
+    background: var(--bg, #fff);
+    border-radius: 22px;
+    box-shadow: 0 32px 100px rgba(15,23,42,.25), 0 6px 24px rgba(15,23,42,.1);
+    width: 100%;
+    max-width: 620px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateY(28px) scale(0.97);
+    opacity: 0;
+    transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .28s ease;
+}
+.rnc-trash-view-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 24px 20px;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+    flex-shrink: 0;
+    --rnc-trash-view-accent: #ef4444;
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--rnc-trash-view-accent) 8%, #fff) 0%,
+        color-mix(in srgb, var(--rnc-trash-view-accent) 4%, #fff) 100%);
+}
+.rnc-trash-view-hicon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    border: 1.5px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(0,0,0,.1);
+}
+.rnc-trash-view-hmain {
+    flex: 1;
+    min-width: 0;
+}
+.rnc-trash-view-hlabel {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: #ef4444;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.rnc-trash-view-hlabel::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ef4444;
+}
+.rnc-trash-view-htitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text, #1e293b);
+    margin: 0 0 8px;
+    letter-spacing: -.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.rnc-trash-view-hmeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.rnc-tv-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 500;
+    background: var(--bg-secondary, #f1f5f9);
+    color: var(--text-secondary, #475569);
+    border: 1px solid var(--border, #e2e8f0);
+}
+.rnc-tv-chip--deleted {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fca5a5;
+}
+.rnc-trash-view-hclose {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: rgba(0,0,0,.06);
+    color: var(--text-secondary, #64748b);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s, color .15s;
+    flex-shrink: 0;
+    align-self: flex-start;
+}
+.rnc-trash-view-hclose:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+/* ── Abas da visualização da lixeira ── */
+.rnc-trash-view-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border-bottom: 1.5px solid var(--border, #e2e8f0);
+    background: var(--bg, #fff);
+    flex-shrink: 0;
+    padding: 0 16px;
+}
+.rnc-tv-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 16px 11px;
+    border: none;
+    background: none;
+    color: var(--text-secondary, #64748b);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2.5px solid transparent;
+    margin-bottom: -1.5px;
+    transition: color .15s, border-color .15s;
+    white-space: nowrap;
+    position: relative;
+}
+.rnc-tv-tab i { font-size: 13px; }
+.rnc-tv-tab:hover { color: var(--accent, #2563eb); }
+.rnc-tv-tab.active {
+    color: var(--accent, #2563eb);
+    border-bottom-color: var(--accent, #2563eb);
+    font-weight: 600;
+}
+.rnc-tv-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--accent, #2563eb);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+}
+.rnc-tv-panel {
+    display: none;
+    overflow-y: auto;
+    flex: 1;
+    padding: 20px;
+}
+.rnc-tv-panel.active { display: block; }
+
+.rnc-trash-view-body {
+    /* painel de dados — estilos herdados do .rnc-tv-panel */
+}
+.rnc-trash-view-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ── Motivo na listagem da lixeira ── */
+.rnc-trash-item-motivo {
+    font-size: 12px;
+    color: #92400e;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin-top: 5px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.4;
+}
+.rnc-trash-item-motivo i {
+    margin-right: 4px;
+    opacity: .7;
+}
+
+/* ══════════════════════════════════════════════════════
+   MODAL DE MOTIVO DE EXCLUSÃO
+   ══════════════════════════════════════════════════════ */
+.rnc-dmot-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,.5);
+    backdrop-filter: blur(4px);
+    z-index: 1500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: rncFadeIn .2s ease;
+}
+@keyframes rncFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.rnc-dmot-box {
+    background: var(--bg, #fff);
+    border-radius: 20px;
+    box-shadow: 0 28px 80px rgba(15,23,42,.22), 0 4px 16px rgba(15,23,42,.1);
+    width: 100%;
+    max-width: 440px;
+    padding: 28px 28px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    animation: rncSlideUp .25s cubic-bezier(.22,1,.36,1);
+}
+@keyframes rncSlideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.rnc-dmot-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 6px 18px rgba(239,68,68,.35);
+    margin-bottom: 4px;
+}
+.rnc-dmot-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text, #1e293b);
+    letter-spacing: -.01em;
+}
+.rnc-dmot-msg {
+    font-size: 13.5px;
+    color: var(--text-secondary, #64748b);
+    text-align: center;
+    margin-bottom: 4px;
+}
+.rnc-dmot-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border, #e2e8f0);
+    background: var(--bg-secondary, #f8fafc);
+    font-size: 13.5px;
+    color: var(--text, #1e293b);
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+    transition: border-color .18s, box-shadow .18s;
+    outline: none;
+}
+.rnc-dmot-textarea:focus {
+    border-color: var(--accent, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    background: #fff;
+}
+.rnc-dmot-textarea.rnc-dmot-error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239,68,68,.12);
+    animation: rncShake .3s ease;
+}
+@keyframes rncShake {
+    0%,100% { transform: translateX(0); }
+    25%      { transform: translateX(-5px); }
+    75%      { transform: translateX(5px); }
+}
+.rnc-dmot-counter {
+    align-self: flex-end;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: -4px;
+}
+.rnc-dmot-actions {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    margin-top: 6px;
+}

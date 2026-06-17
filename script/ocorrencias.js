@@ -1117,10 +1117,19 @@
                 var oldName = item.name;
                 item.name = nv;
                 sortByName(list);
+                var _oldLow = oldName.trim().toLowerCase();
                 if (ocManagerKind === 'categorias') {
-                    (window.ocorrencias || []).forEach(function (o) { if (o.categoria === oldName) o.categoria = nv; });
+                    (window.ocorrencias || []).forEach(function (o) {
+                        if (String(o.categoria || '').trim().toLowerCase() === _oldLow) o.categoria = nv;
+                    });
                 } else if (ocManagerKind === 'motivos') {
-                    (window.ocorrencias || []).forEach(function (o) { if (o.motivo === oldName && o.categoria === ocManagerCatName) o.motivo = nv; });
+                    var catObj = catById(ocManagerCatId, ocManagerTipoId);
+                    var currentCatName = catObj ? catObj.name : ocManagerCatName;
+                    var _catLow = currentCatName.trim().toLowerCase();
+                    (window.ocorrencias || []).forEach(function (o) {
+                        if (String(o.motivo || '').trim().toLowerCase() === _oldLow &&
+                            String(o.categoria || '').trim().toLowerCase() === _catLow) o.motivo = nv;
+                    });
                 }
             }
         }

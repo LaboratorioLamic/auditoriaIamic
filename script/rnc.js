@@ -2126,20 +2126,70 @@
     window.rncDelete = function(id) {
         id = Number(id);
         if (!canDeleteRnc()) { toast('Sem permissão para excluir.', 'error'); return; }
-        rncConfirm({
-            title: 'Excluir RNC',
-            message: 'Esta RNC será removida permanentemente.',
-            confirmLabel: 'Excluir', confirmClass: 'oc-confirm-btn-danger', icon: 'fa-trash'
-        }, function() {
+        _rncDeleteMotivo(id);
+    };
+
+    function _rncDeleteMotivo(id) {
+        var wrap = document.getElementById('rncDeleteMotivoModal');
+        if (!wrap) { wrap = document.createElement('div'); wrap.id = 'rncDeleteMotivoModal'; document.body.appendChild(wrap); }
+        wrap.innerHTML =
+            '<div class="rnc-dmot-backdrop" id="rncDmotBackdrop">' +
+                '<div class="rnc-dmot-box">' +
+                    '<div class="rnc-dmot-icon"><i class="fas fa-trash-can"></i></div>' +
+                    '<div class="rnc-dmot-title">Mover para a lixeira</div>' +
+                    '<div class="rnc-dmot-msg">Informe o motivo da exclusão desta RNC. <strong>Mínimo 10 caracteres.</strong></div>' +
+                    '<textarea class="rnc-dmot-textarea" id="rncDmotTextarea" placeholder="Descreva o motivo da exclusão..." maxlength="500" rows="3" autofocus></textarea>' +
+                    '<div class="rnc-dmot-counter"><span id="rncDmotCounter">0</span>/500 <span id="rncDmotMin" style="color:#ef4444;font-weight:600;margin-left:4px;">mín. 10</span></div>' +
+                    '<div class="rnc-dmot-actions">' +
+                        '<button class="oc-confirm-btn-cancel" onclick="document.getElementById(\'rncDeleteMotivoModal\').innerHTML=\'\'">Cancelar</button>' +
+                        '<button class="oc-confirm-btn-danger" id="rncDmotOkBtn"><i class="fas fa-trash-can"></i> Excluir</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        var ta = document.getElementById('rncDmotTextarea');
+        var counter = document.getElementById('rncDmotCounter');
+        var minEl = document.getElementById('rncDmotMin');
+        if (ta) {
+            ta.addEventListener('input', function() {
+                var len = ta.value.length;
+                if (counter) {
+                    counter.textContent = len;
+                    counter.style.color = len < 10 ? '#ef4444' : '';
+                    counter.style.fontWeight = len < 10 ? '600' : '';
+                }
+                if (minEl) minEl.style.display = len >= 10 ? 'none' : '';
+                if (len >= 10) ta.classList.remove('rnc-dmot-error');
+            });
+            setTimeout(function(){ ta.focus(); }, 80);
+        }
+
+        document.getElementById('rncDmotOkBtn').onclick = function() {
+            var motivo = (ta ? ta.value : '').trim();
+            if (motivo.length < 10) {
+                ta.classList.add('rnc-dmot-error');
+                ta.placeholder = 'Mínimo de 10 caracteres!';
+                ta.focus();
+                return;
+            }
+            wrap.innerHTML = '';
             var arr = window.rncItems || [];
             var idx = arr.findIndex(function(x){ return x.id === id; });
-            if (idx !== -1) { arr[idx].deleted = true; arr[idx].deletedAt = new Date().toISOString(); }
-            persist(); renderRnc(); updateRncNotificationBell();
-            toast('RNC removida.', 'success');
-            // Fecha view modal se o item excluído estava aberto
+            if (idx !== -1) {
+                arr[idx].deleted = true;
+                arr[idx].deletedAt = new Date().toISOString();
+                arr[idx].deletedBy = meName();
+                arr[idx].deletedMotivo = motivo;
+            }
+            persist(); renderRnc(); updateRncNotificationBell(); updateRncTrashBadge();
+            toast('RNC movida para a lixeira.', 'success');
             if (rncViewId === id) window.rncCloseView();
+        };
+
+        document.getElementById('rncDmotBackdrop').addEventListener('click', function(e) {
+            if (e.target === e.currentTarget) wrap.innerHTML = '';
         });
-    };
+    }
 
     // ── Autocomplete dos campos ──
     function rncCloseAllDropdowns() {
@@ -2720,6 +2770,7 @@
         updateRncSetorHeadLabel();
         updateRncDateHeadLabel();
         updateRncNotificationBell();
+        updateRncTrashBadge();
         applyRncTaskViewPermission();
         applyRncManagePermission();
         // Reset view toggle
@@ -2753,7 +2804,7 @@
     window.applyRncTaskViewPermission = applyRncTaskViewPermission;
 
     // Expõe para o listener do Firebase
-    window.rncRenderTable = renderRnc;
+    window.rncRenderTable = function() { renderRnc(); updateRncTrashBadge(); };
 
     // ══════════════════════════════════════════════════════════════════
     //  CLICK OUTSIDE
@@ -3593,6 +3644,372 @@
         _rncCalMonthTouch.active = false;
         _rncCalMonthTouch.itemId = null;
         _rncCalMonthTouch.chipEl = null;
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  LIXEIRA DE RNC
+    // ══════════════════════════════════════════════════════════════════
+
+    function _getDeletedRncs() {
+        return (window.rncItems || []).filter(function(x){ return x.deleted; });
+    }
+
+    function updateRncTrashBadge() {
+        var count = _getDeletedRncs().length;
+        var badge = document.getElementById('rncTrashBadge');
+        var btn   = document.getElementById('rncTrashBtn');
+        if (badge) {
+            badge.textContent = count > 99 ? '99+' : String(count);
+            badge.style.display = count > 0 ? '' : 'none';
+        }
+        if (btn) btn.classList.toggle('rnc-trash-btn--has-items', count > 0);
+    }
+    window.updateRncTrashBadge = updateRncTrashBadge;
+
+    function _fmtTrashDate(iso) {
+        if (!iso) return '—';
+        var d = new Date(iso);
+        if (isNaN(d)) return iso;
+        return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' }) +
+               ' às ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+    }
+
+    function _renderRncTrashList() {
+        var list = document.getElementById('rncTrashList');
+        if (!list) return;
+        var items = _getDeletedRncs().slice().sort(function(a,b){
+            return new Date(b.deletedAt||0) - new Date(a.deletedAt||0);
+        });
+        var sub = document.getElementById('rncTrashSubtitle');
+        if (sub) sub.textContent = items.length + (items.length === 1 ? ' item excluído' : ' itens excluídos');
+
+        if (items.length === 0) {
+            list.innerHTML =
+                '<div class="rnc-trash-empty">' +
+                    '<div class="rnc-trash-empty-icon"><i class="fas fa-trash-can"></i></div>' +
+                    '<p class="rnc-trash-empty-title">Lixeira vazia</p>' +
+                    '<p class="rnc-trash-empty-sub">Nenhuma RNC foi excluída ainda.</p>' +
+                '</div>';
+            return;
+        }
+
+        var isAdmin = typeof userIsAdmin === 'function' && userIsAdmin();
+
+        list.innerHTML = items.map(function(r) {
+            var ci = getCI(r.classificacao);
+            var deletedInfo = r.deletedBy
+                ? 'Excluído por <strong>' + esc(r.deletedBy) + '</strong> em ' + _fmtTrashDate(r.deletedAt)
+                : 'Excluído em ' + _fmtTrashDate(r.deletedAt);
+            return '<div class="rnc-trash-item" data-id="' + r.id + '">' +
+                '<div class="rnc-trash-item-icon" style="background:' + ci.bg + ';color:' + ci.color + ';border-color:' + ci.border + '">' +
+                    '<i class="fas ' + ci.icon + '"></i>' +
+                '</div>' +
+                '<div class="rnc-trash-item-info">' +
+                    '<div class="rnc-trash-item-title">' + esc(r.titulo || 'Sem título') + '</div>' +
+                    '<div class="rnc-trash-item-meta">' +
+                        (r.setor ? '<span><i class="fas fa-building"></i> ' + esc(r.setor) + '</span>' : '') +
+                        (r.origem ? '<span><i class="fas fa-location-dot"></i> ' + esc(r.origem) + '</span>' : '') +
+                        '<span><i class="fas fa-circle-dot"></i> ' + esc(ci.label) + '</span>' +
+                    '</div>' +
+                    '<div class="rnc-trash-item-deleted">' + deletedInfo + '</div>' +
+                    (r.deletedMotivo ? '<div class="rnc-trash-item-motivo"><i class="fas fa-comment-slash"></i> ' + esc(r.deletedMotivo) + '</div>' : '') +
+                '</div>' +
+                '<div class="rnc-trash-item-actions">' +
+                    '<button class="rnc-trash-act-btn rnc-trash-act-view" onclick="rncOpenTrashView(' + r.id + ')" title="Visualizar"><i class="fas fa-eye"></i></button>' +
+                    '<button class="rnc-trash-act-btn rnc-trash-act-restore" onclick="rncRestoreFromTrash(' + r.id + ')" title="Restaurar"><i class="fas fa-rotate-left"></i></button>' +
+                    (isAdmin ? '<button class="rnc-trash-act-btn rnc-trash-act-delete" onclick="rncPermanentDelete(' + r.id + ')" title="Excluir permanentemente"><i class="fas fa-trash"></i></button>' : '') +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    window.rncOpenTrash = function() {
+        _renderRncTrashList();
+        var modal = document.getElementById('rncTrashModal');
+        if (modal) { modal.style.display = 'flex'; requestAnimationFrame(function(){ modal.classList.add('open'); }); }
+    };
+
+    window.rncCloseTrash = function() {
+        var modal = document.getElementById('rncTrashModal');
+        if (modal) {
+            modal.classList.remove('open');
+            setTimeout(function(){ if (modal) modal.style.display = 'none'; }, 280);
+        }
+    };
+
+    window.rncRestoreFromTrash = function(id) {
+        id = Number(id);
+        var arr = window.rncItems || [];
+        var idx = arr.findIndex(function(x){ return x.id === id; });
+        if (idx === -1) return;
+        rncConfirm({
+            title: 'Restaurar RNC',
+            message: 'A RNC será restaurada e voltará à lista normal.',
+            confirmLabel: 'Restaurar', confirmClass: 'oc-confirm-btn-primary', icon: 'fa-rotate-left'
+        }, function() {
+            arr[idx].deleted = false;
+            delete arr[idx].deletedAt;
+            delete arr[idx].deletedBy;
+            delete arr[idx].deletedMotivo;
+            persist(); renderRnc(); updateRncNotificationBell(); updateRncTrashBadge();
+            _renderRncTrashList();
+            toast('RNC restaurada com sucesso.', 'success');
+        });
+    };
+
+    window.rncPermanentDelete = function(id) {
+        if (!(typeof userIsAdmin === 'function' && userIsAdmin())) {
+            toast('Apenas administradores podem excluir permanentemente.', 'error');
+            return;
+        }
+        id = Number(id);
+        rncConfirm({
+            title: 'Excluir permanentemente',
+            message: 'Esta ação não pode ser desfeita. A RNC será removida para sempre.',
+            confirmLabel: 'Excluir definitivamente', confirmClass: 'oc-confirm-btn-danger', icon: 'fa-circle-exclamation'
+        }, function() {
+            var arr = window.rncItems || [];
+            var idx = arr.findIndex(function(x){ return x.id === id; });
+            if (idx !== -1) arr.splice(idx, 1);
+            persist(); renderRnc(); updateRncNotificationBell(); updateRncTrashBadge();
+            _renderRncTrashList();
+            toast('RNC excluída permanentemente.', 'success');
+        });
+    };
+
+    // ── Visualização de item da lixeira (somente leitura) ──
+
+    window.rncOpenTrashView = function(id) {
+        id = Number(id);
+        var r = (window.rncItems || []).find(function(x){ return x.id === id; });
+        if (!r) return;
+        _renderRncTrashView(r);
+        var modal = document.getElementById('rncTrashViewModal');
+        if (modal) { modal.style.display = 'flex'; requestAnimationFrame(function(){ modal.classList.add('open'); }); }
+    };
+
+    window.rncCloseTrashView = function() {
+        var modal = document.getElementById('rncTrashViewModal');
+        if (modal) {
+            modal.classList.remove('open');
+            setTimeout(function(){ if (modal) modal.style.display = 'none'; }, 280);
+        }
+    };
+
+    var _rncTrashViewId = null;
+
+    function _renderRncTrashView(r) {
+        _rncTrashViewId = r.id;
+        var ci = getCI(r.classificacao);
+        var mk = getMarker(r.marcador);
+
+        var hdr = document.getElementById('rncTrashViewHeader');
+        if (hdr) hdr.style.setProperty('--rnc-trash-view-accent', ci.color);
+
+        var hicon = document.getElementById('rncTrashViewHIcon');
+        if (hicon) hicon.innerHTML = '<i class="fas ' + ci.icon + '"></i>';
+        if (hicon) { hicon.style.background = ci.bg; hicon.style.color = ci.color; hicon.style.borderColor = ci.border; }
+
+        var htitle = document.getElementById('rncTrashViewTitle');
+        if (htitle) htitle.textContent = r.titulo || 'RNC';
+
+        var hmeta = document.getElementById('rncTrashViewMeta');
+        if (hmeta) {
+            var metaChips = [
+                '<span class="rnc-tv-chip" style="background:' + ci.bg + ';color:' + ci.color + ';border-color:' + ci.border + '"><i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) + '</span>',
+                r.status ? '<span class="rnc-tv-chip"><i class="fas fa-circle-dot"></i> ' + esc(r.status) + '</span>' : '',
+                mk ? '<span class="rnc-tv-chip"><i class="fas ' + mk.icon + '"></i> ' + esc(mk.label) + '</span>' : '',
+                '<span class="rnc-tv-chip rnc-tv-chip--deleted"><i class="fas fa-clock-rotate-left"></i> Excluído em ' + _fmtTrashDate(r.deletedAt) + '</span>'
+            ].filter(Boolean).join('');
+            hmeta.innerHTML = metaChips;
+        }
+
+        // Aba Dados
+        var body = document.getElementById('rncTrashViewBody');
+        if (body) {
+            var mkv = mk;
+            body.innerHTML =
+                '<div class="rnc-trash-view-groups">' +
+                _vgroup('fa-triangle-exclamation', '#2563eb', 'Identificação',
+                    _vrow('fa-heading', 'Título', '<strong>' + esc(r.titulo || '—') + '</strong>') +
+                    _vrow('fa-building', 'Setor', esc(r.setor || '—')) +
+                    _vrow('fa-tag', 'Classificação', '<span class="rnc-class-badge rnc-class-badge--sm" style="background:' + ci.bg + ';color:' + ci.color + ';border-color:' + ci.border + '"><i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) + '</span>') +
+                    _vrow('fa-circle-dot', 'Status', r.status ? '<span class="rnc-vrow-pill" style="' + rncStatusColorStyle(r.status) + '">' + esc(r.status) + '</span>' : '<em class="rnc-vrow-empty">Não definido</em>') +
+                    _vrow('fa-bookmark', 'Marcador', mkv ? '<span class="rnc-vrow-pill" style="background:' + mkv.bg + ';color:' + mkv.color + ';border-color:' + mkv.color + '33"><i class="fas ' + mkv.icon + '"></i> ' + esc(mkv.label) + '</span>' : '<em class="rnc-vrow-empty">Nenhum</em>')
+                ) +
+                _vgroup('fa-calendar-days', '#7c3aed', 'Datas & Responsabilidade',
+                    _vrow('fa-calendar-plus', 'Início', r.dataInicio ? esc(fmtDate(r.dataInicio)) : '<em class="rnc-vrow-empty">—</em>') +
+                    _vrow('fa-calendar-check', 'Conclusão prevista', r.dataConclusao ? esc(fmtDate(r.dataConclusao)) : '<em class="rnc-vrow-empty">—</em>') +
+                    _vrow('fa-user-tie', 'Responsável', esc(r.responsavel || '—')) +
+                    (r.revisor ? _vrow('fa-user-check', 'Revisor', esc(r.revisor)) : '') +
+                    _vrow('fa-clock', 'Registrado em', esc(fmtDateTime(r.createdAt)))
+                ) +
+                _vgroup('fa-map-pin', '#0891b2', 'Origem & Detalhamento',
+                    _vrow('fa-location-dot', 'Origem', esc(r.origem || '—')) +
+                    _vrow('fa-list-ul', 'Detalhamento', esc(r.detalhamento || '—'))
+                ) +
+                _vgroup('fa-file-lines', '#16a34a', 'Descrição & Plano de Ação',
+                    _vtext('Descrição do Ocorrido', esc(r.descricao || '—').replace(/\n/g,'<br>')) +
+                    _vtext('Plano de Ação', r.planoAcao ? esc(r.planoAcao).replace(/\n/g,'<br>') : '<em class="rnc-vrow-empty">Não informado</em>')
+                ) +
+                _vgroup('fa-trash-can', '#dc2626', 'Informações de Exclusão',
+                    _vrow('fa-clock-rotate-left', 'Excluído em', esc(_fmtTrashDate(r.deletedAt))) +
+                    (r.deletedBy ? _vrow('fa-user-xmark', 'Excluído por', esc(r.deletedBy)) : '') +
+                    _vtext('Motivo da exclusão', r.deletedMotivo ? esc(r.deletedMotivo).replace(/\n/g,'<br>') : '<em class="rnc-vrow-empty">Não informado</em>')
+                ) +
+                '</div>';
+        }
+
+        // Aba Checklist
+        _renderRncTvCl(r);
+
+        // Aba Publicações
+        _renderRncTvPubs(r);
+
+        // Aba Anexos
+        _renderRncTvAx(r);
+
+        // Badges
+        _updateRncTvBadges(r);
+
+        // Volta para a aba Dados ao abrir
+        var modal = document.getElementById('rncTrashViewModal');
+        if (modal) {
+            modal.querySelectorAll('.rnc-tv-tab').forEach(function(t){ t.classList.remove('active'); });
+            modal.querySelectorAll('.rnc-tv-panel').forEach(function(p){ p.classList.remove('active'); });
+            var firstTab = modal.querySelector('.rnc-tv-tab');
+            if (firstTab) firstTab.classList.add('active');
+            var firstPanel = document.getElementById('rnctv-info');
+            if (firstPanel) firstPanel.classList.add('active');
+        }
+    }
+
+    window.rncSwitchTrashViewTab = function(panelId, btn) {
+        var modal = document.getElementById('rncTrashViewModal');
+        if (!modal) return;
+        modal.querySelectorAll('.rnc-tv-tab').forEach(function(t){ t.classList.remove('active'); });
+        modal.querySelectorAll('.rnc-tv-panel').forEach(function(p){ p.classList.remove('active'); });
+        if (btn) btn.classList.add('active');
+        var panel = document.getElementById(panelId);
+        if (panel) panel.classList.add('active');
+    };
+
+    function _updateRncTvBadges(r) {
+        var cl = r.checklist || [];
+        var clDone = cl.filter(function(c){ return c.checked; }).length;
+        var elCl = document.getElementById('rncTvClBadge');
+        if (elCl) { elCl.textContent = cl.length > 0 ? clDone + '/' + cl.length : ''; elCl.style.display = cl.length > 0 ? '' : 'none'; }
+        var elPub = document.getElementById('rncTvPubBadge');
+        if (elPub) { var np = (r.publicacoes||[]).length; elPub.textContent = np || ''; elPub.style.display = np > 0 ? '' : 'none'; }
+        var elAx = document.getElementById('rncTvAxBadge');
+        if (elAx) { var na = (r.anexos||[]).length; elAx.textContent = na || ''; elAx.style.display = na > 0 ? '' : 'none'; }
+    }
+
+    function _renderRncTvCl(r) {
+        var container = document.getElementById('rncTvClContent');
+        if (!container) return;
+        var cl = r.checklist || [];
+        if (cl.length === 0) {
+            container.innerHTML = '<div class="rnc-pub-empty"><i class="fas fa-list-check"></i><p>Nenhum item de checklist cadastrado.</p></div>';
+            return;
+        }
+        var done = cl.filter(function(c){ return c.checked; }).length;
+        var pct = Math.round((done / cl.length) * 100);
+        container.innerHTML =
+            '<div class="rnc-view-cl-progress">' +
+                '<div class="rnc-view-cl-bar"><div class="rnc-view-cl-bar-fill" style="width:' + pct + '%"></div></div>' +
+                '<span class="rnc-view-cl-count">' + done + '/' + cl.length + ' (' + pct + '%)</span>' +
+            '</div>' +
+            cl.map(function(item) {
+                return '<div class="rnc-view-cl-item' + (item.checked ? ' checked' : '') + '">' +
+                    '<input type="checkbox" ' + (item.checked ? 'checked' : '') + ' disabled>' +
+                    '<span class="cl-text">' + esc(item.texto || '') + '</span>' +
+                '</div>';
+            }).join('');
+    }
+
+    function _renderRncTvPubs(r) {
+        var container = document.getElementById('rncTvPubContent');
+        if (!container) return;
+        var pubs = r.publicacoes || [];
+        if (pubs.length === 0) {
+            container.innerHTML = '<div class="rnc-pub-empty"><i class="fas fa-paper-plane"></i><p>Nenhuma publicação registrada.</p></div>';
+            return;
+        }
+
+        function tipoOf(p) {
+            var t = p.tipo || 'Comentário';
+            return (t === 'Comentário' || t === 'Atualização' || t === 'Evidência') ? t : 'Comentário';
+        }
+        var counts = { 'Comentário': 0, 'Atualização': 0, 'Evidência': 0 };
+        pubs.forEach(function(p){ counts[tipoOf(p)]++; });
+
+        var subtabs = '<div class="rnc-pub-subtabs">' +
+            RNC_PUB_TIPOS.map(function(t){
+                var isFirst = t.key === RNC_PUB_TIPOS[0].key;
+                return '<button class="rnc-pub-subtab' + (isFirst ? ' active' : '') + '" style="--rnc-pst-color:' + t.color + '" onclick="rncTvSwitchPubSubtab(this,\'' + t.key + '\')">' +
+                    '<i class="fas ' + t.icon + '"></i> ' + t.label +
+                    (counts[t.key] > 0 ? '<span class="rnc-pub-subtab-badge">' + counts[t.key] + '</span>' : '') +
+                '</button>';
+            }).join('') +
+        '</div>';
+
+        var firstKey = RNC_PUB_TIPOS[0].key;
+        var filtered = pubs.filter(function(p){ return tipoOf(p) === firstKey; });
+        var listHtml = _rncTvPubListHtml(r, pubs, firstKey);
+        container.innerHTML = subtabs + listHtml;
+    }
+
+    window.rncTvSwitchPubSubtab = function(btn, key) {
+        var container = document.getElementById('rncTvPubContent');
+        if (!container) return;
+        container.querySelectorAll('.rnc-pub-subtab').forEach(function(b){ b.classList.remove('active'); });
+        if (btn) btn.classList.add('active');
+        var r = _rncTrashViewId ? (window.rncItems||[]).find(function(x){ return x.id === _rncTrashViewId; }) : null;
+        if (!r) return;
+        var listWrap = container.querySelector('.rnc-tv-pub-list-wrap');
+        if (listWrap) listWrap.outerHTML = _rncTvPubListHtml(r, r.publicacoes || [], key);
+    };
+
+    function _rncTvPubListHtml(r, pubs, key) {
+        function tipoOf(p) {
+            var t = p.tipo || 'Comentário';
+            return (t === 'Comentário' || t === 'Atualização' || t === 'Evidência') ? t : 'Comentário';
+        }
+        var filtered = pubs.map(function(p, i){ return { p: p, i: i }; })
+                           .filter(function(o){ return tipoOf(o.p) === key; });
+        if (filtered.length === 0) {
+            var cur = RNC_PUB_TIPOS.find(function(t){ return t.key === key; }) || RNC_PUB_TIPOS[0];
+            return '<div class="rnc-tv-pub-list-wrap"><div class="rnc-pub-empty"><i class="fas ' + cur.icon + '"></i><p>Nenhuma publicação do tipo "' + cur.label + '".</p></div></div>';
+        }
+        return '<div class="rnc-tv-pub-list-wrap"><div class="rnc-pub-list">' +
+            filtered.slice().reverse().map(function(o){ return _rncPubItemHtml(r, o.p, o.i, false); }).join('') +
+        '</div></div>';
+    }
+
+    function _renderRncTvAx(r) {
+        var container = document.getElementById('rncTvAxContent');
+        if (!container) return;
+        var anexos = r.anexos || [];
+        if (anexos.length === 0) {
+            container.innerHTML = '<div class="rnc-pub-empty"><i class="fas fa-paperclip"></i><p>Nenhum anexo cadastrado.</p></div>';
+            return;
+        }
+        container.innerHTML = '<div class="view-anexos-grid">' +
+            anexos.map(function(a) {
+                var name = a.titulo || a.url || 'Arquivo';
+                var ext = name.includes('.') ? name.slice(name.lastIndexOf('.')).toLowerCase() : '';
+                var icon = 'fa-file';
+                if (ext === '.pdf') icon = 'fa-file-pdf';
+                else if (['.xls','.xlsx'].includes(ext)) icon = 'fa-file-excel';
+                else if (['.jpg','.jpeg','.png','.gif','.webp'].includes(ext)) icon = 'fa-file-image';
+                else if (['.ppt','.pptx'].includes(ext)) icon = 'fa-file-powerpoint';
+                return '<a href="' + esc(a.url||'') + '" target="_blank" class="view-anexo-card">' +
+                    '<i class="fas ' + icon + ' anexo-icon"></i>' +
+                    '<span class="anexo-name">' + esc(name) + '</span>' +
+                '</a>';
+            }).join('') +
+        '</div>';
     }
 
 })();
