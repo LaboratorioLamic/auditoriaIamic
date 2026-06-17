@@ -71,7 +71,7 @@
             populateSelects();
             restoreFiltersFromFirebase();
 
-            currentTab === 'dashboard' ? renderDashboard() : renderCards();
+            if (typeof window.renderDashboard === 'function') window.renderDashboard();
             if (typeof window.updateRncNotificationBell === 'function') window.updateRncNotificationBell();
 
             startFirebaseListener();
@@ -83,7 +83,7 @@
             populateYearSelects();
             populateSelects();
             restoreFiltersFromFirebase();
-            currentTab === 'dashboard' ? renderDashboard() : renderCards();
+            if (typeof window.renderDashboard === 'function') window.renderDashboard();
         }
         switchTab('dashboard');
     }
@@ -157,10 +157,10 @@
                     if (_ocDashEl && _ocDashEl.style.display !== 'none') {
                         if (typeof window.renderOcDashboard === 'function') window.renderOcDashboard();
                     } else {
-                        renderDashboard();
+                        if (typeof window.renderDashboard === 'function') window.renderDashboard();
                     }
                 } else {
-                    renderCards();
+                    if (typeof window.renderCards === 'function') window.renderCards();
                 }
                 if (typeof window.updateRncNotificationBell === 'function') window.updateRncNotificationBell();
             });

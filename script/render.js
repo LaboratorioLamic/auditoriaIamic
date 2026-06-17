@@ -2283,3 +2283,6 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         html += `<button class="dpg-btn" onclick="goToDashPubPage(${current + 1})" ${current === total ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
         return html;
     }
+
+    window.renderDashboard = renderDashboard;
+    window.renderCards = renderCards;
