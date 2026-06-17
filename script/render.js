@@ -1321,7 +1321,8 @@ function _clDonutHtml(done, total, pct, size, absolute) {
 
         // Determina a statusKey do módulo a partir do filtro de área
         const _areaToStatusKey = { audit: 'auditStatus', ativ: 'ativStatus', tren: 'trainStatus', doc: 'docStatus', mant: 'mantStatus' };
-        const _statusKey = _areaToStatusKey[fArea] || null;
+        const _fAreaChart = document.getElementById('fDashArea')?.value || '';
+        const _statusKey = _areaToStatusKey[_fAreaChart] || null;
 
         let sortedStatus;
         if (_statusKey && masterLists && masterLists[_statusKey] && typeof _kbGetSortedStatuses === 'function') {
