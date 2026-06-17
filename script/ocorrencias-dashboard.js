@@ -343,16 +343,17 @@
     }
 
     // ── Chart: Linha geral (com linha de tendência e média) ──────────────
-    var lineSubtab = 'geral'; // 'geral' | 'categorias'
+    var lineSubtab = 'geral'; // 'geral' | 'categorias' | 'setores'
 
     function renderLineChart(arr, kpis) {
-        var isGeral = lineSubtab === 'geral';
         destroyChart('line');
         var ctx = document.getElementById('ocDashLineChart');
         if (!ctx) return;
 
-        if (isGeral) {
+        if (lineSubtab === 'geral') {
             renderLineChartGeral(ctx, kpis);
+        } else if (lineSubtab === 'setores') {
+            renderLineChartSetores(ctx, arr);
         } else {
             renderLineChartCategorias(ctx, arr);
         }
@@ -465,6 +466,56 @@
             type: 'line',
             data: { labels: months.map(formatMonthKey), datasets: datasets },
             options: lineChartOptions('Por categoria')
+        });
+    }
+
+    function renderLineChartSetores(ctx, arr) {
+        var monthSet = {};
+        var setorSet = {};
+        arr.forEach(function (o) {
+            var d = String(o.data || '');
+            if (!d) return;
+            var key = d.slice(0, 7);
+            var setor = String(o.setor || '').trim() || '(sem setor)';
+            monthSet[key] = true;
+            setorSet[setor] = true;
+        });
+        var months = Object.keys(monthSet).sort();
+        var setores = Object.keys(setorSet).sort();
+
+        var dataMap = {};
+        arr.forEach(function (o) {
+            var d = String(o.data || '');
+            if (!d) return;
+            var key = d.slice(0, 7);
+            var setor = String(o.setor || '').trim() || '(sem setor)';
+            if (!dataMap[setor]) dataMap[setor] = {};
+            dataMap[setor][key] = (dataMap[setor][key] || 0) + 1;
+        });
+
+        // Remove setores sem dados em nenhum mês visível
+        setores = setores.filter(function (setor) {
+            return months.some(function (m) { return dataMap[setor] && dataMap[setor][m]; });
+        });
+
+        var datasets = setores.map(function (setor, i) {
+            return {
+                label: setor,
+                data: months.map(function (m) { return (dataMap[setor] && dataMap[setor][m]) || 0; }),
+                borderColor: PALETTE[i % PALETTE.length],
+                backgroundColor: PALETTE[i % PALETTE.length] + '22',
+                fill: false,
+                tension: 0.4,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                borderWidth: 2
+            };
+        });
+
+        charts['line'] = new Chart(ctx, {
+            type: 'line',
+            data: { labels: months.map(formatMonthKey), datasets: datasets },
+            options: lineChartOptions('Por setor')
         });
     }
 
@@ -735,8 +786,9 @@
                     '<div class="oc-dash-chart-header">' +
                         '<h3><i class="fas fa-chart-line"></i> Ocorrências ao Longo do Tempo</h3>' +
                         '<div class="oc-dash-line-tabs">' +
-                            '<button class="oc-dash-line-tab active" id="ocDashLineTabGeral" onclick="ocDashSetLineTab(\'geral\')">Geral</button>' +
+                            '<button class="oc-dash-line-tab" id="ocDashLineTabGeral" onclick="ocDashSetLineTab(\'geral\')">Geral</button>' +
                             '<button class="oc-dash-line-tab" id="ocDashLineTabCats" onclick="ocDashSetLineTab(\'categorias\')">Categorias</button>' +
+                            '<button class="oc-dash-line-tab" id="ocDashLineTabSetores" onclick="ocDashSetLineTab(\'setores\')">Setores</button>' +
                         '</div>' +
                     '</div>' +
                     '<div class="oc-dash-canvas-wrap" style="height:260px;"><canvas id="ocDashLineChart"></canvas></div>' +
@@ -818,6 +870,14 @@
         destroyAllCharts();
         container.innerHTML = buildDashboardHTML();
 
+        // Restaura o botão ativo da sub-aba de linha após reconstruir o HTML
+        var btnG = document.getElementById('ocDashLineTabGeral');
+        var btnC = document.getElementById('ocDashLineTabCats');
+        var btnS = document.getElementById('ocDashLineTabSetores');
+        if (btnG) btnG.classList.toggle('active', lineSubtab === 'geral');
+        if (btnC) btnC.classList.toggle('active', lineSubtab === 'categorias');
+        if (btnS) btnS.classList.toggle('active', lineSubtab === 'setores');
+
         // Dados filtrados por ano (linha do tempo, KPIs maior/menor mês)
         var arrYear = getOcDashYearFiltered();
         var kpis = computeKPIs(arrYear);
@@ -834,13 +894,15 @@
         renderRanking(arr);
     };
 
-    // ── Sub-aba da linha (Geral / Categorias) ────────────────────────────
+    // ── Sub-aba da linha (Geral / Categorias / Setores) ──────────────────
     window.ocDashSetLineTab = function (tab) {
         lineSubtab = tab;
         var btnG = document.getElementById('ocDashLineTabGeral');
         var btnC = document.getElementById('ocDashLineTabCats');
+        var btnS = document.getElementById('ocDashLineTabSetores');
         if (btnG) btnG.classList.toggle('active', tab === 'geral');
         if (btnC) btnC.classList.toggle('active', tab === 'categorias');
+        if (btnS) btnS.classList.toggle('active', tab === 'setores');
         var arr = getOcDashFiltered();
         var kpis = computeKPIs(arr);
         renderLineChart(arr, kpis);
