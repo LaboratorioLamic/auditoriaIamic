@@ -1235,22 +1235,22 @@ function _checkTriPerm(permVal, item) {
         }
 
         // Com sistema de IDs, registros referenciam o ID do usuário — mudança de nome não requer propagação
+        closeModal('modalUsuario');
+        resetConfigForm();
+        if (typeof msRefreshUsers === 'function') msRefreshUsers();
+        renderusersConfigTable();
+        if (typeof renderCards === 'function') renderCards();
+        if (currentuser && currentuser.user && currentuser.user.toLowerCase() === user.toLowerCase()) {
+            currentuser = users[editinguserIndex === null ? users.length - 1 : editinguserIndex];
+            updateCurrentuserUI();
+            applyuserPermissionsToTabs();
+            applyListManagerPermissions();
+            applyOcorrenciasPermissions();
+            if (typeof applyRncTaskViewPermission === 'function') applyRncTaskViewPermission();
+            if (typeof updateRncNotificationBell === 'function') updateRncNotificationBell();
+        }
         try {
             await saveusers();
-            if (typeof msRefreshUsers === 'function') msRefreshUsers();
-            renderusersConfigTable();
-            if (typeof renderCards === 'function') renderCards();
-            if (currentuser && currentuser.user && currentuser.user.toLowerCase() === user.toLowerCase()) {
-                currentuser = users[editinguserIndex === null ? users.length - 1 : editinguserIndex];
-                updateCurrentuserUI();
-                applyuserPermissionsToTabs();
-                applyListManagerPermissions();
-                applyOcorrenciasPermissions();
-                if (typeof applyRncTaskViewPermission === 'function') applyRncTaskViewPermission();
-                if (typeof updateRncNotificationBell === 'function') updateRncNotificationBell();
-            }
-            closeModal('modalUsuario');
-            resetConfigForm();
             if (typeof showToast === 'function') showToast('Usuário salvo com sucesso.', 'success');
         } catch (e) {
             if (typeof showToast === 'function') showToast('Erro ao salvar usuário: ' + e.message, 'error');

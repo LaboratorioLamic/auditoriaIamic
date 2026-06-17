@@ -269,7 +269,18 @@
             }
         });
 
-        return Array.from(merged.values());
+        const result = Array.from(merged.values());
+
+        // Guarda de segurança: se o resultado ficou vazio mas o estado local
+        // tem itens, o remoto provavelmente voltou null/vazio por inconsistência
+        // transitória do Firebase (array vazio → null no RTDB) e NÃO por uma
+        // exclusão real. Preserva o estado local para evitar apagar dados.
+        // Não afeta exclusões legítimas: nesse caso localArr também seria [].
+        if (result.length === 0 && localArr.length > 0) {
+            return _deepClone(localArr);
+        }
+
+        return result;
     }
 
     // Wrapper público: enfileira as gravações para que duas chamadas de saveAll
