@@ -700,7 +700,7 @@ window._safeSnapshot = function(item) {
 // Retorna true se o item é recorrente e concluído — trein/doc com periodicidade > 0.
 // Esses itens continuam sendo monitorados pelo prazo mesmo após conclusão.
 function isConcludedRecurring(item, tabType) {
-    if (!/conclu/i.test(item.status || '')) return false;
+    if (typeof _kbStatusIsConcluido === 'function' ? !_kbStatusIsConcluido(item.status || '') : !/conclu/i.test(item.status || '')) return false;
     if (tabType === 'auditoria' || tabType === 'audit') {
         // Rotina não-pontual continua monitorando prazo mesmo concluída
         return item.rotina && item.rotina !== 'pontual';

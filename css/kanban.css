@@ -407,6 +407,49 @@
 }
 .kb-form-btn-save:hover { filter: brightness(1.08); transform: translateY(-1px); }
 
+/* Seletor de estado final (Concluído / Cancelado) */
+.kb-final-state-picker {
+    display: flex;
+    gap: 8px;
+}
+.kb-final-state-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: var(--r-sm);
+    border: 2px solid var(--border);
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color var(--t-fast), background var(--t-fast), color var(--t-fast);
+}
+.kb-final-state-btn:hover {
+    border-color: var(--c-green);
+    color: var(--c-green);
+    background: color-mix(in srgb, var(--c-green) 10%, transparent);
+}
+.kb-final-state-btn.cancelado:hover {
+    border-color: var(--c-red);
+    color: var(--c-red);
+    background: color-mix(in srgb, var(--c-red) 10%, transparent);
+}
+.kb-final-state-btn.selected {
+    border-color: var(--c-green);
+    background: color-mix(in srgb, var(--c-green) 15%, transparent);
+    color: var(--c-green);
+}
+.kb-final-state-btn.cancelado.selected {
+    border-color: var(--c-red);
+    background: color-mix(in srgb, var(--c-red) 15%, transparent);
+    color: var(--c-red);
+}
+
 /* Modal de exclusão kanban */
 .kb-modal-overlay {
     position: fixed;

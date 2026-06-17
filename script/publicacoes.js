@@ -1084,7 +1084,7 @@ window.verPublicacao = function(id, tab, index) {
     if (footerEl) {
         footerEl.innerHTML = `
             <button class="btn-cancel" onclick="closeModal('modalVerPublicacao')">Fechar</button>
-            ${_canMgPubs ? `<button class="btn-secondary" onclick="openPublicacaoModal(window._verPubIndex)"><i class="fas fa-pencil-alt"></i> Editar</button>` : ''}
+            ${_canMgPubs ? `<button class="btn-secondary" onclick="window._currentViewId=window._verPubId;window._currentViewTab=window._verPubTab;openPublicacaoModal(window._verPubIndex)"><i class="fas fa-pencil-alt"></i> Editar</button>` : ''}
             ${_canMgPubs ? `<button class="btn-danger" onclick="excluirPublicacao(window._verPubId,window._verPubTab,window._verPubIndex)"><i class="fas fa-trash"></i> Excluir</button>` : ''}`;
     }
 

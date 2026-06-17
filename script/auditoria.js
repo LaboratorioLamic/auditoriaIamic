@@ -84,11 +84,11 @@
             return;
         }
 
-        if (/conclu/i.test(newItem.status) && !canSetConcluido(newItem.checklist)) {
+        if ((typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status)) && !canSetConcluido(newItem.checklist)) {
             if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de marcar como Concluído.', 'error');
             return;
         }
-        if (/conclu/i.test(newItem.status) && typeof checkSchedWarnBeforeConcluido === 'function' && !window._schedWarnPassed_audit) {
+        if ((typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status)) && typeof checkSchedWarnBeforeConcluido === 'function' && !window._schedWarnPassed_audit) {
             checkSchedWarnBeforeConcluido(newItem, 'auditoria').then(ok => {
                 if (!ok) return;
                 window._schedWarnPassed_audit = true;

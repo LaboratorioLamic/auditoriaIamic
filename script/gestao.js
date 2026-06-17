@@ -75,7 +75,7 @@
                 newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
             }
 
-            if (/conclu/i.test(newItem.status) && !canSetConcluido(newItem.checklist)) {
+            if ((typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status)) && !canSetConcluido(newItem.checklist)) {
                 if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de marcar como Concluído.', 'error');
                 return;
             }

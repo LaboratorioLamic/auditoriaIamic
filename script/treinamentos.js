@@ -106,15 +106,16 @@
                 newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
             }
 
-            if (/conclu/i.test(newItem.status) && typeof isItemOverdue === 'function' && isItemOverdue(newItem, 'train')) {
+            const _trainIsConcluido = typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status);
+            if (_trainIsConcluido && typeof isItemOverdue === 'function' && isItemOverdue(newItem, 'train')) {
                 showOverdueConcluiModal();
                 return;
             }
-            if (/conclu/i.test(newItem.status) && !canSetConcluido(newItem.checklist)) {
+            if (_trainIsConcluido && !canSetConcluido(newItem.checklist)) {
                 if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de marcar como Concluído.', 'error');
                 return;
             }
-            if (/conclu/i.test(newItem.status) && typeof checkSchedWarnBeforeConcluido === 'function' && !window._schedWarnPassed_train) {
+            if (_trainIsConcluido && typeof checkSchedWarnBeforeConcluido === 'function' && !window._schedWarnPassed_train) {
                 checkSchedWarnBeforeConcluido(newItem, 'treinamentos').then(ok => {
                     if (!ok) return;
                     window._schedWarnPassed_train = true;

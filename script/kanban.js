@@ -54,6 +54,30 @@ function _kbIsFinalStatus(name) {
     return n.includes('conclu') || n.includes('cancel');
 }
 
+// Busca o objeto de status pelo nome na lista do módulo ativo (ou de um cfg passado)
+function _kbFindStatusObj(name, cfg) {
+    cfg = cfg || _kbGetConfig();
+    if (!cfg || !masterLists || !masterLists[cfg.statusKey]) return null;
+    return masterLists[cfg.statusKey].find(s => s.name === name) || null;
+}
+
+// Verifica se um status (pelo nome) está marcado como Concluído na sua definição
+function _kbStatusIsConcluido(name, cfg) {
+    const obj = _kbFindStatusObj(name, cfg);
+    return obj ? _kbIsConcluido(obj.name, obj) : _kbIsConcluido(name);
+}
+
+// Verifica se um status (pelo nome) está marcado como Cancelado na sua definição
+function _kbStatusIsCancelado(name, cfg) {
+    const obj = _kbFindStatusObj(name, cfg);
+    return obj ? _kbIsCancelado(obj.name, obj) : _kbIsCancelado(name);
+}
+
+// Verifica se um status (pelo nome) é final (concluído OU cancelado)
+function _kbStatusIsFinal(name, cfg) {
+    return _kbStatusIsConcluido(name, cfg) || _kbStatusIsCancelado(name, cfg);
+}
+
 function _kbGetColOrder(cfg) {
     cfg = cfg || _kbGetConfig();
     if (!cfg) return null;
@@ -96,21 +120,31 @@ function _kbResolveColor(colorKey) {
 
 // ---- Ordenação de colunas ----
 
-function _kbIsConcluido(name) {
-    return (name || '').toLowerCase().includes('conclu');
+function _kbIsConcluido(name, statusObj) {
+    if (statusObj) return !!statusObj.isConcluido;
+    // fallback: busca na lista do módulo ativo
+    const obj = _kbFindStatusObj(name);
+    return obj ? !!obj.isConcluido : false;
 }
 
-function _kbIsCancelado(name) {
-    return (name || '').toLowerCase().includes('cancel');
+function _kbIsCancelado(name, statusObj) {
+    if (statusObj) return !!statusObj.isCancelado;
+    // fallback: busca na lista do módulo ativo
+    const obj = _kbFindStatusObj(name);
+    return obj ? !!obj.isCancelado : false;
+}
+
+function _kbIsFinalStatusObj(statusObj) {
+    return _kbIsConcluido(statusObj.name, statusObj) || _kbIsCancelado(statusObj.name, statusObj);
 }
 
 function _kbGetSortedStatuses(cfg) {
     cfg = cfg || _kbGetConfig();
     const all = _kbGetStatusList(cfg);
 
-    const concluidos = all.filter(s =>  _kbIsConcluido(s.name));
-    const cancelados = all.filter(s =>  _kbIsCancelado(s.name) && !_kbIsConcluido(s.name));
-    const regulars   = all.filter(s => !_kbIsFinalStatus(s.name));
+    const concluidos = all.filter(s =>  _kbIsConcluido(s.name, s));
+    const cancelados = all.filter(s =>  _kbIsCancelado(s.name, s) && !_kbIsConcluido(s.name, s));
+    const regulars   = all.filter(s => !_kbIsFinalStatusObj(s));
 
     const savedOrder = _kbGetColOrder(cfg);
     if (savedOrder && savedOrder.length) {
@@ -229,7 +263,7 @@ function renderKanban() {
     }
 
     statuses.forEach((status, colIdx) => {
-        const isFinal     = _kbIsFinalStatus(status.name);
+        const isFinal     = _kbIsFinalStatusObj(status);
         const color       = _kbResolveColor(status.color);
         const colItems    = data.filter(i => i.status === status.name)
             .sort((a, b) => {
@@ -301,7 +335,7 @@ function renderKanban() {
 
 function _kbNextIsFinalOrEnd(statuses, colIdx) {
     const next = statuses[colIdx + 1];
-    return !next || _kbIsFinalStatus(next.name);
+    return !next || _kbIsFinalStatusObj(next);
 }
 
 // ---- Card ----
@@ -350,7 +384,7 @@ function _kbRenderCard(item) {
 
 function _kbDeadlineColor(dateStr, flagDays, status, item) {
     // Concluído recorrente (train/doc com periodicidade) continua monitorando prazo
-    const skipFlag = _kbIsFinalStatus(status) &&
+    const skipFlag = _kbStatusIsFinal(status) &&
         !(typeof isConcludedRecurring === 'function' && item && isConcludedRecurring(item, currentTab));
     if (skipFlag) return 'var(--ind-green)';
     if (!dateStr) return 'var(--c-default)';
@@ -463,15 +497,16 @@ function kbDrop(event, targetStatus) {
     const item = (cfg.getItems() || []).find(a => a.id === _kanbanDragItemId);
     if (!item || item.status === targetStatus) return;
 
-    if (/conclu/i.test(targetStatus) && typeof isItemOverdue === 'function' && (currentTab === 'treinamentos' || currentTab === 'documentos') && isItemOverdue(item, currentTab)) {
+    const _dropIsConcluido = _kbStatusIsConcluido(targetStatus);
+    if (_dropIsConcluido && typeof isItemOverdue === 'function' && (currentTab === 'treinamentos' || currentTab === 'documentos') && isItemOverdue(item, currentTab)) {
         showOverdueConcluiModal();
         return;
     }
-    if (/conclu/i.test(targetStatus) && !canSetConcluido(item.checklist)) {
+    if (_dropIsConcluido && !canSetConcluido(item.checklist)) {
         if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de mover para Concluído.', 'error');
         return;
     }
-    if (/conclu/i.test(targetStatus) && typeof checkSchedWarnBeforeConcluido === 'function') {
+    if (_dropIsConcluido && typeof checkSchedWarnBeforeConcluido === 'function') {
         checkSchedWarnBeforeConcluido(item, currentTab).then(ok => {
             if (!ok) return;
             _kbApplyDrop(item, targetStatus);
@@ -531,6 +566,7 @@ function startKanbanRename(statusName) {
     const colorLabels = { blue:'Azul', green:'Verde', red:'Vermelho', orange:'Laranja', yellow:'Amarelo', purple:'Roxo', default:'Cinza' };
 
     _kbNewColColor = statusObj.color || 'default';
+    _kbEditFinalState = statusObj.isConcluido ? 'concluido' : (statusObj.isCancelado ? 'cancelado' : null);
 
     const modal = document.createElement('div');
     modal.id = 'kbEditColModal';
@@ -554,6 +590,23 @@ function startKanbanRename(statusName) {
                             class="kb-color-opt ${c === _kbNewColColor ? 'selected' : ''} bg-${c}"
                             title="${colorLabels[c]}"
                             onclick="kbPickColor('${c}',this)"></button>`).join('')}
+                </div>
+            </div>
+            <div class="kb-modal-field">
+                <label class="kb-form-label">Estado final</label>
+                <div class="kb-final-state-picker">
+                    <button type="button" id="kbFinalConcluido"
+                        class="kb-final-state-btn ${_kbEditFinalState === 'concluido' ? 'selected' : ''}"
+                        onclick="kbToggleFinalState('concluido')"
+                        title="Marcar como Concluído">
+                        <i class="fas fa-check-circle"></i> Concluído
+                    </button>
+                    <button type="button" id="kbFinalCancelado"
+                        class="kb-final-state-btn cancelado ${_kbEditFinalState === 'cancelado' ? 'selected' : ''}"
+                        onclick="kbToggleFinalState('cancelado')"
+                        title="Marcar como Cancelado">
+                        <i class="fas fa-times-circle"></i> Cancelado
+                    </button>
                 </div>
             </div>
             <div class="kb-modal-actions">
@@ -596,17 +649,22 @@ function confirmKanbanEditCol(oldName) {
 
     const idx = list.findIndex(s => s.name === oldName);
     if (idx !== -1) {
-        list[idx].name  = newName;
-        list[idx].color = _kbNewColColor;
+        list[idx].name        = newName;
+        list[idx].color       = _kbNewColColor;
+        list[idx].isConcluido = (_kbEditFinalState === 'concluido') || undefined;
+        list[idx].isCancelado = (_kbEditFinalState === 'cancelado') || undefined;
+        if (!list[idx].isConcluido) delete list[idx].isConcluido;
+        if (!list[idx].isCancelado) delete list[idx].isCancelado;
     }
 
     if (newName !== oldName) {
         (cfg.getItems() || []).forEach(a => { if (a.status === oldName) a.status = newName; });
         const list2 = masterLists[cfg.statusKey] || [];
-        const order = _kbGetColOrder(cfg) || list2.filter(s => !_kbIsFinalStatus(s.name)).map(s => s.name);
+        const order = _kbGetColOrder(cfg) || list2.filter(s => !_kbIsFinalStatusObj(s)).map(s => s.name);
         const oi = order.indexOf(oldName);
         if (oi !== -1) order[oi] = newName;
-        _kbSetColOrderMemory(order.filter(n => !_kbIsFinalStatus(n)), cfg);
+        const list3 = masterLists[cfg.statusKey] || [];
+        _kbSetColOrderMemory(order.filter(n => { const so = list3.find(s => s.name === n); return so ? !_kbIsFinalStatusObj(so) : !_kbIsFinalStatus(n); }), cfg);
     }
 
     const modal = document.getElementById('kbEditColModal');
@@ -622,7 +680,7 @@ function moveKanbanColumn(statusName, direction) {
     const cfg = _kbGetConfig();
     if (!cfg) return;
     const statuses = _kbGetSortedStatuses(cfg);
-    const regulars = statuses.filter(s => !_kbIsFinalStatus(s.name));
+    const regulars = statuses.filter(s => !_kbIsFinalStatusObj(s));
     const idx      = regulars.findIndex(s => s.name === statusName);
 
     if (idx === -1) return;
@@ -639,6 +697,7 @@ function moveKanbanColumn(statusName, direction) {
 // ============================================================
 
 var _kbNewColColor = 'default';
+var _kbEditFinalState = null; // null | 'concluido' | 'cancelado'
 
 function openKanbanAddCol() {
     const existing = document.getElementById('kbAddColModal');
@@ -692,6 +751,18 @@ function openKanbanAddCol() {
     }
 }
 
+function kbToggleFinalState(state) {
+    if (_kbEditFinalState === state) {
+        _kbEditFinalState = null;
+    } else {
+        _kbEditFinalState = state;
+    }
+    const btnC = document.getElementById('kbFinalConcluido');
+    const btnX = document.getElementById('kbFinalCancelado');
+    if (btnC) btnC.classList.toggle('selected', _kbEditFinalState === 'concluido');
+    if (btnX) btnX.classList.toggle('selected', _kbEditFinalState === 'cancelado');
+}
+
 function kbPickColor(colorKey, btn) {
     _kbNewColColor = colorKey;
     document.querySelectorAll('.kb-color-opt').forEach(el => el.classList.remove('selected'));
@@ -718,9 +789,9 @@ function confirmKanbanAddCol() {
 
     list.push({ name, color: _kbNewColColor });
 
-    const order = _kbGetColOrder(cfg) || list.filter(s => !_kbIsFinalStatus(s.name)).map(s => s.name);
+    const order = _kbGetColOrder(cfg) || list.filter(s => !_kbIsFinalStatusObj(s)).map(s => s.name);
     if (!order.includes(name)) order.push(name);
-    _kbSetColOrderMemory(order.filter(n => !_kbIsFinalStatus(n)), cfg);
+    _kbSetColOrderMemory(order.filter(n => { const so = list.find(s => s.name === n); return so ? !_kbIsFinalStatusObj(so) : !_kbIsFinalStatus(n); }), cfg);
 
     const modal = document.getElementById('kbAddColModal');
     if (modal) modal.remove();
@@ -1156,16 +1227,17 @@ function _kbTouchDrop(cx, cy) {
     if (item.status === targetStatus) return;
 
     // Reutiliza a lógica de validação e persistência do kbDrop
-    if (/conclu/i.test(targetStatus) && typeof isItemOverdue === 'function' &&
+    const _moveIsConcluido = _kbStatusIsConcluido(targetStatus);
+    if (_moveIsConcluido && typeof isItemOverdue === 'function' &&
         (currentTab === 'treinamentos' || currentTab === 'documentos') && isItemOverdue(item, currentTab)) {
         showOverdueConcluiModal();
         return;
     }
-    if (/conclu/i.test(targetStatus) && !canSetConcluido(item.checklist)) {
+    if (_moveIsConcluido && !canSetConcluido(item.checklist)) {
         if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de mover para Concluído.', 'error');
         return;
     }
-    if (/conclu/i.test(targetStatus) && typeof checkSchedWarnBeforeConcluido === 'function') {
+    if (_moveIsConcluido && typeof checkSchedWarnBeforeConcluido === 'function') {
         checkSchedWarnBeforeConcluido(item, currentTab).then(ok => { if (ok) _kbApplyDrop(item, targetStatus); });
         return;
     }

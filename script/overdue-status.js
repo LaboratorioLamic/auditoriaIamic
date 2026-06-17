@@ -235,7 +235,7 @@ function _renderStatusOptions(prefix) {
     const container  = document.getElementById(`${prefix}SchedStatusOptions`);
     if (!container) return;
 
-    const statusList = (masterLists[cfg.statusKey] || []).filter(s => s && !s.deleted && s.name && !/conclu/i.test(s.name) && !/cancel/i.test(s.name));
+    const statusList = (masterLists[cfg.statusKey] || []).filter(s => s && !s.deleted && s.name && (typeof _kbStatusIsFinal === 'function' ? !_kbStatusIsFinal(s.name, cfg) : (!/conclu/i.test(s.name) && !/cancel/i.test(s.name))));
     const hiddenId   = type === 'overdue' ? `${prefix}OverdueStatus` : `${prefix}AlertStatus`;
     const current    = document.getElementById(hiddenId)?.value || '';
     const isOverdue  = type === 'overdue';
@@ -364,7 +364,7 @@ window.applyOverdueStatuses = function() {
     function checkArray(arr, getDeadline, getFlag) {
         arr.forEach(item => {
             if (!item || item.deleted) return;
-            if (!/conclu/i.test(item.status)) return;
+            if (typeof _kbStatusIsConcluido === 'function' ? !_kbStatusIsConcluido(item.status) : !/conclu/i.test(item.status)) return;
 
             const hasOverdue = !!item.overdueStatus;
             const hasAlert   = !!item.alertStatus;

@@ -424,8 +424,8 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         if (dateField) {
             data.sort((a, b) => {
                 // 1) Concluído/Cancelado vão para o final — exceto recorrentes com prazo iminente
-                const isAClosed = (a.status === 'Concluído' || a.status === 'Cancelado') && !isConcludedRecurring(a, currentTab);
-                const isBClosed = (b.status === 'Concluído' || b.status === 'Cancelado') && !isConcludedRecurring(b, currentTab);
+                const isAClosed = (typeof _kbStatusIsFinal === 'function' ? _kbStatusIsFinal(a.status) : (a.status === 'Concluído' || a.status === 'Cancelado')) && !isConcludedRecurring(a, currentTab);
+                const isBClosed = (typeof _kbStatusIsFinal === 'function' ? _kbStatusIsFinal(b.status) : (b.status === 'Concluído' || b.status === 'Cancelado')) && !isConcludedRecurring(b, currentTab);
 
                 if (isAClosed !== isBClosed) {
                     return isAClosed ? 1 : -1;
@@ -481,7 +481,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
 
             let indicatorClass = 'ind-green';
             // Concluído recorrente (train/doc com periodicidade) continua monitorando prazo
-            const _skipFlag = item.status === 'Concluído' && !isConcludedRecurring(item, currentTab);
+            const _skipFlag = (typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(item.status) : item.status === 'Concluído') && !isConcludedRecurring(item, currentTab);
             if (!_skipFlag && d !== Infinity) {
                 if (d < 0) indicatorClass = 'ind-red';
                 else if (flagDays > 0 && d <= flagDays) indicatorClass = 'ind-yellow';
@@ -763,7 +763,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
     function _getItemIndicatorClass(item, getDeadlineDate) {
         const d = daysDiff(getDeadlineDate ? getDeadlineDate(item) : null);
         const flagDays = (item.flagDias === 0 || item.flagDias === '0') ? 0 : (item.flagDias || 7);
-        const _skipFlag = item.status === 'Concluído' && !isConcludedRecurring(item, currentTab);
+        const _skipFlag = (typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(item.status) : item.status === 'Concluído') && !isConcludedRecurring(item, currentTab);
         if (_skipFlag || d === Infinity) return 'green';
         if (d < 0) return 'red';
         if (flagDays > 0 && d <= flagDays) return 'yellow';
@@ -1115,23 +1115,23 @@ function _clDonutHtml(done, total, pct, size, absolute) {
 
         if (!allowedTabs || allowedTabs.includes('auditoria')) {
             rawItems = rawItems.concat(
-                audits.map(a => ({ ...a, type: 'audit', statusType: getStatusType(a.status), dateField: a.dataPublicacao, deadlineField: a.dataPrevisao, color: getStatusColor(a.status, 'audit') }))
+                audits.map(a => ({ ...a, type: 'audit', statusType: getStatusType(a.status, 'audit'), dateField: a.dataPublicacao, deadlineField: a.dataPrevisao, color: getStatusColor(a.status, 'audit') }))
             );
         }
         if (!allowedTabs || allowedTabs.includes('atividades')) {
             rawItems = rawItems.concat(
-                activities.map(a => ({ ...a, type: 'ativ', statusType: getStatusType(a.status), dateField: a.dataInicio, deadlineField: a.dataConclusao, color: getStatusColor(a.status, 'ativ') }))
+                activities.map(a => ({ ...a, type: 'ativ', statusType: getStatusType(a.status, 'ativ'), dateField: a.dataInicio, deadlineField: a.dataConclusao, color: getStatusColor(a.status, 'ativ') }))
             );
         }
         if (!allowedTabs || allowedTabs.includes('treinamentos')) {
             const _trainings = typeof trainings !== 'undefined' ? trainings : [];
             rawItems = rawItems.concat(
-                _trainings.map(t => ({ ...t, type: 'tren', statusType: getStatusType(t.status), dateField: t.dataPublicacao || t.dataInicio || t.data || null, deadlineField: t.dataPrevisao || null, color: getStatusColor(t.status, 'tren') }))
+                _trainings.map(t => ({ ...t, type: 'tren', statusType: getStatusType(t.status, 'tren'), dateField: t.dataPublicacao || t.dataInicio || t.data || null, deadlineField: t.dataPrevisao || null, color: getStatusColor(t.status, 'tren') }))
             );
         }
         if (!allowedTabs || allowedTabs.includes('documentos')) {
             rawItems = rawItems.concat(
-                documents.map(d => ({ ...d, type: 'doc', statusType: getStatusType(d.status), dateField: d.dataCriacao, deadlineField: d.dataProximaRevisao || null, color: getStatusColor(d.status, 'doc') }))
+                documents.map(d => ({ ...d, type: 'doc', statusType: getStatusType(d.status, 'doc'), dateField: d.dataCriacao, deadlineField: d.dataProximaRevisao || null, color: getStatusColor(d.status, 'doc') }))
             );
         }
 
@@ -1313,8 +1313,49 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         _initActivityYearSelect(rawItems);
         _renderAtividadeMensal(rawItems);
 
-        // --- Status por Área (pizza) ---
-        const sortedStatus = Object.entries(statusCounts).sort(([, a], [, b]) => b.count - a.count);
+        // --- Status por Área (funil) ---
+        // Ordena na mesma ordem que o kanban do módulo filtrado
+        const _isFinal = n => typeof _kbStatusIsFinal === 'function' ? _kbStatusIsFinal(n) : /conclu|cancel/i.test(n);
+        const allStatusEntries = Object.entries(statusCounts);
+        const activeEntries = allStatusEntries.filter(([k]) => !_isFinal(k));
+
+        // Determina a statusKey do módulo a partir do filtro de área
+        const _areaToStatusKey = { audit: 'auditStatus', ativ: 'ativStatus', tren: 'trainStatus', doc: 'docStatus', mant: 'mantStatus' };
+        const _statusKey = _areaToStatusKey[fArea] || null;
+
+        let sortedStatus;
+        if (_statusKey && masterLists && masterLists[_statusKey] && typeof _kbGetSortedStatuses === 'function') {
+            // Usa a ordem do kanban para o módulo filtrado
+            const _kbCfg = Object.values(window._KB_MODULES || {}).find(m => m.statusKey === _statusKey) || { statusKey: _statusKey, colOrderKey: '' };
+            const _orderedStatuses = _kbGetSortedStatuses(_kbCfg).filter(s => !_isFinal(s.name));
+            const _orderedNames = _orderedStatuses.map(s => s.name);
+            sortedStatus = activeEntries.sort(([a], [b]) => {
+                const ia = _orderedNames.indexOf(a);
+                const ib = _orderedNames.indexOf(b);
+                if (ia === -1 && ib === -1) return 0;
+                if (ia === -1) return 1;
+                if (ib === -1) return -1;
+                return ia - ib;
+            });
+        } else if (!_statusKey && typeof _kbGetSortedStatuses === 'function') {
+            // Sem filtro de área: ordena por posição média entre todos os módulos
+            const _allKeys = ['auditStatus', 'ativStatus', 'trainStatus', 'docStatus'];
+            const _posMap = {};
+            _allKeys.forEach(key => {
+                const _cfg = { statusKey: key, colOrderKey: '' };
+                (_kbGetSortedStatuses(_cfg) || []).filter(s => !_isFinal(s.name)).forEach((s, i) => {
+                    if (!_posMap[s.name]) _posMap[s.name] = [];
+                    _posMap[s.name].push(i);
+                });
+            });
+            sortedStatus = activeEntries.sort(([a], [b]) => {
+                const pa = _posMap[a] ? _posMap[a].reduce((s, v) => s + v, 0) / _posMap[a].length : 9999;
+                const pb = _posMap[b] ? _posMap[b].reduce((s, v) => s + v, 0) / _posMap[b].length : 9999;
+                return pa - pb;
+            });
+        } else {
+            sortedStatus = activeEntries;
+        }
         const badgeStatus = document.getElementById('badgeStatusAtivos');
         if (badgeStatus) badgeStatus.textContent = activeCount + ' ativos';
         _renderStatusPizza(sortedStatus, activeCount);
@@ -1412,59 +1453,32 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         updateNotificationCount();
     }
 
-    // ── Status por Área — Pizza ───────────────────────────────────────────
-    var _statusPizzaSlices = [];
-    var _statusPizzaTooltipBound = false;
-
+    // ── Status por Área — Funil Pipeline ─────────────────────────────────
     function _renderStatusPizza(sortedStatus, activeCount) {
-        const canvas = document.getElementById('chartStatusPizza');
-        const legendEl = document.getElementById('statusPizzaLegend');
-        const totalEl = document.getElementById('statusPizzaTotal');
-        if (totalEl) totalEl.textContent = activeCount;
+        const container = document.getElementById('statusFunnelChart');
+        if (!container) return;
 
-        if (legendEl) {
-            if (sortedStatus.length === 0) {
-                legendEl.innerHTML = '<div class="chart-empty" style="padding:12px 0"><i class="fas fa-chart-pie"></i><span>Nenhum item ativo</span></div>';
-            } else {
-                legendEl.innerHTML = sortedStatus.map(([key, data]) => {
-                    const colorVar = colorMap[data.color] || colorMap['default'];
-                    const pct = activeCount > 0 ? ((data.count / activeCount) * 100).toFixed(1) : 0;
-                    return `<li><span class="dl-dot" style="background:${colorVar}"></span><span style="flex:1;font-size:12px">${key}</span><span class="dl-count">${data.count}</span><span style="color:var(--text-muted);font-size:11px;margin-left:4px">(${pct}%)</span></li>`;
-                }).join('');
-            }
-        }
-
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        const W = canvas.width, H = canvas.height;
-        const cx = W / 2, cy = H / 2, r = Math.min(W, H) * 0.38, inner = r * 0.58;
-        ctx.clearRect(0, 0, W, H);
-
-        if (activeCount === 0 || sortedStatus.length === 0) {
-            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = r - inner; ctx.stroke();
-            _statusPizzaSlices = [];
+        if (sortedStatus.length === 0) {
+            container.innerHTML = '<div class="chart-empty" style="padding:20px 0"><i class="fas fa-filter"></i><span>Nenhum item encontrado</span></div>';
             return;
         }
 
-        const gap = 0.03;
-        _statusPizzaSlices = [];
-        let startAngle = -Math.PI / 2;
-        sortedStatus.forEach(([key, data]) => {
-            const slice = (data.count / activeCount) * Math.PI * 2;
+        const maxCount = sortedStatus.reduce((m, [, d]) => Math.max(m, d.count), 0);
+
+        container.innerHTML = sortedStatus.map(([key, data]) => {
             const colorVar = colorMap[data.color] || colorMap['default'];
             const resolvedColor = _resolveCssVar(colorVar);
-            const pct = ((data.count / activeCount) * 100).toFixed(1);
-            _statusPizzaSlices.push({ start: startAngle + gap / 2, end: startAngle + slice - gap / 2, color: resolvedColor, label: key, count: data.count, pct });
-            ctx.beginPath(); ctx.moveTo(cx, cy);
-            ctx.arc(cx, cy, r, startAngle + gap / 2, startAngle + slice - gap / 2);
-            ctx.closePath(); ctx.fillStyle = resolvedColor; ctx.fill();
-            startAngle += slice;
-        });
-        ctx.beginPath(); ctx.arc(cx, cy, inner, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff'; ctx.fill();
-
-        _initDonutTooltip(canvas, 'statusPizzaTooltip', () => _statusPizzaSlices, cx, cy, r, inner);
+            const pct = activeCount > 0 ? ((data.count / activeCount) * 100).toFixed(1) : 0;
+            // Largura relativa ao maior valor: mínimo 20% para sempre ser visível
+            const barW = maxCount > 0 ? Math.max(20, Math.round((data.count / maxCount) * 100)) : 20;
+            return `<div class="funnel-row" title="${key}: ${data.count} (${pct}%)">
+                <div class="funnel-bar-label">${key}</div>
+                <div class="funnel-bar" style="width:${barW}%;background:${resolvedColor}">
+                    <span class="funnel-bar-count">${data.count}</span>
+                    <span class="funnel-bar-pct">${pct}%</span>
+                </div>
+            </div>`;
+        }).join('');
     }
 
     // Resolve CSS variable to hex for canvas (approximate from known palette)

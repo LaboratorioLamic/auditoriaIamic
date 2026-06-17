@@ -531,21 +531,14 @@
                 <!-- Coluna direita permanente: pizzas -->
                 <div class="dash-col-pies">
 
-                    <!-- Status por Área (pizza) -->
+                    <!-- Status por Área (funil) -->
                     <div class="chart-card">
                         <div class="chart-card-header">
-                            <h3><i class="fas fa-chart-pie"></i> Status por Área</h3>
+                            <h3><i class="fas fa-filter"></i> Status por Área</h3>
                             <span class="chart-badge" id="badgeStatusAtivos">0 ativos</span>
                         </div>
-                        <div class="chart-content chart-content--center">
-                            <div class="donut-wrap">
-                                <canvas id="chartStatusPizza" width="150" height="150"></canvas>
-                                <div class="donut-center">
-                                    <span id="statusPizzaTotal">0</span>
-                                    <small>ativos</small>
-                                </div>
-                            </div>
-                            <ul class="donut-legend" id="statusPizzaLegend"></ul>
+                        <div class="chart-content" style="flex-direction:column;gap:0;padding:8px 12px 10px">
+                            <div id="statusFunnelChart"></div>
                         </div>
                     </div>
 

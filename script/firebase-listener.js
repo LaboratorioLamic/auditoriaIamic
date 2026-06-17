@@ -410,10 +410,23 @@
         }
     }
 
-    function getStatusType(statusname) {
+    function getStatusType(statusname, category) {
+        // Busca o objeto de status na lista correta para checar flags isConcluido/isCancelado
+        let list;
+        if (category === 'audit') list = masterLists.auditStatus;
+        else if (category === 'ativ') list = masterLists.ativStatus;
+        else if (category === 'mant') list = masterLists.mantStatus;
+        else if (category === 'doc') list = masterLists.docStatus;
+        else if (category === 'tren') list = masterLists.trainStatus;
+        const statusObj = (list || []).find(s => s.name === statusname);
+        if (statusObj) {
+            if (statusObj.isConcluido) return 'finalizado';
+            if (statusObj.isCancelado) return 'inativo';
+        }
+        // Fallback por nome para compatibilidade
         const finalizadoKeywords = ['concluído', 'finalizado', 'publicado'];
         const inativoKeywords = ['cancelado', 'obsoleto'];
-        const nameLower = statusname.toLowerCase();
+        const nameLower = (statusname || '').toLowerCase();
         if (finalizadoKeywords.includes(nameLower)) return 'finalizado';
         if (inativoKeywords.includes(nameLower)) return 'inativo';
         return 'ativo';

@@ -1649,7 +1649,7 @@ function viewHistoryItem(id, tab, historyIndex) {
         if (typeof renderHistoryDrawer === 'function') renderHistoryDrawer();
     }
 
-    function editCurrentViewItem() {
+    window.editCurrentViewItem = function editCurrentViewItem() {
         if (!currentViewItemId || !currentViewTab) return;
         const _vItem = [...(audits||[]),...(trainings||[]),...(activities||[]),...(documents||[])].find(a => a.id === currentViewItemId);
         if (!userCanEditCards(_vItem)) {
