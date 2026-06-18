@@ -89,7 +89,7 @@
     }
 
     function isEditingCardOpen() {
-        const drawerIds = ['modalAuditoria', 'modalAtividades', 'modalManutencao', 'modalDocumentos', 'modalOcorrencia', 'modalRnc'];
+        const drawerIds = ['modalAuditoria', 'modalTreinamentos', 'modalAtividades', 'modalManutencao', 'modalDocumentos', 'modalOcorrencia', 'modalRnc'];
         return drawerIds.some(id => {
             const el = document.getElementById(id);
             return el && el.classList.contains('open');

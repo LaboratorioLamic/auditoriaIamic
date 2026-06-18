@@ -16,11 +16,15 @@ function openSetorFilterModal() {
     }
 
     const setores = _getVisibleSetores();
-    _tempSetorSelection = activeSetorFilter ? [...activeSetorFilter] : setores.slice(); // cópia
+    _tempSetorSelection = activeSetorFilter ? [...activeSetorFilter] : [];
+
+    const searchEl = document.getElementById('setorFilterSearch');
+    if (searchEl) searchEl.value = '';
 
     _renderSetorFilterGrid(setores);
     _updateSetorFilterCount();
     modal.style.display = 'flex';
+    if (searchEl) setTimeout(() => searchEl.focus(), 80);
 }
 
 function closeSetorFilterModal() {
@@ -32,8 +36,8 @@ function closeSetorFilterModal() {
 function confirmSetorFilter() {
     if (!_tempSetorSelection) return;
     const setores = _getVisibleSetores();
-    // Se tudo selecionado, limpar filtro (= sem restrição)
-    if (_tempSetorSelection.length === setores.length) {
+    // Se tudo selecionado ou nada selecionado, limpar filtro (= sem restrição)
+    if (_tempSetorSelection.length === 0 || _tempSetorSelection.length === setores.length) {
         activeSetorFilter = null;
     } else {
         activeSetorFilter = [..._tempSetorSelection];
@@ -74,32 +78,7 @@ function _getVisibleSetores() {
     const all = (masterLists && masterLists.setores) ? [...masterLists.setores] : [];
     const baseFn = _getAllowedSetoresBase || getAllowedSetores;
     const allowed = baseFn();
-    let result = allowed === null ? all : all.filter(s => allowed.includes(s));
-
-    // Na aba dashboard, restringe aos setores que efetivamente têm dados
-    // (respeitando os demais filtros ativos: área, categoria, status, responsável, período, título)
-    if (currentTab === 'dashboard' && window.dashboardAvailableSetores instanceof Set) {
-        result = result.filter(s => window.dashboardAvailableSetores.has(s));
-    }
-
-    // Nas abas de atividades, rotinas (auditoria), treinamentos e documentos, restringe
-    // aos setores que efetivamente têm dados na aba (respeitando os demais filtros ativos)
-    const tabToFilterPrefix = {
-        auditoria: 'Audit',
-        treinamentos: 'Train',
-        atividades: 'Ativ',
-        manutencao: 'Mant',
-        documentos: 'Doc'
-    };
-    const _prefix = tabToFilterPrefix[currentTab];
-    if (_prefix) {
-        if (typeof updateFilterFacetOptions === 'function') updateFilterFacetOptions(_prefix);
-        const available = window.tabAvailableSetores && window.tabAvailableSetores[_prefix];
-        if (available instanceof Set) {
-            result = result.filter(s => available.has(s));
-        }
-    }
-
+    const result = allowed === null ? all : all.filter(s => allowed.includes(s));
     return result.sort((a, b) => String(a).localeCompare(String(b), 'pt'));
 }
 
@@ -195,6 +174,17 @@ function _syncSetorFilterBtn() {
 }
 
 // _syncSetorFilterBtn é chamado pelo tabs.js ao trocar de aba
+
+function _filterSetorChips(query, gridId) {
+    const q = query.trim().toLowerCase();
+    const id = gridId || 'setorFilterGrid';
+    const chips = document.querySelectorAll(`#${id} .setor-chip`);
+    chips.forEach(chip => {
+        const label = chip.querySelector('.setor-chip-label');
+        const text = label ? label.textContent.toLowerCase() : '';
+        chip.style.display = (!q || text.includes(q)) ? '' : 'none';
+    });
+}
 
 function _escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

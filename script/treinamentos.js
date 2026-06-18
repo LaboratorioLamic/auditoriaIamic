@@ -127,18 +127,16 @@
             window._schedWarnPassed_train = false;
 
             const changes = calculateChanges(originalItem, newItem);
-            if (changes.length > 0 || changes.silentChanged) {
-                if (changes.length > 0) {
-                    newItem.historico.push({
-                        timestamp: new Date().toISOString(),
-                        acao: 'Edição de Dados',
-                        usuario: currentuser?.name || 'Sistema',
-                        detalhes: changes,
-                        snapshot: _safeSnapshot(originalItem)
-                    });
-                }
-                trainings = trainings.map(t => t.id === editingTrainId ? newItem : t);
+            if (changes.length > 0) {
+                newItem.historico.push({
+                    timestamp: new Date().toISOString(),
+                    acao: 'Edição de Dados',
+                    usuario: currentuser?.name || 'Sistema',
+                    detalhes: changes,
+                    snapshot: _safeSnapshot(originalItem)
+                });
             }
+            trainings = trainings.map(t => t.id === editingTrainId ? newItem : t);
         }
 
         saveAll();

@@ -115,10 +115,6 @@
                     detalhes: changes,
                     snapshot: _safeSnapshot(originalItem)
                 });
-            } else if (!changes.silentChanged) {
-                documents = documents.map(d => d.id === editingDocId ? item : d);
-                closeFormDrawer();
-                return;
             }
             documents = documents.map(d => d.id === editingDocId ? newItem : d);
         }

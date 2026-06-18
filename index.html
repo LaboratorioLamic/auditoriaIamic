@@ -3215,6 +3215,10 @@
                 <i class="fas fa-times"></i> Desmarcar todos
             </button>
         </div>
+        <div class="setor-filter-search">
+            <i class="fas fa-search setor-filter-search-icon"></i>
+            <input type="text" id="setorFilterSearch" class="setor-filter-search-input" placeholder="Buscar setor..." oninput="_filterSetorChips(this.value)" autocomplete="off">
+        </div>
         <div class="setor-filter-grid" id="setorFilterGrid">
             <!-- chips dos setores -->
         </div>
@@ -3242,6 +3246,10 @@
             <button class="setor-filter-deselect" id="rncSetorFilterToggleAllBtn" onclick="rncSetorFilterToggleAll()">
                 <i class="fas fa-times"></i> Desmarcar todos
             </button>
+        </div>
+        <div class="setor-filter-search">
+            <i class="fas fa-search setor-filter-search-icon"></i>
+            <input type="text" id="rncSetorFilterSearch" class="setor-filter-search-input" placeholder="Buscar setor..." oninput="_filterSetorChips(this.value, 'rncSetorFilterGrid')" autocomplete="off">
         </div>
         <div class="setor-filter-grid" id="rncSetorFilterGrid">
             <!-- chips dos setores -->

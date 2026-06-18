@@ -2122,26 +2122,32 @@ function viewHistoryItem(id, tab, historyIndex) {
         const isMarcadorList = key.toLowerCase().includes('marcadores');
         const isObjectList = isStatus || isMarcadorList;
         const isSubcat = key.includes('_');
+        const isSetor = key === 'setores';
 
-        // Bloqueia exclusão de categorias que possuem subcategorias/itens vinculados
-        if (!isObjectList && !isSubcat) {
-            const categoryToSubcatMap = {
-                auditCategorias: 'auditSubcats',
-                ativCategorias: 'ativSubcats',
-                docCategorias: 'docSubcats',
-                mantCategorias: 'mantItens'
-            };
-            const subcatKey = categoryToSubcatMap[key];
-            if (subcatKey) {
-                const map = masterLists[subcatKey] || {};
-                const children = map[val] || [];
-                if (Array.isArray(children) && children.length > 0) {
-                    alert('Não é possível excluir esta categoria pois existem subcategorias/itens vinculados. Exclua primeiro as subcategorias/itens.');
-                    return;
-                }
-            }
-        }
+        let typeLabel = 'item';
+        if (isSetor) typeLabel = 'setor';
+        else if (isStatus) typeLabel = 'status';
+        else if (isMarcadorList) typeLabel = 'marcador';
+        else if (isSubcat) typeLabel = 'subcategoria';
+        else typeLabel = 'categoria';
 
+        const typeIcon = isSetor ? 'fa-building'
+            : isStatus ? 'fa-tag'
+            : isMarcadorList ? 'fa-bookmark'
+            : isSubcat ? 'fa-layer-group'
+            : 'fa-folder';
+
+        showConfirmDanger({
+            title: `Excluir ${typeLabel}?`,
+            message: `O ${typeLabel} <strong>"${val}"</strong> será removido da lista.<br>Esta ação pode ser revertida pelo administrador.`,
+            confirmLabel: `Excluir ${typeLabel}`,
+            icon: typeIcon,
+            requireReason: false,
+            onConfirm: () => _doRemoveFromList(key, val, isStatus, isMarcadorList, isObjectList, isSubcat, isSetor)
+        });
+    }
+
+    function _doRemoveFromList(key, val, isStatus, isMarcadorList, isObjectList, isSubcat, isSetor) {
         // Guarda a categoria e a subcategoria/ item atualmente selecionados no modal da aba ativa
         const prefix = getTabPrefix(currentTab);
         const currentCatSelect = document.getElementById(`${prefix}Categoria`);
@@ -2159,7 +2165,6 @@ function viewHistoryItem(id, tab, historyIndex) {
             const [baseKey, cat] = key.split('_');
             list = masterLists[baseKey][cat];
             if (isObjectList) {
-                // SOFT DELETE para objetos de status/marcadores: marcar como deletado
                 const itemToDelete = list.find(s => s.name === val);
                 if (itemToDelete) {
                     itemToDelete.deleted = true;
@@ -2167,10 +2172,8 @@ function viewHistoryItem(id, tab, historyIndex) {
                     itemToDelete.deletedBy = currentuser.email || currentuser.name || 'unknown';
                 }
             } else {
-                // Para strings simples, fazer soft delete também
                 const index = list.indexOf(val);
                 if (index > -1) {
-                    // Converter para objeto e marcar como deletado
                     list[index] = { value: val, deleted: true, deletedAt: new Date().toISOString() };
                 }
             }
@@ -2178,7 +2181,6 @@ function viewHistoryItem(id, tab, historyIndex) {
         } else {
             list = masterLists[key];
             if (isObjectList) {
-                // SOFT DELETE para objetos de status/marcadores
                 const itemToDelete = list.find(s => s.name === val);
                 if (itemToDelete) {
                     itemToDelete.deleted = true;
@@ -2186,10 +2188,8 @@ function viewHistoryItem(id, tab, historyIndex) {
                     itemToDelete.deletedBy = currentuser.email || currentuser.name || 'unknown';
                 }
             } else {
-                // Para strings simples
                 const index = list.indexOf(val);
                 if (index > -1) {
-                    // Converter para objeto e marcar como deletado
                     list[index] = { value: val, deleted: true, deletedAt: new Date().toISOString() };
                 }
             }
@@ -2202,9 +2202,7 @@ function viewHistoryItem(id, tab, historyIndex) {
             const restoredCat = document.getElementById(`${prefix}Categoria`);
             if (restoredCat) {
                 restoredCat.value = selectedCategoryBefore;
-                // Recarrega a lista de subcategorias/itens para a categoria correta
                 onCategoryChange(prefix);
-
                 if (selectedSubBefore) {
                     const restoredSub = prefix === 'mant'
                         ? document.getElementById(`${prefix}Item`)
@@ -2221,7 +2219,7 @@ function viewHistoryItem(id, tab, historyIndex) {
             openListManager('status');
         } else if (isMarcadorList) {
             openListManager('marcadores');
-        } else if (key === 'setores') {
+        } else if (isSetor) {
             openListManager('setores');
         } else if (key === 'mantTipos') {
             openListManager('tipos');

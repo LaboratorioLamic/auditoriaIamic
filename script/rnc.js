@@ -1733,9 +1733,13 @@
         if (!modal) return;
         var setores = getSetores();
         _rncTempSetorSelection = rncSetorFilter.length ? rncSetorFilter.slice() : setores.slice();
+        var rncSearch = document.getElementById('rncSetorFilterSearch');
+        if (rncSearch) rncSearch.value = '';
+        _filterSetorChips('', 'rncSetorFilterGrid');
         _renderRncSetorFilterGrid(setores);
         _updateRncSetorFilterCount();
         modal.style.display = 'flex';
+        if (rncSearch) setTimeout(function() { rncSearch.focus(); }, 80);
     }
 
     window.rncCloseSetorModal = function() {

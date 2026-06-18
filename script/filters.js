@@ -481,6 +481,11 @@
     var filteredSetores = (allowedSetores === null ? setores : setores.filter(s => allowedSetores.includes(s)))
         .slice().sort((a, b) => String(a).localeCompare(String(b), 'pt'));
 
+    // Setores para os modais de criação/edição: usa permissões base, SEM aplicar filtro ativo do header
+    var baseAllowedSetores = (typeof _getAllowedSetoresBase === 'function' ? _getAllowedSetoresBase() : allowedSetores);
+    var modalSetores = (baseAllowedSetores === null ? setores : setores.filter(s => baseAllowedSetores.includes(s)))
+        .slice().sort((a, b) => String(a).localeCompare(String(b), 'pt'));
+
     // --- FILTROS DASHBOARD ---
     document.getElementById('fDashSetor').innerHTML = makeFilterOpts(filteredSetores, "Setor: Todos");
     // Categoria será populada dinamicamente por updateDashboardFilterOptions
@@ -509,7 +514,7 @@
         const catEl = document.getElementById(`${p}Categoria`);
         const statusEl = document.getElementById(`${p}Status`);
         if (!setorEl || !catEl || !statusEl) return;
-        setorEl.innerHTML = '<option value=""></option>' + makeOpts(filteredSetores);
+        setorEl.innerHTML = '<option value=""></option>' + makeOpts(modalSetores);
         catEl.innerHTML = '<option value=""></option>' + makeOpts(masterLists[`${p}Categorias`] || []);
         statusEl.innerHTML = makeStatusOpts(masterLists[`${p}Status`] || []);
 

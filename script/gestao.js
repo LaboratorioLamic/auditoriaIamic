@@ -89,10 +89,6 @@
                     detalhes: changes,
                     snapshot: _safeSnapshot(originalItem)
                 });
-            } else if (!changes.silentChanged) {
-                activities = activities.map(a => a.id === editingAtivId ? item : a);
-                closeFormDrawer();
-                return;
             }
             activities = activities.map(a => a.id === editingAtivId ? newItem : a);
         }

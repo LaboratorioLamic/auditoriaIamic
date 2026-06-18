@@ -437,46 +437,91 @@
 .confirm-danger-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(2,6,23,0.65);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(2,6,23,0.70);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 99999;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 16px;
-    animation: fadeIn 0.15s ease;
+    animation: fadeIn 0.18s ease;
 }
 
 .confirm-danger-box {
     background: #fff;
-    border-radius: 20px;
-    width: min(420px, 100%);
-    padding: 32px 28px 24px;
+    border-radius: 24px;
+    width: min(440px, 100%);
+    padding: 0 0 28px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 0;
     text-align: center;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.05);
-    animation: modalUp 0.2s cubic-bezier(0.34,1.4,0.64,1);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.06);
+    animation: modalUp 0.25s cubic-bezier(0.34,1.4,0.64,1);
+    overflow: hidden;
+}
+
+.confirm-danger-header-art {
+    width: 100%;
+    height: 120px;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 50%, #fecaca 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    flex-shrink: 0;
+}
+.confirm-danger-header-art::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 70% 30%, rgba(220,38,38,0.12) 0%, transparent 60%),
+                radial-gradient(circle at 20% 80%, rgba(239,68,68,0.08) 0%, transparent 50%);
+}
+.confirm-danger-header-art .cdh-circle-lg {
+    position: absolute;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    border: 2px solid rgba(220,38,38,0.10);
+    top: -60px; right: -40px;
+}
+.confirm-danger-header-art .cdh-circle-sm {
+    position: absolute;
+    width: 90px; height: 90px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(220,38,38,0.12);
+    bottom: -20px; left: 20px;
 }
 
 .confirm-danger-icon-wrap {
-    width: 60px;
-    height: 60px;
+    width: 68px;
+    height: 68px;
     border-radius: 50%;
-    background: #fee2e2;
+    background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #dc2626;
-    font-size: 24px;
-    margin-bottom: 4px;
+    font-size: 26px;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 4px 20px rgba(220,38,38,0.20), 0 0 0 6px rgba(254,226,226,0.8);
+}
+
+.confirm-danger-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 24px 28px 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .confirm-danger-title {
-    font-size: 18px;
+    font-size: 19px;
     font-weight: 700;
     color: #111827;
     line-height: 1.2;
@@ -485,23 +530,24 @@
 .confirm-danger-message {
     font-size: 14px;
     color: #6b7280;
-    line-height: 1.5;
-    max-width: 340px;
+    line-height: 1.6;
+    max-width: 360px;
 }
 
 .confirm-danger-actions {
     display: flex;
     gap: 10px;
-    margin-top: 8px;
+    margin-top: 20px;
     width: 100%;
     justify-content: center;
+    padding: 0 28px;
+    box-sizing: border-box;
 }
 
 .confirm-danger-cancel {
     flex: 1;
-    max-width: 160px;
-    padding: 10px 20px;
-    border-radius: 10px;
+    padding: 11px 20px;
+    border-radius: 12px;
     border: 1.5px solid #e5e7eb;
     background: #fff;
     color: #374151;
@@ -509,17 +555,17 @@
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
-.confirm-danger-cancel:hover { background: #f3f4f6; border-color: #d1d5db; }
+.confirm-danger-cancel:hover { background: #f9fafb; border-color: #d1d5db; transform: translateY(-1px); }
+.confirm-danger-cancel:active { transform: translateY(0); }
 
 .confirm-danger-confirm {
     flex: 1;
-    max-width: 160px;
-    padding: 10px 20px;
-    border-radius: 10px;
+    padding: 11px 20px;
+    border-radius: 12px;
     border: none;
-    background: #dc2626;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     color: #fff;
     font-size: 14px;
     font-weight: 700;
@@ -529,10 +575,12 @@
     align-items: center;
     justify-content: center;
     gap: 7px;
-    transition: background 0.15s, box-shadow 0.15s;
-    box-shadow: 0 2px 8px rgba(220,38,38,0.25);
+    transition: opacity 0.15s, box-shadow 0.15s, transform 0.1s;
+    box-shadow: 0 4px 14px rgba(220,38,38,0.35);
 }
-.confirm-danger-confirm:hover { background: #b91c1c; box-shadow: 0 4px 16px rgba(220,38,38,0.35); }
+.confirm-danger-confirm:not(:disabled):hover { box-shadow: 0 6px 20px rgba(220,38,38,0.45); transform: translateY(-1px); }
+.confirm-danger-confirm:not(:disabled):active { transform: translateY(0); }
+.confirm-danger-confirm:disabled { cursor: not-allowed; }
 
 /* =========================================================================
    MODAIS

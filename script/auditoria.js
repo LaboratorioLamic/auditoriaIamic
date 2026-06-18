@@ -112,7 +112,7 @@
                 snapshot: _safeSnapshot(newItem)
             });
             audits.push(newItem);
-        } else if (changes.length > 0 || changes.silentChanged) {
+        } else {
             if (changes.length > 0) {
                 newItem.historico.push({
                     timestamp: new Date().toISOString(),

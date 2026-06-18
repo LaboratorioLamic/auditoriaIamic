@@ -1256,6 +1256,10 @@
                     '</button>' +
                     '<span class="oc-setor-count"><span id="ocSetorSelCount">0</span> selecionados</span>' +
                 '</div>' +
+                '<div class="setor-filter-search" style="border-top:1px solid var(--border);">' +
+                    '<i class="fas fa-search setor-filter-search-icon"></i>' +
+                    '<input type="text" id="ocSetorSearch" class="setor-filter-search-input" placeholder="Buscar setor..." oninput="ocFilterSetorSearch(this.value)" autocomplete="off">' +
+                '</div>' +
                 '<div class="oc-setor-modal-body" id="ocSetorModalBody"></div>' +
                 '<div class="oc-setor-modal-footer">' +
                     '<button class="oc-setor-btn-cancel" onclick="ocCloseSetorModal()">Cancelar</button>' +
@@ -1288,6 +1292,16 @@
         if (toggleLbl) toggleLbl.textContent = allSel ? 'Desmarcar todos' : 'Marcar todos';
     }
 
+    window.ocFilterSetorSearch = function(query) {
+        var q = query.trim().toLowerCase();
+        var items = document.querySelectorAll('#ocSetorModalBody .oc-setor-item');
+        items.forEach(function(item) {
+            var name = item.querySelector('.oc-setor-name');
+            var text = name ? name.textContent.toLowerCase() : '';
+            item.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+        });
+    };
+
     window.ocToggleSetorPending = function (s) {
         var i = _ocSetorPending.indexOf(s);
         if (i === -1) _ocSetorPending.push(s); else _ocSetorPending.splice(i, 1);
@@ -1306,6 +1320,8 @@
         _ocSetorPending = ocSetorFilter.length ? ocSetorFilter.filter(function (s) { return setores.indexOf(s) !== -1; }) : setores.slice();
         ocRenderSetorModalBody();
         document.getElementById('ocSetorBackdrop').classList.add('open');
+        var searchEl = document.getElementById('ocSetorSearch');
+        if (searchEl) { searchEl.value = ''; setTimeout(function() { searchEl.focus(); }, 80); }
     };
     window.ocCloseSetorModal = function () {
         var bd = document.getElementById('ocSetorBackdrop');
