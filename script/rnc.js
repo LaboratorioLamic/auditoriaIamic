@@ -2313,10 +2313,10 @@
         if (btn) btn.classList.add('active');
         var panel = document.getElementById(panelId);
         if (panel) panel.classList.add('active');
-        // FAB "Nova Publicação" fixo no rodapé: visível apenas na aba de Dados
+        // FAB "Nova Publicação" fixo no rodapé: visível apenas na aba de Publicações
         var fab = document.getElementById('rncViewPubFab');
         var fabItem = (typeof window.rncViewEditId !== 'undefined') ? (window.rncItems || []).find(function(x){ return x.id === window.rncViewEditId; }) : null;
-        if (fab) fab.style.display = (panelId === 'rnc-vinfo' && canEdit(fabItem)) ? '' : 'none';
+        if (fab) fab.style.display = (panelId === 'rnc-vpub' && canEdit(fabItem)) ? '' : 'none';
     };
     function rncSwitchViewTab(panelId, btn) { window.rncSwitchViewTab(panelId, btn); }
 
@@ -2477,22 +2477,94 @@
     var rncPubSubtab = 'Comentário';
 
     function _rncPubItemHtml(r, p, i, canMg) {
-        return '<div class="rnc-pub-item">' +
+        return '<div class="rnc-pub-item" onclick="rncOpenPubView(' + JSON.stringify(r.id) + ',' + i + ',' + canMg + ')">' +
             '<div class="rnc-pub-item-header">' +
                 '<div class="rnc-pub-item-meta">' +
                     '<span class="rnc-pub-item-type">' + esc(p.tipo||'Comentário') + '</span>' +
                     '<span class="rnc-pub-item-date"><i class="fas fa-calendar"></i> ' + esc(fmtDate(p.data)) + (p.hora ? ' ' + esc(p.hora) : '') + '</span>' +
                     (p.usuario ? '<span class="rnc-pub-item-user"><i class="fas fa-user"></i> ' + esc(p.usuario) + '</span>' : '') +
                 '</div>' +
-                (canMg ? '<div class="rnc-pub-item-actions">' +
-                    '<button class="rnc-pub-btn" onclick="rncOpenPubModal(' + i + ')" title="Editar"><i class="fas fa-pen"></i></button>' +
-                    '<button class="rnc-pub-btn danger" onclick="rncDeletePub(' + r.id + ',' + i + ')" title="Excluir"><i class="fas fa-trash"></i></button>' +
-                '</div>' : '') +
             '</div>' +
             '<div class="rnc-pub-item-desc">' + esc(p.descricao||'').replace(/\n/g,'<br>') + '</div>' +
             (p.anexos && p.anexos.length > 0 ? '<div style="margin-top:6px;font-size:12px;color:#94a3b8"><i class="fas fa-paperclip"></i> ' + p.anexos.length + ' anexo(s)</div>' : '') +
         '</div>';
     }
+
+    // Paleta por tipo de publicação
+    var _PUB_META = {
+        'Comentário':  { icon: 'fa-comment-dots',      color: '#2563eb' },
+        'Atualização': { icon: 'fa-rotate',             color: '#0891b2' },
+        'Evidência':   { icon: 'fa-file-circle-check',  color: '#16a34a' }
+    };
+
+    window.rncOpenPubView = function(rncId, pubIdx, canMg) {
+        var r = (window.rncItems || []).find(function(x){ return x.id === rncId; });
+        if (!r) return;
+        var p = (r.publicacoes || [])[pubIdx];
+        if (!p) return;
+
+        var tipo = p.tipo || 'Comentário';
+        var meta = _PUB_META[tipo] || _PUB_META['Comentário'];
+        var modal = document.getElementById('rncPubViewModal');
+        if (!modal) return;
+
+        // Cor temática
+        modal.querySelector('.rnc-pubview-box').style.setProperty('--rnc-pv-color', meta.color);
+
+        // Hero cabeçalho
+        var hero = document.getElementById('rncPubViewHero');
+        if (hero) hero.style.setProperty('--rnc-pv-color', meta.color);
+        var heroIcon = document.getElementById('rncPubViewHeroIcon');
+        if (heroIcon) heroIcon.className = 'fas ' + meta.icon;
+        var heroLabel = document.getElementById('rncPubViewHeroLabel');
+        if (heroLabel) heroLabel.textContent = tipo;
+
+        // Meta info
+        var metaEl = document.getElementById('rncPubViewMeta');
+        var metaItems = [];
+        if (p.data) metaItems.push('<span class="rnc-pubview-meta-item"><i class="fas fa-calendar-alt"></i> <strong>' + esc(fmtDate(p.data)) + (p.hora ? ' ' + esc(p.hora) : '') + '</strong></span>');
+        if (p.usuario) metaItems.push('<span class="rnc-pubview-meta-item"><i class="fas fa-user-circle"></i> <strong>' + esc(p.usuario) + '</strong></span>');
+        metaEl.innerHTML = metaItems.join('');
+
+        // Corpo
+        document.getElementById('rncPubViewBody').innerHTML = esc(p.descricao || '').replace(/\n/g, '<br>') || '<em style="color:#94a3b8">Sem descrição.</em>';
+
+        // Anexos
+        var axWrap = document.getElementById('rncPubViewAnexos');
+        var axList = document.getElementById('rncPubViewAnexosList');
+        var anexos = p.anexos || [];
+        if (anexos.length > 0) {
+            axList.innerHTML = anexos.map(function(a) {
+                var name = a.titulo || a.url || 'Arquivo';
+                var ext = name.includes('.') ? name.slice(name.lastIndexOf('.')).toLowerCase() : '';
+                var icon = ext === '.pdf' ? 'fa-file-pdf' :
+                           ['.xls','.xlsx'].includes(ext) ? 'fa-file-excel' :
+                           ['.jpg','.jpeg','.png','.gif','.webp'].includes(ext) ? 'fa-file-image' :
+                           ['.ppt','.pptx'].includes(ext) ? 'fa-file-powerpoint' : 'fa-file';
+                return '<a href="' + esc(a.url||'#') + '" target="_blank" class="rnc-pubview-anexo-link"><i class="fas ' + icon + '"></i>' + esc(name) + '</a>';
+            }).join('');
+            axWrap.style.display = '';
+        } else {
+            axWrap.style.display = 'none';
+        }
+
+        // Botões de ação
+        var footer = document.getElementById('rncPubViewFooter');
+        if (canMg) {
+            footer.style.display = '';
+            document.getElementById('rncPubViewEditBtn').onclick = function() { rncClosePubView(); rncOpenPubModal(pubIdx); };
+            document.getElementById('rncPubViewDelBtn').onclick = function() { rncClosePubView(); rncDeletePub(rncId, pubIdx); };
+        } else {
+            footer.style.display = 'none';
+        }
+
+        modal.style.display = 'flex';
+    };
+
+    window.rncClosePubView = function() {
+        var modal = document.getElementById('rncPubViewModal');
+        if (modal) modal.style.display = 'none';
+    };
 
     function _renderRncViewPubs(r) {
         var container = document.getElementById('rncViewPubContent');

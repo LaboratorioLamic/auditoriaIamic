@@ -1337,6 +1337,53 @@
     </button>
 </div>
 
+<!-- ═══ RNC — MODAL VISUALIZAÇÃO DE PUBLICAÇÃO ═══ -->
+<div class="rnc-pubview-overlay" id="rncPubViewModal" style="display:none;" onclick="if(event.target===this)rncClosePubView()">
+    <div class="rnc-pubview-box">
+
+        <!-- CABEÇALHO RICO -->
+        <div class="rnc-pubview-hero" id="rncPubViewHero">
+            <!-- Ornamentos decorativos -->
+            <div class="rnc-pv-orb rnc-pv-orb1"></div>
+            <div class="rnc-pv-orb rnc-pv-orb2"></div>
+            <div class="rnc-pv-orb rnc-pv-orb3"></div>
+            <div class="rnc-pv-ring rnc-pv-ring1"></div>
+            <div class="rnc-pv-ring rnc-pv-ring2"></div>
+            <!-- Ícone central -->
+            <div class="rnc-pubview-hero-icon">
+                <i class="fas fa-comment-dots" id="rncPubViewHeroIcon"></i>
+            </div>
+            <!-- Tipo e título -->
+            <div class="rnc-pubview-hero-label" id="rncPubViewHeroLabel">Comentário</div>
+            <!-- Onda SVG na base -->
+            <svg class="rnc-pv-wave" viewBox="0 0 560 48" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0,24 C140,48 280,0 420,24 C490,36 530,18 560,24 L560,48 L0,48 Z" fill="#ffffff"/>
+            </svg>
+            <!-- Botão fechar -->
+            <button class="rnc-pubview-close" onclick="rncClosePubView()"><i class="fas fa-times"></i></button>
+        </div>
+
+        <!-- METADADOS -->
+        <div class="rnc-pubview-meta" id="rncPubViewMeta"></div>
+
+        <!-- CORPO -->
+        <div class="rnc-pubview-divider"></div>
+        <div class="rnc-pubview-body" id="rncPubViewBody"></div>
+
+        <!-- ANEXOS -->
+        <div class="rnc-pubview-anexos" id="rncPubViewAnexos" style="display:none;">
+            <div class="rnc-pubview-anexos-title"><i class="fas fa-paperclip"></i> Anexos</div>
+            <div class="rnc-pubview-anexos-list" id="rncPubViewAnexosList"></div>
+        </div>
+
+        <!-- RODAPÉ -->
+        <div class="rnc-pubview-footer" id="rncPubViewFooter" style="display:none;">
+            <button class="rnc-pubview-edit-btn" id="rncPubViewEditBtn"><i class="fas fa-pen"></i> Editar</button>
+            <button class="rnc-pubview-del-btn" id="rncPubViewDelBtn"><i class="fas fa-trash"></i> Excluir</button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══ RNC — GERENCIADOR DE LISTAS ═══ -->
 <div class="rnc-manager-overlay" id="rncManagerModal" style="display:none;" onclick="if(event.target===this)rncCloseManager()">
     <div class="rnc-manager-box">
