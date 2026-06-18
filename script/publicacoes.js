@@ -1133,21 +1133,6 @@ function _updatePubTabBadge(item) {
     }
 }
 
-// ─── INTEGRAÇÃO COM SAVE (inject no reset) ───────────────────
-// Patch: limpa checklist ao resetar drawer
-const _origResetModal = window.resetModal;
-if (typeof _origResetModal === 'function') {
-    window.resetModal = function(prefix) {
-        _origResetModal(prefix);
-        clearChecklist(prefix);
-        // Reset drawer para primeira aba
-        const drawer = document.getElementById(_drawerIdFromPrefix(prefix));
-        if (drawer) {
-            drawer.querySelectorAll('.drawer-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
-            drawer.querySelectorAll('.drawer-tab-panel').forEach((p, i) => p.classList.toggle('active', i === 0));
-        }
-    };
-}
 
 function _drawerIdFromPrefix(prefix) {
     if (prefix === 'audit') return 'modalAuditoria';

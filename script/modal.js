@@ -114,6 +114,17 @@ function resetModal(prefix) {
     // 3. Chamar onCategoryChange após definir a categoria (se a categoria existir)
     var catEl = document.getElementById(`${prefix}Categoria`);
     if (catEl) onCategoryChange(prefix);
+
+    // 4. Limpar checklist
+    if (typeof clearChecklist === 'function') clearChecklist(prefix);
+
+    // 5. Resetar drawer para primeira aba
+    const _drawerIds = { audit: 'modalAuditoria', train: 'modalTreinamentos', ativ: 'modalAtividades', doc: 'modalDocumentos', mant: 'modalManutencao' };
+    const drawer = document.getElementById(_drawerIds[prefix]);
+    if (drawer) {
+        drawer.querySelectorAll('.drawer-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+        drawer.querySelectorAll('.drawer-tab-panel').forEach((p, i) => p.classList.toggle('active', i === 0));
+    }
 }
 
 
