@@ -474,7 +474,7 @@
                     rncAlertBadgeHtml(r) +
                     actions +
                 '</div>' +
-                '<div class="rnc-card-title">' + esc(r.titulo || 'Sem título') + '</div>' +
+                '<div class="rnc-card-title"><i class="fas ' + ci.icon + '" style="color:' + ci.color + ';margin-right:6px"></i><span class="rnc-card-title-text">' + esc(r.titulo || 'Sem título') + '</span></div>' +
                 '<div class="rnc-card-body">' +
                     rncCardInfoRows(r) +
                     '<div class="rnc-card-status-row">' +
@@ -957,7 +957,7 @@
                                 ' onclick="rncOpenView(' + r.id + ')" style="--rnc-kb-card-color:' + ci.color + '">' +
                                 '<div class="rnc-kb-card-main">' +
                                     '<div class="rnc-kb-card-title-row">' +
-                                        '<div class="rnc-kb-card-title">' + esc(r.titulo || 'Sem título') + '</div>' +
+                                        '<div class="rnc-kb-card-title"><i class="fas ' + ci.icon + '" style="color:' + ci.color + ';margin-right:5px"></i><span class="rnc-kb-card-title-text">' + esc(r.titulo || 'Sem título') + '</span></div>' +
                                         kbActions +
                                     '</div>' +
                                     rncCardMetaHtml(r) +
