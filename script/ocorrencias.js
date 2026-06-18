@@ -281,7 +281,7 @@
     };
 
     function ocCloseAllDropdowns() {
-        ['ocTypeDropdown', 'ocMyDropdown', 'ocColabDropdown', 'ocSetorDropdown', 'ocCategoriaDropdown', 'ocMotivoDropdown', 'ocCatFilterDropdown']
+        ['ocTypeDropdown', 'ocMyDropdown', 'ocColabDropdown', 'ocSetorDropdown', 'ocCategoriaDropdown', 'ocMotivoDropdown', 'ocCatFilterDropdown', 'ocResponsavelDropdown']
             .forEach(function (id) {
                 var el = document.getElementById(id);
                 if (!el) return;
