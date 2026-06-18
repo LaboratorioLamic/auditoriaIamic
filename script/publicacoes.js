@@ -986,9 +986,17 @@ window.verPublicacao = function(id, tab, index) {
     const iconEl = document.getElementById('verPubTypeIcon');
     const labelEl = document.getElementById('verPubTypeLabel');
     const titleEl = document.getElementById('verPubTitle');
-    if (iconEl) { iconEl.innerHTML = `<i class="${cfg.icon}"></i>`; iconEl.style.background = cfg.bg; iconEl.style.color = cfg.color; }
-    if (labelEl) { labelEl.textContent = tipo; labelEl.style.color = cfg.color; }
-    if (titleEl) titleEl.textContent = item.titulo || '';
+    const headerEl = document.getElementById('verPubHeader');
+    const subtitleEl = document.getElementById('verPubHeaderSubtitle');
+    if (iconEl) { iconEl.innerHTML = `<i class="${cfg.icon}"></i>`; iconEl.style.background = ''; iconEl.style.color = ''; }
+    if (labelEl) { labelEl.textContent = tipo; labelEl.style.color = ''; }
+    if (titleEl) titleEl.textContent = pub.titulo || item.titulo || '';
+    if (headerEl) headerEl.setAttribute('data-tipo', tipo);
+    if (subtitleEl) {
+        const dateStr = pub.data ? _formatDateBR(pub.data) : '';
+        const userStr = pub.usuario ? ((typeof resolveUserId === 'function' ? resolveUserId(pub.usuario) : null) || pub.usuario) : '';
+        subtitleEl.textContent = [dateStr + (pub.hora ? ' · ' + pub.hora : ''), userStr].filter(Boolean).join('  ·  ');
+    }
 
     // Meta pills
     const metaPills = `
@@ -1083,7 +1091,7 @@ window.verPublicacao = function(id, tab, index) {
     const footerEl = document.getElementById('verPubFooter');
     if (footerEl) {
         footerEl.innerHTML = `
-            <button class="btn-cancel" onclick="closeModal('modalVerPublicacao')">Fechar</button>
+            <button class="btn-ver-tarefa" onclick="closeModal('modalVerPublicacao');openView(${id},'${tab}')"><i class="fas fa-arrow-up-right-from-square"></i> Visualizar Tarefa</button>
             ${_canMgPubs ? `<button class="btn-secondary" onclick="window._currentViewId=window._verPubId;window._currentViewTab=window._verPubTab;openPublicacaoModal(window._verPubIndex)"><i class="fas fa-pencil-alt"></i> Editar</button>` : ''}
             ${_canMgPubs ? `<button class="btn-danger" onclick="excluirPublicacao(window._verPubId,window._verPubTab,window._verPubIndex)"><i class="fas fa-trash"></i> Excluir</button>` : ''}`;
     }

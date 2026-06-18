@@ -1863,6 +1863,38 @@
 .rnc-pub-item { cursor: pointer; }
 .rnc-pub-item:hover { box-shadow: 0 4px 18px rgba(37,99,235,.12); border-color: #bfdbfe; transform: translateY(-1px); }
 
+/* Paginação de publicações */
+.rnc-pub-pagination {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+}
+.rnc-pub-pgbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 6px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #fff;
+    color: #475569;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+}
+.rnc-pub-pgbtn:hover:not(:disabled) { border-color: #94a3b8; background: #f8fafc; }
+.rnc-pub-pgbtn.active { border-color: var(--accent, #2563eb); background: var(--accent, #2563eb); color: #fff; font-weight: 600; }
+.rnc-pub-pgbtn:disabled { opacity: .35; cursor: default; }
+.rnc-pub-pgcount {
+    margin-left: 6px;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
 /* ══════════════════════════════════════════════════════
    MODAL VISUALIZAÇÃO DE PUBLICAÇÃO
    ══════════════════════════════════════════════════════ */

@@ -799,11 +799,15 @@
             <button class="list-subtab" id="listSubtabGroups" onclick="setListSubtab('groups')">
                 <i class="fas fa-layer-group"></i> Grupos
             </button>
+            <button class="list-subtab" id="listSubtabSetores" onclick="setListSubtab('setores')">
+                <i class="fas fa-sitemap"></i> Setores
+            </button>
         </div>
 
         <div class="cards-grid" id="cardsGrid" style="display:none;"></div>
         <div id="tableView" style="display:none;"></div>
         <div id="groupsView" style="display:none;"></div>
+        <div id="setoresView" style="display:none;"></div>
 
         <div id="kanbanBoard"></div>
 
@@ -2700,19 +2704,28 @@
 <!-- MODAL VISUALIZAÇÃO DE PUBLICAÇÃO -->
 <div class="modal" id="modalVerPublicacao">
     <div class="modal-content ver-pub-modal-content">
-        <div class="ver-pub-modal-header">
+        <div class="ver-pub-modal-header" id="verPubHeader">
+            <div class="ver-pub-header-decor">
+                <span class="ver-pub-decor-circle ver-pub-decor-c1"></span>
+                <span class="ver-pub-decor-circle ver-pub-decor-c2"></span>
+                <span class="ver-pub-decor-circle ver-pub-decor-c3"></span>
+                <span class="ver-pub-decor-dots"></span>
+            </div>
             <div class="ver-pub-modal-header-left">
-                <div class="ver-pub-modal-icon" id="verPubTypeIcon"><i class="fas fa-paper-plane"></i></div>
-                <div>
+                <div class="ver-pub-modal-icon-wrap">
+                    <div class="ver-pub-modal-icon" id="verPubTypeIcon"><i class="fas fa-paper-plane"></i></div>
+                </div>
+                <div class="ver-pub-header-text">
                     <div class="ver-pub-modal-type" id="verPubTypeLabel">Publicação</div>
                     <div class="ver-pub-modal-title" id="verPubTitle"></div>
+                    <div class="ver-pub-header-subtitle" id="verPubHeaderSubtitle"></div>
                 </div>
             </div>
-            <button onclick="closeModal('modalVerPublicacao')" class="ver-pub-close-btn">&times;</button>
+            <button onclick="closeModal('modalVerPublicacao')" class="ver-pub-close-btn"><i class="fas fa-xmark"></i></button>
         </div>
         <div class="ver-pub-modal-body" id="verPubContent"></div>
         <div class="ver-pub-modal-footer" id="verPubFooter">
-            <button class="btn-cancel" onclick="closeModal('modalVerPublicacao')">Fechar</button>
+            <button class="btn-ver-tarefa" onclick="closeModal('modalVerPublicacao')"><i class="fas fa-arrow-up-right-from-square"></i> Visualizar Tarefa</button>
         </div>
     </div>
 </div>

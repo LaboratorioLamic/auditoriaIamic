@@ -156,6 +156,25 @@
 }
 .btn-cancel:hover { background: #f8fafc; border-color: #cbd5e1; color: #374151; }
 
+.btn-ver-tarefa {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s, box-shadow .15s;
+    font-family: inherit;
+    font-size: 13.5px;
+    letter-spacing: 0.1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    box-shadow: 0 2px 8px rgba(79,70,229,.25);
+}
+.btn-ver-tarefa:hover { opacity: .88; box-shadow: 0 4px 14px rgba(79,70,229,.35); }
+
 .btn-duplicate {
     background: #fff;
     color: #92400e;

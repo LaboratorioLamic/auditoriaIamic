@@ -2284,6 +2284,8 @@
         var r = (window.rncItems || []).find(function(x){ return x.id === id; });
         if (!r) return;
         rncViewId = id;
+        rncPubSubtab = 'Geral';
+        rncPubPage = 1;
         // Expõe para o sistema de publicações reutilizar o #modalPublicacao
         window._currentViewId = id;
         window._currentViewTab = 'rnc';
@@ -2472,13 +2474,15 @@
         renderRnc();
     };
 
-    // ── Publicações no view modal (sub-abas: Comentário / Atualização / Evidência) ──
+    // ── Publicações no view modal (sub-abas: Geral / Comentário / Atualização / Evidência) ──
     var RNC_PUB_TIPOS = [
         { key: 'Comentário',  label: 'Comentário',  icon: 'fa-comment-dots',        color: '#2563eb' },
         { key: 'Atualização', label: 'Atualização', icon: 'fa-rotate',              color: '#0891b2' },
         { key: 'Evidência',   label: 'Evidência',   icon: 'fa-file-circle-check',   color: '#16a34a' }
     ];
-    var rncPubSubtab = 'Comentário';
+    var rncPubSubtab = 'Geral';
+    var rncPubPage = 1;
+    var RNC_PUB_PER_PAGE = 10;
 
     function _rncPubItemHtml(r, p, i, canMg) {
         return '<div class="rnc-pub-item" onclick="rncOpenPubView(' + JSON.stringify(r.id) + ',' + i + ',' + canMg + ')">' +
@@ -2585,7 +2589,11 @@
         pubs.forEach(function(p){ counts[tipoOf(p)]++; });
 
         // Barra de sub-abas
+        var geralActive = rncPubSubtab === 'Geral';
         var subtabs = '<div class="rnc-pub-subtabs">' +
+            '<button class="rnc-pub-subtab' + (geralActive ? ' active' : '') + '" style="--rnc-pst-color:#64748b" onclick="rncSwitchPubSubtab(\'Geral\')">' +
+                '<i class="fas fa-layer-group"></i> Geral' +
+            '</button>' +
             RNC_PUB_TIPOS.map(function(t){
                 var active = rncPubSubtab === t.key;
                 return '<button class="rnc-pub-subtab' + (active ? ' active' : '') + '" style="--rnc-pst-color:' + t.color + '" onclick="rncSwitchPubSubtab(\'' + t.key + '\')">' +
@@ -2595,23 +2603,62 @@
             }).join('') +
         '</div>';
 
-        // Lista filtrada pela sub-aba ativa
-        var filtered = pubs.map(function(p, idx){ return { p: p, i: idx }; })
-                           .filter(function(o){ return tipoOf(o.p) === rncPubSubtab; });
-        var listHtml;
-        if (filtered.length === 0) {
-            var cur = RNC_PUB_TIPOS.find(function(t){ return t.key === rncPubSubtab; }) || RNC_PUB_TIPOS[0];
-            listHtml = '<div class="rnc-pub-empty"><i class="fas ' + cur.icon + '"></i><p>Nenhuma publicação do tipo "' + cur.label + '".</p></div>';
+        // Lista filtrada pela sub-aba ativa (invertida = mais recente primeiro)
+        var pool;
+        if (rncPubSubtab === 'Geral') {
+            pool = pubs.map(function(p, idx){ return { p: p, i: idx }; }).slice().reverse();
         } else {
+            pool = pubs.map(function(p, idx){ return { p: p, i: idx }; })
+                       .filter(function(o){ return tipoOf(o.p) === rncPubSubtab; })
+                       .slice().reverse();
+        }
+
+        var listHtml;
+        if (pool.length === 0) {
+            if (rncPubSubtab === 'Geral') {
+                listHtml = '<div class="rnc-pub-empty"><i class="fas fa-layer-group"></i><p>Nenhuma publicação registrada.</p></div>';
+            } else {
+                var cur = RNC_PUB_TIPOS.find(function(t){ return t.key === rncPubSubtab; }) || RNC_PUB_TIPOS[0];
+                listHtml = '<div class="rnc-pub-empty"><i class="fas ' + cur.icon + '"></i><p>Nenhuma publicação do tipo "' + cur.label + '".</p></div>';
+            }
+        } else {
+            var totalPages = Math.max(1, Math.ceil(pool.length / RNC_PUB_PER_PAGE));
+            if (rncPubPage > totalPages) rncPubPage = totalPages;
+            var pageItems = pool.slice((rncPubPage - 1) * RNC_PUB_PER_PAGE, rncPubPage * RNC_PUB_PER_PAGE);
+
+            var paginationHtml = '';
+            if (totalPages > 1) {
+                var pages = '';
+                for (var pg = 1; pg <= totalPages; pg++) {
+                    pages += '<button class="rnc-pub-pgbtn' + (pg === rncPubPage ? ' active' : '') + '" onclick="rncGoToPubPage(' + pg + ')">' + pg + '</button>';
+                }
+                paginationHtml = '<div class="rnc-pub-pagination">' +
+                    '<button class="rnc-pub-pgbtn" onclick="rncGoToPubPage(' + (rncPubPage - 1) + ')" ' + (rncPubPage === 1 ? 'disabled' : '') + '><i class="fas fa-chevron-left"></i></button>' +
+                    pages +
+                    '<button class="rnc-pub-pgbtn" onclick="rncGoToPubPage(' + (rncPubPage + 1) + ')" ' + (rncPubPage === totalPages ? 'disabled' : '') + '><i class="fas fa-chevron-right"></i></button>' +
+                    '<span class="rnc-pub-pgcount">' + pool.length + ' publicaç' + (pool.length !== 1 ? 'ões' : 'ão') + '</span>' +
+                '</div>';
+            } else {
+                paginationHtml = '<div class="rnc-pub-pagination"><span class="rnc-pub-pgcount">' + pool.length + ' publicaç' + (pool.length !== 1 ? 'ões' : 'ão') + '</span></div>';
+            }
+
             listHtml = '<div class="rnc-pub-list">' +
-                filtered.slice().reverse().map(function(o){ return _rncPubItemHtml(r, o.p, o.i, canMg); }).join('') +
-            '</div>';
+                pageItems.map(function(o){ return _rncPubItemHtml(r, o.p, o.i, canMg); }).join('') +
+            '</div>' + paginationHtml;
         }
         container.innerHTML = subtabs + listHtml;
     }
 
     window.rncSwitchPubSubtab = function(key) {
         rncPubSubtab = key;
+        rncPubPage = 1;
+        if (!rncViewId) return;
+        var r = (window.rncItems||[]).find(function(x){ return x.id === rncViewId; });
+        if (r) _renderRncViewPubs(r);
+    };
+
+    window.rncGoToPubPage = function(page) {
+        rncPubPage = page;
         if (!rncViewId) return;
         var r = (window.rncItems||[]).find(function(x){ return x.id === rncViewId; });
         if (r) _renderRncViewPubs(r);

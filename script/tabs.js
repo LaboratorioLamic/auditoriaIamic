@@ -81,6 +81,8 @@
     if (_tv) _tv.style.display = (_showListMode && currentListSubtab === 'table') ? 'block' : 'none';
     var _gv = document.getElementById('groupsView');
     if (_gv) _gv.style.display = (_showListMode && currentListSubtab === 'groups') ? 'flex' : 'none';
+    var _sv = document.getElementById('setoresView');
+    if (_sv) _sv.style.display = (_showListMode && currentListSubtab === 'setores') ? 'flex' : 'none';
     var _kbBoard = document.getElementById('kanbanBoard');
     if (_kbBoard) _kbBoard.style.display = _isKanbanMode ? 'flex' : 'none';
     var _calBoard = document.getElementById('calendarBoard');

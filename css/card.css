@@ -363,7 +363,8 @@
 /* =========================================================================
    VIEW GRUPOS (pastas por Categoria)
    ========================================================================= */
-#groupsView {
+#groupsView,
+#setoresView {
     padding-bottom: 40px;
     display: flex;
     flex-direction: column;

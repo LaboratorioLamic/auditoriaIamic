@@ -82,6 +82,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         // Sub-aba lista: desviar para tabela ou grupos se necessário
         if (currentListSubtab === 'table') { _renderListTable(); return; }
         if (currentListSubtab === 'groups') { _renderListGroups(); return; }
+        if (currentListSubtab === 'setores') { _renderListSetores(); return; }
 
         // Atualiza dinamicamente os filtros (selects) para mostrar apenas opções
         // que possuem ao menos 1 card possível com os filtros atuais
@@ -966,6 +967,8 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         if (grid) grid.style.display = 'none';
         const tv = document.getElementById('tableView');
         if (tv) tv.style.display = 'none';
+        const sv = document.getElementById('setoresView');
+        if (sv) sv.style.display = 'none';
 
         const gv = document.getElementById('groupsView');
         if (!gv) return;
@@ -1076,6 +1079,126 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         });
 
         gv.innerHTML = html;
+        updateNotificationCount();
+    }
+
+    function _renderListSetores() {
+        const grid = document.getElementById('cardsGrid');
+        if (grid) grid.style.display = 'none';
+        const tv = document.getElementById('tableView');
+        if (tv) tv.style.display = 'none';
+        const gv = document.getElementById('groupsView');
+        if (gv) gv.style.display = 'none';
+
+        const sv = document.getElementById('setoresView');
+        if (!sv) return;
+        sv.style.display = 'flex';
+
+        const { data, statusList, getDeadlineDate } = _getFilteredData();
+
+        if (data.length === 0) {
+            sv.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-search fa-2x"></i><p>Nenhum registro encontrado.</p></div>';
+            updateNotificationCount();
+            return;
+        }
+
+        // Agrupa por setor
+        const groups = {};
+        data.forEach(item => {
+            const setor = item.setor || 'Sem Setor';
+            if (!groups[setor]) groups[setor] = [];
+            groups[setor].push(item);
+        });
+
+        let html = '';
+        Object.keys(groups).sort().forEach(setor => {
+            const items = groups[setor];
+            const folderId = 'sf_' + setor.replace(/\W/g,'_');
+            let cardsHtml = '';
+            items.forEach(item => {
+                const canEdit = userCanEditCards(item);
+                const canDelete = userCanDeleteCards(item);
+                const statusObj = statusList.find(s => s.name === item.status) || { color: 'default' };
+                const statusColorVar = colorMap[statusObj.color] || colorMap['default'];
+                const ind = _getItemIndicatorClass(item, getDeadlineDate);
+                const indClass = ind === 'red' ? 'ind-red' : ind === 'yellow' ? 'ind-yellow' : 'ind-green';
+                const fullTitle = item.titulo || '';
+                const displayTitle = truncateText(fullTitle, 55);
+                const marcadorText = item.marcador || '';
+                const marcadorColorVar = colorMap[item.marcadorCor] || colorMap['default'];
+
+                const checklist = item.checklist || [];
+                const clTotal = checklist.length;
+                const clDone = checklist.filter(c => c.checked).length;
+                const clPct = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0;
+                const donutHtml = clTotal > 0 ? _clDonutHtml(clDone, clTotal, clPct, 40, true) : '';
+
+                let specificContent = '';
+                const _fmtEsc3 = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const _respRow3 = (raw) => {
+                    if (!raw) return '';
+                    try {
+                        const p = JSON.parse(raw);
+                        if (Array.isArray(p) && p.length > 0) {
+                            const name = (typeof resolveUserId === 'function' ? resolveUserId(p[0]) : null) || p[0] || '';
+                            const extra = p.length - 1;
+                            const badge = extra > 0 ? `<span class="card-resp-extra">+${extra}</span>` : '';
+                            return `<div class="card-info-row"><i class="fas fa-user"></i><span class="card-resp-wrap"><span class="card-resp-name">${_fmtEsc3(name)}</span>${badge}</span></div>`;
+                        }
+                    } catch (_) {}
+                    return `<div class="card-info-row"><i class="fas fa-user"></i><span class="card-resp-wrap"><span class="card-resp-name">${_fmtEsc3(String(raw))}</span></span></div>`;
+                };
+                if (currentTab === 'auditoria') {
+                    specificContent = `<div class="card-info-row"><i class="fas fa-layer-group"></i> <span>${item.categoria||'ND'}</span></div>
+                        ${_respRow3(item.responsavel)}
+                        <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>`;
+                } else if (currentTab === 'treinamentos') {
+                    specificContent = `<div class="card-info-row"><i class="fas fa-layer-group"></i> <span>${item.categoria||'ND'}</span></div>
+                        ${_respRow3(item.responsavel)}
+                        <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: ${formatBR(item.dataPrevisao)||'N/A'}</span></div>`;
+                } else if (currentTab === 'atividades') {
+                    specificContent = `<div class="card-info-row"><i class="fas fa-layer-group"></i> <span>${item.categoria||'ND'}</span></div>
+                        ${_respRow3(item.responsavel)}
+                        <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Fim: <strong>${formatBR(item.dataConclusao)}</strong></span></div>`;
+                } else if (currentTab === 'manutencao') {
+                    const isNA = isBlankPeriodicity(item.intervalo);
+                    specificContent = `<div class="card-info-row"><i class="fas fa-layer-group"></i> <span>${item.categoria||'ND'}</span></div>
+                        <div class="card-info-row"><i class="fas fa-tag"></i> <span>${item.tipo||'ND'}</span></div>
+                        <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isNA?'N/A':formatBR(item.proxima)}</strong></span></div>`;
+                } else {
+                    const isPontual = !item.rotina || item.rotina === 'pontual';
+                    specificContent = `<div class="card-info-row"><i class="fas fa-layer-group"></i> <span>${item.categoria||'ND'}</span></div>
+                        ${_respRow3(item.responsavel)}
+                        <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Próx: <strong>${isPontual&&!item.dataProximaRevisao?'N/A':formatBR(item.dataProximaRevisao)}</strong></span></div>`;
+                }
+
+                cardsHtml += `<div class="card ${indClass}" onclick="openView(${item.id},'${currentTab}')">
+                    <div class="card-header">
+                        <span class="tag" style="background-color:${statusColorVar}">${item.status||'Novo'}</span>
+                        <div class="card-actions" onclick="event.stopPropagation()">
+                            ${canEdit?`<i class="fas fa-pen" onclick="editItem(${item.id},'${currentTab}')" title="Editar"></i>`:''}
+                            ${canDelete?`<i class="fas fa-trash" onclick="deleteItem(${item.id},'${currentTab}')" title="Excluir"></i>`:''}
+                        </div>
+                    </div>
+                    <div class="card-title"><h4 title="${fullTitle}">${displayTitle}</h4></div>
+                    <div class="card-body">${specificContent}${marcadorText?`<div class="card-marker" style="background:${marcadorColorVar}"><i class="fas fa-bookmark"></i> ${marcadorText}</div>`:''}</div>
+                    ${donutHtml}
+                </div>`;
+            });
+
+            const _sfKey = `sf_collapsed_${currentTab}_${folderId}`;
+            const _sfCollapsed = localStorage.getItem(_sfKey) === '1';
+            html += `<div class="groups-folder${_sfCollapsed ? '' : ' open'}" id="${folderId}">
+                <div class="groups-folder-header" onclick="(function(el){el.classList.toggle('open');localStorage.setItem('sf_collapsed_${currentTab}_${folderId}',el.classList.contains('open')?'0':'1');})(document.getElementById('${folderId}'))">
+                    <i class="fas fa-chevron-right groups-folder-icon"></i>
+                    <span class="groups-folder-name"><i class="fas fa-folder" style="margin-right:6px;color:#3b82f6;"></i>${setor}</span>
+                    <span class="groups-folder-count">${items.length}</span>
+                </div>
+                <div class="groups-folder-body">${cardsHtml}</div>
+            </div>`;
+        });
+
+        sv.innerHTML = html;
         updateNotificationCount();
     }
 
