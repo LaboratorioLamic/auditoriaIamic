@@ -244,11 +244,20 @@
         };
     }
 
+    // Normaliza valores do Firebase RTDB para array JS.
+    // O RTDB serializa arrays como objetos {0:x,1:y,...} — Object.values() recupera.
+    function _toArray(val) {
+        if (!val) return [];
+        if (Array.isArray(val)) return val;
+        if (typeof val === 'object') return Object.values(val);
+        return [];
+    }
+
     // Reconcilia uma coleção: parte do estado REMOTO e reaplica somente as
     // alterações locais reais (detectadas contra o baseline) por id de item.
     function _mergeCollection(localArr, remoteArr, baseArr) {
         localArr  = Array.isArray(localArr)  ? localArr  : [];
-        remoteArr = Array.isArray(remoteArr) ? remoteArr : [];
+        remoteArr = _toArray(remoteArr);
         baseArr   = Array.isArray(baseArr)   ? baseArr   : [];
 
         const hasId = (it) => it && it.id !== undefined && it.id !== null && it.id !== '';
@@ -307,7 +316,8 @@
         try {
             const database = getFirebaseDatabase();
             const dbRef = getFirebaseRef();
-            const { runTransaction } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
+            const { update } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
+            const dbGet = getFirebaseGet();
 
             cleanInvalidResponsaveis();
             cleanMalformedItems();
@@ -321,15 +331,13 @@
                 });
             });
 
-            // Baseline ausente (ex.: carregamento ainda não concluído ou falhou):
-            // trata como vazio. Assim todo item local vira "novo" (upsert) e
-            // NADA é excluído — evita apagar o banco com um estado local parcial.
+            // Baseline ausente: trata como vazio para que todo item local vire
+            // "novo" (upsert) sem excluir nada — evita apagar dados com estado parcial.
             const base = _syncBaseline || {
                 audits: [], trainings: [], activities: [], maintenances: [], documents: [], ocorrencias: [], rncItems: []
             };
 
-            // Snapshots locais estáveis: a função da transação pode rodar várias
-            // vezes (retries) e NÃO pode depender de estado mutável que muda no meio.
+            // Snapshots locais estáveis capturados antes da leitura remota.
             const local = {
                 audits: _deepClone(audits),
                 trainings: _deepClone(trainings),
@@ -342,44 +350,32 @@
             const mlSnapshot = JSON.parse(JSON.stringify(masterLists));
             const koSnapshot = JSON.parse(JSON.stringify(kanbanOrder));
 
-            // READ-MERGE-WRITE ATÔMICO: o merge 3-vias roda DENTRO da transação,
-            // contra o estado remoto mais recente verificado pelo servidor. Isso
-            // elimina a janela de corrida entre ler e gravar — nenhuma alteração
-            // concorrente de outra sessão é sobrescrita.
-            const result = await runTransaction(dbRef(database, "/"), (current) => {
-                current = current || {};
-                return {
-                    ...current, // preserva nós não gerenciados aqui (passwords, userPreferences, etc.)
-                    audits:       _mergeCollection(local.audits,       current.audits,       base.audits),
-                    trainings:    _mergeCollection(local.trainings,    current.trainings,    base.trainings),
-                    activities:   _mergeCollection(local.activities,   current.activities,   base.activities),
-                    maintenances: _mergeCollection(local.maintenances, current.maintenances, base.maintenances),
-                    documents:    _mergeCollection(local.documents,    current.documents,    base.documents),
-                    ocorrencias:  _mergeCollection(local.ocorrencias,  current.ocorrencias,  base.ocorrencias),
-                    rncItems:     _mergeCollection(local.rncItems,     current.rncItems,     base.rncItems),
-                    masterLists:  mlSnapshot,
-                    kanbanOrder:  koSnapshot,
-                    lastUpdate:   new Date().toISOString()
-                };
-            }, { applyLocally: false });
+            // Lê o estado remoto mais recente e aplica o merge 3-vias antes de gravar.
+            // Usa update() em caminhos específicos em vez de runTransaction(/) que falha
+            // com internal_error em bancos grandes (transações na raiz são instáveis no RTDB).
+            const remoteSnapshot = await dbGet(dbRef(database, "/"));
+            const remoteState = remoteSnapshot.exists() ? remoteSnapshot.val() : {};
 
-            if (!result.committed) {
-                // Transação não confirmada: NÃO adota nada. As edições locais e o
-                // baseline ficam intactos para uma nova tentativa (nada se perde).
-                console.warn('saveAll: transação não confirmada; estado local preservado.');
-                if (typeof showToast === 'function') showToast('Não foi possível salvar agora. Suas alterações continuam aqui — tente novamente.', 'error');
-                else if (showAlert) alert("Erro ao sincronizar dados. Verifique a conexão.");
-                return;
-            }
+            const mergedAudits       = _mergeCollection(local.audits,       remoteState.audits,       base.audits);
+            const mergedTrainings    = _mergeCollection(local.trainings,    remoteState.trainings,    base.trainings);
+            const mergedActivities   = _mergeCollection(local.activities,   remoteState.activities,   base.activities);
+            const mergedMaintenances = _mergeCollection(local.maintenances, remoteState.maintenances, base.maintenances);
+            const mergedDocuments    = _mergeCollection(local.documents,    remoteState.documents,    base.documents);
+            const mergedOcorrencias  = _mergeCollection(local.ocorrencias,  remoteState.ocorrencias,  base.ocorrencias);
+            const mergedRncItems     = _mergeCollection(local.rncItems,     remoteState.rncItems,     base.rncItems);
 
-            const committed = (result.snapshot && result.snapshot.val()) || {};
-            const mergedAudits       = committed.audits       || [];
-            const mergedTrainings    = committed.trainings    || [];
-            const mergedActivities   = committed.activities   || [];
-            const mergedMaintenances = committed.maintenances || [];
-            const mergedDocuments    = committed.documents    || [];
-            const mergedOcorrencias  = committed.ocorrencias  || [];
-            const mergedRncItems     = committed.rncItems     || [];
+            await update(dbRef(database, "/"), {
+                audits:       mergedAudits,
+                trainings:    mergedTrainings,
+                activities:   mergedActivities,
+                maintenances: mergedMaintenances,
+                documents:    mergedDocuments,
+                ocorrencias:  mergedOcorrencias,
+                rncItems:     mergedRncItems,
+                masterLists:  mlSnapshot,
+                kanbanOrder:  koSnapshot,
+                lastUpdate:   new Date().toISOString()
+            });
 
             // O merge incorporou novidades de outras sessões? (para re-render)
             const pulledRemoteChanges =
@@ -430,8 +426,10 @@
             // Falha de gravação: NÃO adota o resultado mesclado. As edições locais e
             // o baseline são preservados, então a alteração do usuário não é perdida
             // nem revertida pelo listener — bastará uma nova tentativa de salvar.
-            if (typeof showToast === 'function') showToast('Erro ao salvar. Verifique a conexão — suas alterações não foram perdidas.', 'error');
-            else if (showAlert) alert("Erro ao sincronizar dados. Verifique a conexão.");
+            if (showAlert) {
+                if (typeof showToast === 'function') showToast('Erro ao salvar. Verifique a conexão — suas alterações não foram perdidas.', 'error');
+                else alert("Erro ao sincronizar dados. Verifique a conexão.");
+            }
         }
     }
 
