@@ -76,7 +76,7 @@
     var _showListMode = !isBackup && !isDashboard && !isConfig && !isOcorrencias && !isRnc && !_isKanbanMode && !_isCalMode;
     document.getElementById('cardsGrid').style.display = (_hideGrid || currentListSubtab !== 'cards') ? 'none' : 'grid';
     var _lsBar = document.getElementById('listSubtabsBar');
-    if (_lsBar) _lsBar.style.display = _showListMode ? 'flex' : 'none';
+    if (_lsBar) _lsBar.style.display = (_showListMode && tab === 'atividades') ? 'flex' : 'none';
     var _tv = document.getElementById('tableView');
     if (_tv) _tv.style.display = (_showListMode && currentListSubtab === 'table') ? 'block' : 'none';
     var _gv = document.getElementById('groupsView');
