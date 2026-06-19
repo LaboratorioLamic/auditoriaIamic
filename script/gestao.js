@@ -2,7 +2,7 @@
         originalItem = null;
 
         const isNew = !editingAtivId;
-        let item = isNew ? { id: Date.now(), historico: [], type: 'ativ' } : activities.find(a => a.id === editingAtivId);
+        let item = isNew ? { id: (typeof generateId === 'function' ? generateId() : Date.now()), historico: [], type: 'ativ' } : activities.find(a => a.id === editingAtivId);
 
         const selectedAtivMarkerName = document.getElementById('ativMarcador').value;
         const ativMarkerObj = (masterLists.ativMarcadores || []).find(m => m.name === selectedAtivMarkerName);

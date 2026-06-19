@@ -8,7 +8,7 @@
 
         const isNew = !editingTrainId;
         let item = isNew ? {
-            id: Date.now() + Math.floor(Math.random() * 1000),
+            id: (typeof generateId === 'function' ? generateId() : Date.now() + Math.floor(Math.random() * 1000)),
             historico: [],
             type: 'train'
         } : trainings.find(t => t.id === editingTrainId);

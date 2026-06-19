@@ -288,7 +288,12 @@
             '</div>';
     }
 
-    function uid() { return Date.now(); } // numeric, compatível com renderViewChecklist
+    // numeric, compatível com renderViewChecklist — *1000 + sufixo aleatório evita
+    // colisão de ids quando dois itens são criados no mesmo milissegundo (a colisão
+    // funde itens no merge 3-vias por id → perda de dados).
+    function uid() {
+        return (typeof generateId === 'function') ? generateId() : (Date.now() * 1000 + Math.floor(Math.random() * 1000));
+    }
     function esc(s) {
         return String(s == null ? '' : s)
             .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -2107,7 +2112,7 @@
         } else {
             if (!window.rncItems) window.rncItems = [];
             window.rncItems.push({
-                id: Date.now(),
+                id: uid(),
                 titulo: titulo, setor: setor, classificacao: classificacao,
                 origem: origem, detalhamento: detalhamento, descricao: descricao,
                 planoAcao: planoAcao, status: status, marcador: marcador,

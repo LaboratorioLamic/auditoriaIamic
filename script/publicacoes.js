@@ -330,9 +330,23 @@ window.saveViewChecklistComment = function(id, tab, index, value) {
         const cb = document.querySelector(`#vcl-item-${id}-${index} .view-checklist-cb`);
         if (cb) cb.disabled = !value.trim();
     }
-    // Debounce save
+    // Debounce save. Durante os 800ms o array global pode ter sido SUBSTITUÍDO por
+    // uma sincronização remota (o viewModal não congela o listener), deixando `found`
+    // órfão. Por isso, no disparo, re-resolvemos o item pelo id no array atual e
+    // reaplicamos o comentário antes de salvar — assim a alteração nunca se perde.
     clearTimeout(window._checklistCommentSaveTimer);
-    window._checklistCommentSaveTimer = setTimeout(() => saveAll(), 800);
+    window._checklistCommentSaveTimer = setTimeout(() => {
+        let cur;
+        if (finalTab === 'auditoria') cur = audits.find(i => i.id === id);
+        else if (finalTab === 'atividades') cur = activities.find(i => i.id === id);
+        else if (finalTab === 'treinamentos') cur = trainings.find(i => i.id === id);
+        else if (finalTab === 'documentos') cur = documents.find(i => i.id === id);
+        else if (finalTab === 'rnc') cur = (window.rncItems || []).find(i => i.id === id);
+        if (cur && cur.checklist && cur.checklist[index]) {
+            cur.checklist[index].comment = value;
+        }
+        saveAll();
+    }, 800);
 };
 
 window.selectAllViewChecklist = function(id, tab) {

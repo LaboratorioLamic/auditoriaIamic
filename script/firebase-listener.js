@@ -307,8 +307,7 @@
         try {
             const database = getFirebaseDatabase();
             const dbRef = getFirebaseRef();
-            const dbGet = getFirebaseGet();
-            const { update } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
+            const { runTransaction } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
 
             cleanInvalidResponsaveis();
             cleanMalformedItems();
@@ -329,28 +328,60 @@
                 audits: [], trainings: [], activities: [], maintenances: [], documents: [], ocorrencias: [], rncItems: []
             };
 
-            // Relê o estado remoto atual para reconciliar (merge 3-vias).
-            let remote = {};
-            try {
-                const snap = await dbGet(dbRef(database, "/"));
-                remote = snap.exists() ? snap.val() : {};
-            } catch (e) {
-                // Sem leitura remota não é seguro fazer merge: aborta a gravação
-                // para não arriscar sobrescrever dados de outras sessões.
-                console.error('saveAll: falha ao ler estado remoto para merge. Gravação cancelada.', e);
-                if (showAlert) alert("Erro ao sincronizar dados. Verifique a conexão.");
+            // Snapshots locais estáveis: a função da transação pode rodar várias
+            // vezes (retries) e NÃO pode depender de estado mutável que muda no meio.
+            const local = {
+                audits: _deepClone(audits),
+                trainings: _deepClone(trainings),
+                activities: _deepClone(activities),
+                maintenances: _deepClone(maintenances),
+                documents: _deepClone(documents),
+                ocorrencias: _deepClone(ocorrencias),
+                rncItems: _deepClone(rncItems)
+            };
+            const mlSnapshot = JSON.parse(JSON.stringify(masterLists));
+            const koSnapshot = JSON.parse(JSON.stringify(kanbanOrder));
+
+            // READ-MERGE-WRITE ATÔMICO: o merge 3-vias roda DENTRO da transação,
+            // contra o estado remoto mais recente verificado pelo servidor. Isso
+            // elimina a janela de corrida entre ler e gravar — nenhuma alteração
+            // concorrente de outra sessão é sobrescrita.
+            const result = await runTransaction(dbRef(database, "/"), (current) => {
+                current = current || {};
+                return {
+                    ...current, // preserva nós não gerenciados aqui (passwords, userPreferences, etc.)
+                    audits:       _mergeCollection(local.audits,       current.audits,       base.audits),
+                    trainings:    _mergeCollection(local.trainings,    current.trainings,    base.trainings),
+                    activities:   _mergeCollection(local.activities,   current.activities,   base.activities),
+                    maintenances: _mergeCollection(local.maintenances, current.maintenances, base.maintenances),
+                    documents:    _mergeCollection(local.documents,    current.documents,    base.documents),
+                    ocorrencias:  _mergeCollection(local.ocorrencias,  current.ocorrencias,  base.ocorrencias),
+                    rncItems:     _mergeCollection(local.rncItems,     current.rncItems,     base.rncItems),
+                    masterLists:  mlSnapshot,
+                    kanbanOrder:  koSnapshot,
+                    lastUpdate:   new Date().toISOString()
+                };
+            }, { applyLocally: false });
+
+            if (!result.committed) {
+                // Transação não confirmada: NÃO adota nada. As edições locais e o
+                // baseline ficam intactos para uma nova tentativa (nada se perde).
+                console.warn('saveAll: transação não confirmada; estado local preservado.');
+                if (typeof showToast === 'function') showToast('Não foi possível salvar agora. Suas alterações continuam aqui — tente novamente.', 'error');
+                else if (showAlert) alert("Erro ao sincronizar dados. Verifique a conexão.");
                 return;
             }
 
-            const mergedAudits       = _mergeCollection(audits,       remote.audits,       base.audits);
-            const mergedTrainings    = _mergeCollection(trainings,    remote.trainings,    base.trainings);
-            const mergedActivities   = _mergeCollection(activities,   remote.activities,   base.activities);
-            const mergedMaintenances = _mergeCollection(maintenances, remote.maintenances, base.maintenances);
-            const mergedDocuments    = _mergeCollection(documents,    remote.documents,    base.documents);
-            const mergedOcorrencias  = _mergeCollection(ocorrencias,  remote.ocorrencias,  base.ocorrencias);
-            const mergedRncItems     = _mergeCollection(rncItems,     remote.rncItems,     base.rncItems);
+            const committed = (result.snapshot && result.snapshot.val()) || {};
+            const mergedAudits       = committed.audits       || [];
+            const mergedTrainings    = committed.trainings    || [];
+            const mergedActivities   = committed.activities   || [];
+            const mergedMaintenances = committed.maintenances || [];
+            const mergedDocuments    = committed.documents    || [];
+            const mergedOcorrencias  = committed.ocorrencias  || [];
+            const mergedRncItems     = committed.rncItems     || [];
 
-            // O merge trouxe novidades de outras sessões? (para re-render)
+            // O merge incorporou novidades de outras sessões? (para re-render)
             const pulledRemoteChanges =
                 JSON.stringify(mergedAudits)       !== JSON.stringify(audits) ||
                 JSON.stringify(mergedTrainings)    !== JSON.stringify(trainings) ||
@@ -360,7 +391,10 @@
                 JSON.stringify(mergedOcorrencias)  !== JSON.stringify(ocorrencias) ||
                 JSON.stringify(mergedRncItems)     !== JSON.stringify(rncItems);
 
-            // Adota o resultado reconciliado como novo estado local + baseline.
+            // SÓ AGORA (gravação CONFIRMADA pelo servidor) adota o resultado
+            // reconciliado como novo estado local + baseline. Se a gravação
+            // tivesse falhado, a edição permaneceria em memória para nova tentativa
+            // — e o baseline não seria "envenenado" com algo que não foi salvo.
             audits = mergedAudits;
             trainings = mergedTrainings;
             activities = mergedActivities;
@@ -370,19 +404,6 @@
             rncItems = mergedRncItems;
             if (typeof window.rncItems !== 'undefined') window.rncItems = rncItems;
             captureSyncBaseline();
-
-            await update(dbRef(database, "/"), {
-                '/audits': mergedAudits,
-                '/trainings': mergedTrainings,
-                '/activities': mergedActivities,
-                '/maintenances': mergedMaintenances,
-                '/documents': mergedDocuments,
-                '/ocorrencias': mergedOcorrencias,
-                '/rncItems': mergedRncItems,
-                '/masterLists': masterLists,
-                '/kanbanOrder': kanbanOrder,
-                '/lastUpdate': new Date().toISOString()
-            });
 
             // Se incorporamos mudanças de outras sessões, atualiza a UI.
             if (pulledRemoteChanges && !isEditingCardOpen()) {
@@ -406,7 +427,11 @@
 
         } catch (err) {
             console.error("Erro ao sincronizar com Firebase:", err);
-            if (showAlert) alert("Erro ao sincronizar dados. Verifique a conexão.");
+            // Falha de gravação: NÃO adota o resultado mesclado. As edições locais e
+            // o baseline são preservados, então a alteração do usuário não é perdida
+            // nem revertida pelo listener — bastará uma nova tentativa de salvar.
+            if (typeof showToast === 'function') showToast('Erro ao salvar. Verifique a conexão — suas alterações não foram perdidas.', 'error');
+            else if (showAlert) alert("Erro ao sincronizar dados. Verifique a conexão.");
         }
     }
 

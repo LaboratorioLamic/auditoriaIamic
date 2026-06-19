@@ -8,7 +8,7 @@
         const dataProximaRevisao = document.getElementById('docDataProximaRevisao').value;
 
         const isNew = !editingDocId;
-        let item = isNew ? { id: Date.now(), historico: [], type: 'doc' } : documents.find(d => d.id === editingDocId);
+        let item = isNew ? { id: (typeof generateId === 'function' ? generateId() : Date.now()), historico: [], type: 'doc' } : documents.find(d => d.id === editingDocId);
 
         const selectedDocMarkerName = document.getElementById('docMarcador').value;
         const docMarkerObj = (masterLists.docMarcadores || []).find(m => m.name === selectedDocMarkerName);

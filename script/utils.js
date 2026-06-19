@@ -310,6 +310,15 @@ window._safeSnapshot = function(item) {
         return daysDiff(dateStr) < 0;
     };
 
+    // Gera um id numérico único para itens das coleções. Multiplicar o timestamp
+    // por 1000 e somar um sufixo aleatório evita colisões quando dois itens são
+    // criados no mesmo milissegundo (inclusive entre sessões/dispositivos). IDs
+    // colididos seriam fundidos no merge 3-vias (Map por id) → perda de dados.
+    function generateId() {
+        return Date.now() * 1000 + Math.floor(Math.random() * 1000);
+    }
+    if (typeof window !== 'undefined') window.generateId = generateId;
+
     // Função para limpar responsáveis que não são usuários cadastrados
     function cleanInvalidResponsaveis() {
         // Preserva JSON arrays de multi-select; sanitiza undefined/null para string vazia
