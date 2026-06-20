@@ -185,6 +185,7 @@ function toggleKanbanView(mode) {
         var _lsBarKb = document.getElementById('listSubtabsBar'); if (_lsBarKb) _lsBarKb.style.display = 'none';
         var _tvK = document.getElementById('tableView'); if (_tvK) _tvK.style.display = 'none';
         var _gvK = document.getElementById('groupsView'); if (_gvK) _gvK.style.display = 'none';
+        var _svK = document.getElementById('setoresView'); if (_svK) _svK.style.display = 'none';
         if (addBtn)    addBtn.style.display    = canEdit ? 'flex' : 'none';
         if (addColRow) addColRow.style.display = canEdit ? 'flex' : 'none';
         renderKanban();

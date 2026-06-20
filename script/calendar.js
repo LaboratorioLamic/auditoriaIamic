@@ -101,6 +101,7 @@ function toggleCalendarView(mode) {
         var _lsBarCal = document.getElementById('listSubtabsBar'); if (_lsBarCal) _lsBarCal.style.display = 'none';
         var _tvCal = document.getElementById('tableView'); if (_tvCal) _tvCal.style.display = 'none';
         var _gvCal = document.getElementById('groupsView'); if (_gvCal) _gvCal.style.display = 'none';
+        var _svCal = document.getElementById('setoresView'); if (_svCal) _svCal.style.display = 'none';
         renderCalendar();
     } else {
         if (calBoard) calBoard.style.display = 'none';
