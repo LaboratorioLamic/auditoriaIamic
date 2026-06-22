@@ -2354,6 +2354,22 @@
 .checklist-item-required-toggle:hover { background: #fef3c7; border-color: #f59e0b; }
 .checklist-item-required-toggle.active { background: #fef3c7; border-color: #f59e0b; color: #92400e; font-weight: 600; }
 .checklist-item-required-toggle.required-for-pub.active { background: #fef2f2; border-color: #fca5a5; color: #dc2626; font-weight: 600; }
+.checklist-item-fixo-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #6b7280;
+    padding: 4px 8px;
+    height: 26px;
+    cursor: pointer;
+    border: 1px solid #e5e7eb;
+    border-radius: 5px;
+    background: #fff;
+    transition: all 0.15s;
+}
+.checklist-item-fixo-toggle:hover { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+.checklist-item-fixo-toggle.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; font-weight: 600; }
 .checklist-item-del-btn {
     width: 26px;
     height: 26px;

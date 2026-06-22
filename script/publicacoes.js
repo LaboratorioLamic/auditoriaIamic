@@ -73,6 +73,7 @@ function renderChecklistEditor(prefix) {
     container.innerHTML = items.map((item, i) => {
         const requiresComment = !!item.requiresComment;
         const requiredForPub = !!item.requiredForPub;
+        const fixo = !!item.fixo;
         const commentVal = (item.comment || '').replace(/"/g, '&quot;');
         return `
         <div class="checklist-editor-item">
@@ -86,6 +87,12 @@ function renderChecklistEditor(prefix) {
                     title="${requiredForPub ? 'Obrigatório para publicar (clique para remover)' : 'Tornar obrigatório para publicar'}">
                     <i class="fas fa-exclamation-circle" style="font-size:11px;"></i>
                     ${requiredForPub ? 'Obrigatório' : 'Opcional'}
+                </button>
+                <button class="checklist-item-fixo-toggle ${fixo ? 'active' : ''}"
+                    onclick="toggleChecklistItemFixo('${prefix}', ${i}, this)"
+                    title="${fixo ? 'Fixo: permanece após publicação' : 'Temporário: removido após publicação'}">
+                    <i class="fas fa-thumbtack" style="font-size:11px;"></i>
+                    Fixo
                 </button>` : `
                 <button class="checklist-item-required-toggle ${requiresComment ? 'active' : ''}"
                     onclick="toggleChecklistItemRequired('${prefix}', ${i}, this)"
@@ -112,7 +119,8 @@ window.addChecklistItem = function(prefix) {
     const text = input.value.trim();
     if (!text) return;
     const items = _getChecklistData(prefix);
-    items.push({ texto: text, checked: false, requiresComment: false, comment: '' });
+    const isPub = prefix.endsWith('-pub');
+    items.push({ texto: text, checked: false, requiresComment: false, comment: '', ...(isPub ? { fixo: false } : {}) });
     _setChecklistData(prefix, items);
     renderChecklistEditor(prefix);
     input.value = '';
@@ -159,6 +167,16 @@ window.toggleChecklistItemRequiredForPub = function(prefix, index, btn) {
     btn.innerHTML = `<i class="fas fa-exclamation-circle" style="font-size:11px;"></i> ${isNow ? 'Obrigatório' : 'Opcional'}`;
 };
 
+window.toggleChecklistItemFixo = function(prefix, index, btn) {
+    const items = _getChecklistData(prefix);
+    if (!items[index]) return;
+    items[index].fixo = !items[index].fixo;
+    _setChecklistData(prefix, items);
+    const isNow = items[index].fixo;
+    btn.classList.toggle('active', isNow);
+    btn.innerHTML = `<i class="fas fa-thumbtack" style="font-size:11px;"></i> Fixo`;
+};
+
 // Chamado ao abrir drawer em modo edição
 window.restoreChecklist = function(prefix, checklistArr, checklistPubArr) {
     _setChecklistData(prefix, checklistArr ? JSON.parse(JSON.stringify(checklistArr)) : []);
@@ -190,6 +208,7 @@ window.getChecklistPub = function(prefix) {
         checked: !!i.checked,
         requiresComment: !!i.requiresComment,
         requiredForPub: !!i.requiredForPub,
+        fixo: !!i.fixo,
         comment: i.comment || ''
     }));
 };
@@ -739,6 +758,10 @@ window.confirmarPublicacao = function() {
     } else {
         item.publicacoes.unshift(pub);
         _updateItemDatesAfterPublicacao(item, finalTab, dataVal);
+        // Remove itens temporários (não-fixos) do checklistPublicacao após publicar
+        if (item.checklistPublicacao && item.checklistPublicacao.length > 0) {
+            item.checklistPublicacao = item.checklistPublicacao.filter(c => !!c.fixo);
+        }
     }
 
     window._editingPubIndex = null;
