@@ -1218,23 +1218,23 @@
             </div>
         </div>
         <div class="form-section-divider full-width rnc-divider-blank"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div class="field-group">
-                <label class="field-label">Responsável</label>
-                <div class="rnc-ac-wrap">
-                    <input type="text" id="rncFResponsavel" class="form-input" placeholder="Nome do responsável..." oninput="rncResponsavelInput()" onclick="rncResponsavelInput()" autocomplete="off">
-                    <i class="fas fa-chevron-down rnc-ac-caret"></i>
-                    <div class="rnc-ac-dropdown" id="rncResponsavelDropdown"></div>
-                </div>
+        <div class="field-group">
+            <label class="field-label">Responsável</label>
+            <div class="ms-field" id="ms-rnc-resp">
+                <input class="ms-input" id="ms-rnc-resp-input" type="text" placeholder="Buscar e adicionar responsável..." autocomplete="off">
+                <div class="ms-tags" id="ms-rnc-resp-tags"></div>
+                <div class="ms-dropdown" id="ms-rnc-resp-drop"></div>
             </div>
-            <div class="field-group">
-                <label class="field-label">Revisor</label>
-                <div class="rnc-ac-wrap">
-                    <input type="text" id="rncFRevisor" class="form-input" placeholder="Nome do revisor..." oninput="rncRevisorInput()" onclick="rncRevisorInput()" autocomplete="off">
-                    <i class="fas fa-chevron-down rnc-ac-caret"></i>
-                    <div class="rnc-ac-dropdown" id="rncRevisorDropdown"></div>
-                </div>
+            <input type="hidden" id="rncFResponsavel">
+        </div>
+        <div class="field-group">
+            <label class="field-label">Revisor</label>
+            <div class="ms-field" id="ms-rnc-rev">
+                <input class="ms-input" id="ms-rnc-rev-input" type="text" placeholder="Buscar e adicionar revisor..." autocomplete="off">
+                <div class="ms-tags" id="ms-rnc-rev-tags"></div>
+                <div class="ms-dropdown" id="ms-rnc-rev-drop"></div>
             </div>
+            <input type="hidden" id="rncFRevisor">
         </div>
         <div class="field-group" style="margin-top:12px;">
             <label class="field-label"><i class="fas fa-bell" style="color:#f59e0b;margin-right:5px;"></i> Alerta (dias antes da conclusão)</label>

@@ -333,6 +333,38 @@
     }
     function persist() { if (typeof saveAll === 'function') saveAll(); }
     function getCI(id) { return CLASSES.find(function(c){ return c.id === id; }) || CLASSES[0]; }
+
+    // Retorna array normalizado de IDs/nomes de responsavel ou revisor (suporta legado string)
+    function rncArrField(val) {
+        if (Array.isArray(val)) return val;
+        if (val && typeof val === 'string') {
+            if (val.startsWith('[')) { try { return JSON.parse(val); } catch(_){} }
+            return val.trim() ? [val.trim()] : [];
+        }
+        return [];
+    }
+    // Resolve array de IDs para nomes, com fallback para o próprio valor
+    function rncResolveNames(arr) {
+        return arr.map(function(id) {
+            if (typeof resolveUserId === 'function') { var n = resolveUserId(id); if (n) return n; }
+            var u = (typeof users !== 'undefined' ? users : []).find(function(u){ return u.id === id; });
+            return u ? u.name : id;
+        });
+    }
+    function rncNamesHtml(arr) {
+        var names = rncResolveNames(arr);
+        return names.length ? names.map(function(n){ return esc(n); }).join(', ') : '—';
+    }
+    function rncNamesChips(arr) {
+        var names = rncResolveNames(arr);
+        if (!names.length) return '<em class="rnc-vrow-empty">—</em>';
+        return '<span class="rnc-person-chips">' +
+            names.map(function(n) {
+                var initials = n.trim().split(/\s+/).map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase();
+                return '<span class="rnc-person-chip"><span class="rnc-person-chip-avatar">' + esc(initials) + '</span><span class="rnc-person-chip-name">' + esc(n) + '</span></span>';
+            }).join('') +
+        '</span>';
+    }
     function setVal(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; }
     function getVal(id) { var el = document.getElementById(id); return el ? el.value : ''; }
     function focusEl(id) { var el = document.getElementById(id); if (el) el.focus(); }
@@ -405,11 +437,21 @@
         var restrictToSelf = (typeof userRncTaskView === 'function') && userRncTaskView() === 'usuario';
         var effMode = (restrictToSelf && rncMyMode === 'all') ? 'responsavel' : rncMyMode;
         if (effMode === 'responsavel') {
-            var me = meName().toLowerCase();
-            arr = arr.filter(function(r){ return String(r.responsavel || '').trim().toLowerCase() === me; });
+            var meId = (typeof currentuser !== 'undefined' && currentuser && currentuser.id) ? currentuser.id : null;
+            var meName_ = meName().toLowerCase();
+            arr = arr.filter(function(r){
+                var a = rncArrField(r.responsavel);
+                if (!a.length) return false;
+                return a.some(function(v){ return (meId && v === meId) || v.toLowerCase() === meName_; });
+            });
         } else if (effMode === 'revisor') {
-            var me2 = meName().toLowerCase();
-            arr = arr.filter(function(r){ return String(r.revisor || '').trim().toLowerCase() === me2; });
+            var meId2 = (typeof currentuser !== 'undefined' && currentuser && currentuser.id) ? currentuser.id : null;
+            var meName2 = meName().toLowerCase();
+            arr = arr.filter(function(r){
+                var a = rncArrField(r.revisor);
+                if (!a.length) return false;
+                return a.some(function(v){ return (meId2 && v === meId2) || v.toLowerCase() === meName2; });
+            });
         }
         if (rncClassFilter) arr = arr.filter(function(r){ return r.classificacao === rncClassFilter; });
         if (rncSetorFilter.length) {
@@ -430,7 +472,8 @@
         if (rncSearch) {
             var s = rncSearch;
             arr = arr.filter(function(r){
-                return [r.titulo, r.setor, r.origem, r.detalhamento, r.descricao, r.responsavel]
+                var respNames = rncResolveNames(rncArrField(r.responsavel)).join(' ');
+                return [r.titulo, r.setor, r.origem, r.detalhamento, r.descricao, respNames]
                     .some(function(v){ return String(v || '').toLowerCase().indexOf(s) !== -1; });
             });
         }
@@ -450,7 +493,8 @@
     function rncCardInfoRows(r) {
         var rows = '';
         rows += '<div class="rnc-card-info-row"><i class="fas fa-building"></i> <span>' + esc(r.setor || 'ND') + '</span></div>';
-        if (r.responsavel) rows += '<div class="rnc-card-info-row"><i class="fas fa-user"></i> <span>' + esc(r.responsavel) + '</span></div>';
+        var respArr = rncArrField(r.responsavel);
+        if (respArr.length) rows += '<div class="rnc-card-info-row"><i class="fas fa-user"></i> <span>' + rncNamesHtml(respArr) + '</span></div>';
         rows += '<div class="rnc-card-info-row"><i class="far fa-calendar-check"></i> <span>Conclusão: <strong>' + esc(fmtDate(r.dataConclusao)) + '</strong></span></div>';
         return rows;
     }
@@ -791,7 +835,7 @@
                     '<td><span class="rnc-class-badge rnc-class-badge--sm" style="background:' + ci.bg + ';color:' + ci.color + ';border-color:' + ci.border + '"><i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) + '</span></td>' +
                     '<td>' + esc(r.origem || '—') + '</td>' +
                     '<td>' + (mk ? '<span class="rnc-marker-badge" style="background:' + mk.bg + ';color:' + mk.color + '"><i class="fas ' + mk.icon + '"></i> ' + esc(mk.label) + '</span>' : '<span style="color:#cbd5e1">—</span>') + '</td>' +
-                    '<td>' + esc(r.responsavel || '—') + '</td>' +
+                    '<td>' + rncNamesHtml(rncArrField(r.responsavel)) + '</td>' +
                     '<td>' + (r.dataConclusao ? esc(fmtDate(r.dataConclusao)) : '<span style="color:#cbd5e1">—</span>') + '</td>' +
                     '<td>' + (r.status ? '<span class="rnc-card-status" style="' + rncStatusColorStyle(r.status) + '">' + esc(r.status) + '</span>' : '<span style="color:#cbd5e1">—</span>') + '</td>' +
                     '<td onclick="event.stopPropagation()">' +
@@ -1880,9 +1924,11 @@
         var arr = (window.rncItems || []).filter(function(r){ return r && !r.deleted; });
         if (typeof userRncTaskView === 'function' && userRncTaskView() === 'usuario') {
             var me = meName().toLowerCase();
+            var meId3 = (typeof currentuser !== 'undefined' && currentuser && currentuser.id) ? currentuser.id : null;
             arr = arr.filter(function(r){
-                return String(r.responsavel || '').trim().toLowerCase() === me ||
-                       String(r.revisor || '').trim().toLowerCase() === me;
+                var resp = rncArrField(r.responsavel);
+                var rev = rncArrField(r.revisor);
+                return resp.concat(rev).some(function(v){ return (meId3 && v === meId3) || v.toLowerCase() === me; });
             });
         }
         var notifs = [];
@@ -1989,10 +2035,12 @@
         setVal('rncFStatus', (stList && stList.length) ? stList[0].name : '');
         setVal('rncFDataInicio', todayVal);
         setVal('rncFDataConclusao', '');
-        setVal('rncFResponsavel', meName());
-        var respInput = document.getElementById('rncFResponsavel');
-        if (respInput) respInput.disabled = false;
-        setVal('rncFRevisor', '');
+        if (typeof msRefreshUsers === 'function') msRefreshUsers();
+        if (typeof msSetValue === 'function') {
+            var meId = (typeof currentuser !== 'undefined' && currentuser && currentuser.id) ? currentuser.id : meName();
+            msSetValue('rnc-resp', meId ? [meId] : []);
+            msSetValue('rnc-rev', []);
+        }
         setVal('rncFAlerta', '');
         setVal('rncFMarcador', '');
         renderMarkerChips('');
@@ -2011,8 +2059,11 @@
         setVal('rncFStatus', r.status);
         setVal('rncFDataInicio', r.dataInicio);
         setVal('rncFDataConclusao', r.dataConclusao);
-        setVal('rncFResponsavel', r.responsavel || meName());
-        setVal('rncFRevisor', r.revisor || '');
+        if (typeof msRefreshUsers === 'function') msRefreshUsers();
+        if (typeof msSetValue === 'function') {
+            msSetValue('rnc-resp', r.responsavel || []);
+            msSetValue('rnc-rev', r.revisor || []);
+        }
         setVal('rncFAlerta', (r.alertaDias != null ? r.alertaDias : ''));
         setVal('rncFMarcador', r.marcador || '');
         renderMarkerChips(r.marcador || '');
@@ -2020,8 +2071,7 @@
             b.classList.toggle('active', b.getAttribute('data-cls') === (r.classificacao || 'critica'));
         });
         var respLocked = (typeof userRncResponsavelLocked === 'function') && userRncResponsavelLocked(r);
-        var respInput = document.getElementById('rncFResponsavel');
-        if (respInput) respInput.disabled = respLocked;
+        if (typeof msSetDisabled === 'function') msSetDisabled('rnc-resp', !!respLocked);
     }
 
     function openRncDrawer() {
@@ -2061,8 +2111,8 @@
         var chip = document.querySelector('.rnc-class-chip.active');
         var classificacao = chip ? chip.getAttribute('data-cls') : 'critica';
         var marcador = getVal('rncFMarcador');
-        var responsavel = getVal('rncFResponsavel').trim() || meName();
-        var revisor = getVal('rncFRevisor').trim();
+        var responsavel = (typeof msGetValue === 'function') ? msGetValue('rnc-resp') : [];
+        var revisor = (typeof msGetValue === 'function') ? msGetValue('rnc-rev') : [];
         var alertaRaw = getVal('rncFAlerta');
         var alertaDias = (alertaRaw === '' || alertaRaw == null) ? null : Math.max(0, parseInt(alertaRaw, 10) || 0);
 
@@ -2203,7 +2253,7 @@
     // ── Autocomplete dos campos ──
     function rncCloseAllDropdowns() {
         ['rncSetorDropdown','rncOrigemDropdown','rncDetalhamentoDropdown','rncStatusDropdown',
-         'rncResponsavelDropdown','rncRevisorDropdown','rncMarkerDropdown'].forEach(function(id){
+         'rncMarkerDropdown'].forEach(function(id){
             var el = document.getElementById(id); if (el) el.classList.remove('open');
         });
     }
@@ -2260,25 +2310,6 @@
         var dd = document.getElementById('rncStatusDropdown'); if (dd) dd.classList.remove('open');
     };
 
-    // ── Autocomplete de usuários (responsável e revisor) ──
-    function getUserNames() {
-        var u = typeof users !== 'undefined' ? users : [];
-        return u.filter(function(x){ return x && x.name; }).map(function(x){ return x.name; }).sort(function(a,b){ return a.localeCompare(b,'pt'); });
-    }
-    window.rncResponsavelInput = function() {
-        buildRncAcFull('rncFResponsavel', 'rncResponsavelDropdown', getUserNames(), 'rncSelectResponsavel');
-    };
-    window.rncSelectResponsavel = function(v) {
-        setVal('rncFResponsavel', v);
-        var dd = document.getElementById('rncResponsavelDropdown'); if (dd) dd.classList.remove('open');
-    };
-    window.rncRevisorInput = function() {
-        buildRncAcFull('rncFRevisor', 'rncRevisorDropdown', getUserNames(), 'rncSelectRevisor');
-    };
-    window.rncSelectRevisor = function(v) {
-        setVal('rncFRevisor', v);
-        var dd = document.getElementById('rncRevisorDropdown'); if (dd) dd.classList.remove('open');
-    };
 
     // ══════════════════════════════════════════════════════════════════
     //  VIEW MODAL (modal de visualização)
@@ -2350,7 +2381,8 @@
         // Linha de metadados (setor · responsável · conclusão)
         var meta = [];
         if (r.setor)         meta.push('<span><i class="fas fa-building"></i> ' + esc(r.setor) + '</span>');
-        if (r.responsavel)   meta.push('<span><i class="fas fa-user"></i> ' + esc(r.responsavel) + '</span>');
+        var _respArr = rncArrField(r.responsavel);
+        if (_respArr.length) meta.push('<span><i class="fas fa-user"></i> ' + rncNamesHtml(_respArr) + '</span>');
         if (r.dataConclusao) meta.push('<span><i class="far fa-calendar-check"></i> ' + esc(fmtDate(r.dataConclusao)) + '</span>');
         var sub = document.getElementById('rncViewSubtitle');
         if (sub) sub.innerHTML = meta.join('<span class="rnc-view-meta-sep">·</span>');
@@ -2378,8 +2410,8 @@
                 _vgroup('fa-calendar-days', '#7c3aed', 'Datas & Responsabilidade',
                     _vrow('fa-calendar-plus', 'Início', r.dataInicio ? esc(fmtDate(r.dataInicio)) : '<em class="rnc-vrow-empty">—</em>') +
                     _vrow('fa-calendar-check', 'Conclusão prevista', r.dataConclusao ? esc(fmtDate(r.dataConclusao)) : '<em class="rnc-vrow-empty">—</em>') +
-                    _vrow('fa-user-tie', 'Responsável', esc(r.responsavel || '—')) +
-                    (r.revisor ? _vrow('fa-user-check', 'Revisor', esc(r.revisor)) : '') +
+                    _vrow('fa-user-tie', 'Responsável', rncNamesChips(rncArrField(r.responsavel))) +
+                    (rncArrField(r.revisor).length ? _vrow('fa-user-check', 'Revisor', rncNamesChips(rncArrField(r.revisor))) : '') +
                     _vrow('fa-clock', 'Registrado em', esc(fmtDateTime(r.createdAt)))
                 ) +
                 _vgroup('fa-map-pin', '#0891b2', 'Origem & Detalhamento',
@@ -3968,8 +4000,8 @@
                 _vgroup('fa-calendar-days', '#7c3aed', 'Datas & Responsabilidade',
                     _vrow('fa-calendar-plus', 'Início', r.dataInicio ? esc(fmtDate(r.dataInicio)) : '<em class="rnc-vrow-empty">—</em>') +
                     _vrow('fa-calendar-check', 'Conclusão prevista', r.dataConclusao ? esc(fmtDate(r.dataConclusao)) : '<em class="rnc-vrow-empty">—</em>') +
-                    _vrow('fa-user-tie', 'Responsável', esc(r.responsavel || '—')) +
-                    (r.revisor ? _vrow('fa-user-check', 'Revisor', esc(r.revisor)) : '') +
+                    _vrow('fa-user-tie', 'Responsável', rncNamesChips(rncArrField(r.responsavel))) +
+                    (rncArrField(r.revisor).length ? _vrow('fa-user-check', 'Revisor', rncNamesChips(rncArrField(r.revisor))) : '') +
                     _vrow('fa-clock', 'Registrado em', esc(fmtDateTime(r.createdAt)))
                 ) +
                 _vgroup('fa-map-pin', '#0891b2', 'Origem & Detalhamento',

@@ -1583,6 +1583,48 @@
     border: 1px solid;
 }
 .rnc-vrow-empty { color: #94a3b8; font-style: italic; font-size: 13px; }
+.rnc-person-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.rnc-person-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px 2px 3px;
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--vg-color) 10%, #f1f5f9);
+    border: 1px solid color-mix(in srgb, var(--vg-color) 20%, #e2e8f0);
+    font-size: 11px;
+    font-weight: 500;
+    color: #1e293b;
+    white-space: nowrap;
+}
+.rnc-person-chip-avatar {
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: var(--vg-color, #7c3aed);
+    color: #fff;
+    font-size: 8px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    letter-spacing: 0;
+}
+.rnc-person-chip-name {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.rnc-vrow:has(.rnc-person-chips) {
+    align-items: flex-start;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
 .rnc-vtext-block {
     padding: 8px 0;
     border-bottom: 1px solid color-mix(in srgb, var(--vg-color) 8%, #f1f5f9);

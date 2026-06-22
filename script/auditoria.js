@@ -157,6 +157,7 @@
             diasSemana: Array.from(document.querySelectorAll('#auditWeekdays .wd-btn.active')).map(b => Number(b.dataset.day)),
             flagDias: document.getElementById('auditFlagDias').value,
             marcador: document.getElementById('auditMarcador').value,
+            marcadorCor: (() => { const n = document.getElementById('auditMarcador').value; const mk = (masterLists.auditMarcadores || []).find(m => m.name === n); return mk ? mk.color : 'default'; })(),
             anexos: typeof getAnexos === 'function' ? getAnexos('audit') : []
         };
 

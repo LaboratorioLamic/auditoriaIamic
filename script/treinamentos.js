@@ -172,6 +172,7 @@
             revisor:     (typeof msGetValue === 'function') ? JSON.stringify(msGetValue('tren-rev'))  : document.getElementById('trainRevisor').value || '',
             flagDias: document.getElementById('trainFlagDias').value === '' ? 0 : Number(document.getElementById('trainFlagDias').value),
             marcador: document.getElementById('trainMarcador').value,
+            marcadorCor: (() => { const n = document.getElementById('trainMarcador').value; const mk = (masterLists.trainMarcadores || []).find(m => m.name === n); return mk ? mk.color : 'default'; })(),
             anexos: typeof getAnexos === 'function' ? getAnexos('train') : []
         };
 

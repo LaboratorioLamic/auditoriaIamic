@@ -144,6 +144,7 @@
             revisor:     (typeof msGetValue === 'function') ? JSON.stringify(msGetValue('doc-rev'))  : document.getElementById('docRevisor').value,
             flagDias: document.getElementById('docFlagDias').value,
             marcador: document.getElementById('docMarcador').value,
+            marcadorCor: (() => { const n = document.getElementById('docMarcador').value; const mk = (masterLists.docMarcadores || []).find(m => m.name === n); return mk ? mk.color : 'default'; })(),
             descricao: document.getElementById('docDescricao').value,
             anexos: typeof getAnexos === 'function' ? getAnexos('doc') : []
         };

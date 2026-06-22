@@ -888,6 +888,19 @@ function resetModal(prefix) {
         renderViewContent(id, normalizedTab);
     }
 
+function _markerBadgeHtml(item) {
+    if (!item || !item.marcador) return null;
+    var _esc = function(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+    var colorKeyMap = {
+        blue: '#2563eb', green: '#16a34a', red: '#dc2626',
+        orange: '#ea580c', yellow: '#ca8a04', purple: '#9333ea',
+        default: '#64748b'
+    };
+    var bg = colorKeyMap[item.marcadorCor] || colorKeyMap['default'];
+    return { html: '<span style="display:inline-flex;align-items:center;gap:5px;background:' + bg + ';color:#fff;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;">' +
+        '<i class="fas fa-bookmark" style="font-size:10px"></i> ' + _esc(item.marcador) + '</span>' };
+}
+
 function renderViewContent(id, tab) {
     var item, statusList, finalTab = tab;
 
@@ -1002,6 +1015,7 @@ function renderViewContent(id, tab) {
             ['Frequência', freqLabelAudit],
             ['Publicação', formatBR(item.dataPublicacao)],
             ['Previsão', formatBR(item.dataPrevisao)],
+            ['Marcador', _markerBadgeHtml(item)],
             ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'],
             ['Ao Alertar →', item.alertStatus || null],
             ['Ao Vencer →', item.overdueStatus || null]
@@ -1011,6 +1025,7 @@ function renderViewContent(id, tab) {
             ['Setor', item.setor], ['Categoria', item.categoria],
             ['Responsável', item.responsavel], ['Revisor', item.revisor],
             ['Data Início', formatBR(item.dataInicio)], ['Data Conclusão', formatBR(item.dataConclusao)],
+            ['Marcador', _markerBadgeHtml(item)],
             ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
         ]);
     } else if (finalTab === 'manutencao') {
@@ -1024,6 +1039,7 @@ function renderViewContent(id, tab) {
             ['Resp. Técnico', item.responsavelTecnico],
             ['Resp. Manutenção', item.responsavelManutencao],
             ['Empresa', item.empresaResponsavel],
+            ['Marcador', _markerBadgeHtml(item)],
             ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
         ]);
     } else if (finalTab === 'treinamentos') {
@@ -1037,6 +1053,7 @@ function renderViewContent(id, tab) {
             ['Frequência', freqLabelTrain],
             ['Data Publicação', formatBR(item.dataPublicacao)],
             ['Data Previsão', item.dataPrevisao ? formatBR(item.dataPrevisao) : 'N/A'],
+            ['Marcador', _markerBadgeHtml(item)],
             ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'],
             ['Ao Alertar →', item.alertStatus || null],
             ['Ao Vencer →', item.overdueStatus || null]
@@ -1052,6 +1069,7 @@ function renderViewContent(id, tab) {
             ['Frequência', freqLabelDoc],
             ['Data do Documento', formatBR(item.dataCriacao)],
             ['Próx. Revisão', item.dataProximaRevisao ? formatBR(item.dataProximaRevisao) : 'N/A'],
+            ['Marcador', _markerBadgeHtml(item)],
             ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'],
             ['Ao Alertar →', item.alertStatus || null],
             ['Ao Vencer →', item.overdueStatus || null]
@@ -1132,6 +1150,7 @@ function _viewCards(pairs) {
     const _esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     const _renderVal = (val) => {
         if (val === null || val === undefined || val === '') return '<span class="view-info-nd">ND</span>';
+        if (val && typeof val === 'object' && val.html !== undefined) return val.html || '<span class="view-info-nd">ND</span>';
         try {
             const p = JSON.parse(val);
             if (Array.isArray(p) && p.length > 0) {

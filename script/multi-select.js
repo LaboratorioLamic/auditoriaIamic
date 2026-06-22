@@ -12,6 +12,8 @@
         { key: 'tren-rev',   hidden: 'trainRevisor',     field: 'ms-tren-rev',   tags: 'ms-tren-rev-tags',   input: 'ms-tren-rev-input',   drop: 'ms-tren-rev-drop' },
         { key: 'doc-resp',   hidden: 'docResponsavel',   field: 'ms-doc-resp',   tags: 'ms-doc-resp-tags',   input: 'ms-doc-resp-input',   drop: 'ms-doc-resp-drop' },
         { key: 'doc-rev',    hidden: 'docRevisor',       field: 'ms-doc-rev',    tags: 'ms-doc-rev-tags',    input: 'ms-doc-rev-input',    drop: 'ms-doc-rev-drop' },
+        { key: 'rnc-resp',   hidden: 'rncFResponsavel',  field: 'ms-rnc-resp',   tags: 'ms-rnc-resp-tags',   input: 'ms-rnc-resp-input',   drop: 'ms-rnc-resp-drop' },
+        { key: 'rnc-rev',    hidden: 'rncFRevisor',      field: 'ms-rnc-rev',    tags: 'ms-rnc-rev-tags',    input: 'ms-rnc-rev-input',    drop: 'ms-rnc-rev-drop' },
     ];
 
     // Estado interno: key → array de IDs selecionados

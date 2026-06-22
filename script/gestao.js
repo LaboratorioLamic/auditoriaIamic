@@ -116,6 +116,7 @@
             revisor:     (typeof msGetValue === 'function') ? JSON.stringify(msGetValue('ativ-rev'))  : document.getElementById('ativRevisor').value,
             flagDias: document.getElementById('ativFlagDias').value,
             marcador: document.getElementById('ativMarcador').value,
+            marcadorCor: (() => { const n = document.getElementById('ativMarcador').value; const mk = (masterLists.ativMarcadores || []).find(m => m.name === n); return mk ? mk.color : 'default'; })(),
             anexos: typeof getAnexos === 'function' ? getAnexos('ativ') : []
         };
 
