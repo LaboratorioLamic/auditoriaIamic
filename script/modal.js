@@ -2248,7 +2248,10 @@ function viewHistoryItem(id, tab, historyIndex) {
     }
     function closeModal(id) {
         document.getElementById(id).style.display = 'none';
-        if (id === 'viewModal') closeHistoryDrawer();
+        if (id === 'viewModal') {
+            closeHistoryDrawer();
+            if (typeof window._flushChecklistSave === 'function') window._flushChecklistSave();
+        }
     }
 
     const FORM_DRAWER_IDS = ['modalAuditoria', 'modalTreinamentos', 'modalAtividades', 'modalDocumentos', 'modalManutencao'];

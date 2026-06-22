@@ -1482,7 +1482,10 @@ function _checkTriPerm(permVal, item) {
                 const el = document.getElementById(id);
                 if (el && el.style.display && el.style.display !== 'none') {
                     el.style.display = 'none';
-                    if (id === 'viewModal' && typeof closeHistoryDrawer === 'function') closeHistoryDrawer();
+                    if (id === 'viewModal') {
+                        if (typeof closeHistoryDrawer === 'function') closeHistoryDrawer();
+                        if (typeof window._flushChecklistSave === 'function') window._flushChecklistSave();
+                    }
                     closed = true;
                     break;
                 }

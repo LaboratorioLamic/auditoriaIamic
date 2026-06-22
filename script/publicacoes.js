@@ -78,7 +78,7 @@ function renderChecklistEditor(prefix) {
         <div class="checklist-editor-item">
             <div class="checklist-editor-item-top">
                 <input type="text" class="checklist-item-text-input" value="${(item.texto || '').replace(/"/g, '&quot;')}"
-                    onchange="updateChecklistItemText('${prefix}', ${i}, this.value)"
+                    oninput="updateChecklistItemText('${prefix}', ${i}, this.value)"
                     placeholder="Texto do item">
                 ${isPubPrefix ? `
                 <button class="checklist-item-required-toggle ${requiredForPub ? 'active required-for-pub' : ''}"
@@ -99,7 +99,7 @@ function renderChecklistEditor(prefix) {
             <div class="checklist-editor-comment-area">
                 <textarea class="checklist-editor-comment-input"
                     placeholder="Comentário pré-preenchido (opcional)…"
-                    onchange="updateChecklistItemComment('${prefix}', ${i}, this.value)"
+                    oninput="updateChecklistItemComment('${prefix}', ${i}, this.value)"
                     rows="2">${commentVal}</textarea>
             </div>` : ''}
         </div>`;
@@ -129,6 +129,12 @@ window.removeChecklistItem = function(prefix, index) {
 window.updateChecklistItemText = function(prefix, index, value) {
     const items = _getChecklistData(prefix);
     if (items[index]) items[index].texto = value;
+    _setChecklistData(prefix, items);
+};
+
+window.updateChecklistItemComment = function(prefix, index, value) {
+    const items = _getChecklistData(prefix);
+    if (items[index]) items[index].comment = value;
     _setChecklistData(prefix, items);
 };
 
@@ -330,23 +336,31 @@ window.saveViewChecklistComment = function(id, tab, index, value) {
         const cb = document.querySelector(`#vcl-item-${id}-${index} .view-checklist-cb`);
         if (cb) cb.disabled = !value.trim();
     }
-    // Debounce save. Durante os 800ms o array global pode ter sido SUBSTITUÍDO por
-    // uma sincronização remota (o viewModal não congela o listener), deixando `found`
-    // órfão. Por isso, no disparo, re-resolvemos o item pelo id no array atual e
-    // reaplicamos o comentário antes de salvar — assim a alteração nunca se perde.
-    clearTimeout(window._checklistCommentSaveTimer);
-    window._checklistCommentSaveTimer = setTimeout(() => {
-        let cur;
-        if (finalTab === 'auditoria') cur = audits.find(i => i.id === id);
-        else if (finalTab === 'atividades') cur = activities.find(i => i.id === id);
-        else if (finalTab === 'treinamentos') cur = trainings.find(i => i.id === id);
-        else if (finalTab === 'documentos') cur = documents.find(i => i.id === id);
-        else if (finalTab === 'rnc') cur = (window.rncItems || []).find(i => i.id === id);
-        if (cur && cur.checklist && cur.checklist[index]) {
-            cur.checklist[index].comment = value;
+    _scheduleChecklistSave();
+};
+
+// Debounce de 600ms: agrupa marcações rápidas em um único saveAll.
+// Salva DURANTE o viewModal para que o listener Firebase não reverta
+// a alteração local antes do fechamento.
+function _scheduleChecklistSave() {
+    window._checklistDirty = true;
+    clearTimeout(window._checklistSaveTimer);
+    window._checklistSaveTimer = setTimeout(() => {
+        if (window._checklistDirty) {
+            window._checklistDirty = false;
+            saveAll();
         }
+    }, 600);
+}
+
+// Chamado pelo closeModal ao fechar o viewModal: cancela o timer pendente
+// e salva imediatamente se ainda há alterações não enviadas.
+window._flushChecklistSave = function() {
+    clearTimeout(window._checklistSaveTimer);
+    if (window._checklistDirty) {
+        window._checklistDirty = false;
         saveAll();
-    }, 800);
+    }
 };
 
 window.selectAllViewChecklist = function(id, tab) {
@@ -366,7 +380,7 @@ window.selectAllViewChecklist = function(id, tab) {
             c.checked = !allDone;
         }
     });
-    saveAll();
+    _scheduleChecklistSave();
     renderViewChecklist(found, finalTab);
     renderCards();
 };
@@ -388,7 +402,7 @@ window.toggleViewChecklistItem = function(id, tab, index) {
     // Block if requires comment but none provided
     if (!c.checked && c.requiresComment && !(c.comment || '').trim()) return;
     c.checked = !c.checked;
-    saveAll();
+    _scheduleChecklistSave();
     renderViewChecklist(found, finalTab);
     renderCards();
 };

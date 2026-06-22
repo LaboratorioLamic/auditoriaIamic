@@ -303,12 +303,35 @@
 
     // Wrapper público: enfileira as gravações para que duas chamadas de saveAll
     // não se intercalem (read-merge-write atômico por chamada).
+    //
+    // COALESCING: o save lê o estado LOCAL (não congelado) no instante em que roda,
+    // então N chamadas disparadas em rajada não precisam de N gravações do banco
+    // inteiro — basta UMA regravação após o save atual para capturar todas as
+    // mutações acumuladas. Enquanto há um save em andamento/agendado, chamadas
+    // extras apenas marcam `_saveCoalesced` em vez de empilhar ciclos redundantes.
+    // Exceção: `showAlert` (sincronização manual) sempre força um ciclo próprio,
+    // pois precisa reportar sucesso/erro daquela ação específica ao usuário.
+    var _saveCoalesced = false;
     function saveAll(showAlert = false) {
+        if (!showAlert && _pendingSaves > 0) {
+            // Já há um save no ar; ele (ou seu follow-up) relerá o estado local
+            // atualizado. Evita gravações redundantes do banco inteiro em rajada.
+            _saveCoalesced = true;
+            return _saveAllQueue;
+        }
         _pendingSaves++;
         _saveAllQueue = _saveAllQueue
             .catch(() => {})
             .then(() => _saveAllInternal(showAlert))
             .finally(() => { _pendingSaves = Math.max(0, _pendingSaves - 1); });
+        // Follow-up único: se chegaram mutações durante este save, regrava uma vez.
+        _saveAllQueue = _saveAllQueue.then(() => {
+            if (_saveCoalesced && _pendingSaves === 0) {
+                _saveCoalesced = false;
+                return saveAll();
+            }
+            _saveCoalesced = false;
+        });
         return _saveAllQueue;
     }
 
@@ -316,7 +339,7 @@
         try {
             const database = getFirebaseDatabase();
             const dbRef = getFirebaseRef();
-            const { update } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js");
+            const update = getFirebaseUpdate();
             const dbGet = getFirebaseGet();
 
             cleanInvalidResponsaveis();
