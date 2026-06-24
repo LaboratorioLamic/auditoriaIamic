@@ -299,6 +299,41 @@ function _setImgProgress(ctx, pct) {
   if (lbl) lbl.textContent = pct + '%';
 }
 
+// ── Limpeza de imgBlobs órfãos ───────────────────────────────
+// Analisa /imgBlobs vs publicações e apaga os não-referenciados.
+// collections: array de arrays (audits, trainings, activities, maintenances, documents, rncItems)
+// Retorna { total, orphans, removed } para exibir no relatório.
+window.purgeOrphanImgBlobs = async function(collections) {
+  const db    = getFirebaseDatabase();
+  const dbRef = getFirebaseRef();
+  const dbGet = getFirebaseGet();
+  const dbSet = getFirebaseSet();
+
+  const snap = await dbGet(dbRef(db, 'imgBlobs'));
+  const blobs = snap.exists() ? snap.val() : {};
+  const storedIds = Object.keys(blobs);
+
+  // Coleta todos os fileId referenciados em publicações
+  const referenced = new Set();
+  (collections || []).forEach(arr => {
+    (arr || []).forEach(item => {
+      (item.publicacoes || []).forEach(pub => {
+        (pub.anexos || []).forEach(a => {
+          if (a.tipo === 'imagem' && a.fileId) referenced.add(a.fileId);
+        });
+      });
+    });
+  });
+
+  const orphans = storedIds.filter(id => !referenced.has(id));
+
+  await Promise.all(
+    orphans.map(id => dbSet(dbRef(db, `imgBlobs/${id}`), null).catch(() => {}))
+  );
+
+  return { total: storedIds.length, orphans: orphans.length, removed: orphans.length };
+};
+
 // Salva Base64 em /imgBlobs/{blobId} — nó isolado, não viaja com saveAll()
 async function _saveImgBlob(blobId, dataUrl) {
   const db    = getFirebaseDatabase();

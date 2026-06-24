@@ -597,6 +597,48 @@ function _checkTriPerm(permVal, item) {
     }
     
 
+    // --- LIMPEZA DE IMGBLOBS ÓRFÃOS ---
+    window.runImgBlobsPurge = async function() {
+        const btn    = document.getElementById('btnPurgeImgBlobs');
+        const report = document.getElementById('imgBlobsReport');
+        if (!btn || !report) return;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analisando...';
+        report.style.display = 'none';
+
+        try {
+            const result = await window.purgeOrphanImgBlobs([
+                audits, trainings, activities, maintenances, documents, rncItems
+            ]);
+
+            const { total, orphans } = result;
+            const kept = total - orphans;
+
+            if (total === 0) {
+                report.innerHTML = `<i class="fas fa-check-circle" style="color:#16a34a"></i> Nenhuma imagem encontrada no banco.`;
+            } else if (orphans === 0) {
+                report.innerHTML = `<i class="fas fa-check-circle" style="color:#16a34a"></i> <strong>${total}</strong> imagem(ns) encontrada(s) — todas associadas a publicações. Nada removido.`;
+            } else {
+                report.innerHTML = `
+                    <i class="fas fa-trash-alt" style="color:#7c3aed"></i>
+                    <strong>${orphans}</strong> imagem(ns) órfã(s) removida(s).<br>
+                    <span style="color:#9ca3af; font-size:12px;">${kept} imagem(ns) mantida(s) por estarem associadas a publicações.</span>`;
+            }
+            report.style.display = '';
+            if (typeof showToast === 'function') {
+                showToast(orphans > 0 ? `${orphans} imagem(ns) órfã(s) removida(s).` : 'Nenhuma imagem órfã encontrada.', 'success');
+            }
+        } catch (err) {
+            report.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#ef4444"></i> Erro: ${err.message}`;
+            report.style.display = '';
+            if (typeof showToast === 'function') showToast('Erro ao limpar imagens: ' + err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-broom"></i> Analisar e Limpar Imagens Órfãs';
+        }
+    };
+
     // --- CONFIGURAÇÕES: GESTÃO DE USUÁRIOS ---
     let editinguserIndex = null;
     let tempSelectedSetores = [];
