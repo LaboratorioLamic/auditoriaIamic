@@ -1821,6 +1821,7 @@ window.verPublicacao = function(id, tab, index) {
     if (anexos.length > 0) {
         const _extIcon = (name, tipo) => {
             if (tipo === 'link') return `<i class="fas fa-link" style="color:#2563eb"></i>`;
+            if (tipo === 'imagem') return `<i class="fas fa-image" style="color:#7c3aed"></i>`;
             const ext = (name.includes('.') ? name.slice(name.lastIndexOf('.')).toLowerCase() : '');
             if (ext === '.pdf') return `<i class="fas fa-file-pdf" style="color:#ef4444"></i>`;
             if (['.xls','.xlsx','.ods'].includes(ext)) return `<i class="fas fa-file-excel" style="color:#16a34a"></i>`;
@@ -1828,15 +1829,27 @@ window.verPublicacao = function(id, tab, index) {
             if (['.jpg','.jpeg','.png','.gif','.webp','.svg'].includes(ext)) return `<i class="fas fa-file-image" style="color:#0891b2"></i>`;
             return `<i class="fas fa-file" style="color:#6b7280"></i>`;
         };
+        const _cardHtml = (a) => {
+            const icon  = _extIcon(a.titulo || '', a.tipo);
+            const label = (a.titulo || 'Arquivo').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+            if (a.tipo === 'imagem') {
+                const blobId = (a.fileId || '').replace(/'/g, "\\'");
+                const safeLabel = label.replace(/'/g, "\\'");
+                return `<button type="button" class="ver-pub-anexo-card" onclick="openImgLightboxBlob('${blobId}','${safeLabel}')">
+                    <span class="ver-pub-anexo-icon">${icon}</span>
+                    <span class="ver-pub-anexo-name">${label}</span>
+                </button>`;
+            }
+            return `<a href="${a.url}" target="_blank" class="ver-pub-anexo-card">
+                <span class="ver-pub-anexo-icon">${icon}</span>
+                <span class="ver-pub-anexo-name">${label}</span>
+            </a>`;
+        };
         anexosBlock = `
         <div class="ver-pub-section">
             <div class="ver-pub-section-label"><i class="fas fa-paperclip"></i> Anexos</div>
             <div class="ver-pub-anexos-grid">
-                ${anexos.map(a => `
-                    <a href="${a.url}" target="_blank" class="ver-pub-anexo-card">
-                        <span class="ver-pub-anexo-icon">${_extIcon(a.titulo || '', a.tipo)}</span>
-                        <span class="ver-pub-anexo-name">${a.titulo || 'Arquivo'}</span>
-                    </a>`).join('')}
+                ${anexos.map(_cardHtml).join('')}
             </div>
         </div>`;
     }
@@ -1885,6 +1898,13 @@ window.excluirPublicacao = function(id, tab, index) {
         confirmLabel: 'Excluir',
         requireReason: false,
         onConfirm: () => {
+            const pubRemovida = item.publicacoes[index];
+            // Exclui blobs de imagem do RTDB
+            (pubRemovida?.anexos || []).forEach(a => {
+                if (a.tipo === 'imagem' && a.fileId) {
+                    if (typeof window._deleteImgBlob === 'function') window._deleteImgBlob(a.fileId);
+                }
+            });
             item.publicacoes.splice(index, 1);
             // Reavalia itens do checklist geral após exclusão
             _autoMarkGeralFromPub(item);
@@ -1942,3 +1962,48 @@ function _formatDateBR(dateStr) {
 // Os arquivos auditoria.js, gestao.js, etc. devem chamar getChecklist(prefix) ao salvar
 // e restoreChecklist(prefix, item.checklist) ao editar.
 // O patch abaixo não é necessário pois as chamadas estarão no modal.js atualizado.
+
+// ─── Lightbox de imagem ──────────────────────────────────────
+window.openImgLightbox = function(url, label) {
+    const lb  = document.getElementById('imgLightbox');
+    const img = document.getElementById('imgLightboxImg');
+    const lbl = document.getElementById('imgLightboxLabel');
+    if (!lb || !img) return;
+    img.src = url;
+    if (lbl) lbl.textContent = label || '';
+    lb.style.display = 'flex';
+    document.addEventListener('keydown', _lightboxKeyHandler);
+};
+
+window.openImgLightboxBlob = async function(blobId, label) {
+    const lb  = document.getElementById('imgLightbox');
+    const img = document.getElementById('imgLightboxImg');
+    const lbl = document.getElementById('imgLightboxLabel');
+    if (!lb || !img) return;
+    // Mostra lightbox com spinner enquanto carrega
+    img.src = '';
+    img.style.opacity = '0.3';
+    if (lbl) lbl.textContent = label || '';
+    lb.style.display = 'flex';
+    document.addEventListener('keydown', _lightboxKeyHandler);
+    try {
+        const dataUrl = await window._loadImgBlob(blobId);
+        img.src = dataUrl;
+        img.style.opacity = '';
+    } catch (err) {
+        lb.style.display = 'none';
+        if (typeof showToast === 'function') showToast('Erro ao carregar imagem: ' + err.message, 'error');
+    }
+};
+
+window.closeImgLightbox = function() {
+    const lb  = document.getElementById('imgLightbox');
+    const img = document.getElementById('imgLightboxImg');
+    if (lb) lb.style.display = 'none';
+    if (img) img.src = '';
+    document.removeEventListener('keydown', _lightboxKeyHandler);
+};
+
+function _lightboxKeyHandler(e) {
+    if (e.key === 'Escape') window.closeImgLightbox();
+}

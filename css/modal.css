@@ -2105,6 +2105,13 @@
     transition: background .15s, border-color .15s, box-shadow .15s, transform .15s;
     max-width: 230px;
     overflow: hidden;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: inherit;
+}
+button.ver-pub-anexo-card {
+    appearance: none;
+    -webkit-appearance: none;
 }
 .ver-pub-anexo-card:hover {
     background: #eff6ff;

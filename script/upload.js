@@ -34,6 +34,9 @@ const _uploadQueues = {
   rnc:        { file: null, dataUrl: null }
 };
 
+// Armazena a task Firebase ativa por contexto para permitir cancelamento
+const _activeUploadTasks = {};
+
 // Botões de salvar/confirmar bloqueados durante upload
 const _SAVE_BTN_IDS = {
   'pub':        'btn-confirmar-publicacao',
@@ -77,7 +80,7 @@ async function driveRename(fileId, newName) {
   return _driveRequest({ action: 'rename', id: fileId, newName });
 }
 
-// ── Modo de upload (arquivo vs link) ─────────────────────────
+// ── Modo de upload (arquivo vs link vs imagem) ───────────────
 function _getUploadMode(ctx) {
   const sel = document.getElementById(`${ctx}-upload-tipo`);
   return sel ? sel.value : 'arquivo';
@@ -85,18 +88,32 @@ function _getUploadMode(ctx) {
 
 function _onUploadTipoChange(ctx) {
   const mode = _getUploadMode(ctx);
-  const zone    = document.getElementById(`${ctx}-upload-zone`);
-  const preview = document.getElementById(`${ctx}-file-preview`);
+  const zone     = document.getElementById(`${ctx}-upload-zone`);
+  const preview  = document.getElementById(`${ctx}-file-preview`);
   const linkWrap = document.getElementById(`${ctx}-link-wrap`);
-  const btn   = document.getElementById(`${ctx}-upload-btn`);
+  const btn      = document.getElementById(`${ctx}-upload-btn`);
+  const fileInput = document.getElementById(`${ctx}-file-input`);
+
+  _clearUploadFile(ctx);
+
   if (mode === 'link') {
     if (zone) zone.style.display = 'none';
     if (preview) preview.style.display = 'none';
     if (linkWrap) linkWrap.style.display = '';
     if (btn) btn.textContent = 'Adicionar';
-    _clearUploadFile(ctx);
+  } else if (mode === 'imagem') {
+    if (linkWrap) linkWrap.style.display = 'none';
+    if (fileInput) fileInput.accept = '.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff';
+    const hint = zone ? zone.querySelector('.upload-drop-hint') : null;
+    if (hint) hint.textContent = 'JPG, PNG, GIF, WebP (máx. 5 MB)';
+    if (zone) zone.style.display = '';
+    if (btn) btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Enviar`;
+    _renderUploadPreview(ctx);
   } else {
     if (linkWrap) linkWrap.style.display = 'none';
+    if (fileInput) fileInput.accept = '.pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp';
+    const hint = zone ? zone.querySelector('.upload-drop-hint') : null;
+    if (hint) hint.textContent = 'PDF, imagem, planilha ou slides';
     if (btn) btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Enviar`;
     _renderUploadPreview(ctx);
   }
@@ -125,15 +142,45 @@ function initUploadZone(ctx) {
   });
 }
 
+const IMAGE_TYPES = ['image/jpeg','image/png','image/gif','image/webp','image/bmp','image/tiff'];
+const IMAGE_EXTS  = ['.jpg','.jpeg','.png','.gif','.webp','.bmp','.tiff'];
+const IMAGE_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+
 function _setUploadFile(ctx, file) {
-  if (!_validateUploadFile(file)) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    _uploadQueues[ctx].file    = file;
-    _uploadQueues[ctx].dataUrl = e.target.result;
-    _renderUploadPreview(ctx);
-  };
-  reader.readAsDataURL(file);
+  const mode = _getUploadMode(ctx);
+  if (mode === 'imagem') {
+    if (!_validateImageFile(file)) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      _uploadQueues[ctx].file    = file;
+      _uploadQueues[ctx].dataUrl = e.target.result;
+      _renderUploadPreview(ctx);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    if (!_validateUploadFile(file)) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      _uploadQueues[ctx].file    = file;
+      _uploadQueues[ctx].dataUrl = e.target.result;
+      _renderUploadPreview(ctx);
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function _validateImageFile(file) {
+  const okType = IMAGE_TYPES.includes(file.type);
+  const okExt  = IMAGE_EXTS.some(ext => file.name.toLowerCase().endsWith(ext));
+  if (!okType && !okExt) {
+    if (typeof showToast === 'function') showToast('Apenas imagens são aceitas (JPG, PNG, GIF, WebP).', 'error');
+    return false;
+  }
+  if (file.size > IMAGE_MAX_BYTES) {
+    if (typeof showToast === 'function') showToast('Imagem muito grande. Máximo permitido: 5 MB.', 'error');
+    return false;
+  }
+  return true;
 }
 
 function _validateUploadFile(file) {
@@ -189,9 +236,142 @@ function _renderUploadPreview(ctx) {
 }
 
 function _clearUploadFile(ctx) {
+  // Cancela upload Firebase em andamento
+  if (_activeUploadTasks[ctx]) {
+    try { _activeUploadTasks[ctx].cancel(); } catch (_) {}
+    _activeUploadTasks[ctx] = null;
+    const btn = document.getElementById(`${ctx}-upload-btn`);
+    _setUploadBtnLoading(btn, false);
+    _setSaveBtnBlocked(ctx, false);
+    _setImgProgress(ctx, null);
+  }
   _uploadQueues[ctx].file    = null;
   _uploadQueues[ctx].dataUrl = null;
   _renderUploadPreview(ctx);
+}
+
+// ── Compressão agressiva: redimensiona + JPEG ────────────────
+const IMG_MAX_DIM  = 900;   // px — lado máximo após resize
+const IMG_QUALITY  = 0.55;  // qualidade JPEG (55%)
+
+async function _compressImageToJpeg(dataUrl, quality = IMG_QUALITY) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.naturalWidth;
+      let h = img.naturalHeight;
+      if (w > IMG_MAX_DIM || h > IMG_MAX_DIM) {
+        if (w >= h) { h = Math.round(h * IMG_MAX_DIM / w); w = IMG_MAX_DIM; }
+        else        { w = Math.round(w * IMG_MAX_DIM / h); h = IMG_MAX_DIM; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width  = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+function _base64ToBlob(dataUrl, mime) {
+  const b64 = dataUrl.split(',')[1];
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+function _setImgProgress(ctx, pct) {
+  const wrap = document.getElementById(`${ctx}-img-progress`);
+  const bar  = document.getElementById(`${ctx}-img-progress-bar`);
+  const lbl  = document.getElementById(`${ctx}-img-progress-pct`);
+  if (!wrap) return;
+  if (pct === null) {
+    wrap.style.display = 'none';
+    if (bar) bar.style.width = '0%';
+    if (lbl) lbl.textContent = '0%';
+    return;
+  }
+  wrap.style.display = '';
+  if (bar) bar.style.width = pct + '%';
+  if (lbl) lbl.textContent = pct + '%';
+}
+
+// Salva Base64 em /imgBlobs/{blobId} — nó isolado, não viaja com saveAll()
+async function _saveImgBlob(blobId, dataUrl) {
+  const db    = getFirebaseDatabase();
+  const dbRef = getFirebaseRef();
+  const dbSet = getFirebaseSet();
+  await dbSet(dbRef(db, `imgBlobs/${blobId}`), { data: dataUrl, ts: Date.now() });
+}
+
+window._deleteImgBlob = async function _deleteImgBlob(blobId) {
+  if (!blobId) return;
+  try {
+    const db    = getFirebaseDatabase();
+    const dbRef = getFirebaseRef();
+    const dbSet = getFirebaseSet();
+    await dbSet(dbRef(db, `imgBlobs/${blobId}`), null);
+  } catch (_) {}
+}
+
+window._loadImgBlob = async function _loadImgBlob(blobId) {
+  const db    = getFirebaseDatabase();
+  const dbRef = getFirebaseRef();
+  const dbGet = getFirebaseGet();
+  const snap  = await dbGet(dbRef(db, `imgBlobs/${blobId}`));
+  if (!snap.exists()) throw new Error('Imagem não encontrada.');
+  return snap.val().data;
+}
+
+async function doUploadImagemFirebase(ctx, onSuccess) {
+  const q = _uploadQueues[ctx];
+  if (!q.file || !q.dataUrl) {
+    if (typeof showToast === 'function') showToast('Selecione uma imagem primeiro.', 'error');
+    return;
+  }
+  const titleInput = document.getElementById(`${ctx}-upload-title`);
+  const title = (titleInput?.value || '').trim();
+  if (!title) {
+    if (typeof showToast === 'function') showToast('Informe um nome para a imagem.', 'error');
+    if (titleInput) titleInput.focus();
+    return;
+  }
+
+  const btn = document.getElementById(`${ctx}-upload-btn`);
+  _setUploadBtnLoading(btn, true);
+  _setSaveBtnBlocked(ctx, true);
+  _setImgProgress(ctx, 10);
+
+  try {
+    // Comprime: resize 900px + JPEG 55%
+    _setImgProgress(ctx, 30);
+    const compressed = await _compressImageToJpeg(q.dataUrl);
+    _setImgProgress(ctx, 60);
+
+    // ID único para o blob
+    const blobId = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    // Salva em /imgBlobs/{blobId} — isolado do saveAll()
+    await _saveImgBlob(blobId, compressed);
+    _setImgProgress(ctx, 100);
+
+    if (titleInput) titleInput.value = '';
+    _clearUploadFile(ctx);
+    if (typeof onSuccess === 'function') onSuccess({ titulo: title, url: null, fileId: blobId, tipo: 'imagem' });
+    if (typeof showToast === 'function') showToast('Imagem salva com sucesso!', 'success');
+  } catch (err) {
+    if (!err.canceled) {
+      if (typeof showToast === 'function') showToast('Erro ao salvar imagem: ' + err.message, 'error');
+    }
+  } finally {
+    _activeUploadTasks[ctx] = null;
+    _setUploadBtnLoading(btn, false);
+    _setSaveBtnBlocked(ctx, false);
+    _setImgProgress(ctx, null);
+  }
 }
 
 // ── Upload principal ─────────────────────────────────────────
@@ -290,12 +470,16 @@ async function renameAnexoDrive(fileId, newName, onSuccess) {
 
 // ── Resetar zona ao fechar modal ────────────────────────────
 function resetUploadZone(ctx) {
+  // Cancela upload em andamento ao resetar
+  if (_activeUploadTasks[ctx]) {
+    try { _activeUploadTasks[ctx].cancel(); } catch (_) {}
+    _activeUploadTasks[ctx] = null;
+  }
   _uploadQueues[ctx] = { file: null, dataUrl: null };
   const titleInput = document.getElementById(`${ctx}-upload-title`);
   if (titleInput) titleInput.value = '';
   const linkInput = document.getElementById(`${ctx}-link-input`);
   if (linkInput) linkInput.value = '';
-  // Reset tipo to 'arquivo'
   const tipoSel = document.getElementById(`${ctx}-upload-tipo`);
   if (tipoSel) { tipoSel.value = 'arquivo'; _onUploadTipoChange(ctx); }
   _renderUploadPreview(ctx);
@@ -321,6 +505,9 @@ function _renderAnexosList(ctx) {
     if (isLink) {
       iconColor = '#2563eb';
       iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;color:${iconColor};flex-shrink:0;"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>`;
+    } else if (a.tipo === 'imagem') {
+      iconColor = '#7c3aed';
+      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;color:${iconColor};flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
     } else {
       if (ext === '.pdf') iconColor = '#ef4444';
       else if (['.xls','.xlsx','.ods'].includes(ext)) iconColor = '#16a34a';
@@ -329,19 +516,23 @@ function _renderAnexosList(ctx) {
       iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;color:${iconColor};flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
     }
     const nameEsc = name.replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const safeBlobId = (a.fileId || '').replace(/'/g, "\\'");
+    const nameLink = a.tipo === 'imagem'
+      ? `<button type="button" class="anexo-saved-name anexo-name-display" title="${nameEsc}" onclick="window._loadImgBlob && window._loadImgBlob('${safeBlobId}').then(d=>{const w=window.open();w.document.write('<img src=\\''+d+'\\'>')}).catch(()=>{})" style="background:none;border:none;padding:0;cursor:pointer;text-align:left;">${nameEsc}</button>`
+      : `<a href="${a.url}" target="_blank" class="anexo-saved-name anexo-name-display" title="${nameEsc}">${nameEsc}</a>`;
     return `
       <div class="anexo-saved-item" id="anexo-item-${ctx}-${i}">
         ${iconSvg}
-        <a href="${a.url}" target="_blank" class="anexo-saved-name anexo-name-display" title="${nameEsc}">${nameEsc}</a>
+        ${nameLink}
         <input type="text" class="anexo-name-input" value="${nameEsc}" style="display:none;"
           onblur="_commitRenameAnexo('${ctx}',${i},this)"
           onkeydown="if(event.key==='Enter'){this.blur();}if(event.key==='Escape'){_cancelRenameAnexo('${ctx}',${i},this);}">
-        <button class="anexo-rename-btn" onclick="_startRenameAnexo('${ctx}',${i})" title="Renomear">
+        ${a.tipo !== 'imagem' ? `<button class="anexo-rename-btn" onclick="_startRenameAnexo('${ctx}',${i})" title="Renomear">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:11px;height:11px;">
             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
             <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
           </svg>
-        </button>
+        </button>` : ''}
         <button class="anexo-del" onclick="_removeAnexoItem('${ctx}', ${i})" title="Remover">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:11px;height:11px;">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -362,7 +553,11 @@ function _removeAnexoItem(ctx, index) {
     confirmLabel: 'Remover',
     onConfirm: () => {
       if (anexo && anexo.fileId) {
-        driveDelete(anexo.fileId).catch(() => {});
+        if (anexo.tipo === 'imagem') {
+          _deleteImgBlob(anexo.fileId);
+        } else {
+          driveDelete(anexo.fileId).catch(() => {});
+        }
       }
       window._anexosData[ctx].splice(index, 1);
       _renderAnexosList(ctx);
@@ -423,7 +618,7 @@ function _commitRenameAnexo(ctx, index, input) {
 // Chamado pelo modal ao abrir para edição — restaura anexos existentes
 function restoreAnexosUpload(ctx, anexos) {
   if (!window._anexosData) window._anexosData = {};
-  window._anexosData[ctx] = (anexos || []).filter(a => a && a.url);
+  window._anexosData[ctx] = (anexos || []).filter(a => a && (a.url || (a.tipo === 'imagem' && a.fileId)));
   _renderAnexosList(ctx);
   resetUploadZone(ctx);
 }
@@ -431,12 +626,22 @@ function restoreAnexosUpload(ctx, anexos) {
 // Chamado pelo modal ao salvar — retorna array de anexos
 function getAnexosUpload(ctx) {
   if (!window._anexosData) return [];
-  return (window._anexosData[ctx] || []).filter(a => a && a.url);
+  return (window._anexosData[ctx] || []).filter(a => a && (a.url || (a.tipo === 'imagem' && a.fileId)));
 }
 
 // Executa o upload do arquivo pendente ou adiciona link
 async function submitAnexoUpload(ctx, getPrefixo) {
   const mode = _getUploadMode(ctx);
+
+  if (mode === 'imagem') {
+    await doUploadImagemFirebase(ctx, (result) => {
+      if (!window._anexosData) window._anexosData = {};
+      if (!window._anexosData[ctx]) window._anexosData[ctx] = [];
+      window._anexosData[ctx].push(result);
+      _renderAnexosList(ctx);
+    });
+    return;
+  }
 
   if (mode === 'link') {
     const titleInput = document.getElementById(`${ctx}-upload-title`);
