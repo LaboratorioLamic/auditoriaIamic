@@ -61,48 +61,245 @@ function _setChecklistData(prefix, arr) {
     window._checklistData[prefix] = arr;
 }
 
+// ─── DRAG-AND-DROP DE REORDENAÇÃO DO CHECKLIST ───────────────
+window._clDragSrc = null;
+
+function _clEditorItemEl(target) {
+    return target.closest('.cl-pub-editor-item') || target.closest('.checklist-editor-item');
+}
+
+window._clDragStart = function(e, prefix, index) {
+    window._clDragSrc = { prefix, index };
+    e.dataTransfer.effectAllowed = 'move';
+    const el = _clEditorItemEl(e.target);
+    if (el) setTimeout(() => el.classList.add('dragging'), 0);
+};
+
+window._clDragOver = function(e, prefix, index) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const el = _clEditorItemEl(e.target);
+    if (el) el.classList.add('drag-over');
+};
+
+window._clDragLeave = function(e) {
+    const el = _clEditorItemEl(e.target);
+    if (el) el.classList.remove('drag-over');
+};
+
+window._clDrop = function(e, prefix, index) {
+    e.preventDefault();
+    const el = _clEditorItemEl(e.target);
+    if (el) el.classList.remove('drag-over');
+    if (!window._clDragSrc || window._clDragSrc.prefix !== prefix) return;
+    const from = window._clDragSrc.index;
+    if (from === index) return;
+    const items = _getChecklistData(prefix);
+    const srcItem = items[from];
+    const tgtItem = items[index];
+    if (srcItem && tgtItem && prefix.endsWith('-pub')) {
+        const srcKey = srcItem.geralIndex != null ? srcItem.geralIndex : null;
+        const tgtKey = tgtItem.geralIndex != null ? tgtItem.geralIndex : null;
+        if (srcKey !== tgtKey) {
+            // Mudança de grupo: atualiza geralIndex e re-renderiza
+            srcItem.geralIndex = tgtKey;
+            _setChecklistData(prefix, items);
+            renderChecklistEditor(prefix);
+            window._clDragSrc = null;
+            return;
+        }
+    }
+    const moved = items.splice(from, 1)[0];
+    items.splice(index, 0, moved);
+    _setChecklistData(prefix, items);
+    // BUG FIX: reordenar o checklist geral invalida geralIndex do checklist de publicação
+    if (!prefix.endsWith('-pub')) _syncGeralIndexAfterReorder(prefix, from, index);
+    renderChecklistEditor(prefix);
+    window._clDragSrc = null;
+};
+
+// Drop no corpo de um grupo (quando o grupo está vazio ou se arrasta abaixo dos itens)
+window._clDropOnGroup = function(e, prefix, geralIndex) {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!window._clDragSrc || window._clDragSrc.prefix !== prefix) return;
+    const from = window._clDragSrc.index;
+    const items = _getChecklistData(prefix);
+    if (!items[from]) return;
+    const newKey = geralIndex != null ? parseInt(geralIndex) : null;
+    if (items[from].geralIndex === newKey) return;
+    items[from].geralIndex = newKey;
+    _setChecklistData(prefix, items);
+    renderChecklistEditor(prefix);
+    window._clDragSrc = null;
+};
+
+window._clDragEnd = function() {
+    document.querySelectorAll('.checklist-editor-item.dragging, .cl-pub-editor-item.dragging').forEach(el => el.classList.remove('dragging'));
+    document.querySelectorAll('.checklist-editor-item.drag-over, .cl-pub-editor-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+    window._clDragSrc = null;
+};
+
+// Recalcula geralIndex no checklist de publicação após reordenação do checklist geral
+function _syncGeralIndexAfterReorder(geralPrefix, from, to) {
+    const pubPrefix = geralPrefix + '-pub';
+    const pubItems = _getChecklistData(pubPrefix);
+    if (!pubItems.length) return;
+    let changed = false;
+    pubItems.forEach(item => {
+        if (item.geralIndex == null) return;
+        const gi = item.geralIndex;
+        if (gi === from) {
+            item.geralIndex = to; changed = true;
+        } else if (from < to && gi > from && gi <= to) {
+            item.geralIndex = gi - 1; changed = true;
+        } else if (from > to && gi >= to && gi < from) {
+            item.geralIndex = gi + 1; changed = true;
+        }
+    });
+    if (changed) { _setChecklistData(pubPrefix, pubItems); renderChecklistEditor(pubPrefix); }
+}
+
+// Recalcula geralIndex no checklist de publicação após remoção de item do checklist geral
+function _syncGeralIndexAfterRemove(geralPrefix, removedIndex) {
+    const pubPrefix = geralPrefix + '-pub';
+    const pubItems = _getChecklistData(pubPrefix);
+    if (!pubItems.length) return;
+    let changed = false;
+    pubItems.forEach(item => {
+        if (item.geralIndex == null) return;
+        if (item.geralIndex === removedIndex) {
+            item.geralIndex = null; changed = true; // item geral foi excluído
+        } else if (item.geralIndex > removedIndex) {
+            item.geralIndex -= 1; changed = true;   // índice deslocado
+        }
+    });
+    if (changed) { _setChecklistData(pubPrefix, pubItems); renderChecklistEditor(pubPrefix); }
+}
+
+function _renderPubEditorItem(prefix, item, i, geralItems) {
+    const req = !!item.requiredForPub;
+    const geralOpts = ['<option value="">Sem grupo</option>',
+        ...geralItems.map((g, gi) =>
+            `<option value="${gi}"${item.geralIndex === gi ? ' selected' : ''}>${(g.texto || `Item ${gi+1}`).slice(0, 28)}</option>`)
+    ].join('');
+    return `
+    <div class="cl-pub-editor-item" draggable="true"
+        ondragstart="_clDragStart(event,'${prefix}',${i})"
+        ondragover="_clDragOver(event,'${prefix}',${i})"
+        ondragleave="_clDragLeave(event)"
+        ondrop="_clDrop(event,'${prefix}',${i})"
+        ondragend="_clDragEnd(event)">
+        <span class="checklist-drag-handle" title="Arrastar para reordenar"><i class="fas fa-grip-vertical"></i></span>
+        <input type="text" class="cl-pub-item-input" value="${(item.texto || '').replace(/"/g, '&quot;')}"
+            oninput="updateChecklistItemText('${prefix}', ${i}, this.value)"
+            placeholder="Descreva o item...">
+        <button class="cl-pub-item-req-btn${req ? ' active' : ''}"
+            onclick="toggleChecklistItemRequiredForPub('${prefix}', ${i}, this)"
+            title="${req ? 'Obrigatório para publicar — clique para tornar opcional' : 'Tornar obrigatório para publicar'}">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>${req ? 'Obrigatório' : 'Opcional'}</span>
+        </button>
+        <button class="cl-pub-item-link-btn${item.geralIndex != null ? ' linked' : ''}"
+            onclick="_clPubShowGroupDropdown(this,'${prefix}',${i})"
+            title="${item.geralIndex != null ? 'Associado a grupo — clique para alterar' : 'Sem associação — clique para associar'}">
+            <i class="fas ${item.geralIndex != null ? 'fa-link' : 'fa-unlink'}"></i>
+        </button>
+        <button class="cl-pub-item-del" onclick="removeChecklistItem('${prefix}',${i})" title="Remover item">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+    </div>`;
+}
+
+function _renderPubEditorGroupedItems(prefix, items, geralItems) {
+    const groups = new Map();
+    items.forEach((item, i) => {
+        const key = item.geralIndex != null ? item.geralIndex : '__solo__';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push({ item, i });
+    });
+
+    const sortedGi = [...groups.keys()].filter(k => k !== '__solo__').sort((a, b) => a - b);
+    let html = '';
+
+    sortedGi.forEach(gi => {
+        const groupItems = groups.get(gi);
+        const geralItem = geralItems[gi];
+        const title = geralItem ? (geralItem.texto || `Item ${gi + 1}`) : `Item Geral ${gi + 1}`;
+        html += `<div class="cl-pub-editor-group">
+            <div class="cl-pub-editor-group-hdr">
+                <i class="fas fa-layer-group cl-pub-editor-group-icon"></i>
+                <span class="cl-pub-editor-group-title">${title}</span>
+                <span class="cl-pub-editor-group-badge">${groupItems.length}</span>
+            </div>
+            <div class="cl-pub-editor-group-body"
+                ondragover="event.preventDefault()"
+                ondrop="_clDropOnGroup(event,'${prefix}',${gi})">
+                ${groupItems.map(({ item, i }) => _renderPubEditorItem(prefix, item, i, geralItems)).join('')}
+            </div>
+        </div>`;
+    });
+
+    const soloItems = groups.get('__solo__') || [];
+    html += `<div class="cl-pub-editor-group cl-pub-editor-group-solo">
+        <div class="cl-pub-editor-group-hdr">
+            <i class="fas fa-list-check cl-pub-editor-group-icon"></i>
+            <span class="cl-pub-editor-group-title">Sem associação</span>
+            <span class="cl-pub-editor-group-badge">${soloItems.length}</span>
+        </div>
+        <div class="cl-pub-editor-group-body"
+            ondragover="event.preventDefault()"
+            ondrop="_clDropOnGroup(event,'${prefix}',null)">
+            ${soloItems.length === 0
+                ? '<div class="cl-pub-editor-empty"><i class="fas fa-info-circle"></i> Arraste itens aqui para remover associação ao checklist geral.</div>'
+                : soloItems.map(({ item, i }) => _renderPubEditorItem(prefix, item, i, geralItems)).join('')}
+        </div>
+    </div>`;
+
+    return html;
+}
+
 function renderChecklistEditor(prefix) {
     const container = document.getElementById(`${prefix}-checklist-editor`);
     if (!container) return;
     const items = _getChecklistData(prefix);
+    const isPubPrefix = prefix.endsWith('-pub');
+    const basePrefix = isPubPrefix ? prefix.slice(0, -4) : prefix;
+    const geralItems = isPubPrefix ? _getChecklistData(basePrefix) : [];
+
+    if (isPubPrefix) {
+        container.innerHTML = _renderPubEditorGroupedItems(prefix, items, geralItems);
+        return;
+    }
+
     if (items.length === 0) {
         container.innerHTML = '<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;"><i class="fas fa-list-check" style="font-size:24px;display:block;margin-bottom:8px;"></i>Nenhum item ainda. Adicione abaixo.</div>';
         return;
     }
-    const isPubPrefix = prefix.endsWith('-pub');
+
     container.innerHTML = items.map((item, i) => {
         const requiresComment = !!item.requiresComment;
-        const requiredForPub = !!item.requiredForPub;
-        const fixo = !!item.fixo;
         const commentVal = (item.comment || '').replace(/"/g, '&quot;');
         return `
-        <div class="checklist-editor-item">
+        <div class="checklist-editor-item" draggable="true"
+            ondragstart="_clDragStart(event,'${prefix}',${i})"
+            ondragover="_clDragOver(event,'${prefix}',${i})"
+            ondragleave="_clDragLeave(event)"
+            ondrop="_clDrop(event,'${prefix}',${i})"
+            ondragend="_clDragEnd(event)">
             <div class="checklist-editor-item-top">
+                <span class="checklist-drag-handle" title="Arrastar para reordenar"><i class="fas fa-grip-vertical"></i></span>
                 <input type="text" class="checklist-item-text-input" value="${(item.texto || '').replace(/"/g, '&quot;')}"
                     oninput="updateChecklistItemText('${prefix}', ${i}, this.value)"
                     placeholder="Texto do item">
-                ${isPubPrefix ? `
-                <button class="checklist-item-required-toggle ${requiredForPub ? 'active required-for-pub' : ''}"
-                    onclick="toggleChecklistItemRequiredForPub('${prefix}', ${i}, this)"
-                    title="${requiredForPub ? 'Obrigatório para publicar (clique para remover)' : 'Tornar obrigatório para publicar'}">
-                    <i class="fas fa-exclamation-circle" style="font-size:11px;"></i>
-                    ${requiredForPub ? 'Obrigatório' : 'Opcional'}
-                </button>
-                <button class="checklist-item-fixo-toggle ${fixo ? 'active' : ''}"
-                    onclick="toggleChecklistItemFixo('${prefix}', ${i}, this)"
-                    title="${fixo ? 'Fixo: permanece após publicação' : 'Temporário: removido após publicação'}">
-                    <i class="fas fa-thumbtack" style="font-size:11px;"></i>
-                    Fixo
-                </button>` : `
                 <button class="checklist-item-required-toggle ${requiresComment ? 'active' : ''}"
-                    onclick="toggleChecklistItemRequired('${prefix}', ${i}, this)"
-                    title="${requiresComment ? 'Comentário obrigatório ativado' : 'Exigir comentário para marcar'}">
+                    onclick="toggleChecklistItemRequired('${prefix}', ${i}, this)">
                     <i class="fas fa-comment-dots" style="font-size:11px;"></i>
                     ${requiresComment ? 'Comentário obrigatório' : 'Exigir comentário'}
-                </button>`}
+                </button>
                 <button class="checklist-item-del-btn" onclick="removeChecklistItem('${prefix}',${i})" title="Remover">&times;</button>
             </div>
-            ${!isPubPrefix && requiresComment ? `
+            ${requiresComment ? `
             <div class="checklist-editor-comment-area">
                 <textarea class="checklist-editor-comment-input"
                     placeholder="Comentário pré-preenchido (opcional)…"
@@ -120,7 +317,12 @@ window.addChecklistItem = function(prefix) {
     if (!text) return;
     const items = _getChecklistData(prefix);
     const isPub = prefix.endsWith('-pub');
-    items.push({ texto: text, checked: false, requiresComment: false, comment: '', ...(isPub ? { fixo: false } : {}) });
+    const newItem = { id: Date.now() + Math.floor(Math.random() * 1000), texto: text, checked: false, requiresComment: false, comment: '' };
+    if (isPub) {
+        newItem.requiredForPub = false;
+        newItem.geralIndex = (window._clPubNewGroup && window._clPubNewGroup[prefix] != null) ? window._clPubNewGroup[prefix] : null;
+    }
+    items.push(newItem);
     _setChecklistData(prefix, items);
     renderChecklistEditor(prefix);
     input.value = '';
@@ -131,6 +333,8 @@ window.removeChecklistItem = function(prefix, index) {
     const items = _getChecklistData(prefix);
     items.splice(index, 1);
     _setChecklistData(prefix, items);
+    // BUG FIX: remover item do geral desloca ou apaga referências no checklist de publicação
+    if (!prefix.endsWith('-pub')) _syncGeralIndexAfterRemove(prefix, index);
     renderChecklistEditor(prefix);
 };
 
@@ -167,14 +371,96 @@ window.toggleChecklistItemRequiredForPub = function(prefix, index, btn) {
     btn.innerHTML = `<i class="fas fa-exclamation-circle" style="font-size:11px;"></i> ${isNow ? 'Obrigatório' : 'Opcional'}`;
 };
 
-window.toggleChecklistItemFixo = function(prefix, index, btn) {
+window.setChecklistItemGeralIndex = function(prefix, index, value) {
     const items = _getChecklistData(prefix);
     if (!items[index]) return;
-    items[index].fixo = !items[index].fixo;
+    items[index].geralIndex = (value === '' || value === null) ? null : parseInt(value, 10);
     _setChecklistData(prefix, items);
-    const isNow = items[index].fixo;
-    btn.classList.toggle('active', isNow);
-    btn.innerHTML = `<i class="fas fa-thumbtack" style="font-size:11px;"></i> Fixo`;
+};
+
+// ─── PUB CHECKLIST GROUP DROPDOWN ────────────────────────────
+window._clPubNewGroup = {};
+
+function _clPubCloseDropdown() {
+    if (window._clPubActiveDropdown) {
+        window._clPubActiveDropdown.remove();
+        window._clPubActiveDropdown = null;
+    }
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.cl-pub-link-dropdown') &&
+        !e.target.closest('.cl-pub-item-link-btn') &&
+        !e.target.closest('.cl-pub-add-group-btn')) {
+        _clPubCloseDropdown();
+    }
+});
+
+function _clPubBuildDropdown(opts, currentValue, onClickFn) {
+    const dropdown = document.createElement('div');
+    dropdown.className = 'cl-pub-link-dropdown';
+    dropdown.innerHTML = opts.map(opt => `
+        <div class="cl-pub-link-dropdown-item${currentValue === opt.value ? ' selected' : ''}"
+            onclick="${onClickFn}(${JSON.stringify(opt.value)})">
+            <i class="fas ${opt.value === null ? 'fa-unlink' : 'fa-link'}"></i>
+            ${opt.label}
+        </div>`).join('');
+    return dropdown;
+}
+
+function _clPubPositionDropdown(dropdown, btn) {
+    document.body.appendChild(dropdown);
+    window._clPubActiveDropdown = dropdown;
+    const rect = btn.getBoundingClientRect();
+    const ddW = dropdown.offsetWidth;
+    let left = rect.left + window.scrollX;
+    if (left + ddW > window.innerWidth - 8) left = window.innerWidth - ddW - 8;
+    dropdown.style.top = (rect.bottom + 4 + window.scrollY) + 'px';
+    dropdown.style.left = Math.max(4, left) + 'px';
+}
+
+window._clPubShowGroupDropdown = function(btn, prefix, index) {
+    _clPubCloseDropdown();
+    const basePrefix = prefix.slice(0, -4);
+    const geralItems = _getChecklistData(basePrefix);
+    const items = _getChecklistData(prefix);
+    const item = items[index];
+    const current = item ? item.geralIndex : null;
+    const opts = [{ label: 'Sem associação', value: null },
+        ...geralItems.map((g, gi) => ({ label: (g.texto || `Item ${gi+1}`).slice(0, 40), value: gi }))];
+    const fnName = `__clPubSel_${prefix.replace(/-/g,'_')}_${index}`;
+    window[fnName] = function(val) {
+        _clPubCloseDropdown();
+        window.setChecklistItemGeralIndex(prefix, index, val === null ? '' : String(val));
+        renderChecklistEditor(prefix);
+    };
+    const dropdown = _clPubBuildDropdown(opts, current, fnName);
+    _clPubPositionDropdown(dropdown, btn);
+};
+
+window._clPubShowAddGroupDropdown = function(btn, prefix) {
+    _clPubCloseDropdown();
+    const basePrefix = prefix.slice(0, -4);
+    const geralItems = _getChecklistData(basePrefix);
+    if (!window._clPubNewGroup) window._clPubNewGroup = {};
+    const current = window._clPubNewGroup[prefix] != null ? window._clPubNewGroup[prefix] : null;
+    const opts = [{ label: 'Sem associação', value: null },
+        ...geralItems.map((g, gi) => ({ label: (g.texto || `Item ${gi+1}`).slice(0, 40), value: gi }))];
+    const fnName = `__clPubAddSel_${prefix.replace(/-/g,'_')}`;
+    window[fnName] = function(val) {
+        _clPubCloseDropdown();
+        if (!window._clPubNewGroup) window._clPubNewGroup = {};
+        window._clPubNewGroup[prefix] = val === null ? null : parseInt(val, 10);
+        const linked = window._clPubNewGroup[prefix] != null;
+        const b = document.getElementById(`${prefix}-add-group-btn`);
+        if (b) {
+            b.innerHTML = `<i class="fas ${linked ? 'fa-link' : 'fa-unlink'}"></i>`;
+            b.classList.toggle('active', linked);
+            b.title = linked ? 'Novo item associado a grupo — clique para alterar' : 'Associar novo item a grupo';
+        }
+    };
+    const dropdown = _clPubBuildDropdown(opts, current, fnName);
+    _clPubPositionDropdown(dropdown, btn);
 };
 
 // Chamado ao abrir drawer em modo edição
@@ -204,11 +490,12 @@ window.getChecklist = function(prefix) {
 
 window.getChecklistPub = function(prefix) {
     return _getChecklistData(prefix + '-pub').map(i => ({
+        id: i.id || null,
         texto: i.texto || '',
         checked: !!i.checked,
         requiresComment: !!i.requiresComment,
         requiredForPub: !!i.requiredForPub,
-        fixo: !!i.fixo,
+        geralIndex: i.geralIndex != null ? i.geralIndex : null,
         comment: i.comment || ''
     }));
 };
@@ -245,6 +532,13 @@ window.renderViewChecklist = function(item, tab) {
 
     const canCL = typeof userCanChecklist === 'function' ? userCanChecklist(item) : true;
 
+    const _pubCL = item.checklistPublicacao || [];
+    const _pubs = item.publicacoes || [];
+    const _completedPubIds = new Set();
+    _pubs.forEach(p => (p.checklistSnapshot || []).forEach(s => {
+        if (s.checked) { if (s.id) _completedPubIds.add(s.id); else _completedPubIds.add('t:' + (s.texto || '').trim()); }
+    }));
+
     const itemsHtml = checklist.map((c, i) => {
         const hasComment = !!(c.comment || '').trim();
         const needsComment = !!c.requiresComment;
@@ -255,13 +549,46 @@ window.renderViewChecklist = function(item, tab) {
             ? 'Você não tem permissão para preencher este checklist'
             : (blockedByComment ? 'Digite um comentário antes de marcar este item' : '');
         const commentBtnClass = hasComment ? 'has-comment' : '';
+
+        const assocPub = _pubCL.filter(pc => pc.geralIndex === i);
+        let pubBtnHtml = '';
+        let pubBlocked = false;
+        let pubLockedDone = false;
+        if (assocPub.length > 0) {
+            const doneCount = assocPub.filter(pc => _completedPubIds.has(pc.id || ('t:' + (pc.texto || '').trim()))).length;
+            const allPubDone = doneCount === assocPub.length;
+            const partial = doneCount > 0 && !allPubDone;
+            pubBlocked = !c.checked && !allPubDone;
+            pubLockedDone = c.checked && allPubDone;
+            pubBtnHtml = `<button class="vcl-pub-progress-btn${allPubDone ? ' all-done' : partial ? ' partial' : ''}"
+                onclick="_clViewPubProgress(this,${item.id},'${tab}',${i})"
+                title="Publicações associadas (${doneCount}/${assocPub.length} concluídos)">
+                <i class="fas fa-paper-plane"></i>
+                <span class="vcl-ppb-badge">${doneCount}/${assocPub.length}</span>
+            </button>`;
+        }
+
+        const isDisabledFinal = isDisabled || pubBlocked || pubLockedDone;
+        const cbTitle = pubBlocked
+            ? 'Há publicações pendentes — conclua todas as publicações associadas para marcar este item'
+            : pubLockedDone ? 'Concluído via publicações — não pode ser desmarcado manualmente' : title;
+
+        const stateClass = pubBlocked ? 'pub-cl-blocked' : pubLockedDone ? 'pub-cl-locked-done' : c.checked ? 'cl-done' : '';
+
         return `
-        <div class="view-checklist-item ${c.checked ? 'checked' : ''} ${blockedByPerm ? 'vcl-perm-locked' : ''}" id="vcl-item-${item.id}-${i}">
+        <div class="view-checklist-item ${c.checked ? 'checked' : ''} ${blockedByPerm ? 'vcl-perm-locked' : ''} ${stateClass}" id="vcl-item-${item.id}-${i}">
             <div class="view-checklist-item-row">
-                <input type="checkbox" class="view-checklist-cb" ${c.checked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''}
-                    onchange="toggleViewChecklistItem(${item.id},'${tab}',${i})"
-                    title="${title}">
-                <span class="view-checklist-item-text">${c.texto || ''}</span>
+                <span class="vcl-pub-lock-wrap${pubBlocked ? ' active' : pubLockedDone ? ' locked-done' : ''}"${pubBlocked ? ` onclick="_clPubBlockWarn(${item.id},'${tab}',${i})"` : pubLockedDone ? ` onclick="_clPubLockedDoneWarn()"` : ''}>
+                    <input type="checkbox" class="view-checklist-cb" ${c.checked ? 'checked' : ''} ${isDisabledFinal ? 'disabled' : ''}
+                        onchange="toggleViewChecklistItem(${item.id},'${tab}',${i})"
+                        title="${cbTitle}">
+                    ${pubBlocked ? '<i class="fas fa-lock vcl-pub-lock-icon"></i>' : ''}
+                    ${pubLockedDone ? '<i class="fas fa-lock vcl-pub-lock-icon vcl-lock-done"></i>' : ''}
+                </span>
+                <span class="view-checklist-item-text${pubBlocked ? ' pub-cl-blocked-text' : ''}"
+                    ${pubBlocked ? `onclick="_clPubBlockWarn(${item.id},'${tab}',${i})" style="cursor:not-allowed"` : ''}
+                >${c.texto || ''}</span>
+                ${pubBtnHtml}
                 <button class="view-checklist-comment-btn ${commentBtnClass}"
                     onclick="toggleViewChecklistComment('vcl-item-${item.id}-${i}')"
                     title="${hasComment ? 'Ver/editar comentário' : 'Adicionar comentário'}">
@@ -392,13 +719,34 @@ window.selectAllViewChecklist = function(id, tab) {
     else if (finalTab === 'rnc') found = (window.rncItems || []).find(i => i.id === id);
     if (!found || !found.checklist) return;
     if (typeof userCanChecklist === 'function' && !userCanChecklist(found)) return;
-    const allDone = found.checklist.every(c => c.checked);
-    found.checklist.forEach(c => {
-        // Only toggle items that are not blocked by required comment
-        if (allDone || !c.requiresComment || (c.comment || '').trim()) {
-            c.checked = !allDone;
-        }
+
+    const _pCL = found.checklistPublicacao || [];
+    const _doneSet = new Set();
+    (found.publicacoes || []).forEach(p => (p.checklistSnapshot || []).forEach(s => {
+        if (s.checked) _doneSet.add(s.id || ('t:' + (s.texto || '').trim()));
+    }));
+    const _isPubBlocked = idx => {
+        const assoc = _pCL.filter(pc => pc.geralIndex === idx);
+        return assoc.length > 0 && assoc.some(pc => !_doneSet.has(pc.id || ('t:' + (pc.texto || '').trim())));
+    };
+    const _isPubLockedDone = idx => {
+        const assoc = _pCL.filter(pc => pc.geralIndex === idx);
+        return assoc.length > 0 && assoc.every(pc => _doneSet.has(pc.id || ('t:' + (pc.texto || '').trim())));
+    };
+
+    // Considera "allDone" apenas nos itens que podem ser toggleados
+    const toggleable = found.checklist.filter((c, idx) =>
+        !_isPubBlocked(idx) && !_isPubLockedDone(idx) && (!c.requiresComment || (c.comment || '').trim())
+    );
+    const allDone = toggleable.length > 0 && toggleable.every(c => c.checked);
+
+    found.checklist.forEach((c, idx) => {
+        if (_isPubLockedDone(idx)) return; // nunca toca em itens bloqueados por pub concluída
+        if (_isPubBlocked(idx)) return;    // nunca marca itens com pub pendente
+        if (c.requiresComment && !(c.comment || '').trim()) return; // respeita comentário obrigatório
+        c.checked = !allDone;
     });
+
     _scheduleChecklistSave();
     renderViewChecklist(found, finalTab);
     renderCards();
@@ -420,10 +768,149 @@ window.toggleViewChecklistItem = function(id, tab, index) {
     if (typeof userCanChecklist === 'function' && !userCanChecklist(found)) return;
     // Block if requires comment but none provided
     if (!c.checked && c.requiresComment && !(c.comment || '').trim()) return;
+
+    const _pCL2 = found.checklistPublicacao || [];
+    const _assoc2 = _pCL2.filter(pc => pc.geralIndex === index);
+    if (_assoc2.length > 0) {
+        const _doneSet2 = new Set();
+        (found.publicacoes || []).forEach(p => (p.checklistSnapshot || []).forEach(s => {
+            if (s.checked) _doneSet2.add(s.id || ('t:' + (s.texto || '').trim()));
+        }));
+        const _pubDone2 = _assoc2.filter(pc => _doneSet2.has(pc.id || ('t:' + (pc.texto || '').trim()))).length;
+        if (!c.checked && _pubDone2 < _assoc2.length) {
+            // Bloqueia marcar quando há pub pendente
+            _clPubBlockWarn(id, tab, index);
+            return;
+        }
+        if (c.checked && _pubDone2 === _assoc2.length) {
+            // Bloqueia desmarcar quando concluído via publicações
+            if (typeof showToast === 'function') showToast('Este item foi concluído via publicações e não pode ser desmarcado manualmente.', 'warning');
+            return;
+        }
+    }
     c.checked = !c.checked;
     _scheduleChecklistSave();
     renderViewChecklist(found, finalTab);
     renderCards();
+};
+
+window._clPubLockedDoneWarn = function() {
+    if (typeof showToast === 'function') showToast('Este item foi concluído via publicações e não pode ser desmarcado manualmente.', 'warning');
+};
+
+function _clPubBlockWarn(itemId, tab, index) {
+    if (typeof showToast === 'function') {
+        showToast('Há publicações pendentes. Conclua todas as publicações associadas para poder marcar este item.', 'warning');
+    }
+    // Shake no botão de progresso de publicação para chamar atenção
+    const btn = document.querySelector(`#vcl-item-${itemId}-${index} .vcl-pub-progress-btn`);
+    if (btn) {
+        btn.classList.remove('vcl-pub-btn-shake');
+        void btn.offsetWidth; // reflow para resetar animação
+        btn.classList.add('vcl-pub-btn-shake');
+        setTimeout(() => btn.classList.remove('vcl-pub-btn-shake'), 600);
+    }
+}
+
+// ─── POPUP DE PROGRESSO DE PUBLICAÇÃO POR ITEM DO CHECKLIST ──
+window._clViewPubProgress = function(btn, itemId, tab, geralIndex) {
+    const existing = document.getElementById('_vcl_pp_popup');
+    if (existing) {
+        const wasSame = existing._srcBtn === btn;
+        existing.remove();
+        if (wasSame) return;
+    }
+
+    const finalTab = _normalizeTab(tab);
+    let found;
+    if (finalTab === 'auditoria') found = audits.find(i => i.id === itemId);
+    else if (finalTab === 'atividades') found = activities.find(i => i.id === itemId);
+    else if (finalTab === 'treinamentos') found = trainings.find(i => i.id === itemId);
+    else if (finalTab === 'documentos') found = documents.find(i => i.id === itemId);
+    else if (finalTab === 'rnc') found = (window.rncItems || []).find(i => i.id === itemId);
+    if (!found) return;
+
+    const pubCL = (found.checklistPublicacao || []).filter(c => c.geralIndex === geralIndex);
+    if (!pubCL.length) return;
+    const pubs = found.publicacoes || [];
+
+    // Para cada item de pub: encontra qual publicação o concluiu (mais recente = menor índice)
+    const completionMap = new Map();
+    pubCL.forEach(pc => {
+        const key = pc.id || ('t:' + (pc.texto || '').trim());
+        for (let pi = 0; pi < pubs.length; pi++) {
+            const snap = (pubs[pi].checklistSnapshot || []).find(s =>
+                (pc.id && s.id === pc.id) || (!pc.id && (s.texto || '').trim() === (pc.texto || '').trim())
+            );
+            if (snap && snap.checked) { completionMap.set(key, { pub: pubs[pi], pubIndex: pi }); break; }
+        }
+    });
+
+    const total = pubCL.length;
+    const done = pubCL.filter(pc => completionMap.has(pc.id || ('t:' + (pc.texto || '').trim()))).length;
+    const pct = total ? Math.round((done / total) * 100) : 0;
+
+    const itemsHtml = pubCL.map(pc => {
+        const key = pc.id || ('t:' + (pc.texto || '').trim());
+        const entry = completionMap.get(key);
+        const isDone = !!entry;
+        const pubRef = entry ? entry.pub : null;
+        const pubIdx = entry ? entry.pubIndex : null;
+        const metaHtml = isDone ? `<span class="vcl-pp-meta">
+            <i class="fas fa-paper-plane"></i>
+            ${pubRef.tipo || 'Publicação'}${pubRef.data ? ' &nbsp;·&nbsp; ' + _formatDateBR(pubRef.data) : ''}
+            ${pubRef.hora ? ' · ' + pubRef.hora : ''}
+        </span>` : '<span class="vcl-pp-meta vcl-pp-meta-pend"><i class="fas fa-clock"></i> Pendente</span>';
+        const clickAttr = isDone
+            ? `onclick="document.getElementById('_vcl_pp_popup')?.remove();verPublicacao(${itemId},'${tab}',${pubIdx})" title="Ver publicação"`
+            : '';
+        return `<div class="vcl-pp-item${isDone ? ' done clickable' : ''}" ${clickAttr}>
+            <span class="vcl-pp-dot">${isDone ? '<i class="fas fa-check"></i>' : ''}</span>
+            <div class="vcl-pp-body">
+                <span class="vcl-pp-text">${pc.texto || ''}</span>
+                ${metaHtml}
+            </div>
+            ${isDone ? '<i class="fas fa-chevron-right vcl-pp-item-arrow"></i>' : ''}
+        </div>`;
+    }).join('');
+
+    const barColor = pct === 100 ? 'linear-gradient(90deg,#22c55e,#16a34a)' : pct > 0 ? 'linear-gradient(90deg,#6366f1,#818cf8)' : '#e0e7ff';
+    const popup = document.createElement('div');
+    popup.id = '_vcl_pp_popup';
+    popup._srcBtn = btn;
+    popup.className = 'vcl-pp-popup';
+    popup.innerHTML = `
+        <div class="vcl-pp-hdr">
+            <div class="vcl-pp-hdr-top">
+                <span class="vcl-pp-title"><i class="fas fa-paper-plane"></i> Publicações Associadas</span>
+                <button class="vcl-pp-close-btn" onclick="document.getElementById('_vcl_pp_popup')?.remove()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="vcl-pp-prog-row">
+                <div class="vcl-pp-bar-track"><div class="vcl-pp-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+                <span class="vcl-pp-count">${done}<span class="vcl-pp-total">/${total}</span></span>
+            </div>
+        </div>
+        <div class="vcl-pp-list">${itemsHtml}</div>`;
+
+    document.body.appendChild(popup);
+
+    const rect = btn.getBoundingClientRect();
+    const popW = 290;
+    let left = rect.right - popW + window.scrollX;
+    if (left < 6) left = 6;
+    if (left + popW > window.innerWidth - 6) left = window.innerWidth - popW - 6;
+    popup.style.left = left + 'px';
+    popup.style.top = (rect.bottom + 6 + window.scrollY) + 'px';
+
+    setTimeout(() => {
+        function _vclPPClose(e) {
+            if (!e.target.closest('#_vcl_pp_popup') && !e.target.closest('.vcl-pub-progress-btn')) {
+                document.getElementById('_vcl_pp_popup')?.remove();
+                document.removeEventListener('click', _vclPPClose);
+            }
+        }
+        document.addEventListener('click', _vclPPClose);
+    }, 20);
 };
 
 // ─── VIEW ANEXOS ─────────────────────────────────────────────
@@ -458,25 +945,94 @@ window._editingPubIndex = null;
 // editIndex: número = editar publicação existente; undefined/null = nova publicação
 // ─── CHECKLIST DE PUBLICAÇÃO (modal de publicar) ─────────────
 window._pubChecklistState = [];
+window._pubChecklistGeralItems = [];
 
-function _renderPubChecklistItems() {
-    return (window._pubChecklistState || []).map((c, i) => {
-        const isRequired = !!c.requiredForPub;
-        const needsWarning = isRequired && !c.checked;
+function _renderPubClItem(c, i) {
+    const isRequired = !!c.requiredForPub;
+    const needsWarning = isRequired && !c.checked;
+    const isEditing = window._editingPubIndex != null;
+    if (isEditing) {
         return `
-        <label class="pub-cl-item ${c.checked ? 'checked' : ''} ${needsWarning ? 'pub-cl-required-warn' : ''}" data-pub-cl-index="${i}">
-            <input type="checkbox" ${c.checked ? 'checked' : ''} onchange="togglePubClItem(${i}, this)">
+        <div class="pub-cl-item pub-cl-item-readonly ${c.checked ? 'checked' : ''}" data-pub-cl-index="${i}">
+            <span class="pub-cl-ro-dot">${c.checked ? '<i class="fas fa-check"></i>' : ''}</span>
             ${isRequired ? `<i class="fas fa-exclamation-circle pub-cl-required-icon" title="Item obrigatório para publicar"></i>` : ''}
             <span>${c.texto || ''}</span>
-        </label>`;
-    }).join('');
+        </div>`;
+    }
+    return `
+    <label class="pub-cl-item ${c.checked ? 'checked' : ''} ${needsWarning ? 'pub-cl-required-warn' : ''}" data-pub-cl-index="${i}">
+        <input type="checkbox" ${c.checked ? 'checked' : ''} onchange="togglePubClItem(${i}, this)">
+        ${isRequired ? `<i class="fas fa-exclamation-circle pub-cl-required-icon" title="Item obrigatório para publicar"></i>` : ''}
+        <span>${c.texto || ''}</span>
+    </label>`;
+}
+
+function _renderPubChecklistItems() {
+    const state = window._pubChecklistState || [];
+    const geralItems = window._pubChecklistGeralItems || [];
+    const isEditing = window._editingPubIndex != null;
+
+    if (state.length === 0) {
+        return `<div class="pub-cl-empty-done"><i class="fas fa-circle-check"></i> Todos os itens já foram concluídos em publicações anteriores.</div>`;
+    }
+
+    const roNotice = isEditing
+        ? `<div class="pub-cl-readonly-notice"><i class="fas fa-lock"></i> O checklist não pode ser alterado ao editar uma publicação.</div>`
+        : '';
+
+    // Agrupa itens por geralIndex
+    const groups = new Map();
+    state.forEach((c, i) => {
+        const key = c.geralIndex != null ? c.geralIndex : '__solo__';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push({ c, i });
+    });
+
+    let html = '';
+
+    // Grupos associados ao checklist geral (em ordem de índice)
+    const sortedKeys = [...groups.keys()].filter(k => k !== '__solo__').sort((a, b) => a - b);
+    sortedKeys.forEach(gi => {
+        const entries = groups.get(gi);
+        const geralItem = geralItems[gi];
+        const geralText = geralItem ? (geralItem.texto || `Item Geral ${gi + 1}`) : `Item Geral ${gi + 1}`;
+        const allDone = entries.every(e => e.c.checked);
+        html += `<div class="pub-cl-group">
+            <div class="pub-cl-group-header${allDone ? ' all-done' : ''}">
+                <i class="fas fa-layer-group"></i>
+                <span>${geralText}</span>
+                ${allDone ? '<i class="fas fa-check-circle pub-cl-group-done-icon"></i>' : ''}
+            </div>
+            ${entries.map(({ c, i }) => _renderPubClItem(c, i)).join('')}
+        </div>`;
+    });
+
+    // Itens sem associação
+    const solo = groups.get('__solo__') || [];
+    if (solo.length > 0) {
+        if (sortedKeys.length > 0) {
+            html += `<div class="pub-cl-group pub-cl-group-standalone">
+                <div class="pub-cl-group-header">
+                    <i class="fas fa-list-check"></i><span>Outros itens</span>
+                </div>
+                ${solo.map(({ c, i }) => _renderPubClItem(c, i)).join('')}
+            </div>`;
+        } else {
+            html += solo.map(({ c, i }) => _renderPubClItem(c, i)).join('');
+        }
+    }
+
+    return roNotice + html;
 }
 
 function _updatePubClToggleBtn() {
     const btn = document.getElementById('pubClToggleAllBtn');
-    if (!btn || !window._pubChecklistState) return;
-    const allChecked = window._pubChecklistState.length > 0 && window._pubChecklistState.every(c => c.checked);
-    btn.textContent = allChecked ? 'Desmarcar todos' : 'Marcar todos';
+    if (!btn) return;
+    const state = window._pubChecklistState || [];
+    // Esconde botão ao editar (checklist é somente leitura)
+    if (window._editingPubIndex != null || state.length === 0) { btn.style.display = 'none'; return; }
+    btn.style.display = '';
+    btn.textContent = state.every(c => c.checked) ? 'Desmarcar todos' : 'Marcar todos';
 }
 
 window.togglePubClItem = function(i, cb) {
@@ -651,19 +1207,39 @@ window.openPublicacaoModal = function(editIndex) {
     const clItems = document.getElementById('pubChecklistItems');
     if (clWrap && clItems) {
         if (isEditing && existingPub && existingPub.checklistSnapshot && existingPub.checklistSnapshot.length > 0) {
-            // Ao editar: carrega o snapshot salvo preservando o estado marcado
+            // Edição: restaura snapshot da publicação específica
             window._pubChecklistState = existingPub.checklistSnapshot.map(c => ({ ...c }));
+            window._pubChecklistGeralItems = item.checklist || [];
             clItems.innerHTML = _renderPubChecklistItems();
             clWrap.style.display = '';
             _updatePubClToggleBtn();
         } else if (pubCL.length > 0 && !isEditing) {
-            window._pubChecklistState = pubCL.map(c => ({ ...c, checked: false, comment: '' }));
-            clItems.innerHTML = _renderPubChecklistItems();
-            clWrap.style.display = '';
-            _updatePubClToggleBtn();
+            // Determina quais itens já foram concluídos em publicações anteriores
+            const completedIds = new Set();
+            (item.publicacoes || []).forEach(pub => {
+                (pub.checklistSnapshot || []).forEach(snap => {
+                    if (snap.checked && snap.id) completedIds.add(snap.id);
+                });
+            });
+            // Exibe apenas itens pendentes (sem ID ou cujo ID não está concluído)
+            const pending = pubCL.filter(c => !c.id || !completedIds.has(c.id));
+            window._pubChecklistGeralItems = item.checklist || [];
+            if (pending.length > 0) {
+                window._pubChecklistState = pending.map(c => ({ ...c, checked: false }));
+                clItems.innerHTML = _renderPubChecklistItems();
+                clWrap.style.display = '';
+                _updatePubClToggleBtn();
+            } else {
+                // Todos os itens já concluídos — exibe mensagem informativa
+                window._pubChecklistState = [];
+                clItems.innerHTML = _renderPubChecklistItems();
+                clWrap.style.display = '';
+                _updatePubClToggleBtn();
+            }
         } else {
             clWrap.style.display = 'none';
             window._pubChecklistState = [];
+            window._pubChecklistGeralItems = [];
         }
     }
 
@@ -731,9 +1307,15 @@ window.confirmarPublicacao = function() {
         anexos: anexos
     };
 
-    // Salva snapshot do checklist de publicação
+    // Salva snapshot do checklist de publicação (com id e geralIndex para rastreabilidade)
     if (window._pubChecklistState && window._pubChecklistState.length > 0) {
-        pub.checklistSnapshot = window._pubChecklistState.map(c => ({ texto: c.texto, checked: c.checked, requiredForPub: !!c.requiredForPub }));
+        pub.checklistSnapshot = window._pubChecklistState.map(c => ({
+            id: c.id || null,
+            texto: c.texto,
+            checked: c.checked,
+            requiredForPub: !!c.requiredForPub,
+            geralIndex: c.geralIndex != null ? c.geralIndex : null
+        }));
     } else if (isEditing && item.publicacoes[editIndex]?.checklistSnapshot) {
         pub.checklistSnapshot = item.publicacoes[editIndex].checklistSnapshot;
     }
@@ -755,13 +1337,16 @@ window.confirmarPublicacao = function() {
 
     if (isEditing) {
         item.publicacoes[editIndex] = pub;
+        // Reavalia marcação geral ao editar publicação
+        _autoMarkGeralFromPub(item);
+        _autoUnmarkGeralFromPub(item);
     } else {
         item.publicacoes.unshift(pub);
         _updateItemDatesAfterPublicacao(item, finalTab, dataVal);
-        // Remove itens temporários (não-fixos) do checklistPublicacao após publicar
-        if (item.checklistPublicacao && item.checklistPublicacao.length > 0) {
-            item.checklistPublicacao = item.checklistPublicacao.filter(c => !!c.fixo);
-        }
+        // Auto-marca itens do checklist geral quando todos os associados estiverem concluídos
+        _autoMarkGeralFromPub(item);
+        // Auto-desmarca itens que tinham pub concluída mas agora há novos itens pendentes
+        _autoUnmarkGeralFromPub(item);
     }
 
     window._editingPubIndex = null;
@@ -781,6 +1366,53 @@ window.confirmarPublicacao = function() {
     renderCards();
     if (typeof showToast === 'function') showToast(isEditing ? 'Publicação atualizada com sucesso!' : 'Publicação registrada com sucesso!', 'success');
 };
+
+// Marca automaticamente itens do checklist geral cujos itens de publicação
+// associados foram todos concluídos ao longo das publicações do item.
+function _autoUnmarkGeralFromPub(item) {
+    const pubCL = item.checklistPublicacao || [];
+    const geral = item.checklist || [];
+    if (!geral.length || !pubCL.length) return;
+    const completedIds = new Set();
+    (item.publicacoes || []).forEach(pub => (pub.checklistSnapshot || []).forEach(snap => {
+        if (snap.checked) completedIds.add(snap.id || ('t:' + (snap.texto || '').trim()));
+    }));
+    const usedGi = [...new Set(pubCL.filter(c => c.geralIndex != null).map(c => c.geralIndex))];
+    usedGi.forEach(gi => {
+        if (gi < 0 || gi >= geral.length || !geral[gi].checked) return;
+        const assoc = pubCL.filter(c => c.geralIndex === gi);
+        if (!assoc.length) return;
+        if (!assoc.every(c => completedIds.has(c.id || ('t:' + (c.texto || '').trim())))) {
+            geral[gi].checked = false;
+        }
+    });
+}
+
+function _autoMarkGeralFromPub(item) {
+    const pubCL = item.checklistPublicacao || [];
+    const geral = item.checklist || [];
+    if (!geral.length || !pubCL.length) return;
+
+    // Coleta IDs marcados em qualquer publicação
+    const completedIds = new Set();
+    (item.publicacoes || []).forEach(pub => {
+        (pub.checklistSnapshot || []).forEach(snap => {
+            if (snap.checked && snap.id) completedIds.add(snap.id);
+        });
+    });
+
+    // Índices geral com itens associados
+    const usedGi = [...new Set(pubCL.filter(c => c.geralIndex != null).map(c => c.geralIndex))];
+    usedGi.forEach(gi => {
+        if (gi < 0 || gi >= geral.length || geral[gi].checked) return;
+        const associated = pubCL.filter(c => c.geralIndex === gi);
+        if (!associated.length) return;
+        // Só auto-marca se todos os associados possuem ID e foram concluídos
+        if (associated.every(c => c.id && completedIds.has(c.id))) {
+            geral[gi].checked = true;
+        }
+    });
+}
 
 function _updateItemDatesAfterPublicacao(item, tab, newDate) {
     if (tab === 'auditoria') {
@@ -1079,23 +1711,107 @@ window.verPublicacao = function(id, tab, index) {
             <div class="ver-pub-desc-block">${pub.descricao.replace(/\n/g,'<br>')}</div>
         </div>` : '';
 
-    // Checklist de publicação (salvo no pub)
+    // Checklist de publicação (salvo no pub) — agrupado por item do checklist geral
     const clItems = pub.checklistSnapshot || [];
     let clBlock = '';
     if (clItems.length > 0) {
-        const done = clItems.filter(c => c.checked).length;
-        const pct = Math.round((done / clItems.length) * 100);
-        clBlock = `
-        <div class="ver-pub-section">
-            <div class="ver-pub-section-label"><i class="fas fa-list-check"></i> Checklist de Publicação <span class="ver-pub-cl-badge">${done}/${clItems.length}</span></div>
-            <div class="ver-pub-cl-progress"><div class="ver-pub-cl-progress-bar" style="width:${pct}%"></div></div>
-            <div class="ver-pub-cl-list">
-                ${clItems.map(c => `
+        const geralSource = item ? (item.checklist || []) : [];
+        const hasGroups = clItems.some(c => c.geralIndex != null);
+
+        // Coleta itens concluídos em publicações ANTERIORES (mais antigas = índice maior)
+        const currentIds  = new Set(clItems.map(c => c.id).filter(Boolean));
+        const currentTexts = new Set(clItems.map(c => (c.texto || '').trim()));
+        const prevCompleted = [];
+        const seenPrev = new Set();
+        (item.publicacoes || []).slice(index + 1).forEach(p => {
+            (p.checklistSnapshot || []).forEach(c => {
+                if (!c.checked) return;
+                const key = c.id || (c.texto || '').trim();
+                if (seenPrev.has(key)) return;
+                if (c.id && currentIds.has(c.id)) return;
+                if (!c.id && currentTexts.has((c.texto || '').trim())) return;
+                seenPrev.add(key);
+                prevCompleted.push(c);
+            });
+        });
+
+        // Progresso inclui concluídos anteriores
+        const done  = clItems.filter(c => c.checked).length + prevCompleted.length;
+        const total = clItems.length + prevCompleted.length;
+        const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+        // Agrupa prev por geralIndex para injetar nos grupos corretos
+        const prevByGroup = new Map();
+        prevCompleted.forEach(c => {
+            const key = c.geralIndex != null ? c.geralIndex : '__solo__';
+            if (!prevByGroup.has(key)) prevByGroup.set(key, []);
+            prevByGroup.get(key).push(c);
+        });
+
+        const _prevItemHtml = c => `
+            <div class="ver-pub-cl-item ver-pub-cl-item-prev">
+                <span class="ver-pub-cl-dot"><i class="fas fa-check"></i></span>
+                <span>${c.texto || ''}</span>
+            </div>`;
+        const _prevDivider = n => n > 0 ? `<div class="ver-pub-cl-prev-divider"><i class="fas fa-history"></i> Concluídos anteriormente</div>` : '';
+
+        let clListHtml = '';
+        if (hasGroups) {
+            const snapGroups = new Map();
+            clItems.forEach(c => {
+                const key = c.geralIndex != null ? c.geralIndex : '__solo__';
+                if (!snapGroups.has(key)) snapGroups.set(key, []);
+                snapGroups.get(key).push(c);
+            });
+            // Garante que grupos com apenas itens anteriores também apareçam
+            prevByGroup.forEach((_, k) => {
+                if (k !== '__solo__' && !snapGroups.has(k)) snapGroups.set(k, []);
+            });
+            const sortedGi = [...snapGroups.keys()].filter(k => k !== '__solo__').sort((a, b) => a - b);
+            sortedGi.forEach(gi => {
+                const groupItems = snapGroups.get(gi) || [];
+                const prevItems  = prevByGroup.get(gi) || [];
+                const geralText  = geralSource[gi] ? (geralSource[gi].texto || `Item ${gi+1}`) : `Item Geral ${gi+1}`;
+                const allDone    = (groupItems.length > 0 || prevItems.length > 0) && groupItems.every(c => c.checked);
+                clListHtml += `<div class="ver-pub-cl-group">
+                    <div class="ver-pub-cl-group-hdr${allDone ? ' done' : ''}">
+                        <i class="fas fa-layer-group"></i> ${geralText}
+                        ${allDone ? '<i class="fas fa-check-circle" style="margin-left:auto;color:#22c55e"></i>' : ''}
+                    </div>
+                    ${groupItems.map(c => `
+                        <div class="ver-pub-cl-item ${c.checked ? 'done' : ''}">
+                            <span class="ver-pub-cl-dot">${c.checked ? '<i class="fas fa-check"></i>' : ''}</span>
+                            <span>${c.texto || ''}</span>
+                        </div>`).join('')}
+                    ${_prevDivider(prevItems.length)}
+                    ${prevItems.map(_prevItemHtml).join('')}
+                </div>`;
+            });
+            const solo     = snapGroups.get('__solo__') || [];
+            const soloPrev = prevByGroup.get('__solo__') || [];
+            if (solo.length || soloPrev.length) {
+                clListHtml += solo.map(c => `
                     <div class="ver-pub-cl-item ${c.checked ? 'done' : ''}">
                         <span class="ver-pub-cl-dot">${c.checked ? '<i class="fas fa-check"></i>' : ''}</span>
                         <span>${c.texto || ''}</span>
-                    </div>`).join('')}
-            </div>
+                    </div>`).join('');
+                clListHtml += _prevDivider(soloPrev.length);
+                clListHtml += soloPrev.map(_prevItemHtml).join('');
+            }
+        } else {
+            clListHtml = clItems.map(c => `
+                <div class="ver-pub-cl-item ${c.checked ? 'done' : ''}">
+                    <span class="ver-pub-cl-dot">${c.checked ? '<i class="fas fa-check"></i>' : ''}</span>
+                    <span>${c.texto || ''}</span>
+                </div>`).join('');
+            clListHtml += _prevDivider(prevCompleted.length);
+            clListHtml += prevCompleted.map(_prevItemHtml).join('');
+        }
+
+        clBlock = `
+        <div class="ver-pub-section">
+            <div class="ver-pub-section-label"><i class="fas fa-list-check"></i> Checklist de Publicação <span class="ver-pub-cl-badge">${done}/${total}</span></div>
+            <div class="ver-pub-cl-progress"><div class="ver-pub-cl-progress-bar" style="width:${pct}%"></div></div>
+            <div class="ver-pub-cl-list">${clListHtml}</div>
         </div>`;
     }
 
@@ -1170,8 +1886,14 @@ window.excluirPublicacao = function(id, tab, index) {
         requireReason: false,
         onConfirm: () => {
             item.publicacoes.splice(index, 1);
+            // Reavalia itens do checklist geral após exclusão
+            _autoMarkGeralFromPub(item);
+            _autoUnmarkGeralFromPub(item);
             saveAll();
             closeModal('modalVerPublicacao');
+            // Re-renderiza checklist do modal de visualização para refletir novo estado
+            if (typeof renderViewChecklist === 'function') renderViewChecklist(item, finalTab);
+            if (typeof renderViewContent === 'function') renderViewContent(id, finalTab);
             renderViewPublicacoes(item);
             _updatePubTabBadge(item);
             renderCards();
