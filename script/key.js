@@ -597,6 +597,58 @@ function _checkTriPerm(permVal, item) {
     }
     
 
+    // --- LIMPEZA DE LOGS ÓRFÃOS (historico de itens deletados) ---
+    window.runOrphanLogsPurge = async function() {
+        const btn    = document.getElementById('btnPurgeOrphanLogs');
+        const report = document.getElementById('orphanLogsReport');
+        if (!btn || !report) return;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analisando...';
+        report.style.display = 'none';
+
+        try {
+            const collections = [audits, trainings, activities, maintenances, documents, ocorrencias, rncItems];
+            let totalLogs = 0;
+            let removedLogs = 0;
+            let affectedItems = 0;
+
+            collections.forEach(col => {
+                (col || []).forEach(item => {
+                    if (!item || !item.deleted) return;
+                    const logCount = Array.isArray(item.historico) ? item.historico.length : 0;
+                    if (logCount > 0) {
+                        totalLogs += logCount;
+                        removedLogs += logCount;
+                        affectedItems++;
+                        item.historico = [];
+                    }
+                });
+            });
+
+            if (removedLogs === 0) {
+                report.innerHTML = `<i class="fas fa-check-circle" style="color:#16a34a"></i> Nenhum log órfão encontrado. Todos os logs pertencem a itens ativos.`;
+            } else {
+                await saveAll(false);
+                report.innerHTML = `
+                    <i class="fas fa-trash-alt" style="color:#dc2626"></i>
+                    <strong>${removedLogs}</strong> log(s) de rastreabilidade removido(s) de <strong>${affectedItems}</strong> item(ns) excluído(s).<br>
+                    <span style="color:#9ca3af; font-size:12px;">Logs de itens ativos não foram afetados.</span>`;
+            }
+            report.style.display = '';
+            if (typeof showToast === 'function') {
+                showToast(removedLogs > 0 ? `${removedLogs} log(s) órfão(s) removido(s).` : 'Nenhum log órfão encontrado.', 'success');
+            }
+        } catch (err) {
+            report.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#ef4444"></i> Erro: ${err.message}`;
+            report.style.display = '';
+            if (typeof showToast === 'function') showToast('Erro ao limpar logs: ' + err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-eraser"></i> Limpar Logs Órfãos';
+        }
+    };
+
     // --- LIMPEZA DE IMGBLOBS ÓRFÃOS ---
     window.runImgBlobsPurge = async function() {
         const btn    = document.getElementById('btnPurgeImgBlobs');

@@ -607,31 +607,51 @@
         </div>
 
         <div id="backupContent" style="display:none;">
-            <div class="backup-card">
-                <i class="fa-solid fa-cloud-arrow-down fa-3x" style="color:var(--primary); margin-bottom:16px;"></i>
-                <h2 style="margin:0 0 8px; color:var(--primary)">Central de Backup</h2>
-                <p style="color:var(--text-light); margin:0 0 24px 0">Gerencie seus dados via Nuvem (Firebase) ou Arquivo Local.</p>
-                
-                <div class="backup-actions" style="flex-wrap: wrap;">
-                    <button class="btn-large btn-export" onclick="exportLocalData()" style="background:var(--ind-green); color:#fff; border:none; flex:1;">
+
+            <!-- Card principal: export / import -->
+            <div class="backup-card-hero">
+                <i class="fa-solid fa-cloud-arrow-down fa-2x" style="color:var(--primary); margin-bottom:12px;"></i>
+                <h2 style="margin:0 0 6px; color:var(--primary); font-size:20px;">Central de Backup</h2>
+                <p style="color:var(--text-light); margin:0; font-size:14px;">Gerencie seus dados via Nuvem (Firebase) ou Arquivo Local.</p>
+                <div class="backup-actions">
+                    <button class="btn-large btn-export" onclick="exportLocalData()" style="background:var(--ind-green); color:#fff; border:none; min-width:160px;">
                         <i class="fas fa-download"></i> Baixar Dados
                     </button>
-                    <button class="btn-large btn-import" onclick="document.getElementById('fileInput').click()" style="background:#fff; color:var(--text); border:2px solid var(--border); flex:1;">
+                    <button class="btn-large btn-import" onclick="document.getElementById('fileInput').click()" style="background:#fff; color:var(--text); border:2px solid var(--border); min-width:160px;">
                         <i class="fas fa-upload"></i> Importar Dados
                     </button>
                     <input type="file" id="fileInput" style="display:none" onchange="importLocalData(this)" accept=".json">
                 </div>
-                <p style="font-size:12px; color:#999; margin-top:20px">Nota: Ao restaurar um arquivo local, ele será automaticamente sincronizado com a nuvem.</p>
+                <p style="font-size:11px; color:#aaa; margin:16px 0 0;">Ao restaurar um arquivo local, ele será automaticamente sincronizado com a nuvem.</p>
             </div>
 
-            <div class="backup-card" style="max-width:500px;">
-                <i class="fas fa-image fa-2x" style="color:#7c3aed; margin-bottom:12px;"></i>
-                <h3 style="margin:0 0 6px; color:var(--text)">Limpeza de Imagens</h3>
-                <p style="color:var(--text-light); font-size:13px; margin:0 0 20px;">Remove imagens armazenadas no banco que não estão associadas a nenhuma publicação.</p>
-                <div id="imgBlobsReport" style="display:none; background:#f5f3ff; border:1.5px solid #ddd6fe; border-radius:10px; padding:14px 16px; margin-bottom:16px; text-align:left; font-size:13px; color:#4b5563;"></div>
-                <button class="btn-large" id="btnPurgeImgBlobs" onclick="runImgBlobsPurge()" style="background:#7c3aed; color:#fff; border:none; width:100%; justify-content:center;">
-                    <i class="fas fa-broom"></i> Analisar e Limpar Imagens Órfãs
-                </button>
+            <!-- Grid de utilitários de limpeza -->
+            <div class="backup-utils-grid">
+
+                <div class="backup-card-util">
+                    <i class="fas fa-image fa-2x" style="color:#7c3aed; margin-bottom:10px;"></i>
+                    <h3 style="margin:0 0 6px; color:var(--text); font-size:15px;">Limpeza de Imagens</h3>
+                    <p style="color:var(--text-light); font-size:13px; margin:0 0 16px; line-height:1.5;">Remove imagens armazenadas no banco que não estão associadas a nenhuma publicação.</p>
+                    <div class="backup-util-body">
+                        <div id="imgBlobsReport" class="backup-report" style="display:none; background:#f5f3ff; border:1.5px solid #ddd6fe; border-radius:10px; padding:12px 14px; margin-bottom:14px; text-align:left; font-size:13px; color:#4b5563; line-height:1.5;"></div>
+                        <button class="btn-large" id="btnPurgeImgBlobs" onclick="runImgBlobsPurge()" style="background:#7c3aed; color:#fff; border:none; width:100%; justify-content:center; margin-top:auto;">
+                            <i class="fas fa-broom"></i> Analisar e Limpar Imagens Órfãs
+                        </button>
+                    </div>
+                </div>
+
+                <div class="backup-card-util">
+                    <i class="fas fa-history fa-2x" style="color:#dc2626; margin-bottom:10px;"></i>
+                    <h3 style="margin:0 0 6px; color:var(--text); font-size:15px;">Limpeza de Logs Órfãos</h3>
+                    <p style="color:var(--text-light); font-size:13px; margin:0 0 16px; line-height:1.5;">Remove logs de rastreabilidade de itens excluídos do sistema, sem nenhum vínculo ativo.</p>
+                    <div class="backup-util-body">
+                        <div id="orphanLogsReport" class="backup-report" style="display:none; background:#fff5f5; border:1.5px solid #fecaca; border-radius:10px; padding:12px 14px; margin-bottom:14px; text-align:left; font-size:13px; color:#4b5563; line-height:1.5;"></div>
+                        <button class="btn-large" id="btnPurgeOrphanLogs" onclick="runOrphanLogsPurge()" style="background:#dc2626; color:#fff; border:none; width:100%; justify-content:center; margin-top:auto;">
+                            <i class="fas fa-eraser"></i> Limpar Logs Órfãos
+                        </button>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -2717,7 +2737,7 @@
                 <div style="height:5px;background:#e5e7eb;border-radius:99px;overflow:hidden;">
                     <div id="pub-img-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#a855f7);border-radius:99px;transition:width .2s ease;"></div>
                 </div>
-            </div>
+            </div>01
             <div id="pub-upload-zone" class="upload-drop-zone">
                 <input type="file" id="pub-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
