@@ -770,6 +770,8 @@ function resetModal(prefix) {
                 }
 
                 if (deletedItem) {
+                    // Apaga imagens (anexos do card + de publicações) para não deixar órfãos
+                    if (typeof window._deleteItemImgBlobs === 'function') window._deleteItemImgBlobs(deletedItem);
                     if (!masterLists.deletionHistory) masterLists.deletionHistory = [];
                     masterLists.deletionHistory.push({
                         histId: Date.now() + '_' + Math.random().toString(36).slice(2, 7),
@@ -2252,6 +2254,11 @@ function viewHistoryItem(id, tab, historyIndex) {
             closeHistoryDrawer();
             if (typeof window._flushChecklistSave === 'function') window._flushChecklistSave();
         }
+        // Cancelar/fechar a publicação descarta imagens enviadas mas não publicadas.
+        // Se a publicação foi salva, o blob já está referenciado e é preservado.
+        if (id === 'modalPublicacao' && typeof window._discardSessionImgBlobs === 'function') {
+            window._discardSessionImgBlobs('pub');
+        }
     }
 
     const FORM_DRAWER_IDS = ['modalAuditoria', 'modalTreinamentos', 'modalAtividades', 'modalDocumentos', 'modalManutencao'];
@@ -2287,6 +2294,11 @@ function viewHistoryItem(id, tab, historyIndex) {
     }
 
     function closeFormDrawer() {
+        // Cancelar/fechar um drawer descarta imagens enviadas mas não salvas.
+        // Se o item foi salvo, o blob já está referenciado e é preservado.
+        if (typeof window._discardSessionImgBlobs === 'function') {
+            ['audit', 'ativ', 'train', 'doc', 'mant', 'oc', 'rnc'].forEach(ctx => window._discardSessionImgBlobs(ctx));
+        }
         FORM_DRAWER_IDS.forEach(did => {
             const el = document.getElementById(did);
             if (el) el.classList.remove('open');

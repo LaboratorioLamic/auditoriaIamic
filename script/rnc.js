@@ -2090,6 +2090,8 @@
         if (d) d.classList.remove('open');
         if (bk) bk.classList.remove('open');
         rncCloseAllDropdowns();
+        // Descarta imagens enviadas mas não salvas (preserva as já persistidas)
+        if (typeof window._discardSessionImgBlobs === 'function') window._discardSessionImgBlobs('rnc');
     };
 
     window.rncSelectClass = function(cls) {
@@ -2724,6 +2726,10 @@
             message: 'Esta publicação será removida permanentemente.',
             confirmLabel: 'Excluir', icon: 'fa-trash'
         }, function() {
+            var pubRemovida = r.publicacoes[index];
+            (pubRemovida && pubRemovida.anexos || []).forEach(function(a) {
+                if (a && a.tipo === 'imagem' && a.fileId && typeof window._deleteImgBlob === 'function') window._deleteImgBlob(a.fileId);
+            });
             r.publicacoes.splice(index, 1);
             persist();
             _renderRncViewPubs(r);
@@ -3930,7 +3936,10 @@
         }, function() {
             var arr = window.rncItems || [];
             var idx = arr.findIndex(function(x){ return x.id === id; });
-            if (idx !== -1) arr.splice(idx, 1);
+            if (idx !== -1) {
+                if (typeof window._deleteItemImgBlobs === 'function') window._deleteItemImgBlobs(arr[idx]);
+                arr.splice(idx, 1);
+            }
             persist(); renderRnc(); updateRncNotificationBell(); updateRncTrashBadge();
             _renderRncTrashList();
             toast('RNC excluída permanentemente.', 'success');

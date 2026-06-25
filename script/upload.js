@@ -361,6 +361,70 @@ window._loadImgBlob = async function _loadImgBlob(blobId) {
   return snap.val().data;
 }
 
+// ── Prevenção de imagens órfãs ───────────────────────────────
+// Rastreia blobs de imagem enviados na sessão atual de um modal/drawer
+// (já gravados em /imgBlobs) mas ainda NÃO persistidos via saveAll().
+// Se o usuário cancelar/fechar sem salvar, são apagados para não virarem órfãos.
+const _sessionImgBlobs = {};
+
+function _trackSessionImgBlob(ctx, blobId) {
+  if (!blobId) return;
+  if (!_sessionImgBlobs[ctx]) _sessionImgBlobs[ctx] = new Set();
+  _sessionImgBlobs[ctx].add(blobId);
+}
+
+// Coleta todos os fileId de imagem efetivamente referenciados nos dados salvos
+// (anexos de cards e anexos de publicações), em todas as coleções.
+function _collectReferencedBlobIds() {
+  const refs = new Set();
+  const collections = [
+    (typeof audits        !== 'undefined' && audits)        || [],
+    (typeof trainings     !== 'undefined' && trainings)     || [],
+    (typeof activities    !== 'undefined' && activities)    || [],
+    (typeof maintenances  !== 'undefined' && maintenances)  || [],
+    (typeof documents     !== 'undefined' && documents)     || [],
+    (window.ocorrencias)  || [],
+    (window.rncItems)     || []
+  ];
+  const scan = (anexos) => (anexos || []).forEach(a => {
+    if (a && a.tipo === 'imagem' && a.fileId) refs.add(a.fileId);
+  });
+  collections.forEach(arr => (arr || []).forEach(item => {
+    if (!item) return;
+    scan(item.anexos);
+    (item.publicacoes || []).forEach(p => scan(p && p.anexos));
+  }));
+  return refs;
+}
+
+// Descarta a sessão de upload de um contexto: apaga de /imgBlobs os blobs
+// enviados nesta sessão que NÃO estão referenciados em nenhum dado salvo.
+// Blobs que já foram persistidos (item salvo) permanecem intactos.
+window._discardSessionImgBlobs = function _discardSessionImgBlobs(ctx) {
+  const set = _sessionImgBlobs[ctx];
+  if (!set || set.size === 0) return;
+  const referenced = _collectReferencedBlobIds();
+  set.forEach(blobId => {
+    if (!referenced.has(blobId) && typeof window._deleteImgBlob === 'function') {
+      window._deleteImgBlob(blobId);
+    }
+  });
+  set.clear();
+};
+
+// Apaga todos os blobs de imagem associados a um item (anexos do card +
+// anexos de todas as publicações). Usado ao excluir um item permanentemente.
+window._deleteItemImgBlobs = function _deleteItemImgBlobs(item) {
+  if (!item) return;
+  const del = (anexos) => (anexos || []).forEach(a => {
+    if (a && a.tipo === 'imagem' && a.fileId && typeof window._deleteImgBlob === 'function') {
+      window._deleteImgBlob(a.fileId);
+    }
+  });
+  del(item.anexos);
+  (item.publicacoes || []).forEach(p => del(p && p.anexos));
+};
+
 async function doUploadImagemFirebase(ctx, onSuccess) {
   const q = _uploadQueues[ctx];
   if (!q.file || !q.dataUrl) {
@@ -391,6 +455,8 @@ async function doUploadImagemFirebase(ctx, onSuccess) {
 
     // Salva em /imgBlobs/{blobId} — isolado do saveAll()
     await _saveImgBlob(blobId, compressed);
+    // Marca como blob de sessão: será descartado se o modal/drawer fechar sem salvar
+    _trackSessionImgBlob(ctx, blobId);
     _setImgProgress(ctx, 100);
 
     if (titleInput) titleInput.value = '';

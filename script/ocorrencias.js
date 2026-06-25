@@ -596,6 +596,8 @@
         if (d) d.classList.remove('open');
         if (bk) bk.classList.remove('open');
         ocCloseAllDropdowns();
+        // Descarta imagens enviadas mas não salvas (preserva as já persistidas)
+        if (typeof window._discardSessionImgBlobs === 'function') window._discardSessionImgBlobs('oc');
     };
 
     window.ocSaveForm = function () {
@@ -665,6 +667,8 @@
             confirmLabel: 'Excluir',
             icon: 'fa-trash'
         }, function () {
+            var alvo = (window.ocorrencias || []).find(function (x) { return x.id === id; });
+            if (alvo && typeof window._deleteItemImgBlobs === 'function') window._deleteItemImgBlobs(alvo);
             window.ocorrencias = (window.ocorrencias || []).filter(function (x) { return x.id !== id; });
             persist();
             renderTable();
@@ -689,6 +693,9 @@
             icon: 'fa-trash',
             requireText: 'SIM'
         }, function () {
+            if (typeof window._deleteItemImgBlobs === 'function') {
+                (window.ocorrencias || []).forEach(function (x) { if (x.tipoId === ocCurrentTipoId) window._deleteItemImgBlobs(x); });
+            }
             window.ocorrencias = (window.ocorrencias || []).filter(function (x) { return x.tipoId !== ocCurrentTipoId; });
             persist();
             ocPage = 1;

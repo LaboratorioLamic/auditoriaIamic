@@ -1528,6 +1528,10 @@ function _checkTriPerm(permVal, item) {
                         if (typeof closeHistoryDrawer === 'function') closeHistoryDrawer();
                         if (typeof window._flushChecklistSave === 'function') window._flushChecklistSave();
                     }
+                    // Fechar a publicação por ESC descarta imagens enviadas mas não publicadas
+                    if (id === 'modalPublicacao' && typeof window._discardSessionImgBlobs === 'function') {
+                        window._discardSessionImgBlobs('pub');
+                    }
                     closed = true;
                     break;
                 }
