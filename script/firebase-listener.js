@@ -22,22 +22,29 @@
 
     async function loadCloudData() {
         try {
+            // (#5) Pinta a UI imediatamente a partir do cache local, se houver,
+            // enquanto a rede responde. O cache é apenas visual: NUNCA alimenta o
+            // baseline do merge nem é gravado de volta sem confirmação da rede.
+            _paintFromLocalCache();
+
             const database = getFirebaseDatabase();
             const dbRef = getFirebaseRef();
             const dbGet = getFirebaseGet();
 
-            const snapshot = await dbGet(dbRef(database, "/"));
+            // (#1/#3) Lê SOMENTE as coleções de dados — não baixa /imgBlobs (imagens
+            // Base64) nem /passwords, que são os nós mais pesados e desnecessários aqui.
+            const _snaps = await Promise.all(_DATA_LISTEN_PATHS.map(p => dbGet(dbRef(database, p))));
+            const record = {};
+            _DATA_LISTEN_PATHS.forEach((p, i) => { record[p] = _snaps[i].exists() ? _snaps[i].val() : undefined; });
 
-            if (snapshot.exists()) {
-                const record = snapshot.val();
-
-                audits = record.audits || [];
-                trainings = record.trainings || [];
-                activities = record.activities || [];
-                maintenances = record.maintenances || [];
-                documents = record.documents || [];
-                ocorrencias = record.ocorrencias || [];
-                rncItems = record.rncItems || [];
+            {
+                audits = _toArray(record.audits);
+                trainings = _toArray(record.trainings);
+                activities = _toArray(record.activities);
+                maintenances = _toArray(record.maintenances);
+                documents = _toArray(record.documents);
+                ocorrencias = _toArray(record.ocorrencias);
+                rncItems = _toArray(record.rncItems);
                 if (typeof window.rncItems !== 'undefined') window.rncItems = rncItems;
 
                 if (record.masterLists) {
@@ -75,6 +82,7 @@
             if (typeof window.updateRncNotificationBell === 'function') window.updateRncNotificationBell();
 
             startFirebaseListener();
+            _saveLocalCache();
 
         } catch (err) {
             console.error("Erro ao carregar dados do Firebase:", err);
@@ -96,19 +104,106 @@
         });
     }
 
+    // === CACHE LOCAL (#5) — pintura instantânea da UI a partir do localStorage ===
+    // Puramente visual: acelera o primeiro render enquanto a rede responde. Nunca
+    // alimenta o baseline do merge nem é gravado de volta sem confirmação da rede.
+    var _LOCAL_CACHE_KEY = 'auditoriaIamic:cacheV1';
+
+    function _saveLocalCache() {
+        try {
+            localStorage.setItem(_LOCAL_CACHE_KEY, JSON.stringify({
+                audits, trainings, activities, maintenances, documents,
+                ocorrencias, rncItems, masterLists, kanbanOrder, ts: Date.now()
+            }));
+        } catch (_) { /* quota cheia ou indisponível — cache é opcional */ }
+    }
+
+    function _paintFromLocalCache() {
+        try {
+            // Só pinta se ainda não há dados em memória (evita sobrepor sessão viva).
+            const empty = !audits.length && !trainings.length && !activities.length &&
+                          !maintenances.length && !documents.length && !ocorrencias.length && !rncItems.length;
+            if (!empty) return false;
+            const raw = localStorage.getItem(_LOCAL_CACHE_KEY);
+            if (!raw) return false;
+            const c = JSON.parse(raw);
+            if (!c) return false;
+            audits       = _toArray(c.audits);
+            trainings    = _toArray(c.trainings);
+            activities   = _toArray(c.activities);
+            maintenances = _toArray(c.maintenances);
+            documents    = _toArray(c.documents);
+            ocorrencias  = _toArray(c.ocorrencias);
+            rncItems     = _toArray(c.rncItems);
+            if (typeof window.rncItems !== 'undefined') window.rncItems = rncItems;
+            if (c.masterLists) masterLists = { ...defaultMasterLists, ...c.masterLists };
+            kanbanOrder = c.kanbanOrder || {};
+            try {
+                populateSelects();
+                if (typeof window.renderDashboard === 'function') window.renderDashboard();
+            } catch (_) {}
+            return true;
+        } catch (_) { return false; }
+    }
+
+    // === LISTENER ESCOPADO POR COLEÇÃO (#1) ===
+    // Caminhos de dados lidos/ouvidos. NUNCA inclui imgBlobs (imagens Base64) nem
+    // passwords — assim o Firebase jamais reenvia esses nós pesados nas sincronizações.
+    var _DATA_LISTEN_PATHS = ['audits','trainings','activities','maintenances','documents','ocorrencias','rncItems','masterLists','kanbanOrder'];
+
+    var dataListeners = [];          // um listener por coleção (substitui o único em "/")
+    var _remoteCache = {};           // último valor remoto de cada caminho ouvido
+    var _remoteApplyScheduled = false;
+
+    // Coalesce as rajadas de eventos das várias coleções num único re-render.
+    function _scheduleRemoteApply() {
+        if (_remoteApplyScheduled) return;
+        _remoteApplyScheduled = true;
+        setTimeout(() => { _remoteApplyScheduled = false; _applyRemoteSnapshot(); }, 50);
+    }
+
     function startFirebaseListener() {
         try {
             const database = getFirebaseDatabase();
             const dbRef = getFirebaseRef();
             const dbOnValue = getFirebaseOnValue();
 
-            if (!currentuser || dataListener) return;
+            if (!currentuser) return;
 
-            dataListener = dbOnValue(dbRef(database, "/"), (snapshot) => {
-                if (!snapshot.exists()) return;
+            // Um listener por coleção em vez de um único em "/": o Firebase nunca
+            // reenvia /imgBlobs nem /passwords nas sincronizações. (#1)
+            if (dataListeners.length === 0) {
+                _DATA_LISTEN_PATHS.forEach(path => {
+                    const handler = dbOnValue(dbRef(database, path), (snapshot) => {
+                        _remoteCache[path] = snapshot.exists() ? snapshot.val() : null;
+                        _scheduleRemoteApply();
+                    });
+                    dataListeners.push({ path, handler });
+                });
+            }
 
-                const record = snapshot.val();
-                const editingCard = isEditingCardOpen();
+            startUsersListener();
+        } catch (error) {
+            console.error('Erro no listener Firebase:', error);
+        }
+    }
+
+    // Reaproveita exatamente a lógica de adoção/guarda do listener original,
+    // montando um "record" a partir do cache das coleções ouvidas.
+    function _applyRemoteSnapshot() {
+        try {
+            const record = {
+                audits:       _remoteCache.audits,
+                trainings:    _remoteCache.trainings,
+                activities:   _remoteCache.activities,
+                maintenances: _remoteCache.maintenances,
+                documents:    _remoteCache.documents,
+                ocorrencias:  _remoteCache.ocorrencias,
+                rncItems:     _remoteCache.rncItems,
+                masterLists:  _remoteCache.masterLists,
+                kanbanOrder:  _remoteCache.kanbanOrder
+            };
+            const editingCard = isEditingCardOpen();
 
                 // masterLists e kanbanOrder sempre sincronizam (inclusive durante edição de lista)
                 const listsChanged =
@@ -163,41 +258,44 @@
                     if (typeof window.renderCards === 'function') window.renderCards();
                 }
                 if (typeof window.updateRncNotificationBell === 'function') window.updateRncNotificationBell();
-            });
-
-            if (!usersListener) {
-                usersListener = dbOnValue(dbRef(database, 'passwords'), (snapshot) => {
-                    if (isEditingCardOpen()) return;
-
-                    let rawUsers = snapshot.exists() ? snapshot.val() : [];
-                    if (!Array.isArray(rawUsers)) rawUsers = [];
-
-                    const newUsers = rawUsers.map(u => ({
-                        ...u,
-                        name: u.name || u.Name || u.user || '',
-                        user: u.user || u.User || '',
-                        password: String(u.password || ''),
-                        active: u.active !== false,
-                        canDeleteCards: _normTriPerm(u.canDeleteCards, 'nao'),
-                        canEditCards:   _normTriPerm(u.canEditCards,   'total'),
-                        canManageLists: !!u.canManageLists,
-                        canManagePubs:  _normTriPerm(u.canManagePubs,  'total'),
-                        canPublish: u.canPublish || 'total',
-                        canChecklist: u.canChecklist || 'total',
-                        isAdmin: !!u.isAdmin || u.user === 'admin'
-                    }));
-
-                    if (JSON.stringify(newUsers) !== JSON.stringify(users)) {
-                        users = newUsers;
-                        if (currentTab === 'configuracoes') renderusersConfigTable();
-                        msRefreshUsers();
-                        populateSelects();
-                    }
-                });
-            }
-        } catch (error) {
-            console.error('Erro no listener Firebase:', error);
+        } catch (err) {
+            console.error('Erro ao aplicar dados remotos:', err);
         }
+    }
+
+    function startUsersListener() {
+        const database = getFirebaseDatabase();
+        const dbRef = getFirebaseRef();
+        const dbOnValue = getFirebaseOnValue();
+        if (usersListener) return;
+        usersListener = dbOnValue(dbRef(database, 'passwords'), (snapshot) => {
+            if (isEditingCardOpen()) return;
+
+            let rawUsers = snapshot.exists() ? snapshot.val() : [];
+            if (!Array.isArray(rawUsers)) rawUsers = [];
+
+            const newUsers = rawUsers.map(u => ({
+                ...u,
+                name: u.name || u.Name || u.user || '',
+                user: u.user || u.User || '',
+                password: String(u.password || ''),
+                active: u.active !== false,
+                canDeleteCards: _normTriPerm(u.canDeleteCards, 'nao'),
+                canEditCards:   _normTriPerm(u.canEditCards,   'total'),
+                canManageLists: !!u.canManageLists,
+                canManagePubs:  _normTriPerm(u.canManagePubs,  'total'),
+                canPublish: u.canPublish || 'total',
+                canChecklist: u.canChecklist || 'total',
+                isAdmin: !!u.isAdmin || u.user === 'admin'
+            }));
+
+            if (JSON.stringify(newUsers) !== JSON.stringify(users)) {
+                users = newUsers;
+                if (currentTab === 'configuracoes') renderusersConfigTable();
+                msRefreshUsers();
+                populateSelects();
+            }
+        });
     }
 
     function stopFirebaseListener() {
@@ -205,9 +303,12 @@
             const database = getFirebaseDatabase();
             const dbRef = getFirebaseRef();
             const dbOff = getFirebaseOff();
-            if (dataListener) {
-                dbOff(dbRef(database, "/"), dataListener);
-                dataListener = null;
+            if (dataListeners.length) {
+                dataListeners.forEach(({ path, handler }) => {
+                    try { dbOff(dbRef(database, path), handler); } catch (_) {}
+                });
+                dataListeners = [];
+                _remoteCache = {};
             }
             if (usersListener) {
                 dbOff(dbRef(database, 'passwords'), usersListener);
@@ -373,11 +474,15 @@
             const mlSnapshot = JSON.parse(JSON.stringify(masterLists));
             const koSnapshot = JSON.parse(JSON.stringify(kanbanOrder));
 
-            // Lê o estado remoto mais recente e aplica o merge 3-vias antes de gravar.
-            // Usa update() em caminhos específicos em vez de runTransaction(/) que falha
-            // com internal_error em bancos grandes (transações na raiz são instáveis no RTDB).
-            const remoteSnapshot = await dbGet(dbRef(database, "/"));
-            const remoteState = remoteSnapshot.exists() ? remoteSnapshot.val() : {};
+            // (#3) Lê SOMENTE as coleções de dados para o merge 3-vias — não baixa
+            // /imgBlobs (imagens Base64) nem /passwords. Esta é a leitura mais frequente
+            // do sistema (roda a cada gravação), então excluir as imagens daqui é o maior
+            // corte de banda. Usa update() em caminhos específicos em vez de
+            // runTransaction(/), que falha com internal_error em bancos grandes.
+            const _mergePaths = ['audits','trainings','activities','maintenances','documents','ocorrencias','rncItems','masterLists','kanbanOrder'];
+            const _remoteSnaps = await Promise.all(_mergePaths.map(p => dbGet(dbRef(database, p))));
+            const remoteState = {};
+            _mergePaths.forEach((p, i) => { remoteState[p] = _remoteSnaps[i].exists() ? _remoteSnaps[i].val() : undefined; });
 
             const mergedAudits       = _mergeCollection(local.audits,       remoteState.audits,       base.audits);
             const mergedTrainings    = _mergeCollection(local.trainings,    remoteState.trainings,    base.trainings);
@@ -387,18 +492,25 @@
             const mergedOcorrencias  = _mergeCollection(local.ocorrencias,  remoteState.ocorrencias,  base.ocorrencias);
             const mergedRncItems     = _mergeCollection(local.rncItems,     remoteState.rncItems,     base.rncItems);
 
-            await update(dbRef(database, "/"), {
-                audits:       mergedAudits,
-                trainings:    mergedTrainings,
-                activities:   mergedActivities,
-                maintenances: mergedMaintenances,
-                documents:    mergedDocuments,
-                ocorrencias:  mergedOcorrencias,
-                rncItems:     mergedRncItems,
-                masterLists:  mlSnapshot,
-                kanbanOrder:  koSnapshot,
-                lastUpdate:   new Date().toISOString()
-            });
+            // (#2) Grava SOMENTE as coleções que realmente mudaram em relação ao remoto.
+            // Coleções inalteradas não são reescritas — evita reenviá-las (e o reenvio
+            // do listener) aos demais clientes conectados.
+            const _changed = (a, b) => JSON.stringify(a) !== JSON.stringify(b);
+            const writePayload = {};
+            if (_changed(mergedAudits,       _toArray(remoteState.audits)))       writePayload.audits       = mergedAudits;
+            if (_changed(mergedTrainings,    _toArray(remoteState.trainings)))    writePayload.trainings    = mergedTrainings;
+            if (_changed(mergedActivities,   _toArray(remoteState.activities)))   writePayload.activities   = mergedActivities;
+            if (_changed(mergedMaintenances, _toArray(remoteState.maintenances))) writePayload.maintenances = mergedMaintenances;
+            if (_changed(mergedDocuments,    _toArray(remoteState.documents)))    writePayload.documents    = mergedDocuments;
+            if (_changed(mergedOcorrencias,  _toArray(remoteState.ocorrencias)))  writePayload.ocorrencias  = mergedOcorrencias;
+            if (_changed(mergedRncItems,     _toArray(remoteState.rncItems)))     writePayload.rncItems     = mergedRncItems;
+            if (_changed(mlSnapshot, remoteState.masterLists || {})) writePayload.masterLists = mlSnapshot;
+            if (_changed(koSnapshot, remoteState.kanbanOrder || {})) writePayload.kanbanOrder = koSnapshot;
+
+            if (Object.keys(writePayload).length > 0) {
+                writePayload.lastUpdate = new Date().toISOString();
+                await update(dbRef(database, "/"), writePayload);
+            }
 
             // O merge incorporou novidades de outras sessões? (para re-render)
             const pulledRemoteChanges =
@@ -423,6 +535,7 @@
             rncItems = mergedRncItems;
             if (typeof window.rncItems !== 'undefined') window.rncItems = rncItems;
             captureSyncBaseline();
+            _saveLocalCache(); // (#5) atualiza o cache visual após gravação confirmada
 
             // Se incorporamos mudanças de outras sessões, atualiza a UI.
             if (pulledRemoteChanges && !isEditingCardOpen()) {

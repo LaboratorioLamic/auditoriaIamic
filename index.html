@@ -2349,10 +2349,10 @@
         </div>
         <!-- Aba Anexos -->
         <div class="drawer-tab-panel" id="ativ-panel-anexos">
-            <div id="ativ-anexos-list"></div>
             <div class="upload-widget">
                 <select id="ativ-upload-tipo" class="upload-tipo-select" onchange="_onUploadTipoChange('ativ')">
                     <option value="arquivo">Arquivo</option>
+                    <option value="imagem">Imagem</option>
                     <option value="link">Link</option>
                 </select>
                 <input type="text" id="ativ-upload-title" class="upload-title-input" placeholder="Nome do arquivo">
@@ -2363,14 +2363,15 @@
             </div>
             <div id="ativ-file-preview" style="display:none;"></div>
             <div id="ativ-upload-zone" class="upload-drop-zone">
-                <input type="file" id="ativ-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
+                <input type="file" id="ativ-file-input" style="display:none" accept=".pdf,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span class="upload-drop-label">Clique ou arraste o arquivo</span>
-                <span class="upload-drop-hint">PDF, imagem, planilha ou slides</span>
+                <span class="upload-drop-hint">PDF, planilha ou slides</span>
             </div>
             <div id="ativ-link-wrap" style="display:none;">
                 <input type="url" id="ativ-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
             </div>
+            <div id="ativ-anexos-list"></div>
         </div>
     </div><!-- /form-drawer-body -->
     <div class="form-drawer-footer">
@@ -2698,8 +2699,8 @@
             <div class="upload-widget">
                 <select id="pub-upload-tipo" class="upload-tipo-select" onchange="_onUploadTipoChange('pub')">
                     <option value="arquivo">Arquivo</option>
-                    <option value="link">Link</option>
                     <option value="imagem">Imagem</option>
+                    <option value="link">Link</option>
                 </select>
                 <input type="text" id="pub-upload-title" class="upload-title-input" placeholder="Nome do arquivo">
                 <button type="button" class="upload-send-btn" id="pub-upload-btn" onclick="submitAnexoUpload('pub')">

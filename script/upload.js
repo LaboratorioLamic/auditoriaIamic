@@ -111,9 +111,17 @@ function _onUploadTipoChange(ctx) {
     _renderUploadPreview(ctx);
   } else {
     if (linkWrap) linkWrap.style.display = 'none';
-    if (fileInput) fileInput.accept = '.pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp';
-    const hint = zone ? zone.querySelector('.upload-drop-hint') : null;
-    if (hint) hint.textContent = 'PDF, imagem, planilha ou slides';
+    const sel = document.getElementById(`${ctx}-upload-tipo`);
+    const hasImageOption = sel && Array.from(sel.options).some(o => o.value === 'imagem');
+    if (hasImageOption) {
+      if (fileInput) fileInput.accept = '.pdf,.xls,.xlsx,.ods,.ppt,.pptx,.odp';
+      const hint = zone ? zone.querySelector('.upload-drop-hint') : null;
+      if (hint) hint.textContent = 'PDF, planilha ou slides';
+    } else {
+      if (fileInput) fileInput.accept = '.pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp';
+      const hint = zone ? zone.querySelector('.upload-drop-hint') : null;
+      if (hint) hint.textContent = 'PDF, imagem, planilha ou slides';
+    }
     if (btn) btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Enviar`;
     _renderUploadPreview(ctx);
   }
@@ -158,7 +166,7 @@ function _setUploadFile(ctx, file) {
     };
     reader.readAsDataURL(file);
   } else {
-    if (!_validateUploadFile(file)) return;
+    if (!_validateUploadFile(file, ctx)) return;
     const reader = new FileReader();
     reader.onload = e => {
       _uploadQueues[ctx].file    = file;
@@ -183,12 +191,29 @@ function _validateImageFile(file) {
   return true;
 }
 
-function _validateUploadFile(file) {
-  const okType = UPLOAD_ALLOWED_TYPES.includes(file.type);
-  const okExt  = UPLOAD_ALLOWED_EXT.some(ext => file.name.toLowerCase().endsWith(ext));
-  if (!okType && !okExt) {
-    if (typeof showToast === 'function') showToast('Tipo de arquivo não permitido. Use PDF, imagem, planilha ou apresentação.', 'error');
-    return false;
+const UPLOAD_ALLOWED_TYPES_NO_IMG = UPLOAD_ALLOWED_TYPES.filter(t => !t.startsWith('image/'));
+const UPLOAD_ALLOWED_EXT_NO_IMG   = UPLOAD_ALLOWED_EXT.filter(e => !['.jpg','.jpeg','.png','.gif','.webp','.svg'].includes(e));
+
+function _ctxHasImageOption(ctx) {
+  const sel = document.getElementById(`${ctx}-upload-tipo`);
+  return sel && Array.from(sel.options).some(o => o.value === 'imagem');
+}
+
+function _validateUploadFile(file, ctx) {
+  if (ctx && _ctxHasImageOption(ctx)) {
+    const okType = UPLOAD_ALLOWED_TYPES_NO_IMG.includes(file.type);
+    const okExt  = UPLOAD_ALLOWED_EXT_NO_IMG.some(ext => file.name.toLowerCase().endsWith(ext));
+    if (!okType && !okExt) {
+      if (typeof showToast === 'function') showToast('Tipo de arquivo não permitido. Use PDF, planilha ou apresentação. Para imagens, selecione o tipo "Imagem".', 'error');
+      return false;
+    }
+  } else {
+    const okType = UPLOAD_ALLOWED_TYPES.includes(file.type);
+    const okExt  = UPLOAD_ALLOWED_EXT.some(ext => file.name.toLowerCase().endsWith(ext));
+    if (!okType && !okExt) {
+      if (typeof showToast === 'function') showToast('Tipo de arquivo não permitido. Use PDF, imagem, planilha ou apresentação.', 'error');
+      return false;
+    }
   }
   return true;
 }
