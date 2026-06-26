@@ -37,10 +37,16 @@ const _uploadQueues = {
 // Armazena a task Firebase ativa por contexto para permitir cancelamento
 const _activeUploadTasks = {};
 
-// Botões de salvar/confirmar bloqueados durante upload
+// Botões de salvar/confirmar bloqueados durante upload (arquivo pendente ou enviando).
+// Inclui os drawers de cards (audit/ativ/train/doc) para impedir salvar o card ANTES de
+// o anexo terminar de subir — o que gravaria o card sem o vínculo do arquivo.
 const _SAVE_BTN_IDS = {
   'pub':        'btn-confirmar-publicacao',
-  'edit-pub':   'btn-salvar-edicao-pub'
+  'edit-pub':   'btn-salvar-edicao-pub',
+  'audit':      'btn-save-audit',
+  'ativ':       'btn-save-ativ',
+  'train':      'btn-save-train',
+  'doc':        'btn-save-doc'
 };
 
 let _uploadsInProgress = { 'pub': false, 'edit-pub': false };
@@ -58,13 +64,34 @@ function _setSaveBtnBlocked(ctx, blocked) {
 }
 
 // ── Comunicação com o Google Apps Script ─────────────────────
+// Timeout do upload via Drive. O Apps Script pode demorar (cold start), mas sem um
+// limite uma requisição "pendurada" deixa o botão Enviar travado e — em publicações —
+// o botão Salvar bloqueado (_setSaveBtnBlocked) até a rede desistir sozinha. Com o
+// AbortController, um upload que estoura o tempo REJEITA, o catch mostra o erro e o
+// finally do chamador libera os botões. Importante: o upload é DESACOPLADO do saveAll
+// dos cards (escreve em Drive/ /imgBlobs, nunca nas coleções), então um timeout aqui
+// NÃO interrompe nem corrompe a gravação dos cards — só falha o anexo em questão.
+const UPLOAD_TIMEOUT_MS = 90 * 1000;
+
 async function _driveRequest(payload) {
-  const resp = await fetch(UPLOAD_SCRIPT_URL, {
-    method: 'POST',
-    body:   JSON.stringify(payload)
-  });
-  const text = await resp.text();
-  try { return JSON.parse(text); } catch { return text; }
+  const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), UPLOAD_TIMEOUT_MS) : null;
+  try {
+    const resp = await fetch(UPLOAD_SCRIPT_URL, {
+      method: 'POST',
+      body:   JSON.stringify(payload),
+      signal: ctrl ? ctrl.signal : undefined
+    });
+    const text = await resp.text();
+    try { return JSON.parse(text); } catch { return text; }
+  } catch (err) {
+    if (err && err.name === 'AbortError') {
+      throw new Error('Tempo de envio esgotado. Verifique a conexão e tente novamente.');
+    }
+    throw err;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 async function driveUpload(filename, dataUrl) {

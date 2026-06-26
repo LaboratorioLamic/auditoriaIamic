@@ -48,7 +48,7 @@
                 if (typeof window.rncItems !== 'undefined') window.rncItems = rncItems;
 
                 if (record.masterLists) {
-                    masterLists = { ...defaultMasterLists, ...record.masterLists };
+                    masterLists = _normalizeMasterLists(record.masterLists);
                     if (Array.isArray(masterLists.mantItens) && masterLists.mantItens.length === 0) {
                         masterLists.mantItens = defaultMasterLists.mantItens;
                     }
@@ -136,7 +136,7 @@
             ocorrencias  = _toArray(c.ocorrencias);
             rncItems     = _toArray(c.rncItems);
             if (typeof window.rncItems !== 'undefined') window.rncItems = rncItems;
-            if (c.masterLists) masterLists = { ...defaultMasterLists, ...c.masterLists };
+            if (c.masterLists) masterLists = _normalizeMasterLists(c.masterLists);
             kanbanOrder = c.kanbanOrder || {};
             try {
                 populateSelects();
@@ -205,10 +205,16 @@
             };
             const editingCard = isEditingCardOpen();
 
-                // masterLists e kanbanOrder sempre sincronizam (inclusive durante edição de lista)
-                const listsChanged =
+                // masterLists e kanbanOrder sincronizam mesmo durante edição de card (para
+                // refletir listas criadas por outras sessões nos selects), MAS nunca enquanto
+                // há gravação local pendente: durante um save, o próprio _saveAllInternal
+                // reconcilia masterLists por merge — adotar o remoto aqui reverteria a edição
+                // local ainda não confirmada e o follow-up do coalescing regravaria o estado
+                // revertido (perda de marcador). Por isso o guard _pendingSaves === 0.
+                const listsDiffer =
                     JSON.stringify(record.masterLists) !== JSON.stringify(masterLists) ||
                     JSON.stringify(record.kanbanOrder) !== JSON.stringify(kanbanOrder);
+                const listsChanged = listsDiffer && _pendingSaves === 0;
 
                 // Não adota o remoto enquanto há edição aberta OU gravação local
                 // pendente: evita sobrescrever alterações locais ainda não salvas.
@@ -226,9 +232,13 @@
 
                 if (listsChanged) {
                     if (record.masterLists) {
-                        masterLists = { ...defaultMasterLists, ...record.masterLists };
+                        masterLists = _normalizeMasterLists(record.masterLists);
                     }
                     kanbanOrder = record.kanbanOrder || {};
+                    // Atualiza SÓ o baseline de masterLists (sem chamar captureSyncBaseline,
+                    // que sobrescreveria o baseline dos arrays — que podem ter edições locais
+                    // ainda não salvas durante uma edição de card).
+                    if (_syncBaseline) _syncBaseline.masterLists = _deepClone(masterLists);
                 }
 
                 if (dataChanged) {
@@ -341,7 +351,10 @@
             maintenances: _deepClone(maintenances),
             documents: _deepClone(documents),
             ocorrencias: _deepClone(ocorrencias),
-            rncItems: _deepClone(rncItems)
+            rncItems: _deepClone(rncItems),
+            // masterLists (listas mestras: marcadores, status, categorias, etc.) entra no
+            // baseline para que o save reconcilie suas alterações por delta, igual aos arrays.
+            masterLists: _deepClone(masterLists)
         };
     }
 
@@ -402,6 +415,111 @@
         return result;
     }
 
+    // === MERGE de masterLists (listas mestras: marcadores, status, categorias, subcats…) ===
+    // masterLists é um OBJETO de listas (não um array com ids), então o merge é feito por
+    // chave de topo e por identidade do item (id > name > value > JSON). Reaproveita a mesma
+    // disciplina baseline+remoto dos arrays para NÃO sobrescrever alterações de outras sessões.
+    // Antes, masterLists era gravado como objeto inteiro (last-write-wins): duas sessões
+    // editando marcadores/listas concorrentemente perdiam a alteração de uma delas.
+    function _mlIdentity(el) {
+        if (el === null || el === undefined) return '∅';
+        if (typeof el !== 'object') return 'v:' + String(el);
+        if (el.id !== undefined && el.id !== null && el.id !== '') return 'id:' + String(el.id);
+        if (el.name !== undefined) return 'name:' + String(el.name);
+        if (el.value !== undefined) return 'value:' + String(el.value);
+        return 'j:' + JSON.stringify(el);
+    }
+
+    function _isPlainObject(v) { return v && typeof v === 'object' && !Array.isArray(v); }
+
+    // Merge de uma lista (array de strings/objetos) por identidade — mesma lógica de
+    // _mergeCollection, mas a identidade aceita name/value (marcadores, status, setores…).
+    function _mergeIdentityArray(localArr, remoteArr, baseArr) {
+        localArr  = Array.isArray(localArr) ? localArr : [];
+        remoteArr = _toArray(remoteArr);
+        baseArr   = Array.isArray(baseArr)  ? baseArr  : [];
+
+        const baseById  = new Map(baseArr.map(e => [_mlIdentity(e), e]));
+        const localById = new Map(localArr.map(e => [_mlIdentity(e), e]));
+        const merged    = new Map(remoteArr.map(e => [_mlIdentity(e), e]));
+
+        // Exclusões locais: item que existia no baseline e sumiu do local.
+        baseById.forEach((_v, k) => { if (!localById.has(k)) merged.delete(k); });
+        // Adições/edições locais: difere do baseline => local vence.
+        localById.forEach((el, k) => {
+            const b = baseById.get(k);
+            if (!b || JSON.stringify(b) !== JSON.stringify(el)) merged.set(k, el);
+        });
+
+        const out = Array.from(merged.values());
+        // Mesma guarda dos arrays: remoto transitoriamente vazio (RTDB: []→null) não apaga o local.
+        if (out.length === 0 && localArr.length > 0) return _deepClone(localArr);
+        return out;
+    }
+
+    function _mergeMasterNode(localV, remoteV, baseV) {
+        // Listas (arrays de strings/objetos) → merge por identidade.
+        if (Array.isArray(localV) || Array.isArray(remoteV)) {
+            return _mergeIdentityArray(localV, remoteV, baseV);
+        }
+        // Mapas aninhados (ex.: auditSubcats {cat:[…]}, ncMotivos {catId:[…]}) → recursão.
+        if (_isPlainObject(localV) || _isPlainObject(remoteV)) {
+            const lo = _isPlainObject(localV) ? localV : {};
+            const ro = _isPlainObject(remoteV) ? remoteV : {};
+            const bo = _isPlainObject(baseV)   ? baseV   : {};
+            const keys = new Set([...Object.keys(lo), ...Object.keys(ro)]);
+            const out = {};
+            keys.forEach(k => {
+                // Subchave excluída localmente (estava no baseline, sumiu do local) → remove.
+                if (!(k in lo) && (k in bo)) return;
+                out[k] = _mergeMasterNode(lo[k], ro[k], bo[k]);
+            });
+            return out;
+        }
+        // Escalares: local vence se difere do baseline; senão mantém o remoto.
+        if (JSON.stringify(localV) !== JSON.stringify(baseV)) return localV;
+        return remoteV !== undefined ? remoteV : localV;
+    }
+
+    // Chaves de lista de masterLists que NÃO estão em defaultMasterLists (criadas sob demanda).
+    var _ML_EXTRA_ARRAY_KEYS = ['rncMarcadores'];
+
+    // Normaliza masterLists vindo do RTDB: o Firebase serializa arrays ESPARSOS como
+    // objetos {0:x,1:y,…}. Se uma lista (marcadores/status/categorias) voltar como objeto,
+    // list.push/.some/.find quebram e o CRUD falha "sem persistir" — e ensureLists() do RNC
+    // chega a ZERAR rncMarcadores ao ver que não é array. Converter de volta para array real
+    // (idempotente em arrays já corretos) blinda todo o fluxo de marcadores.
+    function _normalizeMasterLists(ml) {
+        const out = { ...defaultMasterLists, ...(ml || {}) };
+        Object.keys(out).forEach(k => {
+            const dv = defaultMasterLists[k];
+            if (Array.isArray(dv) || _ML_EXTRA_ARRAY_KEYS.includes(k)) {
+                out[k] = _toArray(out[k]);
+            } else if (_isPlainObject(dv)) {
+                // Mapas aninhados (auditSubcats, mantItens, ncMotivos…): cada valor é uma lista.
+                const node = _isPlainObject(out[k]) ? out[k] : {};
+                const norm = {};
+                Object.keys(node).forEach(sub => { norm[sub] = _toArray(node[sub]); });
+                out[k] = norm;
+            }
+        });
+        return out;
+    }
+
+    function _mergeMasterLists(localML, remoteML, baseML) {
+        localML  = _isPlainObject(localML)  ? localML  : {};
+        remoteML = _isPlainObject(remoteML) ? remoteML : {};
+        baseML   = _isPlainObject(baseML)   ? baseML   : {};
+        const keys = new Set([
+            ...Object.keys(defaultMasterLists),
+            ...Object.keys(localML),
+            ...Object.keys(remoteML)
+        ]);
+        const out = {};
+        keys.forEach(k => { out[k] = _mergeMasterNode(localML[k], remoteML[k], baseML[k]); });
+        return out;
+    }
+
     // Wrapper público: enfileira as gravações para que duas chamadas de saveAll
     // não se intercalem (read-merge-write atômico por chamada).
     //
@@ -458,7 +576,7 @@
             // Baseline ausente: trata como vazio para que todo item local vire
             // "novo" (upsert) sem excluir nada — evita apagar dados com estado parcial.
             const base = _syncBaseline || {
-                audits: [], trainings: [], activities: [], maintenances: [], documents: [], ocorrencias: [], rncItems: []
+                audits: [], trainings: [], activities: [], maintenances: [], documents: [], ocorrencias: [], rncItems: [], masterLists: {}
             };
 
             // Snapshots locais estáveis capturados antes da leitura remota.
@@ -491,6 +609,8 @@
             const mergedDocuments    = _mergeCollection(local.documents,    remoteState.documents,    base.documents);
             const mergedOcorrencias  = _mergeCollection(local.ocorrencias,  remoteState.ocorrencias,  base.ocorrencias);
             const mergedRncItems     = _mergeCollection(local.rncItems,     remoteState.rncItems,     base.rncItems);
+            // masterLists também é reconciliado por merge (antes: objeto inteiro = last-write-wins).
+            const mergedMasterLists  = _mergeMasterLists(mlSnapshot, remoteState.masterLists, base.masterLists);
 
             // (#2) Grava SOMENTE as coleções que realmente mudaram em relação ao remoto.
             // Coleções inalteradas não são reescritas — evita reenviá-las (e o reenvio
@@ -504,7 +624,7 @@
             if (_changed(mergedDocuments,    _toArray(remoteState.documents)))    writePayload.documents    = mergedDocuments;
             if (_changed(mergedOcorrencias,  _toArray(remoteState.ocorrencias)))  writePayload.ocorrencias  = mergedOcorrencias;
             if (_changed(mergedRncItems,     _toArray(remoteState.rncItems)))     writePayload.rncItems     = mergedRncItems;
-            if (_changed(mlSnapshot, remoteState.masterLists || {})) writePayload.masterLists = mlSnapshot;
+            if (_changed(mergedMasterLists, remoteState.masterLists || {})) writePayload.masterLists = mergedMasterLists;
             if (_changed(koSnapshot, remoteState.kanbanOrder || {})) writePayload.kanbanOrder = koSnapshot;
 
             if (Object.keys(writePayload).length > 0) {
@@ -520,7 +640,8 @@
                 JSON.stringify(mergedMaintenances) !== JSON.stringify(maintenances) ||
                 JSON.stringify(mergedDocuments)    !== JSON.stringify(documents) ||
                 JSON.stringify(mergedOcorrencias)  !== JSON.stringify(ocorrencias) ||
-                JSON.stringify(mergedRncItems)     !== JSON.stringify(rncItems);
+                JSON.stringify(mergedRncItems)     !== JSON.stringify(rncItems) ||
+                JSON.stringify(mergedMasterLists)  !== JSON.stringify(mlSnapshot);
 
             // SÓ AGORA (gravação CONFIRMADA pelo servidor) adota o resultado
             // reconciliado como novo estado local + baseline. Se a gravação
@@ -534,7 +655,18 @@
             ocorrencias = mergedOcorrencias;
             rncItems = mergedRncItems;
             if (typeof window.rncItems !== 'undefined') window.rncItems = rncItems;
+
+            // masterLists: adota o estado gravado preservando edições feitas DURANTE o await
+            // (ex.: usuário adicionou outro marcador em rajada → saveAll coalescido). Reaplica
+            // os deltas da masterLists viva atual (vs. o snapshot do início do save) sobre o
+            // resultado gravado, para que o follow-up do coalescing os persista — sem perder
+            // o que outras sessões trouxeram (já incorporado em mergedMasterLists).
+            masterLists = _mergeMasterLists(masterLists, mergedMasterLists, mlSnapshot);
             captureSyncBaseline();
+            // O baseline de masterLists deve ser o ESTADO GRAVADO (mergedMasterLists), não a
+            // masterLists viva — assim qualquer edição concorrente continua sendo um delta
+            // pendente para a próxima gravação, em vez de virar "sem alteração".
+            _syncBaseline.masterLists = _deepClone(mergedMasterLists);
             _saveLocalCache(); // (#5) atualiza o cache visual após gravação confirmada
 
             // Se incorporamos mudanças de outras sessões, atualiza a UI.
