@@ -70,9 +70,16 @@ function setMyTasksMode(mode) {
 function _syncPeopleBtnsVisibility() {
     const rBtn = document.getElementById('fbarRespBtn');
     const vBtn = document.getElementById('fbarRevBtn');
-    const hide = fbarMyTasksActive;
-    if (rBtn) rBtn.style.display = hide ? 'none' : 'inline-flex';
-    if (vBtn) vBtn.style.display = (hide || !_hasRevisor()) ? 'none' : 'inline-flex';
+    // Quando "Minhas Tarefas" está ativo como responsável: oculta botão responsável mas mantém revisor visível
+    // Quando ativo como revisor: oculta botão revisor mas mantém responsável visível
+    // Quando desativado (all): mostra ambos
+    if (fbarMyTasksActive) {
+        if (rBtn) rBtn.style.display = fbarMyTasksMode === 'revisor' ? 'inline-flex' : 'none';
+        if (vBtn) vBtn.style.display = (fbarMyTasksMode === 'responsavel' && _hasRevisor()) ? 'inline-flex' : 'none';
+    } else {
+        if (rBtn) rBtn.style.display = 'inline-flex';
+        if (vBtn) vBtn.style.display = _hasRevisor() ? 'inline-flex' : 'none';
+    }
     // NOTE: não limpar filtros aqui — toggleMyTasks controla quando setar/limpar
 }
 
