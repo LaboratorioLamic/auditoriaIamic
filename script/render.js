@@ -11,9 +11,12 @@ function _clDonutHtml(done, total, pct, size, absolute) {
     // Inicia no topo (12h): offset = -25% da circunferência
     const offset = circ * 0.25;
     // 100% = todo verde; >=50% = azul; <50% = âmbar
-    const trackColor = pct === 100 ? '#86efac' : '#e5e7eb';
+    const isDark     = document.body.classList.contains('dark-mode');
+    const trackColor = pct === 100 ? (isDark ? '#166534' : '#86efac') : (isDark ? '#334155' : '#e5e7eb');
     const fillColor  = pct === 100 ? '#22c55e' : pct >= 50 ? '#2563eb' : '#f59e0b';
-    const textColor  = pct === 100 ? '#15803d' : fillColor;
+    const textColor  = isDark
+        ? (pct === 100 ? '#4ade80' : pct >= 50 ? '#60a5fa' : '#fbbf24')
+        : (pct === 100 ? '#15803d' : fillColor);
     const fs = size <= 32 ? 7 : 9;
     const ty = cx + fs * 0.38;
     const wrapClass = absolute ? 'card-cl-donut-abs' : 'card-cl-donut-wrap';
@@ -1969,10 +1972,13 @@ function _clDonutHtml(done, total, pct, size, absolute) {
             startAngle += slice;
         });
 
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
         ctx.beginPath();
         ctx.arc(cx, cy, inner, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = 'rgba(0,0,0,1)';
         ctx.fill();
+        ctx.restore();
 
         _initDonutTooltip(canvas, 'donutModuloTooltip', () => _donutModuloSlices, cx, cy, r, inner);
     }

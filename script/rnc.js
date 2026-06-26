@@ -249,10 +249,17 @@
 
     // ── Classificações (com ícones e cores) ──
     var CLASSES = [
-        { id: 'critica', label: 'NC - Crítica',  icon: 'fa-circle-exclamation',  color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-        { id: 'maior',   label: 'NC - Maior',    icon: 'fa-triangle-exclamation', color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-        { id: 'menor',   label: 'NC - Menor',    icon: 'fa-circle-info',          color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' }
+        { id: 'critica', label: 'NC - Crítica',  icon: 'fa-circle-exclamation',  color: '#dc2626', bg: '#fef2f2', border: '#fecaca', darkColor: '#f87171', darkBg: 'rgba(220,38,38,0.15)',  darkBorder: 'rgba(248,113,113,0.30)' },
+        { id: 'maior',   label: 'NC - Maior',    icon: 'fa-triangle-exclamation', color: '#d97706', bg: '#fffbeb', border: '#fde68a', darkColor: '#fbbf24', darkBg: 'rgba(217,119,6,0.15)',  darkBorder: 'rgba(251,191,36,0.30)' },
+        { id: 'menor',   label: 'NC - Menor',    icon: 'fa-circle-info',          color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', darkColor: '#60a5fa', darkBg: 'rgba(37,99,235,0.15)',  darkBorder: 'rgba(96,165,250,0.30)' }
     ];
+
+    function rncClassStyle(ci) {
+        if (document.body.classList.contains('dark-mode')) {
+            return 'background:' + ci.darkBg + ';color:' + ci.darkColor + ';border-color:' + ci.darkBorder;
+        }
+        return 'background:' + ci.bg + ';color:' + ci.color + ';border-color:' + ci.border;
+    }
 
     // ══════════════════════════════════════════════════════════════════
     //  HELPERS
@@ -517,7 +524,7 @@
         return '<div class="rnc-card' + rncAlertClass(r) + (donut ? ' has-donut' : '') + '" onclick="rncOpenView(' + r.id + ')" style="--rnc-card-accent:' + ci.color + '">' +
             '<div class="rnc-card-main">' +
                 '<div class="rnc-card-header">' +
-                    '<span class="rnc-class-badge rnc-class-badge--sm" style="background:' + ci.bg + ';color:' + ci.color + ';border-color:' + ci.border + '">' +
+                    '<span class="rnc-class-badge rnc-class-badge--sm" style="' + rncClassStyle(ci) + '">' +
                         '<i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) +
                     '</span>' +
                     rncAlertBadgeHtml(r) +
@@ -761,6 +768,8 @@
         else if (rncView === 'calendar') renderRncCalendar();
     }
 
+    window.rncRerender = function () { renderRnc(); };
+
     // ── Sub-abas da Lista (Tabela / Origens) ──
     window.rncSwitchListTab = function(tab, btn) {
         document.querySelectorAll('.rnc-list-subtab').forEach(function(b){ b.classList.remove('active'); });
@@ -832,7 +841,7 @@
                 return '<tr class="rnc-table-row" onclick="rncOpenView(' + r.id + ')">' +
                     '<td class="rnc-table-title">' + esc(r.titulo || '—') + '</td>' +
                     '<td>' + esc(r.setor || '—') + '</td>' +
-                    '<td><span class="rnc-class-badge rnc-class-badge--sm" style="background:' + ci.bg + ';color:' + ci.color + ';border-color:' + ci.border + '"><i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) + '</span></td>' +
+                    '<td><span class="rnc-class-badge rnc-class-badge--sm" style="' + rncClassStyle(ci) + '"><i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) + '</span></td>' +
                     '<td>' + esc(r.origem || '—') + '</td>' +
                     '<td>' + (mk ? '<span class="rnc-marker-badge" style="background:' + mk.bg + ';color:' + mk.color + '"><i class="fas ' + mk.icon + '"></i> ' + esc(mk.label) + '</span>' : '<span style="color:#cbd5e1">—</span>') + '</td>' +
                     '<td>' + rncNamesHtml(rncArrField(r.responsavel)) + '</td>' +
@@ -944,6 +953,9 @@
     function rncStatusColorStyle(statusName) {
         var s = getRncStatusList().find(function(x){ return x.name === statusName; });
         var color = rncResolveColor(s ? s.color : null);
+        if (document.body.classList.contains('dark-mode')) {
+            return 'background:color-mix(in srgb,' + color + ' 18%,#1e293b);color:' + color + ';border-color:color-mix(in srgb,' + color + ' 40%,#334155)';
+        }
         return 'background:color-mix(in srgb,' + color + ' 14%,#fff);color:' + color + ';border-color:color-mix(in srgb,' + color + ' 35%,#fff)';
     }
 
@@ -1557,7 +1569,7 @@
             card.style.setProperty('--rnc-evt-color', ci.color);
             card.innerHTML =
                 '<div class="rnc-cal-ecard-top">' +
-                    '<span class="rnc-class-badge rnc-class-badge--sm" style="background:' + ci.bg + ';color:' + ci.color + ';border-color:' + ci.border + '"><i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) + '</span>' +
+                    '<span class="rnc-class-badge rnc-class-badge--sm" style="' + rncClassStyle(ci) + '"><i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) + '</span>' +
                     rncAlertBadgeHtml(entry.item) +
                 '</div>' +
                 '<div class="rnc-cal-ecard-title">' + esc(entry.item.titulo || 'RNC') + '</div>' +
@@ -2405,7 +2417,7 @@
                 _vgroup('fa-triangle-exclamation', '#2563eb', 'Identificação',
                     _vrow('fa-heading', 'Título', '<strong>' + esc(r.titulo || '—') + '</strong>') +
                     _vrow('fa-building', 'Setor', esc(r.setor || '—')) +
-                    _vrow('fa-tag', 'Classificação', '<span class="rnc-class-badge rnc-class-badge--sm" style="background:' + ci.bg + ';color:' + ci.color + ';border-color:' + ci.border + '"><i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) + '</span>') +
+                    _vrow('fa-tag', 'Classificação', '<span class="rnc-class-badge rnc-class-badge--sm" style="' + rncClassStyle(ci) + '"><i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) + '</span>') +
                     _vrow('fa-circle-dot', 'Status', r.status ? '<span class="rnc-vrow-pill" style="' + rncStatusColorStyle(r.status) + '">' + esc(r.status) + '</span>' : '<em class="rnc-vrow-empty">Não definido</em>') +
                     _vrow('fa-bookmark', 'Marcador', mkv ? '<span class="rnc-vrow-pill" style="background:' + mkv.bg + ';color:' + mkv.color + ';border-color:' + mkv.color + '33"><i class="fas ' + mkv.icon + '"></i> ' + esc(mkv.label) + '</span>' : '<em class="rnc-vrow-empty">Nenhum</em>')
                 ) +
@@ -3867,7 +3879,7 @@
                 ? 'Excluído por <strong>' + esc(r.deletedBy) + '</strong> em ' + _fmtTrashDate(r.deletedAt)
                 : 'Excluído em ' + _fmtTrashDate(r.deletedAt);
             return '<div class="rnc-trash-item" data-id="' + r.id + '">' +
-                '<div class="rnc-trash-item-icon" style="background:' + ci.bg + ';color:' + ci.color + ';border-color:' + ci.border + '">' +
+                '<div class="rnc-trash-item-icon" style="' + rncClassStyle(ci) + '">' +
                     '<i class="fas ' + ci.icon + '"></i>' +
                 '</div>' +
                 '<div class="rnc-trash-item-info">' +
@@ -3985,7 +3997,7 @@
         var hmeta = document.getElementById('rncTrashViewMeta');
         if (hmeta) {
             var metaChips = [
-                '<span class="rnc-tv-chip" style="background:' + ci.bg + ';color:' + ci.color + ';border-color:' + ci.border + '"><i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) + '</span>',
+                '<span class="rnc-tv-chip" style="' + rncClassStyle(ci) + '"><i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) + '</span>',
                 r.status ? '<span class="rnc-tv-chip"><i class="fas fa-circle-dot"></i> ' + esc(r.status) + '</span>' : '',
                 mk ? '<span class="rnc-tv-chip"><i class="fas ' + mk.icon + '"></i> ' + esc(mk.label) + '</span>' : '',
                 '<span class="rnc-tv-chip rnc-tv-chip--deleted"><i class="fas fa-clock-rotate-left"></i> Excluído em ' + _fmtTrashDate(r.deletedAt) + '</span>'
@@ -4002,7 +4014,7 @@
                 _vgroup('fa-triangle-exclamation', '#2563eb', 'Identificação',
                     _vrow('fa-heading', 'Título', '<strong>' + esc(r.titulo || '—') + '</strong>') +
                     _vrow('fa-building', 'Setor', esc(r.setor || '—')) +
-                    _vrow('fa-tag', 'Classificação', '<span class="rnc-class-badge rnc-class-badge--sm" style="background:' + ci.bg + ';color:' + ci.color + ';border-color:' + ci.border + '"><i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) + '</span>') +
+                    _vrow('fa-tag', 'Classificação', '<span class="rnc-class-badge rnc-class-badge--sm" style="' + rncClassStyle(ci) + '"><i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) + '</span>') +
                     _vrow('fa-circle-dot', 'Status', r.status ? '<span class="rnc-vrow-pill" style="' + rncStatusColorStyle(r.status) + '">' + esc(r.status) + '</span>' : '<em class="rnc-vrow-empty">Não definido</em>') +
                     _vrow('fa-bookmark', 'Marcador', mkv ? '<span class="rnc-vrow-pill" style="background:' + mkv.bg + ';color:' + mkv.color + ';border-color:' + mkv.color + '33"><i class="fas ' + mkv.icon + '"></i> ' + esc(mkv.label) + '</span>' : '<em class="rnc-vrow-empty">Nenhum</em>')
                 ) +

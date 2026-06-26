@@ -279,19 +279,28 @@
         var row = document.getElementById('ocDashKpiRow');
         if (!row) return;
 
-        var tendIcon = kpis.tendUp === true ? '<i class="fas fa-arrow-trend-up" style="color:#16a34a;"></i>' :
-                       kpis.tendUp === false ? '<i class="fas fa-arrow-trend-down" style="color:#dc2626;"></i>' :
-                       '<i class="fas fa-minus" style="color:#94a3b8;"></i>';
+        var isDarkPre = document.body.classList.contains('dark-mode');
+        var tendIconColorUp   = isDarkPre ? '#4ade80' : '#16a34a';
+        var tendIconColorDown = isDarkPre ? '#f87171' : '#dc2626';
+        var tendIconColorFlat = isDarkPre ? '#64748b' : '#94a3b8';
+        var tendIcon = kpis.tendUp === true ? '<i class="fas fa-arrow-trend-up" style="color:' + tendIconColorUp + ';"></i>' :
+                       kpis.tendUp === false ? '<i class="fas fa-arrow-trend-down" style="color:' + tendIconColorDown + ';"></i>' :
+                       '<i class="fas fa-minus" style="color:' + tendIconColorFlat + ';"></i>';
         var tendColor = kpis.tendUp === true ? '#16a34a' : kpis.tendUp === false ? '#dc2626' : '#94a3b8';
+
+        var isDark = document.body.classList.contains('dark-mode');
+        var tendValueColor = isDark
+            ? (kpis.tendUp === true ? '#4ade80' : kpis.tendUp === false ? '#f87171' : '#64748b')
+            : tendColor;
 
         row.innerHTML =
             kpiCard('fa-triangle-exclamation', 'Total', kpis.total, '', '#2563eb', '#eff6ff') +
             kpiCard('fa-chart-line', 'Média / mês', kpis.media.toFixed(1), 'apenas meses com dados', '#7c3aed', '#f5f3ff') +
             '<div class="oc-dash-kpi">' +
-                '<div class="oc-dash-kpi-icon" style="color:#d97706;background:#fffbeb;"><i class="fas fa-bolt"></i></div>' +
+                '<div class="oc-dash-kpi-icon" style="' + kpiIconStyle('#d97706', '#fffbeb') + '"><i class="fas fa-bolt"></i></div>' +
                 '<div class="oc-dash-kpi-body">' +
                     '<div class="oc-dash-kpi-label">Tendência</div>' +
-                    '<div class="oc-dash-kpi-value" style="color:' + tendColor + ';">' + kpis.tendStr + ' ' + tendIcon + '</div>' +
+                    '<div class="oc-dash-kpi-value" style="color:' + tendValueColor + ';">' + kpis.tendStr + ' ' + tendIcon + '</div>' +
                     '<div class="oc-dash-kpi-sub">' + (kpis.tendSub || 'últimos 12 meses') + '</div>' +
                 '</div>' +
             '</div>' +
@@ -299,9 +308,30 @@
             kpiCard('fa-arrow-down', 'Menor mês', kpis.menorMes, kpis.menorMesSub, '#dc2626', '#fef2f2');
     }
 
+    function kpiIconStyle(color, bg) {
+        if (document.body.classList.contains('dark-mode')) {
+            var darkBg = {
+                '#eff6ff': 'rgba(37,99,235,0.18)',
+                '#f5f3ff': 'rgba(124,58,237,0.18)',
+                '#fffbeb': 'rgba(217,119,6,0.18)',
+                '#f0fdf4': 'rgba(5,150,105,0.18)',
+                '#fef2f2': 'rgba(220,38,38,0.18)',
+            };
+            var darkColor = {
+                '#2563eb': '#60a5fa',
+                '#7c3aed': '#c084fc',
+                '#d97706': '#fbbf24',
+                '#059669': '#34d399',
+                '#dc2626': '#f87171',
+            };
+            return 'color:' + (darkColor[color] || color) + ';background:' + (darkBg[bg] || 'rgba(100,116,139,0.15)') + ';';
+        }
+        return 'color:' + color + ';background:' + bg + ';';
+    }
+
     function kpiCard(icon, label, value, sub, color, bg) {
         return '<div class="oc-dash-kpi">' +
-            '<div class="oc-dash-kpi-icon" style="color:' + color + ';background:' + bg + ';"><i class="fas ' + icon + '"></i></div>' +
+            '<div class="oc-dash-kpi-icon" style="' + kpiIconStyle(color, bg) + '"><i class="fas ' + icon + '"></i></div>' +
             '<div class="oc-dash-kpi-body">' +
                 '<div class="oc-dash-kpi-label">' + esc(label) + '</div>' +
                 '<div class="oc-dash-kpi-value">' + esc(String(value)) + '</div>' +
@@ -520,6 +550,10 @@
     }
 
     function lineChartOptions(title) {
+        var isDark = document.body.classList.contains('dark-mode');
+        var legendCol = isDark ? '#94a3b8' : '#475569';
+        var tickCol   = isDark ? '#64748b' : '#64748b';
+        var gridCol   = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
         return {
             responsive: true,
             maintainAspectRatio: false,
@@ -527,13 +561,13 @@
             plugins: {
                 legend: {
                     position: 'top',
-                    labels: { usePointStyle: true, pointStyle: 'circle', font: { size: 12 }, color: '#475569' }
+                    labels: { usePointStyle: true, pointStyle: 'circle', font: { size: 12 }, color: legendCol }
                 },
                 tooltip: { backgroundColor: '#1e293b', titleColor: '#f8fafc', bodyColor: '#cbd5e1', cornerRadius: 8 }
             },
             scales: {
-                x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#64748b', font: { size: 12 } } },
-                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { color: '#64748b', font: { size: 12 }, precision: 0 } }
+                x: { grid: { color: gridCol }, ticks: { color: tickCol, font: { size: 12 } } },
+                y: { beginAtZero: true, grid: { color: gridCol }, ticks: { color: tickCol, font: { size: 12 }, precision: 0 } }
             },
             animation: { duration: 600, easing: 'easeInOutQuart' }
         };
@@ -561,18 +595,21 @@
             return;
         }
         hideEmpty('ocDashDonutChart');
+        var isDark = document.body.classList.contains('dark-mode');
+        var borderCol = isDark ? '#1e293b' : '#fff';
+        var legendCol = isDark ? '#94a3b8' : '#475569';
         charts['donut'] = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: labels,
-                datasets: [{ data: data, backgroundColor: colors, hoverOffset: 8, borderWidth: 2, borderColor: '#fff' }]
+                datasets: [{ data: data, backgroundColor: colors, hoverOffset: 8, borderWidth: 2, borderColor: borderCol }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 cutout: '62%',
                 plugins: {
-                    legend: { position: 'right', labels: { usePointStyle: true, pointStyle: 'circle', font: { size: 12 }, color: '#475569', boxWidth: 10 } },
+                    legend: { position: 'right', labels: { usePointStyle: true, pointStyle: 'circle', font: { size: 12 }, color: legendCol, boxWidth: 10 } },
                     tooltip: {
                         backgroundColor: '#1e293b', titleColor: '#f8fafc', bodyColor: '#cbd5e1', cornerRadius: 8,
                         callbacks: {
@@ -892,6 +929,11 @@
         renderSetoresTable(arr);
         renderWaterfallChart(kpis);
         renderRanking(arr);
+        window._ocDashLastKpis = kpis;
+    };
+
+    window.ocDashRerender = function () {
+        if (window._ocDashLastKpis) renderKPIs(window._ocDashLastKpis);
     };
 
     // ── Sub-aba da linha (Geral / Categorias / Setores) ──────────────────
