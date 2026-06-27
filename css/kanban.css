@@ -181,11 +181,13 @@
 
 .kanban-col-body {
     padding: 10px;
-    overflow: visible;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     gap: 8px;
     min-height: 80px;
+    max-height: 564px; /* 4 cards × 130px + 3 gaps × 8px + 20px padding */
     border-radius: 0 0 var(--r-lg) var(--r-lg);
     transition: background var(--t-fast);
 }

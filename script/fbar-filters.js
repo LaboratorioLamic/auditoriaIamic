@@ -140,7 +140,7 @@ function renderPeopleFilterList() {
     const type  = _peopleFilterType;
     const current = type === 'responsavel' ? fbarRespFilter : fbarRevFilter;
 
-    // Coleta IDs/nomes dos campos dos cards da aba atual
+    // Coleta apenas cards visíveis respeitando os demais filtros ativos
     const prefix = _tabPrefix();
     let items = [];
     if (prefix === 'Audit')      items = audits || [];
@@ -149,6 +149,11 @@ function renderPeopleFilterList() {
     else if (prefix === 'Mant')  items = maintenances || [];
     else if (prefix === 'Doc')   items = documents || [];
     items = items.filter(i => !i.deleted);
+    // Aplica todos os filtros ativos excluindo o próprio filtro de pessoa sendo populado
+    if (typeof passesFilters === 'function') {
+        const excluded = type === 'revisor' ? { revisor: true } : { responsavel: true };
+        items = items.filter(i => passesFilters(prefix, i, excluded));
+    }
 
     // Conjunto de usuários válidos (com id e name)
     const validUsers = (users || []).filter(u => u.id && u.name);
