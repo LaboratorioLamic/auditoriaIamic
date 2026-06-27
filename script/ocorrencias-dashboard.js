@@ -211,12 +211,12 @@
     }
 
     // ── KPIs ─────────────────────────────────────────────────────────────
-    function computeKPIs(arr) {
+    function computeKPIs(arr, totalOverride) {
         var byMonth = groupByMonth(arr);
         var months = Object.keys(byMonth).sort();
         var counts = months.map(function (k) { return byMonth[k]; });
 
-        var total = arr.length;
+        var total = (totalOverride !== undefined) ? totalOverride : arr.length;
         var media = months.length ? (total / months.length) : 0;
 
         // Tendência: regressão linear sobre os últimos 12 meses com dados
@@ -917,10 +917,12 @@
 
         // Dados filtrados por ano (linha do tempo, KPIs maior/menor mês)
         var arrYear = getOcDashYearFiltered();
-        var kpis = computeKPIs(arrYear);
 
         // Dados com filtro preciso de data (respeita mês/intervalo, não só o ano)
         var arr = getOcDashPreciseFiltered();
+
+        // Total respeita o filtro preciso; tendência/maior/menor usam a visão anual
+        var kpis = computeKPIs(arrYear, arr.length);
 
         renderKPIs(kpis);
         renderLineChart(arrYear, kpis);
