@@ -1633,6 +1633,15 @@
         var _dfBtn = document.getElementById('fbarDateBtn');
         if (_sfBtn) _sfBtn.style.display = isOc ? 'none' : 'inline-flex';
         if (_dfBtn) _dfBtn.style.display = isOc ? 'none' : 'inline-flex';
+        // Oculta botão de carta na sub-aba de ocorrências do dashboard
+        var _ncBtn = document.getElementById('newCardsContainer');
+        if (_ncBtn) {
+            _ncBtn.style.display = isOc ? 'none' : 'flex';
+            if (isOc) {
+                var _ncModal = document.getElementById('newCardsModal');
+                if (_ncModal) _ncModal.classList.remove('active');
+            }
+        }
 
         if (isOc) {
             // Define filtro padrão de data como ano atual na primeira vez

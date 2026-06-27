@@ -119,6 +119,18 @@
     }
     updateTrashBadge();
 
+    // --- Controle do botão "Novos cards como responsável" ---
+    var newCardsContainer = document.getElementById('newCardsContainer');
+    if (newCardsContainer) {
+        var hideNewCards = isBackup || isConfig || isOcorrencias || isRnc;
+        newCardsContainer.style.display = hideNewCards ? 'none' : 'flex';
+        if (hideNewCards) {
+            var _ncModal = document.getElementById('newCardsModal');
+            if (_ncModal) _ncModal.classList.remove('active');
+        }
+    }
+    if (typeof updateNewCardsBadge === 'function') updateNewCardsBadge();
+
     // Botão filtro de setores
     if (typeof _syncSetorFilterBtn === 'function') _syncSetorFilterBtn();
 

@@ -595,10 +595,11 @@ window._safeSnapshot = function(item) {
     for (const key in current) {
         if (ignoreKeys.includes(key)) continue;
 
-        // Tratamento especial para checklist (array de objetos)
-        if (key === 'checklist') {
-            const origList = (original && Array.isArray(original.checklist)) ? original.checklist : [];
-            const currList = Array.isArray(current.checklist) ? current.checklist : [];
+        // Tratamento especial para checklist e checklistPublicacao (array de objetos)
+        if (key === 'checklist' || key === 'checklistPublicacao') {
+            const label = key === 'checklistPublicacao' ? 'Checklist de Publicação' : 'Checklist';
+            const origList = (original && Array.isArray(original[key])) ? original[key] : [];
+            const currList = Array.isArray(current[key]) ? current[key] : [];
             if (JSON.stringify(origList) !== JSON.stringify(currList)) {
                 const clLines = [];
                 const maxLen = Math.max(origList.length, currList.length);
@@ -606,16 +607,16 @@ window._safeSnapshot = function(item) {
                     const o = origList[i];
                     const c = currList[i];
                     if (!o && c) {
-                        clLines.push(`Checklist: item adicionado — <strong>${c.texto || '(sem nome)'}</strong>`);
+                        clLines.push(`${label}: item adicionado — <strong>${c.texto || '(sem nome)'}</strong>`);
                     } else if (o && !c) {
-                        clLines.push(`Checklist: item removido — <strong>${o.texto || '(sem nome)'}</strong>`);
+                        clLines.push(`${label}: item removido — <strong>${o.texto || '(sem nome)'}</strong>`);
                     } else if (o && c) {
                         const nome = c.texto || o.texto || `Item ${i + 1}`;
                         if (o.texto !== c.texto) {
-                            clLines.push(`Checklist: renomeado — <strong>${o.texto || '(vazio)'}</strong> &rarr; <strong>${c.texto || '(vazio)'}</strong>`);
+                            clLines.push(`${label}: renomeado — <strong>${o.texto || '(vazio)'}</strong> &rarr; <strong>${c.texto || '(vazio)'}</strong>`);
                         }
                         if (!!o.checked !== !!c.checked) {
-                            clLines.push(`Checklist: <strong>${nome}</strong> — ${c.checked ? 'marcado como concluído' : 'desmarcado'}`);
+                            clLines.push(`${label}: <strong>${nome}</strong> — ${c.checked ? 'marcado como concluído' : 'desmarcado'}`);
                         }
                     }
                 }

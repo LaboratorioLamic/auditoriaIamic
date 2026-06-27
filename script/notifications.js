@@ -375,17 +375,33 @@
 
     // ---- Novos cards (botão carta) ----
 
+    // Mapeamento de aba → tipo(s) de card exibidos no botão de carta
+    var _tabToTypes = {
+        auditoria:    ['audit'],
+        atividades:   ['ativ'],
+        treinamentos: ['train'],
+        documentos:   ['doc'],
+        manutencao:   ['mant'],
+        dashboard:    ['audit', 'ativ', 'train', 'doc', 'mant']
+    };
+
     function _getNewCardsForMe() {
         if (typeof currentuser === 'undefined' || !currentuser) return [];
         const myId = String(currentuser.id || currentuser.user || '').toLowerCase();
         const myName = String(currentuser.name || currentuser.user || '').toLowerCase();
 
-        const sources = [
-            { items: typeof audits !== 'undefined' ? audits : [], type: 'audit' },
-            { items: typeof activities !== 'undefined' ? activities : [], type: 'ativ' },
-            { items: typeof trainings !== 'undefined' ? trainings : [], type: 'train' },
-            { items: typeof documents !== 'undefined' ? documents : [], type: 'doc' }
+        const tab = typeof currentTab !== 'undefined' ? currentTab : 'dashboard';
+        const allowedTypes = _tabToTypes[tab] || _tabToTypes['dashboard'];
+
+        const allSources = [
+            { items: typeof audits       !== 'undefined' ? audits       : [], type: 'audit' },
+            { items: typeof activities   !== 'undefined' ? activities   : [], type: 'ativ'  },
+            { items: typeof trainings    !== 'undefined' ? trainings    : [], type: 'train' },
+            { items: typeof documents    !== 'undefined' ? documents    : [], type: 'doc'   },
+            { items: typeof maintenances !== 'undefined' ? maintenances : [], type: 'mant'  }
         ];
+
+        const sources = allSources.filter(s => allowedTypes.includes(s.type));
 
         const result = [];
         sources.forEach(({ items, type }) => {
