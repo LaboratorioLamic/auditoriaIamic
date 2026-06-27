@@ -751,3 +751,133 @@ function canSetConcluido(checklist) {
         'purple': 'var(--c-purple)',
         'default': 'var(--c-default)'
     };
+
+// Abre modal solicitando data de conclusão ao mover/salvar como Concluído.
+// onConfirm(dateStr) — dateStr em formato 'YYYY-MM-DD'
+// onCancel() — chamado se o usuário fechar sem confirmar
+window.showConclusaoDateModal = function(currentDate, onConfirm, onCancel) {
+    var existing = document.getElementById('_conclusaoDateModal');
+    if (existing) existing.remove();
+
+    var today = new Date();
+    var todayStr = today.getFullYear() + '-'
+        + String(today.getMonth() + 1).padStart(2, '0') + '-'
+        + String(today.getDate()).padStart(2, '0');
+    var defaultVal = currentDate || todayStr;
+
+    var overlay = document.createElement('div');
+    overlay.id = '_conclusaoDateModal';
+    overlay.style.cssText = [
+        'position:fixed', 'inset:0', 'z-index:99999',
+        'display:flex', 'align-items:center', 'justify-content:center',
+        'background:rgba(0,0,0,0.55)', 'backdrop-filter:blur(3px)',
+        'animation:fadeIn .15s ease'
+    ].join(';');
+
+    overlay.innerHTML = `
+        <div style="
+            background:var(--bg-card, #1e2535);
+            border:1px solid var(--border, #2e3a50);
+            border-radius:16px;
+            padding:32px 28px 24px;
+            min-width:320px;
+            max-width:90vw;
+            box-shadow:0 24px 60px rgba(0,0,0,0.5);
+            display:flex;flex-direction:column;gap:20px;
+            animation:slideUp .18s ease;
+        ">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="
+                    width:40px;height:40px;border-radius:10px;
+                    background:rgba(16,185,129,0.15);
+                    display:flex;align-items:center;justify-content:center;
+                    flex-shrink:0;
+                ">
+                    <i class="fas fa-check-circle" style="color:#10b981;font-size:18px;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:15px;color:var(--text-primary,#e2e8f0);">Concluído</div>
+                    <div style="font-size:12px;color:var(--text-secondary,#94a3b8);margin-top:2px;">Informe a data de conclusão</div>
+                </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <label style="font-size:12px;font-weight:600;color:var(--text-secondary,#94a3b8);text-transform:uppercase;letter-spacing:.5px;">
+                    Data de Conclusão
+                </label>
+                <input id="_conclusaoDateInput" type="date" value="${defaultVal}" style="
+                    background:var(--bg-input, #0f172a);
+                    border:1.5px solid var(--border,#2e3a50);
+                    border-radius:8px;
+                    color:var(--text-primary,#e2e8f0);
+                    font-size:14px;
+                    padding:10px 12px;
+                    outline:none;
+                    width:100%;
+                    box-sizing:border-box;
+                    cursor:pointer;
+                " onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='var(--border,#2e3a50)'">
+            </div>
+
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button id="_conclusaoCancelBtn" style="
+                    background:transparent;
+                    border:1.5px solid var(--border,#2e3a50);
+                    border-radius:8px;
+                    color:var(--text-secondary,#94a3b8);
+                    font-size:13px;font-weight:600;
+                    padding:9px 20px;cursor:pointer;
+                    transition:border-color .15s,color .15s;
+                " onmouseover="this.style.borderColor='#475569';this.style.color='#e2e8f0'"
+                   onmouseout="this.style.borderColor='var(--border,#2e3a50)';this.style.color='var(--text-secondary,#94a3b8)'">
+                    Cancelar
+                </button>
+                <button id="_conclusaoConfirmBtn" style="
+                    background:#10b981;
+                    border:none;border-radius:8px;
+                    color:#fff;font-size:13px;font-weight:700;
+                    padding:9px 22px;cursor:pointer;
+                    transition:background .15s;
+                    display:flex;align-items:center;gap:8px;
+                " onmouseover="this.style.background='#059669'"
+                   onmouseout="this.style.background='#10b981'">
+                    <i class="fas fa-check"></i> Confirmar
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    function _close() { overlay.remove(); }
+
+    overlay.querySelector('#_conclusaoCancelBtn').addEventListener('click', function() {
+        _close();
+        if (typeof onCancel === 'function') onCancel();
+    });
+
+    overlay.querySelector('#_conclusaoConfirmBtn').addEventListener('click', function() {
+        var val = document.getElementById('_conclusaoDateInput').value;
+        _close();
+        if (typeof onConfirm === 'function') onConfirm(val || todayStr);
+    });
+
+    // Fechar clicando no overlay
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+            _close();
+            if (typeof onCancel === 'function') onCancel();
+        }
+    });
+
+    // Enter confirma
+    overlay.querySelector('#_conclusaoDateInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') overlay.querySelector('#_conclusaoConfirmBtn').click();
+        if (e.key === 'Escape') overlay.querySelector('#_conclusaoCancelBtn').click();
+    });
+
+    setTimeout(function() {
+        var inp = document.getElementById('_conclusaoDateInput');
+        if (inp) inp.focus();
+    }, 50);
+};

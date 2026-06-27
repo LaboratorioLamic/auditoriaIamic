@@ -99,37 +99,52 @@
         }
         window._schedWarnPassed_audit = false;
 
-        const changes = calculateChanges(originalItem || {}, newItem);
+        const _isConcluindoAudit = !isNew
+            && (typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status))
+            && !(typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(originalItem ? originalItem.status : '') : /conclu/i.test(originalItem ? originalItem.status : ''));
 
-        if (!isNew && originalItem) {
-        }
-
-        if (isNew) {
-            newItem.createdAt = new Date().toISOString();
-            newItem.historico.push({
-                timestamp: new Date().toISOString(),
-                acao: 'Criação do Registro',
-                usuario: currentuser?.name || 'Sistema',
-                snapshot: _safeSnapshot(newItem)
-            });
-            audits.push(newItem);
-        } else {
-            if (changes.length > 0) {
-                newItem.historico.push({
+        const _commitAudit = function(newItemFinal) {
+            const _changes = calculateChanges(originalItem || {}, newItemFinal);
+            if (isNew) {
+                newItemFinal.createdAt = new Date().toISOString();
+                newItemFinal.historico.push({
                     timestamp: new Date().toISOString(),
-                    acao: 'Edição de Dados',
+                    acao: 'Criação do Registro',
                     usuario: currentuser?.name || 'Sistema',
-                    detalhes: changes,
-                    snapshot: originalItem ? _safeSnapshot(originalItem) : {}
+                    snapshot: _safeSnapshot(newItemFinal)
                 });
+                audits.push(newItemFinal);
+            } else {
+                if (_changes.length > 0) {
+                    newItemFinal.historico.push({
+                        timestamp: new Date().toISOString(),
+                        acao: 'Edição de Dados',
+                        usuario: currentuser?.name || 'Sistema',
+                        detalhes: _changes,
+                        snapshot: originalItem ? _safeSnapshot(originalItem) : {}
+                    });
+                }
+                audits = audits.map(a => a.id === editingAuditId ? newItemFinal : a);
             }
-            audits = audits.map(a => a.id === editingAuditId ? newItem : a);
+            saveAll();
+            closeFormDrawer();
+            renderCards();
+            if (typeof isCalendarActive === 'function' && isCalendarActive()) renderCalendar();
+        };
+
+        if (_isConcluindoAudit && typeof window.showConclusaoDateModal === 'function') {
+            window.showConclusaoDateModal(
+                newItem.dataPublicacao || '',
+                function(dateStr) {
+                    newItem.dataPublicacao = dateStr;
+                    _commitAudit(newItem);
+                },
+                null
+            );
+            return;
         }
 
-        saveAll();
-        closeFormDrawer();
-        renderCards();
-        if (typeof isCalendarActive === 'function' && isCalendarActive()) renderCalendar();
+        _commitAudit(newItem);
     } catch (error) {
         console.error('Erro ao salvar auditoria:', error);
         alert('Erro ao salvar auditoria. Dados foram salvos localmente.');

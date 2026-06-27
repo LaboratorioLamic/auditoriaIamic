@@ -541,20 +541,37 @@ function kbDrop(event, targetStatus) {
 }
 
 function _kbApplyDrop(item, targetStatus) {
-    const prevStatus = item.status;
-    item.status = targetStatus;
+    const _doApply = function(dateVal, dateField) {
+        const prevStatus = item.status;
+        item.status = targetStatus;
+        if (dateVal && dateField) item[dateField] = dateVal;
 
-    if (!Array.isArray(item.historico)) item.historico = [];
-    item.historico.push({
-        timestamp: new Date().toISOString(),
-        acao: 'Alteração de Status via Kanban',
-        usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
-        detalhes: [{ campo: 'Status', de: prevStatus, para: targetStatus }],
-        snapshot: _safeSnapshot(item)
-    });
+        if (!Array.isArray(item.historico)) item.historico = [];
+        item.historico.push({
+            timestamp: new Date().toISOString(),
+            acao: 'Alteração de Status via Kanban',
+            usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
+            detalhes: [{ campo: 'Status', de: prevStatus, para: targetStatus }],
+            snapshot: _safeSnapshot(item)
+        });
 
-    saveAll();
-    renderKanban();
+        saveAll();
+        renderKanban();
+    };
+
+    const _tabsWithDateModal = ['atividades', 'auditoria'];
+    if (_tabsWithDateModal.includes(currentTab) && _kbStatusIsConcluido(targetStatus)
+            && typeof window.showConclusaoDateModal === 'function') {
+        const _dateField = currentTab === 'auditoria' ? 'dataPublicacao' : 'dataConclusao';
+        window.showConclusaoDateModal(
+            item[_dateField] || '',
+            function(dateStr) { _doApply(dateStr, _dateField); },
+            function() { renderKanban(); }
+        );
+        return;
+    }
+
+    _doApply(null, null);
 }
 
 // ---- Card actions ----

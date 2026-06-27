@@ -168,6 +168,11 @@
     document.getElementById('filtersAtividades').style.display = tab === 'atividades' ? 'flex' : 'none';
     document.getElementById('filtersDocumentos').style.display = tab === 'documentos' ? 'flex' : 'none';
 
+    // 6. Sincroniza filtro de data para a aba antes de renderizar
+    if (typeof _syncDateHiddenSelects === 'function' && typeof _tabPrefix === 'function') {
+        _syncDateHiddenSelects(_tabPrefix());
+    }
+
     // 6. Renderização inicial dos dados da aba
     if(isDashboard) {
         renderDashboard();

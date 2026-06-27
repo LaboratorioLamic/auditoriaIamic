@@ -81,17 +81,39 @@
                 return;
             }
 
-            const changes = calculateChanges(originalItem, newItem);
-            if (changes.length > 0) {
-                newItem.historico.push({
-                    timestamp: new Date().toISOString(),
-                    acao: 'Edição de Dados',
-                    usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
-                    detalhes: changes,
-                    snapshot: _safeSnapshot(originalItem)
-                });
+            const _isConcluindo = (typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status))
+                && !(typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(originalItem.status) : /conclu/i.test(originalItem.status));
+
+            const _commitAtiv = function(newItemFinal) {
+                const changes = calculateChanges(originalItem, newItemFinal);
+                if (changes.length > 0) {
+                    newItemFinal.historico.push({
+                        timestamp: new Date().toISOString(),
+                        acao: 'Edição de Dados',
+                        usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
+                        detalhes: changes,
+                        snapshot: _safeSnapshot(originalItem)
+                    });
+                }
+                activities = activities.map(a => a.id === editingAtivId ? newItemFinal : a);
+                saveAll(); closeFormDrawer(); renderCards();
+                if (typeof isCalendarActive === 'function' && isCalendarActive()) renderCalendar();
+            };
+
+            if (_isConcluindo && typeof window.showConclusaoDateModal === 'function') {
+                window.showConclusaoDateModal(
+                    newItem.dataConclusao || '',
+                    function(dateStr) {
+                        newItem.dataConclusao = dateStr;
+                        _commitAtiv(newItem);
+                    },
+                    null
+                );
+                return;
             }
-            activities = activities.map(a => a.id === editingAtivId ? newItem : a);
+
+            _commitAtiv(newItem);
+            return;
         }
 
         saveAll(); closeFormDrawer(); renderCards();
