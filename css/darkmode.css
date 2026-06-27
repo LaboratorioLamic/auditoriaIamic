@@ -1355,9 +1355,24 @@ body.dark-mode .history-drawer-close-btn { background: #253348; border-color: #3
 body.dark-mode .hd-month-picker { background: #1e293b; border-color: #334155; }
 body.dark-mode .hd-mp-month { background: #253348; border-color: #334155; color: #94a3b8; }
 body.dark-mode .hd-item { background: #1e293b; border-color: #334155; }
+body.dark-mode .hd-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
 body.dark-mode .hd-item-title { color: #e2e8f0; }
-body.dark-mode .hd-view-btn { background: #253348; border-color: #334155; color: #64748b; }
-body.dark-mode .hd-change-row { border-bottom-color: #253348; }
+body.dark-mode .hd-item-body { border-top-color: #334155; background: #162032; }
+body.dark-mode .hd-item-body::-webkit-scrollbar-thumb { background: #334155; }
+body.dark-mode .hd-user { color: #60a5fa; }
+body.dark-mode .hd-date { color: #64748b; }
+body.dark-mode .hd-toggle-icon { color: #64748b; }
+body.dark-mode .hd-view-btn { background: #253348; border-color: #334155; color: #94a3b8; }
+body.dark-mode .hd-view-btn:hover { background: #334155; color: #e2e8f0; }
+body.dark-mode .hd-change-row { border-bottom-color: #253348; background: transparent; }
+body.dark-mode .hd-change-field { color: #60a5fa; }
+body.dark-mode .hd-change-from { color: #f87171; }
+body.dark-mode .hd-change-arrow { color: #475569; }
+body.dark-mode .hd-change-to { color: #4ade80; }
+body.dark-mode .hd-delete-btn { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #f87171; }
+body.dark-mode .hd-delete-btn:hover { background: rgba(239,68,68,0.2); }
+body.dark-mode .history-drawer-empty { color: #64748b; }
+body.dark-mode #historyViewContent { background: transparent; color: #e2e8f0; }
 body.dark-mode .view-history { background: #1e293b; border-color: #334155; }
 
 /* ── Histórico ──────────────────────────────────────────────────────────── */
@@ -1510,8 +1525,8 @@ body.dark-mode .view-modal-content {
 }
 body.dark-mode .view-modal-body,
 body.dark-mode .view-tab-panel {
-    background: #0f172a;
-    color: #e2e8f0;
+    background: #0f172a !important;
+    color: #e2e8f0 !important;
 }
 body.dark-mode .view-modal-footer {
     background: #1e293b !important;
@@ -2021,6 +2036,23 @@ body.dark-mode .hd-mp-clear             { background: rgba(220,38,38,0.12) !impo
 body.dark-mode .hd-mp-clear:hover       { background: rgba(220,38,38,0.20) !important; }
 body.dark-mode .history-drawer-date-filter { background: #0f172a !important; border-bottom-color: #334155 !important; }
 body.dark-mode .view-history            { background: #1e293b !important; border-color: #334155 !important; }
+body.dark-mode .hd-item                 { background: #1e293b !important; border-color: #334155 !important; }
+body.dark-mode .hd-item-title           { color: #e2e8f0 !important; }
+body.dark-mode .hd-item-body            { border-top-color: #334155 !important; background: #162032 !important; }
+body.dark-mode .hd-user                 { color: #60a5fa !important; }
+body.dark-mode .hd-date                 { color: #64748b !important; }
+body.dark-mode .hd-toggle-icon          { color: #64748b !important; }
+body.dark-mode .hd-view-btn             { background: #253348 !important; border-color: #334155 !important; color: #94a3b8 !important; }
+body.dark-mode .hd-view-btn:hover       { background: #334155 !important; color: #e2e8f0 !important; }
+body.dark-mode .hd-change-row           { border-bottom-color: #253348 !important; background: transparent !important; }
+body.dark-mode .hd-change-field         { color: #60a5fa !important; }
+body.dark-mode .hd-change-from          { color: #f87171 !important; }
+body.dark-mode .hd-change-arrow         { color: #475569 !important; }
+body.dark-mode .hd-change-to            { color: #4ade80 !important; }
+body.dark-mode .hd-delete-btn           { background: rgba(239,68,68,0.1) !important; border-color: rgba(239,68,68,0.3) !important; color: #f87171 !important; }
+body.dark-mode .hd-delete-btn:hover     { background: rgba(239,68,68,0.2) !important; }
+body.dark-mode .history-drawer-empty    { color: #64748b !important; }
+body.dark-mode #historyViewContent      { background: transparent !important; color: #e2e8f0 !important; }
 
 /* ── Calendar — modal do dia ────────────────────────────────────────────── */
 body.dark-mode .cal-day-modal           { background: #1e293b !important; box-shadow: -8px 0 32px rgba(0,0,0,0.45) !important; }
