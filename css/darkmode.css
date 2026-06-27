@@ -2124,7 +2124,19 @@ body.dark-mode .ver-pub-anexo-card:hover {
 body.dark-mode .ver-pub-anexo-name { color: #e2e8f0 !important; }
 
 /* Botão marcar todos / pub-cl-header */
-body.dark-mode .pub-cl-header { color: #e2e8f0 !important; }
+body.dark-mode .pub-cl-header {
+    color: #e2e8f0 !important;
+    background: #1e2a3a !important;
+    border-color: #2d4a6b !important;
+}
+body.dark-mode .pub-cl-toggle-all-btn {
+    color: #7dd3fc !important;
+    background: #1e3a52 !important;
+    border-color: #2d4a6b !important;
+}
+body.dark-mode .pub-cl-toggle-all-btn:hover {
+    background: #264d6e !important;
+}
 
 /* ── Sched box header (gradiente claro) ─────────────────────────────────── */
 body.dark-mode .sched-box {
@@ -2192,7 +2204,7 @@ body.dark-mode .cl-pub-editor-group-solo .cl-pub-editor-group-hdr {
 }
 body.dark-mode .cl-pub-editor-group-solo .cl-pub-editor-group-icon { color: #475569 !important; }
 body.dark-mode .cl-pub-editor-group-solo .cl-pub-editor-group-badge { background: #253348 !important; color: #64748b !important; }
-body.dark-mode .cl-pub-editor-item { border-bottom-color: #253348 !important; }
+body.dark-mode .cl-pub-editor-item { background: #1e293b !important; border-bottom-color: #253348 !important; }
 body.dark-mode .cl-pub-editor-item:hover { background: #253348 !important; }
 body.dark-mode .cl-pub-editor-item.drag-over { background: #1e3a5f !important; box-shadow: inset 0 0 0 2px #6366f1 !important; }
 body.dark-mode .cl-pub-editor-item .checklist-drag-handle { color: #475569 !important; }
