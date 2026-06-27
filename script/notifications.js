@@ -277,10 +277,14 @@
         } else {
             badge.classList.add('hidden');
         }
+
+        updateNewCardsBadge();
     }
 
     function toggleNotificationModal() {
         const modal = document.getElementById('notificationModal');
+        const newCardsModal = document.getElementById('newCardsModal');
+        if (newCardsModal) newCardsModal.classList.remove('active');
         modal.classList.toggle('active');
 
         if (modal.classList.contains('active')) {
@@ -368,3 +372,94 @@
             `;
         }).join('');
     }
+
+    // ---- Novos cards (botão carta) ----
+
+    function _getNewCardsForMe() {
+        if (typeof currentuser === 'undefined' || !currentuser) return [];
+        const myId = String(currentuser.id || currentuser.user || '').toLowerCase();
+        const myName = String(currentuser.name || currentuser.user || '').toLowerCase();
+
+        const sources = [
+            { items: typeof audits !== 'undefined' ? audits : [], type: 'audit' },
+            { items: typeof activities !== 'undefined' ? activities : [], type: 'ativ' },
+            { items: typeof trainings !== 'undefined' ? trainings : [], type: 'train' },
+            { items: typeof documents !== 'undefined' ? documents : [], type: 'doc' }
+        ];
+
+        const result = [];
+        sources.forEach(({ items, type }) => {
+            (items || []).forEach(item => {
+                if (item.deleted) return;
+                if (typeof _kbIsNew !== 'function' || !_kbIsNew(item)) return;
+                const raw = item.responsavel;
+                if (!raw) return;
+                let ids = [];
+                try { const p = JSON.parse(String(raw)); ids = Array.isArray(p) ? p.map(String) : [String(p)]; }
+                catch { ids = [String(raw)]; }
+                const isMe = ids.some(id => {
+                    const resolved = typeof resolveUserId === 'function' ? (resolveUserId(id) || '').toLowerCase() : '';
+                    return String(id).toLowerCase() === myId || String(id).toLowerCase() === myName || resolved === myName || resolved === myId;
+                });
+                if (isMe) result.push({ ...item, _type: type });
+            });
+        });
+        return result;
+    }
+
+    function updateNewCardsBadge() {
+        const badge = document.getElementById('newCardsBadge');
+        if (!badge) return;
+        const count = _getNewCardsForMe().length;
+        if (count > 0) {
+            badge.textContent = count;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    function toggleNewCardsModal() {
+        const modal = document.getElementById('newCardsModal');
+        if (!modal) return;
+        const notifModal = document.getElementById('notificationModal');
+        if (notifModal) notifModal.classList.remove('active');
+        modal.classList.toggle('active');
+        if (modal.classList.contains('active')) renderNewCardsModal();
+    }
+
+    function closeNewCardsModal() {
+        const modal = document.getElementById('newCardsModal');
+        if (modal) modal.classList.remove('active');
+    }
+
+    function renderNewCardsModal() {
+        const content = document.getElementById('newCardsModalContent');
+        if (!content) return;
+        const cards = _getNewCardsForMe();
+        if (!cards.length) {
+            content.innerHTML = `<div class="notification-empty"><i class="fas fa-envelope-open"></i><p>Nenhum card novo</p></div>`;
+            return;
+        }
+        const _e = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const typeLabel = { audit: 'Auditoria', ativ: 'Atividade', train: 'Treinamento', doc: 'Documento' };
+        content.innerHTML = cards.map(card => {
+            const age = Math.floor((Date.now() - new Date(card.createdAt).getTime()) / 86400000);
+            const ageStr = age === 0 ? 'Hoje' : `${age} dia${age > 1 ? 's' : ''} atrás`;
+            return `
+                <div class="notification-item" onclick="closeNewCardsModal(); currentHistoryPage = 1; openView(${card.id}, '${card._type}')">
+                    <div class="notification-item-header">
+                        <span class="notification-item-title">${_e(card.titulo || 'Sem título')}</span>
+                        <span class="notification-item-status" style="background:var(--c-yellow);color:#fff">${_e(typeLabel[card._type] || card._type)}</span>
+                    </div>
+                    <div class="notification-item-details">
+                        ${card.setor ? `<div class="notification-item-details-row"><i class="fas fa-building"></i><span>${_e(card.setor)}</span></div>` : ''}
+                        <div class="notification-item-details-row"><i class="fas fa-clock"></i><span>${ageStr}</span></div>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    window.toggleNewCardsModal = toggleNewCardsModal;
+    window.closeNewCardsModal  = closeNewCardsModal;
+    window.updateNewCardsBadge = updateNewCardsBadge;

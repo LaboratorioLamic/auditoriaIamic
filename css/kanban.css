@@ -231,6 +231,26 @@
 }
 .kanban-card.kb-dragging { opacity: 0.4; transform: scale(0.97); box-shadow: var(--shadow-lg); }
 
+.kb-new-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: var(--c-yellow, #f59e0b);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: var(--r-full, 9999px);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    pointer-events: none;
+    z-index: 2;
+    box-shadow: 0 1px 4px rgba(245,158,11,0.35);
+}
+
 .kanban-card-stripe {
     width: 4px;
     flex-shrink: 0;

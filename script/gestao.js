@@ -65,6 +65,7 @@
         };
 
         if (isNew) {
+            newItem.createdAt = new Date().toISOString();
             newItem.historico.push({ timestamp: new Date().toISOString(), acao: 'Criação do Registro', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema', snapshot: _safeSnapshot(newItem) });
             activities.push(newItem);
         } else {

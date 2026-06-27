@@ -202,4 +202,10 @@
         if (modal && !modal.contains(e.target) && !container.contains(e.target)) {
             closeNotificationModal();
         }
+        const newCardsModal = document.getElementById('newCardsModal');
+        const newCardsContainer = document.getElementById('newCardsContainer');
+        if (newCardsModal && newCardsContainer &&
+            !newCardsModal.contains(e.target) && !newCardsContainer.contains(e.target)) {
+            if (typeof closeNewCardsModal === 'function') closeNewCardsModal();
+        }
     });

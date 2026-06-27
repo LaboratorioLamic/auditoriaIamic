@@ -139,3 +139,6 @@
 .notification-empty { padding: 48px 16px; text-align: center; color: var(--text-light); }
 .notification-empty i { font-size: 36px; margin-bottom: 12px; opacity: 0.3; display: block; }
 .notification-empty p { font-size: 14px; font-weight: 500; margin: 0; }
+
+/* Modal de novos cards — posiciona alinhado ao botão carta (2º botão, ~88px do canto) */
+#newCardsModal { right: 24px; }

@@ -105,6 +105,7 @@
         }
 
         if (isNew) {
+            newItem.createdAt = new Date().toISOString();
             newItem.historico.push({
                 timestamp: new Date().toISOString(),
                 acao: 'Criação do Registro',

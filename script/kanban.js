@@ -49,6 +49,26 @@ function _kbGetStatusList(cfg) {
 
 // ---- Utilitários ----
 
+// Card é "novo" se criado há ≤7 dias E sem publicação E sem checklist marcado E status não foi alterado
+function _kbIsNew(item) {
+    if (!item.createdAt) return false;
+    const age = (Date.now() - new Date(item.createdAt).getTime()) / 86400000;
+    if (age > 7) return false;
+    if (item.publicacoes && item.publicacoes.length > 0) return false;
+    const cl = item.checklist || [];
+    if (cl.some(c => c.checked)) return false;
+    // Se o histórico contém uma edição que mudou o status, não é mais novo
+    if (Array.isArray(item.historico)) {
+        const hadStatusChange = item.historico.some(h =>
+            h.acao === 'Edição de Dados' &&
+            Array.isArray(h.detalhes) &&
+            h.detalhes.some(d => typeof d === 'string' && d.startsWith('Status:'))
+        );
+        if (hadStatusChange) return false;
+    }
+    return true;
+}
+
 function _kbIsFinalStatus(name) {
     const n = (name || '').toLowerCase();
     return n.includes('conclu') || n.includes('cancel');
@@ -355,6 +375,7 @@ function _kbRenderCard(item) {
     const clPct   = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0;
     const donutHtml = clTotal > 0 && typeof _clDonutHtml === 'function'
         ? _clDonutHtml(clDone, clTotal, clPct, 36, true) : '';
+    const isNewCard = _kbIsNew(item);
 
     return `
         <div class="kanban-card"
@@ -364,6 +385,7 @@ function _kbRenderCard(item) {
              ondragend="kbDragEnd(event)"
              onclick="kbCardClick(event,${item.id})">
             <div class="kanban-card-stripe" style="background:${deadline}"></div>
+            ${isNewCard ? '<span class="kb-new-badge"><i class="fas fa-star"></i>Novo</span>' : ''}
             ${donutHtml}
             <div class="kanban-card-inner">
                 <div class="kanban-card-title">${_kbHtml(item.titulo || 'Sem título')}</div>
