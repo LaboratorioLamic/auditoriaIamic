@@ -61,7 +61,7 @@
 
         // Gestão de N/C — Ocorrências
         ncTipos: [],         // [{ id, name }]  — cada tipo é uma "sub-aba"
-        ncCategorias: [],    // [{ id, name }]
+        ncCategorias: {},    // { [tipoId]: [{ id, name }] }
         ncMotivos: {},       // { [categoriaId]: [{ id, name }] }
 
         // Gestão de N/C — RNC
