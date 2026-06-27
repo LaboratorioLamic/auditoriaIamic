@@ -521,12 +521,30 @@ function kbDrop(event, targetStatus) {
     if (!item || item.status === targetStatus) return;
 
     const _dropIsConcluido = _kbStatusIsConcluido(targetStatus);
+    const _prevIsConcluido = _kbStatusIsConcluido(item.status);
+
+    // Saindo de Concluído → incrementa ciclo e pergunta sobre checklist
+    if (_prevIsConcluido && !_dropIsConcluido) {
+        item.pubCycleId = (item.pubCycleId || 1) + 1;
+        const _hasChecklist = (item.checklist || []).length > 0 || (item.checklistPublicacao || []).length > 0;
+        if (_hasChecklist && typeof showChecklistResetModal === 'function') {
+            const _kbDateField = item.dataPrevisao !== undefined ? 'dataPrevisao' : 'dataConclusao';
+            showChecklistResetModal(
+                (novaData) => { if (novaData) item[_kbDateField] = novaData; _kbApplyDrop(item, targetStatus); },
+                (novaData) => { if (novaData) item[_kbDateField] = novaData; resetChecklistItems(item); _kbApplyDrop(item, targetStatus); },
+                null,
+                { dataPrevisao: item.dataPrevisao || item.dataConclusao || '' }
+            );
+            return;
+        }
+    }
+
     if (_dropIsConcluido && typeof isItemOverdue === 'function' && (currentTab === 'treinamentos' || currentTab === 'documentos') && isItemOverdue(item, currentTab)) {
         showOverdueConcluiModal();
         return;
     }
-    if (_dropIsConcluido && !canSetConcluido(item.checklist)) {
-        if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de mover para Concluído.', 'error');
+    if (_dropIsConcluido && !canSetConcluido(item.checklist, item)) {
+        if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist de publicação antes de mover para Concluído.', 'error');
         return;
     }
     if (_dropIsConcluido && typeof checkSchedWarnBeforeConcluido === 'function') {
@@ -1273,8 +1291,8 @@ function _kbTouchDrop(cx, cy) {
         showOverdueConcluiModal();
         return;
     }
-    if (_moveIsConcluido && !canSetConcluido(item.checklist)) {
-        if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de mover para Concluído.', 'error');
+    if (_moveIsConcluido && !canSetConcluido(item.checklist, item)) {
+        if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist de publicação antes de mover para Concluído.', 'error');
         return;
     }
     if (_moveIsConcluido && typeof checkSchedWarnBeforeConcluido === 'function') {

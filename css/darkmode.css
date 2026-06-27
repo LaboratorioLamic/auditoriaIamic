@@ -720,6 +720,12 @@ body.dark-mode .pub-cl-item:hover { background: #253348; }
 body.dark-mode .pub-cl-item.checked { background: rgba(22,163,74,.1); border-color: rgba(74,222,128,.25); color: #4ade80; }
 body.dark-mode .pub-cl-item.pub-cl-required-warn { border-color: #f87171; background: rgba(220,38,38,.1); }
 body.dark-mode .pub-cl-readonly-notice { background: #1e293b; border-color: #334155; color: #64748b; }
+body.dark-mode .pub-cl-group-header { background: #0f172a; color: #64748b; border-bottom-color: #334155; }
+body.dark-mode .pub-cl-group-header.all-done { background: rgba(22,163,74,.1); color: #4ade80; border-bottom-color: rgba(74,222,128,.2); }
+body.dark-mode .pub-cl-group-done-icon { color: #4ade80; }
+body.dark-mode .pub-cl-group .pub-cl-item { border-bottom-color: #253348; }
+body.dark-mode .pub-cl-group-standalone .pub-cl-group-header { background: #1e293b; color: #475569; }
+body.dark-mode .pub-cl-empty-done { background: rgba(22,163,74,.1); border-color: rgba(74,222,128,.2); color: #4ade80; }
 
 /* Modal de visualização de publicação */
 body.dark-mode .ver-pub-modal-content { background: #1e293b; }
@@ -1282,6 +1288,10 @@ body.dark-mode .sched-status-opt-item.sched-opt-selected { background: rgba(139,
 body.dark-mode .sched-status-opt-item.sched-opt-selected--overdue { background: rgba(245,158,11,.12); color: #fbbf24; }
 body.dark-mode .sched-status-opt-item.sched-opt-none { color: #475569; border-bottom-color: #334155; }
 
+body.dark-mode .sched-reset-row { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.25); }
+body.dark-mode .sched-reset-icon { color: #818cf8; }
+body.dark-mode .sched-reset-label { color: #94a3b8; }
+
 /* Autocomplete dentro do drawer */
 body.dark-mode .ac-dropdown { background: #1e293b; border-color: #334155; }
 body.dark-mode .ac-option { color: #e2e8f0; }
@@ -1583,6 +1593,27 @@ body.dark-mode .pub-subtab:hover { color: #e2e8f0 !important; background: #25334
 body.dark-mode .pub-subtab.active { color: #93c5fd !important; border-bottom-color: #3b82f6 !important; background: #1e293b !important; }
 body.dark-mode .pub-subtab-badge { background: #253348 !important; color: #94a3b8 !important; }
 body.dark-mode .pub-subtab.active .pub-subtab-badge { background: rgba(37,99,235,0.18) !important; color: #93c5fd !important; }
+
+/* Grupos de conclusão */
+body.dark-mode .pub-conclusao-group { border-color: #334155; }
+body.dark-mode .pub-conclusao-group-header { background: #0f172a; }
+body.dark-mode .pub-conclusao-group-label { color: #e2e8f0; }
+body.dark-mode .pub-conclusao-group-count { background: #1e293b; color: #64748b; }
+body.dark-mode .pub-group-cl-bar-track { background: #334155; }
+body.dark-mode .pub-group-cl-bar-label { color: #818cf8; }
+body.dark-mode .pub-group-cl-bar-label.done { color: #4ade80; }
+body.dark-mode .pub-conclusao-group-chevron { color: #475569; }
+body.dark-mode .pub-conclusao-group-cal { color: #818cf8; }
+
+/* Modal reset checklist */
+body.dark-mode .cl-reset-card { background: #1e293b; }
+body.dark-mode .cl-reset-text { color: #cbd5e1; }
+body.dark-mode .cl-reset-text strong { color: #e2e8f0; }
+body.dark-mode .cl-reset-date-row { background: #0f172a; border-color: #334155; }
+body.dark-mode .cl-reset-date-label { color: #475569; }
+body.dark-mode .cl-reset-date-input { color: #e2e8f0; color-scheme: dark; }
+body.dark-mode .cl-reset-btn--cancel { border-color: #334155; color: #475569; }
+body.dark-mode .cl-reset-btn--manter { border-color: #334155; background: #253348; color: #94a3b8; }
 
 body.dark-mode .pub-table-wrap { }
 body.dark-mode .pub-table thead tr { background: #0f172a !important; border-bottom-color: #334155 !important; }
@@ -2160,6 +2191,23 @@ body.dark-mode .ver-pub-meta-row {
 }
 
 /* ── View checklist items com gradiente claro ───────────────────────────── */
+body.dark-mode .view-checklist-item {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+body.dark-mode .view-checklist-item:hover {
+    background: #253348 !important;
+    border-color: #475569 !important;
+}
+body.dark-mode .view-checklist-item-text { color: #e2e8f0 !important; }
+body.dark-mode .view-checklist-cb {
+    background: #0f172a !important;
+    border-color: #475569 !important;
+}
+body.dark-mode .view-checklist-cb:hover:not(:disabled) {
+    border-color: #6366f1 !important;
+}
 body.dark-mode .view-checklist-item.checked,
 body.dark-mode .view-checklist-item.cl-done,
 body.dark-mode .view-checklist-item.pub-cl-locked-done {
@@ -2176,12 +2224,37 @@ body.dark-mode .view-checklist-select-all {
     color: #94a3b8 !important;
 }
 body.dark-mode .view-checklist-select-all:hover { background: #2d3f57 !important; color: #e2e8f0 !important; }
+body.dark-mode .vcl-perm-banner {
+    background: rgba(245,158,11,0.12) !important;
+    border-color: #78350f !important;
+    color: #fde68a !important;
+}
 
-/* ── vcl-pp-hdr (popover cabeçalho do checklist de publicação) ──────────── */
+/* ── vcl-pp-popup (popover Publicações Associadas) ───────────────────────── */
+body.dark-mode .vcl-pp-popup {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 3px 10px rgba(0,0,0,0.3) !important;
+}
 body.dark-mode .vcl-pp-hdr {
     background: linear-gradient(135deg, #1a1f3c 0%, #1e1b3a 100%) !important;
     border-bottom-color: #3730a3 !important;
 }
+body.dark-mode .vcl-pp-title { color: #a5b4fc !important; }
+body.dark-mode .vcl-pp-close-btn { color: #64748b !important; }
+body.dark-mode .vcl-pp-close-btn:hover { color: #e2e8f0 !important; background: rgba(255,255,255,0.08) !important; }
+body.dark-mode .vcl-pp-bar-track { background: #253348 !important; }
+body.dark-mode .vcl-pp-count { color: #a5b4fc !important; }
+body.dark-mode .vcl-pp-total { color: #64748b !important; }
+body.dark-mode .vcl-pp-list::-webkit-scrollbar-thumb { background: #334155 !important; }
+body.dark-mode .vcl-pp-item { border-bottom-color: #253348 !important; }
+body.dark-mode .vcl-pp-item:hover { background: #253348 !important; }
+body.dark-mode .vcl-pp-item.clickable:hover { background: rgba(22,163,74,0.1) !important; }
+body.dark-mode .vcl-pp-dot { border-color: #334155 !important; }
+body.dark-mode .vcl-pp-text { color: #cbd5e1 !important; }
+body.dark-mode .vcl-pp-item.done .vcl-pp-text { color: #4ade80 !important; }
+body.dark-mode .vcl-pp-meta { color: #818cf8 !important; }
+body.dark-mode .vcl-pp-meta-pend { color: #475569 !important; }
 
 /* ── cl-pub-editor-group ────────────────────────────────────────────────── */
 body.dark-mode .cl-pub-editor-group {
@@ -2223,6 +2296,61 @@ body.dark-mode .cl-pub-link-dropdown { background: #1e293b !important; border-co
 body.dark-mode .cl-pub-link-dropdown-item { color: #e2e8f0 !important; }
 body.dark-mode .cl-pub-link-dropdown-item:hover { background: #253348 !important; }
 body.dark-mode .cl-pub-link-dropdown-item.selected { background: rgba(99,102,241,0.15) !important; color: #a5b4fc !important; }
+
+/* ── Checklist editor geral (aba Geral) ─────────────────────────────────── */
+body.dark-mode .checklist-editor-item {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+body.dark-mode .checklist-editor-item.drag-over {
+    border-color: #6366f1 !important;
+    background: #1a1f3c !important;
+    box-shadow: 0 0 0 2px #4338ca !important;
+}
+body.dark-mode .checklist-item-text-input {
+    background: #253348 !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+body.dark-mode .checklist-item-text-input:focus {
+    border-color: #6366f1 !important;
+    background: #1e293b !important;
+}
+body.dark-mode .checklist-item-required-toggle {
+    background: #253348 !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+}
+body.dark-mode .checklist-item-required-toggle:hover {
+    background: rgba(245,158,11,0.1) !important;
+    border-color: #f59e0b !important;
+    color: #fbbf24 !important;
+}
+body.dark-mode .checklist-item-required-toggle.active {
+    background: rgba(245,158,11,0.12) !important;
+    border-color: #f59e0b !important;
+    color: #fbbf24 !important;
+}
+body.dark-mode .checklist-item-geral-select {
+    background: #253348 !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+body.dark-mode .checklist-item-del-btn { color: #ef4444 !important; }
+body.dark-mode .checklist-item-del-btn:hover { background: rgba(239,68,68,0.1) !important; }
+body.dark-mode .checklist-editor-comment-area {
+    background: linear-gradient(135deg, rgba(120,53,15,0.2) 0%, rgba(146,64,14,0.15) 100%) !important;
+    border-color: #78350f !important;
+}
+body.dark-mode .checklist-editor-comment-input {
+    background: #1e293b !important;
+    border-color: #92400e !important;
+    color: #fde68a !important;
+}
+body.dark-mode .checklist-editor-comment-input:focus {
+    background: #1e293b !important;
+    border-color: #f59e0b !important;
+}
 
 /* ── RNC view modal header ───────────────────────────────────────────────── */
 body.dark-mode .rnc-view-modal-header {

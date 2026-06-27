@@ -508,6 +508,61 @@ window.clearChecklist = function(prefix) {
     renderChecklistEditor(prefix + '-pub');
 };
 
+// Desmarca todos os itens do checklist de um item salvo
+window.resetChecklistItems = function(item) {
+    if (Array.isArray(item.checklist))
+        item.checklist.forEach(c => { c.checked = false; c.comment = ''; });
+    if (Array.isArray(item.checklistPublicacao))
+        item.checklistPublicacao.forEach(c => { c.checked = false; c.comment = ''; });
+};
+
+// Modal de confirmação: manter ou resetar checklist ao sair de Concluído
+// options: { dataPrevisao: 'YYYY-MM-DD', dataField: 'dataPrevisao'|'dataConclusao' }
+window.showChecklistResetModal = function(onManter, onResetar, onCancelar, options) {
+    const existing = document.getElementById('clResetModal');
+    if (existing) existing.remove();
+
+    const _dateVal = (options && options.dataPrevisao) || '';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'clResetModal';
+    overlay.className = 'cl-reset-overlay';
+    overlay.innerHTML = `
+        <div class="cl-reset-card">
+            <div class="cl-reset-header">
+                <div class="cl-reset-header-icon"><i class="fas fa-list-check"></i></div>
+                <div>
+                    <div class="cl-reset-title">Status alterado — Checklist</div>
+                    <div class="cl-reset-subtitle">Este card saiu de Concluído</div>
+                </div>
+            </div>
+            <div class="cl-reset-body">
+                <p class="cl-reset-text">
+                    O card saiu do status <strong>Concluído</strong>. Deseja resetar o checklist para uma nova conclusão futura, ou manter o estado atual?
+                </p>
+                <div class="cl-reset-date-row">
+                    <span class="cl-reset-date-label"><i class="fas fa-calendar-alt" style="margin-right:5px;color:#6366f1;"></i>Previsão</span>
+                    <input type="date" id="clResetDateInput" class="cl-reset-date-input" value="${_dateVal}">
+                </div>
+                <div class="cl-reset-actions">
+                    <button id="clResetBtnCancelar" class="cl-reset-btn cl-reset-btn--cancel">Cancelar</button>
+                    <button id="clResetBtnManter" class="cl-reset-btn cl-reset-btn--manter">Manter Checklist</button>
+                    <button id="clResetBtnResetar" class="cl-reset-btn cl-reset-btn--resetar">Resetar Checklist</button>
+                </div>
+            </div>
+        </div>
+        <style>@keyframes clResetIn{from{opacity:0;transform:scale(0.94)}to{opacity:1;transform:scale(1)}}</style>
+    `;
+    document.body.appendChild(overlay);
+
+    const getDate = () => overlay.querySelector('#clResetDateInput').value;
+    const close = () => overlay.remove();
+    overlay.querySelector('#clResetBtnCancelar').onclick = () => { close(); if (onCancelar) onCancelar(); };
+    overlay.querySelector('#clResetBtnManter').onclick = () => { close(); onManter(getDate()); };
+    overlay.querySelector('#clResetBtnResetar').onclick = () => { close(); onResetar(getDate()); };
+    overlay.addEventListener('click', e => { if (e.target === overlay) { close(); if (onCancelar) onCancelar(); } });
+};
+
 // ─── VIEW CHECKLIST ──────────────────────────────────────────
 window.renderViewChecklist = function(item, tab) {
     const container = document.getElementById('viewChecklistContent');
@@ -949,8 +1004,9 @@ window._pubChecklistGeralItems = [];
 
 function _renderPubClItem(c, i) {
     const isRequired = !!c.requiredForPub;
-    const needsWarning = isRequired && !c.checked;
     const isEditing = window._editingPubIndex != null;
+
+    if (c.previouslyDone) return '';
     if (isEditing) {
         return `
         <div class="pub-cl-item pub-cl-item-readonly ${c.checked ? 'checked' : ''}" data-pub-cl-index="${i}">
@@ -959,6 +1015,7 @@ function _renderPubClItem(c, i) {
             <span>${c.texto || ''}</span>
         </div>`;
     }
+    const needsWarning = isRequired && !c.checked;
     return `
     <label class="pub-cl-item ${c.checked ? 'checked' : ''} ${needsWarning ? 'pub-cl-required-warn' : ''}" data-pub-cl-index="${i}">
         <input type="checkbox" ${c.checked ? 'checked' : ''} onchange="togglePubClItem(${i}, this)">
@@ -972,6 +1029,10 @@ function _renderPubChecklistItems() {
     const geralItems = window._pubChecklistGeralItems || [];
     const isEditing = window._editingPubIndex != null;
 
+    const activeItems = state.filter(c => !c.previouslyDone);
+    if (state.length > 0 && activeItems.length === 0) {
+        return `<div class="pub-cl-empty-done"><i class="fas fa-circle-check"></i> Todos os itens já foram concluídos em publicações anteriores.</div>`;
+    }
     if (state.length === 0) {
         return `<div class="pub-cl-empty-done"><i class="fas fa-circle-check"></i> Todos os itens já foram concluídos em publicações anteriores.</div>`;
     }
@@ -996,7 +1057,7 @@ function _renderPubChecklistItems() {
         const entries = groups.get(gi);
         const geralItem = geralItems[gi];
         const geralText = geralItem ? (geralItem.texto || `Item Geral ${gi + 1}`) : `Item Geral ${gi + 1}`;
-        const allDone = entries.every(e => e.c.checked);
+        const allDone = entries.every(e => e.c.checked || e.c.previouslyDone);
         html += `<div class="pub-cl-group">
             <div class="pub-cl-group-header${allDone ? ' all-done' : ''}">
                 <i class="fas fa-layer-group"></i>
@@ -1151,18 +1212,14 @@ window.openPublicacaoModal = function(editIndex) {
         </div>`;
     } else if (finalTab === 'documentos') {
         fieldsHtml = `
-        <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;">
-            <div class="field-group full-width">
+        <div class="form-grid" style="grid-template-columns:2fr 1fr;gap:12px;">
+            <div class="field-group">
                 <label>Título da Publicação</label>
                 <input type="text" id="pubTitulo" placeholder="Título desta revisão/publicação" value="${existingPub ? (existingPub.titulo || '') : ''}">
             </div>
             <div class="field-group">
                 <label>Data <span class="req-star">*</span></label>
                 <input type="date" id="pubData" value="${dateVal}">
-            </div>
-            <div class="field-group">
-                <label>Hora <span class="req-star">*</span></label>
-                <input type="time" id="pubHora" value="${timeVal}">
             </div>
             <div class="field-group full-width">
                 <label>Descrição <span class="req-star">*</span></label>
@@ -1214,28 +1271,31 @@ window.openPublicacaoModal = function(editIndex) {
             clWrap.style.display = '';
             _updatePubClToggleBtn();
         } else if (pubCL.length > 0 && !isEditing) {
-            // Determina quais itens já foram concluídos em publicações anteriores
-            const completedIds = new Set();
+            // Acumula itens concluídos no ciclo atual (mesmo pubCycleId ou dataConclusaoRef)
+            const _currentCycle = item.pubCycleId || 1;
+            const _currentDateRef = item.dataPublicacao || item.dataConclusao || null;
+            const _key = c => c.id || ('t:' + (c.texto || '').trim());
+            const completedKeys = new Set();
             (item.publicacoes || []).forEach(pub => {
+                const isCurrent = pub.pubCycleId
+                    ? pub.pubCycleId === _currentCycle
+                    : (pub.dataConclusaoRef === _currentDateRef);
+                if (!isCurrent) return;
                 (pub.checklistSnapshot || []).forEach(snap => {
-                    if (snap.checked && snap.id) completedIds.add(snap.id);
+                    if (snap.checked) completedKeys.add(_key(snap));
                 });
             });
-            // Exibe apenas itens pendentes (sem ID ou cujo ID não está concluído)
-            const pending = pubCL.filter(c => !c.id || !completedIds.has(c.id));
+
             window._pubChecklistGeralItems = item.checklist || [];
-            if (pending.length > 0) {
-                window._pubChecklistState = pending.map(c => ({ ...c, checked: false }));
-                clItems.innerHTML = _renderPubChecklistItems();
-                clWrap.style.display = '';
-                _updatePubClToggleBtn();
-            } else {
-                // Todos os itens já concluídos — exibe mensagem informativa
-                window._pubChecklistState = [];
-                clItems.innerHTML = _renderPubChecklistItems();
-                clWrap.style.display = '';
-                _updatePubClToggleBtn();
-            }
+            // Todos os itens do ciclo, marcando os já concluídos como "previouslyDone"
+            window._pubChecklistState = pubCL.map(c => ({
+                ...c,
+                checked: false,
+                previouslyDone: completedKeys.has(_key(c))
+            }));
+            clItems.innerHTML = _renderPubChecklistItems();
+            clWrap.style.display = '';
+            _updatePubClToggleBtn();
         } else {
             clWrap.style.display = 'none';
             window._pubChecklistState = [];
@@ -1263,14 +1323,14 @@ window.confirmarPublicacao = function() {
     const editIndex = window._editingPubIndex;
 
     const dataVal = document.getElementById('pubData')?.value || _nowDateStr();
-    const horaVal = document.getElementById('pubHora')?.value || _nowTimeStr();
+    const horaVal = document.getElementById('pubHora')?.value || (finalTab !== 'documentos' ? _nowTimeStr() : '');
     const descVal = document.getElementById('pubDescricao')?.value.trim() || '';
 
     const anexos = (typeof getAnexosUpload === 'function') ? getAnexosUpload('pub') : [];
 
     // Validações obrigatórias
     const _markReq = (id, bad) => { const el = document.getElementById(id); if (el) el.classList.toggle('field-required-error', bad); };
-    const _dataOk = !!dataVal, _horaOk = !!horaVal, _descOk = !!descVal;
+    const _dataOk = !!dataVal, _horaOk = finalTab === 'documentos' ? true : !!horaVal, _descOk = !!descVal;
     _markReq('pubData', !_dataOk); _markReq('pubHora', !_horaOk); _markReq('pubDescricao', !_descOk);
     if (!_dataOk) { if (typeof showToast === 'function') showToast('Data é obrigatória.', 'error'); document.getElementById('pubData')?.focus(); return; }
     if (!_horaOk) { if (typeof showToast === 'function') showToast('Hora é obrigatória.', 'error'); document.getElementById('pubHora')?.focus(); return; }
@@ -1298,13 +1358,18 @@ window.confirmarPublicacao = function() {
     // Preserva id original ao editar
     const existingId = isEditing ? (item.publicacoes[editIndex]?.id || Date.now()) : Date.now();
 
+    // Garante que o item tenha um ciclo de conclusão
+    if (!item.pubCycleId) item.pubCycleId = 1;
+
     let pub = {
         id: existingId,
         data: dataVal,
         hora: horaVal,
         descricao: descVal,
         usuario: isEditing ? (item.publicacoes[editIndex]?.usuario || '') : (window.currentuser ? (window.currentuser.name || window.currentuser.user || '') : ''),
-        anexos: anexos
+        anexos: anexos,
+        pubCycleId: isEditing ? (item.publicacoes[editIndex]?.pubCycleId || item.pubCycleId) : item.pubCycleId,
+        dataConclusaoRef: item.dataPublicacao || item.dataConclusao || null
     };
 
     // Salva snapshot do checklist de publicação (com id e geralIndex para rastreabilidade)
@@ -1373,16 +1438,29 @@ function _autoUnmarkGeralFromPub(item) {
     const pubCL = item.checklistPublicacao || [];
     const geral = item.checklist || [];
     if (!geral.length || !pubCL.length) return;
-    const completedIds = new Set();
-    (item.publicacoes || []).forEach(pub => (pub.checklistSnapshot || []).forEach(snap => {
-        if (snap.checked) completedIds.add(snap.id || ('t:' + (snap.texto || '').trim()));
-    }));
+
+    const _key = c => c.id || ('t:' + (c.texto || '').trim());
+    const _currentCycle = item.pubCycleId || 1;
+    const _currentDateRef = item.dataPublicacao || item.dataConclusao || null;
+
+    // Acumula chaves concluídas no ciclo atual
+    const completedKeys = new Set();
+    (item.publicacoes || []).forEach(pub => {
+        const isCurrent = pub.pubCycleId
+            ? pub.pubCycleId === _currentCycle
+            : (pub.dataConclusaoRef === _currentDateRef);
+        if (!isCurrent) return;
+        (pub.checklistSnapshot || []).forEach(snap => {
+            if (snap.checked) completedKeys.add(_key(snap));
+        });
+    });
+
     const usedGi = [...new Set(pubCL.filter(c => c.geralIndex != null).map(c => c.geralIndex))];
     usedGi.forEach(gi => {
         if (gi < 0 || gi >= geral.length || !geral[gi].checked) return;
         const assoc = pubCL.filter(c => c.geralIndex === gi);
         if (!assoc.length) return;
-        if (!assoc.every(c => completedIds.has(c.id || ('t:' + (c.texto || '').trim())))) {
+        if (!assoc.every(c => completedKeys.has(_key(c)))) {
             geral[gi].checked = false;
         }
     });
@@ -1393,22 +1471,28 @@ function _autoMarkGeralFromPub(item) {
     const geral = item.checklist || [];
     if (!geral.length || !pubCL.length) return;
 
-    // Coleta IDs marcados em qualquer publicação
-    const completedIds = new Set();
+    const _key = c => c.id || ('t:' + (c.texto || '').trim());
+    const _currentCycle = item.pubCycleId || 1;
+    const _currentDateRef = item.dataPublicacao || item.dataConclusao || null;
+
+    // Acumula chaves concluídas em TODAS as pubs do ciclo atual
+    const completedKeys = new Set();
     (item.publicacoes || []).forEach(pub => {
+        const isCurrent = pub.pubCycleId
+            ? pub.pubCycleId === _currentCycle
+            : (pub.dataConclusaoRef === _currentDateRef);
+        if (!isCurrent) return;
         (pub.checklistSnapshot || []).forEach(snap => {
-            if (snap.checked && snap.id) completedIds.add(snap.id);
+            if (snap.checked) completedKeys.add(_key(snap));
         });
     });
 
-    // Índices geral com itens associados
     const usedGi = [...new Set(pubCL.filter(c => c.geralIndex != null).map(c => c.geralIndex))];
     usedGi.forEach(gi => {
         if (gi < 0 || gi >= geral.length || geral[gi].checked) return;
         const associated = pubCL.filter(c => c.geralIndex === gi);
         if (!associated.length) return;
-        // Só auto-marca se todos os associados possuem ID e foram concluídos
-        if (associated.every(c => c.id && completedIds.has(c.id))) {
+        if (associated.every(c => completedKeys.has(_key(c)))) {
             geral[gi].checked = true;
         }
     });
@@ -1574,10 +1658,6 @@ window.renderViewPublicacoes = function(item) {
         return;
     }
 
-    const totalPages = Math.max(1, Math.ceil(pubs.length / _VP_PUB_PER_PAGE));
-    if (_vpPubPage > totalPages) _vpPubPage = totalPages;
-
-    const pagePubs = pubs.slice((_vpPubPage - 1) * _VP_PUB_PER_PAGE, _vpPubPage * _VP_PUB_PER_PAGE);
     const _canMgPubs = typeof userCanManagePubs === 'function' ? userCanManagePubs(item) : true;
 
     const _sortIcon = (col) => {
@@ -1587,7 +1667,7 @@ window.renderViewPublicacoes = function(item) {
             : '<i class="fas fa-sort-down" style="color:var(--accent);margin-left:4px;font-size:10px"></i>';
     };
 
-    const rows = pagePubs.map((p) => {
+    const _renderPubRow = (p) => {
         const i = allPubs.indexOf(p);
         const typeClass = {
             'Evidência': 'evidencia', 'Atualização': 'atualizacao',
@@ -1599,7 +1679,7 @@ window.renderViewPublicacoes = function(item) {
         return `<tr onclick="verPublicacao(${item.id},'${window._currentViewTab}',${i})" title="Ver publicação">
             <td><span class="pub-type-badge ${typeClass}">${p.tipo || '–'}</span></td>
             <td>${p.titulo || descPreview || '–'}</td>
-            <td>${dateStr}${p.hora ? ' ' + p.hora : ''}</td>
+            <td>${dateStr}${window._currentViewTab !== 'documentos' && p.hora ? ' ' + p.hora : ''}</td>
             <td>${p.usuario || '–'}</td>
             <td>${nAnexos > 0 ? `<i class="fas fa-paperclip" style="color:#94a3b8"></i> ${nAnexos}` : '–'}</td>
             <td onclick="event.stopPropagation();" style="white-space:nowrap;">
@@ -1607,40 +1687,163 @@ window.renderViewPublicacoes = function(item) {
                 ${_canMgPubs ? `<button class="pub-action-btn pub-action-btn-del" title="Excluir" onclick="excluirPublicacao(${item.id},'${window._currentViewTab}',${i})"><i class="fas fa-trash"></i></button>` : ''}
             </td>
         </tr>`;
-    }).join('');
+    };
 
-    // Paginação
-    let paginationHtml = '';
-    if (totalPages > 1) {
-        paginationHtml = `<div class="vp-pub-pagination">
-            <span class="vp-pub-count">${pubs.length} publicaç${pubs.length !== 1 ? 'ões' : 'ão'}</span>
-            <div class="vp-pub-pages">
-                <button class="dpg-btn" onclick="event.stopPropagation();_vpGoPage(${_vpPubPage - 1})" ${_vpPubPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
-                ${Array.from({length: totalPages}, (_, i) => i + 1).map(p =>
-                    `<button class="dpg-btn ${p === _vpPubPage ? 'active' : ''}" onclick="event.stopPropagation();_vpGoPage(${p})">${p}</button>`
-                ).join('')}
-                <button class="dpg-btn" onclick="event.stopPropagation();_vpGoPage(${_vpPubPage + 1})" ${_vpPubPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
-            </div>
-        </div>`;
+    const _tableHead = `<thead><tr>
+        <th style="cursor:pointer" onclick="_vpSortPublicacoes('tipo')">Tipo${_sortIcon('tipo')}</th>
+        <th style="cursor:pointer" onclick="_vpSortPublicacoes('desc')">Descrição${_sortIcon('desc')}</th>
+        <th style="cursor:pointer" onclick="_vpSortPublicacoes('data')">${window._currentViewTab === 'documentos' ? 'Data' : 'Data/Hora'}${_sortIcon('data')}</th>
+        <th style="cursor:pointer" onclick="_vpSortPublicacoes('usuario')">Usuário${_sortIcon('usuario')}</th>
+        <th>Anexos</th><th></th>
+    </tr></thead>`;
+
+    // Verifica se há publicações com pubCycleId ou dataConclusaoRef (agrupamento por conclusão)
+    const _currentCycle = item.pubCycleId || 1;
+    const _currentDateRef = item.dataPublicacao || item.dataConclusao || null;
+    const _hasConclusaoGroups = pubs.some(p => !!p.pubCycleId || !!p.dataConclusaoRef);
+
+    if (_hasConclusaoGroups) {
+        const _groups = {};
+        const _SEM_GRUPO = '__sem_conclusao__';
+        const _CURRENT_KEY = `cycle_${_currentCycle}`;
+
+        pubs.forEach(p => {
+            let key;
+            if (p.pubCycleId) {
+                key = `cycle_${p.pubCycleId}`;
+            } else if (p.dataConclusaoRef) {
+                // Legacy: se a data bate com a data atual do ciclo corrente, une ao grupo atual
+                key = (p.dataConclusaoRef === _currentDateRef) ? _CURRENT_KEY : p.dataConclusaoRef;
+            } else {
+                key = _SEM_GRUPO;
+            }
+            if (!_groups[key]) _groups[key] = { pubs: [], dateRef: p.dataConclusaoRef || null };
+            _groups[key].pubs.push(p);
+        });
+
+        // Ordena: ciclo atual primeiro, demais ciclos por número desc, legacy por data desc, sem grupo por último
+        const _sortedKeys = Object.keys(_groups).sort((a, b) => {
+            if (a === _SEM_GRUPO) return 1;
+            if (b === _SEM_GRUPO) return -1;
+            if (a === _CURRENT_KEY) return -1;
+            if (b === _CURRENT_KEY) return 1;
+            const aIsCycle = a.startsWith('cycle_');
+            const bIsCycle = b.startsWith('cycle_');
+            if (aIsCycle && bIsCycle) return parseInt(b.slice(6)) - parseInt(a.slice(6));
+            if (aIsCycle) return -1;
+            if (bIsCycle) return 1;
+            return b.localeCompare(a);
+        });
+
+        // Calcula % de conclusão do checklistPublicacao por grupo
+        const _pubCL = item.checklistPublicacao || [];
+        const _clKey = c => c.id || ('t:' + (c.texto || '').trim());
+        function _groupPubClPct(groupKey) {
+            if (!_pubCL.length) return null;
+            // Acumula chaves concluídas nas pubs deste grupo
+            const doneKeys = new Set();
+            (_groups[groupKey]?.pubs || []).forEach(pub => {
+                (pub.checklistSnapshot || []).forEach(snap => {
+                    if (snap.checked) doneKeys.add(_clKey(snap));
+                });
+            });
+            // Para ciclos anteriores, apenas as pubs daquele grupo
+            // Para o ciclo atual, acumula também de outras pubs do mesmo ciclo
+            if (groupKey === _CURRENT_KEY) {
+                pubs.forEach(pub => {
+                    const isCurr = pub.pubCycleId ? pub.pubCycleId === _currentCycle : pub.dataConclusaoRef === _currentDateRef;
+                    if (!isCurr) return;
+                    (pub.checklistSnapshot || []).forEach(snap => { if (snap.checked) doneKeys.add(_clKey(snap)); });
+                });
+            }
+            const total = _pubCL.length;
+            const done = _pubCL.filter(c => doneKeys.has(_clKey(c))).length;
+            return { done, total, pct: total > 0 ? Math.round((done / total) * 100) : 0 };
+        }
+
+        let groupsHtml = '';
+        _sortedKeys.forEach((key, gi) => {
+            const grp = _groups[key];
+            const groupPubs = grp.pubs;
+            const labelDate = (key === _CURRENT_KEY) ? _currentDateRef : grp.dateRef;
+            const groupLabel = key === _SEM_GRUPO ? 'Sem data de conclusão' : `Conclusão: ${labelDate ? _formatDateBR(labelDate) : '—'}`;
+            const groupId = `pubGroup_${gi}`;
+            const _gcKey = `pub_group_collapsed_${item.id}_${key}`;
+            const _gcOpen = localStorage.getItem(_gcKey) !== '0';
+
+            // Barra de progresso do checklist de publicação
+            const clPct = _pubCL.length > 0 ? _groupPubClPct(key) : null;
+            const pctHtml = clPct !== null ? `
+                <div class="pub-group-cl-bar-wrap">
+                    <div class="pub-group-cl-bar-track">
+                        <div class="pub-group-cl-bar-fill${clPct.pct === 100 ? ' done' : ''}" style="width:${clPct.pct}%"></div>
+                    </div>
+                    <span class="pub-group-cl-bar-label${clPct.pct === 100 ? ' done' : ''}">${clPct.pct}%</span>
+                </div>` : '';
+
+            groupsHtml += `
+                <div class="pub-conclusao-group${_gcOpen ? ' open' : ''}" id="${groupId}">
+                    <div class="pub-conclusao-group-header" onclick="(function(el){el.classList.toggle('open');localStorage.setItem('${_gcKey}',el.classList.contains('open')?'1':'0');})(document.getElementById('${groupId}'))">
+                        <i class="fas fa-chevron-right pub-conclusao-group-chevron"></i>
+                        <i class="fas fa-calendar-check pub-conclusao-group-cal"></i>
+                        <span class="pub-conclusao-group-label">${groupLabel}</span>
+                        ${pctHtml}
+                        <span class="pub-conclusao-group-count">${groupPubs.length} publicaç${groupPubs.length !== 1 ? 'ões' : 'ão'}</span>
+                    </div>
+                    <div class="pub-conclusao-group-body" style="display:${_gcOpen ? '' : 'none'};">
+                        <div class="pub-table-wrap">
+                            <table class="pub-table">${_tableHead}<tbody>${groupPubs.map(_renderPubRow).join('')}</tbody></table>
+                        </div>
+                    </div>
+                </div>`;
+        });
+
+        container.innerHTML = `<div style="padding:0 2px;">${groupsHtml}</div>`;
+
+        // Toggle chevron baseado em open/closed
+        container.querySelectorAll('.pub-conclusao-group').forEach(g => {
+            const chev = g.querySelector('.pub-conclusao-group-header i.fa-chevron-right');
+            const body = g.querySelector('.pub-conclusao-group-body');
+            if (!chev || !body) return;
+            const obs = new MutationObserver(() => {
+                const isOpen = g.classList.contains('open');
+                chev.style.transform = isOpen ? 'rotate(90deg)' : '';
+                body.style.display = isOpen ? '' : 'none';
+            });
+            obs.observe(g, { attributes: true, attributeFilter: ['class'] });
+            // Estado inicial
+            const isOpen = g.classList.contains('open');
+            chev.style.transform = isOpen ? 'rotate(90deg)' : '';
+        });
     } else {
-        paginationHtml = `<div class="vp-pub-pagination"><span class="vp-pub-count">${pubs.length} publicaç${pubs.length !== 1 ? 'ões' : 'ão'}</span></div>`;
-    }
+        // Sem grupos: renderização paginada original
+        const totalPages = Math.max(1, Math.ceil(pubs.length / _VP_PUB_PER_PAGE));
+        if (_vpPubPage > totalPages) _vpPubPage = totalPages;
+        const pagePubs = pubs.slice((_vpPubPage - 1) * _VP_PUB_PER_PAGE, _vpPubPage * _VP_PUB_PER_PAGE);
+        const rows = pagePubs.map(_renderPubRow).join('');
 
-    container.innerHTML = `
-        <div class="pub-table-wrap">
-            <table class="pub-table">
-                <thead><tr>
-                    <th style="cursor:pointer" onclick="_vpSortPublicacoes('tipo')">Tipo${_sortIcon('tipo')}</th>
-                    <th style="cursor:pointer" onclick="_vpSortPublicacoes('desc')">Descrição${_sortIcon('desc')}</th>
-                    <th style="cursor:pointer" onclick="_vpSortPublicacoes('data')">Data/Hora${_sortIcon('data')}</th>
-                    <th style="cursor:pointer" onclick="_vpSortPublicacoes('usuario')">Usuário${_sortIcon('usuario')}</th>
-                    <th>Anexos</th><th></th>
-                </tr></thead>
-                <tbody>${rows}</tbody>
-            </table>
-        </div>
-        ${paginationHtml}`
-;};
+        let paginationHtml = '';
+        if (totalPages > 1) {
+            paginationHtml = `<div class="vp-pub-pagination">
+                <span class="vp-pub-count">${pubs.length} publicaç${pubs.length !== 1 ? 'ões' : 'ão'}</span>
+                <div class="vp-pub-pages">
+                    <button class="dpg-btn" onclick="event.stopPropagation();_vpGoPage(${_vpPubPage - 1})" ${_vpPubPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                    ${Array.from({length: totalPages}, (_, i) => i + 1).map(p =>
+                        `<button class="dpg-btn ${p === _vpPubPage ? 'active' : ''}" onclick="event.stopPropagation();_vpGoPage(${p})">${p}</button>`
+                    ).join('')}
+                    <button class="dpg-btn" onclick="event.stopPropagation();_vpGoPage(${_vpPubPage + 1})" ${_vpPubPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>`;
+        } else {
+            paginationHtml = `<div class="vp-pub-pagination"><span class="vp-pub-count">${pubs.length} publicaç${pubs.length !== 1 ? 'ões' : 'ão'}</span></div>`;
+        }
+
+        container.innerHTML = `
+            <div class="pub-table-wrap">
+                <table class="pub-table">${_tableHead}<tbody>${rows}</tbody></table>
+            </div>
+            ${paginationHtml}`;
+    }};
 
 const _VER_PUB_TYPE_CONFIG = {
     'Comentário':  { icon: 'fas fa-comment-dots', color: '#6366f1', bg: '#eef2ff' },
@@ -1718,12 +1921,18 @@ window.verPublicacao = function(id, tab, index) {
         const geralSource = item ? (item.checklist || []) : [];
         const hasGroups = clItems.some(c => c.geralIndex != null);
 
-        // Coleta itens concluídos em publicações ANTERIORES (mais antigas = índice maior)
-        const currentIds  = new Set(clItems.map(c => c.id).filter(Boolean));
+        // Coleta itens concluídos em publicações ANTERIORES do mesmo ciclo
+        const _thisCycle = pub.pubCycleId || 1;
+        const _thisDateRef = pub.dataConclusaoRef || null;
+        const _sameCycle = p => p.pubCycleId
+            ? p.pubCycleId === _thisCycle
+            : (p.dataConclusaoRef === _thisDateRef);
+        const currentIds   = new Set(clItems.map(c => c.id).filter(Boolean));
         const currentTexts = new Set(clItems.map(c => (c.texto || '').trim()));
         const prevCompleted = [];
         const seenPrev = new Set();
         (item.publicacoes || []).slice(index + 1).forEach(p => {
+            if (!_sameCycle(p)) return;
             (p.checklistSnapshot || []).forEach(c => {
                 if (!c.checked) return;
                 const key = c.id || (c.texto || '').trim();
@@ -1731,7 +1940,7 @@ window.verPublicacao = function(id, tab, index) {
                 if (c.id && currentIds.has(c.id)) return;
                 if (!c.id && currentTexts.has((c.texto || '').trim())) return;
                 seenPrev.add(key);
-                prevCompleted.push(c);
+                prevCompleted.push({ ...c, geralIndex: c.geralIndex ?? null });
             });
         });
 

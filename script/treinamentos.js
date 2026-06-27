@@ -82,6 +82,7 @@
             marcadorCor: trainMarkerObj ? trainMarkerObj.color : 'default',
             overdueStatus: document.getElementById('trainOverdueStatus').value || '',
             alertStatus: document.getElementById('trainAlertStatus')?.value || '',
+            resetChecklistOnAutoStatus: (typeof getSchedResetChecklist === 'function') ? getSchedResetChecklist('train') : false,
             anexos: getAnexos('train'),
             checklist: (typeof getChecklist === 'function') ? getChecklist('train') : (item.checklist || []),
             checklistPublicacao: (typeof getChecklistPub === 'function') ? getChecklistPub('train') : (item.checklistPublicacao || [])
@@ -112,8 +113,8 @@
                 showOverdueConcluiModal();
                 return;
             }
-            if (_trainIsConcluido && !canSetConcluido(newItem.checklist)) {
-                if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de marcar como Concluído.', 'error');
+            if (_trainIsConcluido && !canSetConcluido(newItem.checklist, newItem)) {
+                if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist de publicação antes de marcar como Concluído.', 'error');
                 return;
             }
             if (_trainIsConcluido && typeof checkSchedWarnBeforeConcluido === 'function' && !window._schedWarnPassed_train) {
@@ -126,6 +127,30 @@
                 return;
             }
             window._schedWarnPassed_train = false;
+
+            // Saindo de Concluído → perguntar sobre checklist
+            const _prevWasConcluidoTrain = typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(originalItem.status) : /conclu/i.test(originalItem.status);
+            const _newNotConcluidoTrain = !_trainIsConcluido;
+            const _hasClTrain = (newItem.checklist || []).length > 0 || (newItem.checklistPublicacao || []).length > 0;
+            if (_prevWasConcluidoTrain && _newNotConcluidoTrain) {
+                newItem.pubCycleId = (newItem.pubCycleId || 1) + 1;
+            }
+            if (_prevWasConcluidoTrain && _newNotConcluidoTrain && _hasClTrain && typeof showChecklistResetModal === 'function') {
+                const _doCommitTrain = (ni) => {
+                    const changes = calculateChanges(originalItem, ni);
+                    if (changes.length > 0) ni.historico.push({ timestamp: new Date().toISOString(), acao: 'Edição de Dados', usuario: currentuser?.name || 'Sistema', detalhes: changes, snapshot: _safeSnapshot(originalItem) });
+                    trainings = trainings.map(t => t.id === editingTrainId ? ni : t);
+                    saveAll(); closeFormDrawer(); renderCards();
+                    if (typeof isCalendarActive === 'function' && isCalendarActive()) renderCalendar();
+                };
+                showChecklistResetModal(
+                    (novaData) => { if (novaData) newItem.dataPrevisao = novaData; _doCommitTrain(newItem); },
+                    (novaData) => { if (novaData) newItem.dataPrevisao = novaData; resetChecklistItems(newItem); _doCommitTrain(newItem); },
+                    null,
+                    { dataPrevisao: newItem.dataPrevisao || '' }
+                );
+                return;
+            }
 
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0) {

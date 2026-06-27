@@ -133,7 +133,7 @@ window.schedFilterStatus = function(prefix) {
 };
 
 // Restaura valores ao editar item existente
-window.setSchedStatusValues = function(prefix, overdueVal, alertVal) {
+window.setSchedStatusValues = function(prefix, overdueVal, alertVal, resetCl) {
     const ovEl = document.getElementById(`${prefix}OverdueStatus`);
     const alEl = document.getElementById(`${prefix}AlertStatus`);
     if (ovEl) ovEl.value = overdueVal || '';
@@ -157,6 +157,16 @@ window.setSchedStatusValues = function(prefix, overdueVal, alertVal) {
     const statusBtn = document.getElementById(`${prefix}SchedStatusBtn`);
     if (statusBtn) statusBtn.disabled = !hasValue;
     _updateStatusBtnUI(prefix);
+
+    // Restaura toggle reset checklist
+    const resetEl = document.getElementById(`${prefix}ResetChecklistOnAuto`);
+    if (resetEl) resetEl.checked = !!resetCl;
+};
+
+// Lê o valor do toggle de reset de checklist
+window.getSchedResetChecklist = function(prefix) {
+    const el = document.getElementById(`${prefix}ResetChecklistOnAuto`);
+    return el ? el.checked : false;
 };
 
 // Compat: resetModal chama isso
@@ -394,6 +404,9 @@ window.applyOverdueStatuses = function() {
     function _applyChange(item, newStatus, acao) {
         const prev  = item.status;
         item.status = newStatus;
+        if (item.resetChecklistOnAutoStatus && typeof resetChecklistItems === 'function') {
+            resetChecklistItems(item);
+        }
         (item.historico = item.historico || []).push({
             timestamp: new Date().toISOString(),
             acao,

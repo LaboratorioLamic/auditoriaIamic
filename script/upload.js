@@ -143,11 +143,11 @@ function _onUploadTipoChange(ctx) {
     if (hasImageOption) {
       if (fileInput) fileInput.accept = '.pdf,.xls,.xlsx,.ods,.ppt,.pptx,.odp';
       const hint = zone ? zone.querySelector('.upload-drop-hint') : null;
-      if (hint) hint.textContent = 'PDF, planilha ou slides';
+      if (hint) hint.textContent = 'PDF, planilha ou slides (máx. 30 MB)';
     } else {
       if (fileInput) fileInput.accept = '.pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp';
       const hint = zone ? zone.querySelector('.upload-drop-hint') : null;
-      if (hint) hint.textContent = 'PDF, imagem, planilha ou slides';
+      if (hint) hint.textContent = 'PDF, imagem, planilha ou slides (máx. 30 MB)';
     }
     if (btn) btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Enviar`;
     _renderUploadPreview(ctx);
@@ -179,7 +179,8 @@ function initUploadZone(ctx) {
 
 const IMAGE_TYPES = ['image/jpeg','image/png','image/gif','image/webp','image/bmp','image/tiff'];
 const IMAGE_EXTS  = ['.jpg','.jpeg','.png','.gif','.webp','.bmp','.tiff'];
-const IMAGE_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+const IMAGE_MAX_BYTES  = 5  * 1024 * 1024; // 5 MB
+const UPLOAD_MAX_BYTES = 30 * 1024 * 1024; // 30 MB
 
 function _setUploadFile(ctx, file) {
   const mode = _getUploadMode(ctx);
@@ -241,6 +242,10 @@ function _validateUploadFile(file, ctx) {
       if (typeof showToast === 'function') showToast('Tipo de arquivo não permitido. Use PDF, imagem, planilha ou apresentação.', 'error');
       return false;
     }
+  }
+  if (file.size > UPLOAD_MAX_BYTES) {
+    if (typeof showToast === 'function') showToast('Arquivo muito grande. Máximo permitido: 30 MB.', 'error');
+    return false;
   }
   return true;
 }

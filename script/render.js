@@ -591,7 +591,8 @@ function _clDonutHtml(done, total, pct, size, absolute) {
             const clTotal = checklist.length;
             const clDone = checklist.filter(c => c.checked).length;
             const clPct = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0;
-            const donutHtml = clTotal > 0 ? _clDonutHtml(clDone, clTotal, clPct, 40, true) : '';
+            const _noChecklist = currentTab === 'treinamentos' || currentTab === 'documentos';
+            const donutHtml = (!_noChecklist && clTotal > 0) ? _clDonutHtml(clDone, clTotal, clPct, 40, true) : '';
 
             div.innerHTML = `
                 <div class="card-header">

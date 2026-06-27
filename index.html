@@ -1321,7 +1321,7 @@
             <input type="file" id="rnc-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             <span class="upload-drop-label">Clique ou arraste o arquivo</span>
-            <span class="upload-drop-hint">PDF, imagem, planilha ou slides</span>
+            <span class="upload-drop-hint">PDF, imagem, planilha ou slides (máx. 30 MB)</span>
         </div>
         <div id="rnc-link-wrap" style="display:none;">
             <input type="url" id="rnc-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
@@ -1696,7 +1696,7 @@
                 <input type="file" id="oc-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span class="upload-drop-label">Clique ou arraste o arquivo</span>
-                <span class="upload-drop-hint">PDF, imagem, planilha ou slides</span>
+                <span class="upload-drop-hint">PDF, imagem, planilha ou slides (máx. 30 MB)</span>
             </div>
             <div id="oc-link-wrap" style="display:none;">
                 <input type="url" id="oc-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
@@ -1983,6 +1983,11 @@
                                 </div>
                             </div>
                         </div>
+                        <label class="sched-reset-row">
+                            <input type="checkbox" id="auditResetChecklistOnAuto">
+                            <i class="fas fa-rotate-left sched-reset-icon"></i>
+                            <span class="sched-reset-label">Resetar checklist ao alterar status</span>
+                        </label>
                     </div>
                 </div>
                 <input type="hidden" id="auditOverdueStatus" value="">
@@ -2031,7 +2036,7 @@
                 <input type="file" id="audit-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span class="upload-drop-label">Clique ou arraste o arquivo</span>
-                <span class="upload-drop-hint">PDF, imagem, planilha ou slides</span>
+                <span class="upload-drop-hint">PDF, imagem, planilha ou slides (máx. 30 MB)</span>
             </div>
             <div id="audit-link-wrap" style="display:none;">
                 <input type="url" id="audit-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
@@ -2060,7 +2065,6 @@
     <!-- Drawer tabs -->
     <div class="drawer-tabs">
         <button class="drawer-tab active" onclick="switchDrawerTab('train','info',this)"><i class="fas fa-info-circle"></i> Informações</button>
-        <button class="drawer-tab" onclick="switchDrawerTab('train','checklist',this)"><i class="fas fa-check-square"></i> Checklist</button>
         <button class="drawer-tab" onclick="switchDrawerTab('train','anexos',this)"><i class="fas fa-paperclip"></i> Anexos</button>
     </div>
     <div class="form-drawer-body">
@@ -2214,6 +2218,11 @@
                                 </div>
                             </div>
                         </div>
+                        <label class="sched-reset-row">
+                            <input type="checkbox" id="trainResetChecklistOnAuto">
+                            <i class="fas fa-rotate-left sched-reset-icon"></i>
+                            <span class="sched-reset-label">Resetar checklist ao alterar status</span>
+                        </label>
                     </div>
                 </div>
                 <input type="hidden" id="trainOverdueStatus" value="">
@@ -2221,28 +2230,6 @@
             </div>
         </div>
         </div><!-- /train-panel-info -->
-        <!-- Aba Checklist -->
-        <div class="drawer-tab-panel" id="train-panel-checklist">
-            <div class="cl-subtabs">
-                <button class="cl-subtab active" onclick="switchClSubtab('train','geral',this)"><i class="fas fa-list-check"></i> Geral</button>
-                <button class="cl-subtab" onclick="switchClSubtab('train','pub',this)"><i class="fas fa-paper-plane"></i> Publicação</button>
-            </div>
-            <div class="cl-subpanel active" id="train-clpanel-geral">
-                <div class="checklist-add-row">
-                    <input type="text" id="train-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('train')">
-                    <button class="checklist-add-btn" onclick="addChecklistItem('train')"><i class="fas fa-plus"></i> Adicionar</button>
-                </div>
-                <div class="checklist-editor" id="train-checklist-editor"></div>
-            </div>
-            <div class="cl-subpanel" id="train-clpanel-pub">
-                <div class="checklist-add-row">
-                    <input type="text" id="train-pub-checklist-input" class="checklist-new-input" placeholder="Novo item de publicação..." onkeydown="if(event.key==='Enter')addChecklistItem('train-pub')">
-                    <button class="cl-pub-add-group-btn" id="train-pub-add-group-btn" onclick="_clPubShowAddGroupDropdown(this,'train-pub')" title="Associar novo item a grupo"><i class="fas fa-unlink"></i></button>
-                    <button class="checklist-add-btn" onclick="addChecklistItem('train-pub')"><i class="fas fa-plus"></i> Adicionar</button>
-                </div>
-                <div class="checklist-editor" id="train-pub-checklist-editor"></div>
-            </div>
-        </div>
         <!-- Aba Anexos -->
         <div class="drawer-tab-panel" id="train-panel-anexos">
             <div id="train-anexos-list"></div>
@@ -2262,7 +2249,7 @@
                 <input type="file" id="train-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span class="upload-drop-label">Clique ou arraste o arquivo</span>
-                <span class="upload-drop-hint">PDF, imagem, planilha ou slides</span>
+                <span class="upload-drop-hint">PDF, imagem, planilha ou slides (máx. 30 MB)</span>
             </div>
             <div id="train-link-wrap" style="display:none;">
                 <input type="url" id="train-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
@@ -2410,7 +2397,7 @@
                 <input type="file" id="ativ-file-input" style="display:none" accept=".pdf,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span class="upload-drop-label">Clique ou arraste o arquivo</span>
-                <span class="upload-drop-hint">PDF, planilha ou slides</span>
+                <span class="upload-drop-hint">PDF, planilha ou slides (máx. 30 MB)</span>
             </div>
             <div id="ativ-link-wrap" style="display:none;">
                 <input type="url" id="ativ-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
@@ -2440,7 +2427,6 @@
     <!-- Drawer tabs -->
     <div class="drawer-tabs">
         <button class="drawer-tab active" onclick="switchDrawerTab('doc','info',this)"><i class="fas fa-info-circle"></i> Informações</button>
-        <button class="drawer-tab" onclick="switchDrawerTab('doc','checklist',this)"><i class="fas fa-check-square"></i> Checklist</button>
         <button class="drawer-tab" onclick="switchDrawerTab('doc','anexos',this)"><i class="fas fa-paperclip"></i> Anexos</button>
     </div>
     <div class="form-drawer-body">
@@ -2594,6 +2580,11 @@
                                 </div>
                             </div>
                         </div>
+                        <label class="sched-reset-row">
+                            <input type="checkbox" id="docResetChecklistOnAuto">
+                            <i class="fas fa-rotate-left sched-reset-icon"></i>
+                            <span class="sched-reset-label">Resetar checklist ao alterar status</span>
+                        </label>
                     </div>
                 </div>
                 <input type="hidden" id="docOverdueStatus" value="">
@@ -2601,28 +2592,6 @@
             </div>
         </div>
         </div><!-- /doc-panel-info -->
-        <!-- Aba Checklist -->
-        <div class="drawer-tab-panel" id="doc-panel-checklist">
-            <div class="cl-subtabs">
-                <button class="cl-subtab active" onclick="switchClSubtab('doc','geral',this)"><i class="fas fa-list-check"></i> Geral</button>
-                <button class="cl-subtab" onclick="switchClSubtab('doc','pub',this)"><i class="fas fa-paper-plane"></i> Publicação</button>
-            </div>
-            <div class="cl-subpanel active" id="doc-clpanel-geral">
-                <div class="checklist-add-row">
-                    <input type="text" id="doc-checklist-input" class="checklist-new-input" placeholder="Novo item do checklist..." onkeydown="if(event.key==='Enter')addChecklistItem('doc')">
-                    <button class="checklist-add-btn" onclick="addChecklistItem('doc')"><i class="fas fa-plus"></i> Adicionar</button>
-                </div>
-                <div class="checklist-editor" id="doc-checklist-editor"></div>
-            </div>
-            <div class="cl-subpanel" id="doc-clpanel-pub">
-                <div class="checklist-add-row">
-                    <input type="text" id="doc-pub-checklist-input" class="checklist-new-input" placeholder="Novo item de publicação..." onkeydown="if(event.key==='Enter')addChecklistItem('doc-pub')">
-                    <button class="cl-pub-add-group-btn" id="doc-pub-add-group-btn" onclick="_clPubShowAddGroupDropdown(this,'doc-pub')" title="Associar novo item a grupo"><i class="fas fa-unlink"></i></button>
-                    <button class="checklist-add-btn" onclick="addChecklistItem('doc-pub')"><i class="fas fa-plus"></i> Adicionar</button>
-                </div>
-                <div class="checklist-editor" id="doc-pub-checklist-editor"></div>
-            </div>
-        </div>
         <!-- Aba Anexos -->
         <div class="drawer-tab-panel" id="doc-panel-anexos">
             <div id="doc-anexos-list"></div>
@@ -2642,7 +2611,7 @@
                 <input type="file" id="doc-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span class="upload-drop-label">Clique ou arraste o arquivo</span>
-                <span class="upload-drop-hint">PDF, imagem, planilha ou slides</span>
+                <span class="upload-drop-hint">PDF, imagem, planilha ou slides (máx. 30 MB)</span>
             </div>
             <div id="doc-link-wrap" style="display:none;">
                 <input type="url" id="doc-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
@@ -2766,7 +2735,7 @@
                 <input type="file" id="pub-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span class="upload-drop-label">Clique ou arraste o arquivo</span>
-                <span class="upload-drop-hint">PDF, imagem, planilha ou slides</span>
+                <span class="upload-drop-hint">PDF, imagem, planilha ou slides (máx. 30 MB)</span>
             </div>
             <div id="pub-link-wrap" style="display:none;">
                 <input type="url" id="pub-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">

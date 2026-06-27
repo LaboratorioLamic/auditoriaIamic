@@ -72,6 +72,7 @@
             marcadorCor: auditMarkerObj ? auditMarkerObj.color : 'default',
             overdueStatus: document.getElementById('auditOverdueStatus').value || '',
             alertStatus: document.getElementById('auditAlertStatus')?.value || '',
+            resetChecklistOnAutoStatus: (typeof getSchedResetChecklist === 'function') ? getSchedResetChecklist('audit') : false,
             anexos: getAnexos('audit'),
             checklist: (typeof getChecklist === 'function') ? getChecklist('audit') : (item.checklist || []),
             checklistPublicacao: (typeof getChecklistPub === 'function') ? getChecklistPub('audit') : (item.checklistPublicacao || [])
@@ -84,8 +85,8 @@
             return;
         }
 
-        if ((typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status)) && !canSetConcluido(newItem.checklist)) {
-            if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de marcar como Concluído.', 'error');
+        if ((typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status)) && !canSetConcluido(newItem.checklist, newItem)) {
+            if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist de publicação antes de marcar como Concluído.', 'error');
             return;
         }
         if ((typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status)) && typeof checkSchedWarnBeforeConcluido === 'function' && !window._schedWarnPassed_audit) {
@@ -142,6 +143,24 @@
                 null
             );
             return;
+        }
+
+        // Saindo de Concluído → perguntar sobre checklist
+        const _prevStatusAudit = !isNew ? item.status : null;
+        const _prevWasConcluido = _prevStatusAudit && (typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(_prevStatusAudit) : /conclu/i.test(_prevStatusAudit));
+        const _newIsNotConcluido = !(typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status));
+        const _hasChecklistAudit = (newItem.checklist || []).length > 0 || (newItem.checklistPublicacao || []).length > 0;
+        if (_prevWasConcluido && _newIsNotConcluido) {
+            newItem.pubCycleId = (newItem.pubCycleId || 1) + 1;
+            if (_hasChecklistAudit && typeof showChecklistResetModal === 'function') {
+                showChecklistResetModal(
+                    (novaData) => { if (novaData) newItem.dataPrevisao = novaData; _commitAudit(newItem); },
+                    (novaData) => { if (novaData) newItem.dataPrevisao = novaData; resetChecklistItems(newItem); _commitAudit(newItem); },
+                    null,
+                    { dataPrevisao: newItem.dataPrevisao || '' }
+                );
+                return;
+            }
         }
 
         _commitAudit(newItem);

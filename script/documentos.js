@@ -69,6 +69,7 @@
             marcadorCor: docMarkerObj ? docMarkerObj.color : 'default',
             overdueStatus: document.getElementById('docOverdueStatus').value || '',
             alertStatus: document.getElementById('docAlertStatus')?.value || '',
+            resetChecklistOnAutoStatus: (typeof getSchedResetChecklist === 'function') ? getSchedResetChecklist('doc') : false,
             anexos: getAnexos('doc'),
             checklist: (typeof getChecklist === 'function') ? getChecklist('doc') : (item.checklist || []),
             checklistPublicacao: (typeof getChecklistPub === 'function') ? getChecklistPub('doc') : (item.checklistPublicacao || []),
@@ -92,8 +93,8 @@
                 showOverdueConcluiModal();
                 return;
             }
-            if (_docIsConcluido && !canSetConcluido(newItem.checklist)) {
-                if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de marcar como Concluído.', 'error');
+            if (_docIsConcluido && !canSetConcluido(newItem.checklist, newItem)) {
+                if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist de publicação antes de marcar como Concluído.', 'error');
                 return;
             }
             if (_docIsConcluido && typeof checkSchedWarnBeforeConcluido === 'function' && !window._schedWarnPassed_doc) {
@@ -106,6 +107,30 @@
                 return;
             }
             window._schedWarnPassed_doc = false;
+
+            // Saindo de Concluído → perguntar sobre checklist
+            const _prevWasConcluidoDoc = typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(originalItem.status) : /conclu/i.test(originalItem.status);
+            const _newNotConcluidoDoc = !_docIsConcluido;
+            const _hasClDoc = (newItem.checklist || []).length > 0 || (newItem.checklistPublicacao || []).length > 0;
+            if (_prevWasConcluidoDoc && _newNotConcluidoDoc) {
+                newItem.pubCycleId = (newItem.pubCycleId || 1) + 1;
+            }
+            if (_prevWasConcluidoDoc && _newNotConcluidoDoc && _hasClDoc && typeof showChecklistResetModal === 'function') {
+                const _doCommitDoc = (ni) => {
+                    const changes = calculateChanges(originalItem, ni);
+                    if (changes.length > 0) ni.historico.push({ timestamp: new Date().toISOString(), acao: 'Edição de Dados', usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema', detalhes: changes, snapshot: _safeSnapshot(originalItem) });
+                    documents = documents.map(d => d.id === editingDocId ? ni : d);
+                    saveAll(); closeFormDrawer(); renderCards();
+                    if (typeof isCalendarActive === 'function' && isCalendarActive()) renderCalendar();
+                };
+                showChecklistResetModal(
+                    (novaData) => { if (novaData) newItem.dataPrevisao = novaData; _doCommitDoc(newItem); },
+                    (novaData) => { if (novaData) newItem.dataPrevisao = novaData; resetChecklistItems(newItem); _doCommitDoc(newItem); },
+                    null,
+                    { dataPrevisao: newItem.dataPrevisao || '' }
+                );
+                return;
+            }
 
             const changes = calculateChanges(originalItem, newItem);
             if (changes.length > 0) {

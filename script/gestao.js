@@ -76,8 +76,8 @@
                 newItem.historico = originalItem.historico ? [...originalItem.historico] : [];
             }
 
-            if ((typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status)) && !canSetConcluido(newItem.checklist)) {
-                if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist antes de marcar como Concluído.', 'error');
+            if ((typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status)) && !canSetConcluido(newItem.checklist, newItem)) {
+                if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist de publicação antes de marcar como Concluído.', 'error');
                 return;
             }
 
@@ -110,6 +110,23 @@
                     null
                 );
                 return;
+            }
+
+            // Saindo de Concluído → perguntar sobre checklist
+            const _prevWasConcluidoAtiv = typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(originalItem.status) : /conclu/i.test(originalItem.status);
+            const _newNotConcluidoAtiv = !(typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status));
+            const _hasClAtiv = (newItem.checklist || []).length > 0 || (newItem.checklistPublicacao || []).length > 0;
+            if (_prevWasConcluidoAtiv && _newNotConcluidoAtiv) {
+                newItem.pubCycleId = (newItem.pubCycleId || 1) + 1;
+                if (_hasClAtiv && typeof showChecklistResetModal === 'function') {
+                    showChecklistResetModal(
+                        (novaData) => { if (novaData) newItem.dataConclusao = novaData; _commitAtiv(newItem); },
+                        (novaData) => { if (novaData) newItem.dataConclusao = novaData; resetChecklistItems(newItem); _commitAtiv(newItem); },
+                        null,
+                        { dataPrevisao: newItem.dataConclusao || '' }
+                    );
+                    return;
+                }
             }
 
             _commitAtiv(newItem);

@@ -735,11 +735,27 @@ function isConcludedRecurring(item, tabType) {
 
 // Retorna true se o status "Concluído" é permitido dado o checklist.
 // Só bloqueia itens marcados como requiredForPub=true; se nenhum tiver, libera.
-function canSetConcluido(checklist) {
-    if (!checklist || checklist.length === 0) return true;
-    const required = checklist.filter(function(item) { return !!item.requiredForPub; });
-    if (required.length === 0) return true;
-    return required.every(function(item) { return !!item.checked; });
+function canSetConcluido(checklist, item) {
+    // Bloqueia se checklist geral tiver itens obrigatórios não marcados
+    if (checklist && checklist.length > 0) {
+        const required = checklist.filter(function(c) { return !!c.requiredForPub; });
+        if (required.length > 0 && !required.every(function(c) { return !!c.checked; })) return false;
+    }
+    // Bloqueia se checklistPublicacao não estiver 100% concluído no ciclo atual
+    if (item && Array.isArray(item.checklistPublicacao) && item.checklistPublicacao.length > 0) {
+        var pubCL = item.checklistPublicacao;
+        var currentCycle = item.pubCycleId || 1;
+        var currentDateRef = item.dataPublicacao || item.dataConclusao || null;
+        var _key = function(c) { return c.id || ('t:' + (c.texto || '').trim()); };
+        var doneKeys = new Set();
+        (item.publicacoes || []).forEach(function(pub) {
+            var isCurr = pub.pubCycleId ? pub.pubCycleId === currentCycle : pub.dataConclusaoRef === currentDateRef;
+            if (!isCurr) return;
+            (pub.checklistSnapshot || []).forEach(function(snap) { if (snap.checked) doneKeys.add(_key(snap)); });
+        });
+        if (!pubCL.every(function(c) { return doneKeys.has(_key(c)); })) return false;
+    }
+    return true;
 }
 
     var colorMap = {

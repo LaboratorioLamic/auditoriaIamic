@@ -292,7 +292,7 @@ function resetModal(prefix) {
             }
             if (typeof onAuditRotinaChange === 'function') onAuditRotinaChange(true);
             document.getElementById('auditMarcador').value = item.marcador || '';
-            if (typeof setSchedStatusValues === 'function') setSchedStatusValues('audit', item.overdueStatus || '', item.alertStatus || '');
+            if (typeof setSchedStatusValues === 'function') setSchedStatusValues('audit', item.overdueStatus || '', item.alertStatus || '', item.resetChecklistOnAutoStatus || false);
             setTimeout(() => { if (typeof updateSchedStatusVisibility === 'function') updateSchedStatusVisibility('audit'); }, 0);
             restoreAnexos('audit', item.anexos);
             if (typeof restoreChecklist === 'function') restoreChecklist('audit', item.checklist, item.checklistPublicacao);
@@ -350,7 +350,7 @@ function resetModal(prefix) {
             _applyRespFieldLock('tren-resp', item);
             document.getElementById('trainFlagDias').value = item.flagDias;
             document.getElementById('trainMarcador').value = item.marcador || '';
-            if (typeof setSchedStatusValues === 'function') setSchedStatusValues('train', item.overdueStatus || '', item.alertStatus || '');
+            if (typeof setSchedStatusValues === 'function') setSchedStatusValues('train', item.overdueStatus || '', item.alertStatus || '', item.resetChecklistOnAutoStatus || false);
             setTimeout(() => { if (typeof updateSchedStatusVisibility === 'function') updateSchedStatusVisibility('train'); }, 0);
             restoreAnexos('train', item.anexos);
             if (typeof restoreChecklist === 'function') restoreChecklist('train', item.checklist, item.checklistPublicacao);
@@ -415,7 +415,7 @@ function resetModal(prefix) {
             document.getElementById('docFlagDias').value = item.flagDias;
             restoreAnexos('doc', item.anexos);
             document.getElementById('docMarcador').value = item.marcador || '';
-            if (typeof setSchedStatusValues === 'function') setSchedStatusValues('doc', item.overdueStatus || '', item.alertStatus || '');
+            if (typeof setSchedStatusValues === 'function') setSchedStatusValues('doc', item.overdueStatus || '', item.alertStatus || '', item.resetChecklistOnAutoStatus || false);
             setTimeout(() => { if (typeof updateSchedStatusVisibility === 'function') updateSchedStatusVisibility('doc'); }, 0);
             if (typeof restoreChecklist === 'function') restoreChecklist('doc', item.checklist, item.checklistPublicacao);
             openFormDrawer('modalDocumentos');
@@ -1078,10 +1078,17 @@ function renderViewContent(id, tab) {
         ]);
     }
 
+    // Aba checklist: ocultar para treinamentos e documentos
+    const _noChecklistTab = finalTab === 'treinamentos' || finalTab === 'documentos';
+    document.querySelectorAll('.view-modal-tab').forEach(t => {
+        const match = t.getAttribute('onclick')?.match(/switchViewTab\('(\w+)'/);
+        if (match && match[1] === 'checklist') t.style.display = _noChecklistTab ? 'none' : '';
+    });
+
     // Checklist mini-progress no info tab
     const checklist = item.checklist || [];
     let checklistProgress = '';
-    if (checklist.length > 0) {
+    if (!_noChecklistTab && checklist.length > 0) {
         const done = checklist.filter(c => c.checked).length;
         const pct = Math.round((done / checklist.length) * 100);
         checklistProgress = `
