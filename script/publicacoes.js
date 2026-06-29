@@ -1697,10 +1697,11 @@ window.renderViewPublicacoes = function(item) {
         <th>Anexos</th><th></th>
     </tr></thead>`;
 
-    // Verifica se há publicações com pubCycleId ou dataConclusaoRef (agrupamento por conclusão)
+    // Agrupamento por conclusão exclusivo de rotinas (auditoria)
+    const _tabSuportaGrupos = !window._currentViewTab || window._currentViewTab === 'auditoria';
     const _currentCycle = item.pubCycleId || 1;
     const _currentDateRef = item.dataPublicacao || item.dataConclusao || null;
-    const _hasConclusaoGroups = pubs.some(p => !!p.pubCycleId || !!p.dataConclusaoRef);
+    const _hasConclusaoGroups = _tabSuportaGrupos && pubs.some(p => !!p.pubCycleId || !!p.dataConclusaoRef);
 
     if (_hasConclusaoGroups) {
         const _groups = {};
