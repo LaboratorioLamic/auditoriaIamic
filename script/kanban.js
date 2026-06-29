@@ -582,7 +582,7 @@ function _kbApplyDrop(item, targetStatus) {
             && typeof window.showConclusaoDateModal === 'function') {
         const _dateField = currentTab === 'auditoria' ? 'dataPublicacao' : 'dataConclusao';
         window.showConclusaoDateModal(
-            item[_dateField] || '',
+            '',
             function(dateStr) { _doApply(dateStr, _dateField); },
             function() { renderKanban(); }
         );

@@ -102,7 +102,7 @@
 
             if (_isConcluindo && typeof window.showConclusaoDateModal === 'function') {
                 window.showConclusaoDateModal(
-                    newItem.dataConclusao || '',
+                    '',
                     function(dateStr) {
                         newItem.dataConclusao = dateStr;
                         _commitAtiv(newItem);

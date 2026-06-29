@@ -135,7 +135,7 @@
 
         if (_isConcluindoAudit && typeof window.showConclusaoDateModal === 'function') {
             window.showConclusaoDateModal(
-                newItem.dataPublicacao || '',
+                '',
                 function(dateStr) {
                     newItem.dataPublicacao = dateStr;
                     _commitAudit(newItem);
