@@ -792,13 +792,13 @@ window.showConclusaoDateModal = function(currentDate, onConfirm, onCancel) {
 
     overlay.innerHTML = `
         <div style="
-            background:var(--bg-card, #1e2535);
-            border:1px solid var(--border, #2e3a50);
+            background:var(--card-bg, #ffffff);
+            border:1px solid var(--border, #e2e8f0);
             border-radius:16px;
             padding:32px 28px 24px;
             min-width:320px;
             max-width:90vw;
-            box-shadow:0 24px 60px rgba(0,0,0,0.5);
+            box-shadow:0 24px 60px rgba(0,0,0,0.15);
             display:flex;flex-direction:column;gap:20px;
             animation:slideUp .18s ease;
         ">
@@ -812,40 +812,40 @@ window.showConclusaoDateModal = function(currentDate, onConfirm, onCancel) {
                     <i class="fas fa-check-circle" style="color:#10b981;font-size:18px;"></i>
                 </div>
                 <div>
-                    <div style="font-weight:700;font-size:15px;color:var(--text-primary,#e2e8f0);">Concluído</div>
-                    <div style="font-size:12px;color:var(--text-secondary,#94a3b8);margin-top:2px;">Informe a data de conclusão</div>
+                    <div style="font-weight:700;font-size:15px;color:var(--text, #0f172a);">Concluído</div>
+                    <div style="font-size:12px;color:var(--text-light,#64748b);margin-top:2px;">Informe a data de conclusão</div>
                 </div>
             </div>
 
             <div style="display:flex;flex-direction:column;gap:8px;">
-                <label style="font-size:12px;font-weight:600;color:var(--text-secondary,#94a3b8);text-transform:uppercase;letter-spacing:.5px;">
+                <label style="font-size:12px;font-weight:600;color:var(--text-light,#64748b);text-transform:uppercase;letter-spacing:.5px;">
                     Data de Conclusão
                 </label>
                 <input id="_conclusaoDateInput" type="date" value="${defaultVal}" style="
-                    background:var(--bg-input, #0f172a);
-                    border:1.5px solid var(--border,#2e3a50);
+                    background:var(--bg, #f1f5f9);
+                    border:1.5px solid var(--border,#e2e8f0);
                     border-radius:8px;
-                    color:var(--text-primary,#e2e8f0);
+                    color:var(--text,#0f172a);
                     font-size:14px;
                     padding:10px 12px;
                     outline:none;
                     width:100%;
                     box-sizing:border-box;
                     cursor:pointer;
-                " onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='var(--border,#2e3a50)'">
+                " onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='var(--border,#e2e8f0)'">
             </div>
 
             <div style="display:flex;gap:10px;justify-content:flex-end;">
                 <button id="_conclusaoCancelBtn" style="
                     background:transparent;
-                    border:1.5px solid var(--border,#2e3a50);
+                    border:1.5px solid var(--border,#e2e8f0);
                     border-radius:8px;
-                    color:var(--text-secondary,#94a3b8);
+                    color:var(--text-light,#64748b);
                     font-size:13px;font-weight:600;
                     padding:9px 20px;cursor:pointer;
                     transition:border-color .15s,color .15s;
-                " onmouseover="this.style.borderColor='#475569';this.style.color='#e2e8f0'"
-                   onmouseout="this.style.borderColor='var(--border,#2e3a50)';this.style.color='var(--text-secondary,#94a3b8)'">
+                " onmouseover="this.style.borderColor='var(--border-strong,#cbd5e1)';this.style.color='var(--text,#0f172a)'"
+                   onmouseout="this.style.borderColor='var(--border,#e2e8f0)';this.style.color='var(--text-light,#64748b)'">
                     Cancelar
                 </button>
                 <button id="_conclusaoConfirmBtn" style="
