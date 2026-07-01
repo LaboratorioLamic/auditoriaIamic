@@ -551,6 +551,11 @@ window._safeSnapshot = function(item) {
     var changes = [];
     var silentChanged = false;
 
+    // Se o status mudou nesta edição, o card deixa de ser "novo" imediatamente
+    if (original && current && original.status !== current.status) {
+        current._statusChangedOnce = true;
+    }
+
     // Lista de chaves técnicas que não devem gerar log de texto, mas disparam o salvamento
     var ignoreKeys = ['id', 'historico', 'type', 'proxima', 'dataProximaRevisao', 'anexos', 'marcadorCor'];
 

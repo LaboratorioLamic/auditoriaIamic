@@ -57,13 +57,20 @@ function _kbIsNew(item) {
     if (item.publicacoes && item.publicacoes.length > 0) return false;
     const cl = item.checklist || [];
     if (cl.some(c => c.checked)) return false;
+    // Se o status já foi alterado ao menos uma vez, não é mais novo
+    if (item._statusChangedOnce) return false;
     // Se o histórico contém uma edição que mudou o status, não é mais novo
     if (Array.isArray(item.historico)) {
-        const hadStatusChange = item.historico.some(h =>
-            h.acao === 'Edição de Dados' &&
-            Array.isArray(h.detalhes) &&
-            h.detalhes.some(d => typeof d === 'string' && d.startsWith('Status:'))
-        );
+        const hadStatusChange = item.historico.some(h => {
+            if (!Array.isArray(h.detalhes)) return false;
+            if (h.acao === 'Edição de Dados') {
+                return h.detalhes.some(d => typeof d === 'string' && d.startsWith('Status:'));
+            }
+            if (h.acao === 'Alteração de Status via Kanban') {
+                return h.detalhes.some(d => d && typeof d === 'object' && d.campo === 'Status');
+            }
+            return false;
+        });
         if (hadStatusChange) return false;
     }
     return true;
@@ -562,6 +569,7 @@ function _kbApplyDrop(item, targetStatus) {
     const _doApply = function(dateVal, dateField) {
         const prevStatus = item.status;
         item.status = targetStatus;
+        item._statusChangedOnce = true;
         if (dateVal && dateField) item[dateField] = dateVal;
 
         if (!Array.isArray(item.historico)) item.historico = [];
