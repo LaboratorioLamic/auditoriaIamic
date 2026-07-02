@@ -19,6 +19,8 @@ var kanbanActiveByTab = {
 
 var _kanbanDragItemId = null;
 
+var _kbColSortDir = {}; // chave: `${tab}|${statusName}` -> 'asc' | 'desc' (padrão: 'asc')
+
 var _KB_MODULES = {
     auditoria:    { prefix: 'Audit', statusKey: 'auditStatus',  colOrderKey: 'kanban_audit_col_order',  sortDateField: 'dataPrevisao',       getItems: () => audits },
     treinamentos: { prefix: 'Train', statusKey: 'trainStatus',  colOrderKey: 'kanban_train_col_order',  sortDateField: 'dataPrevisao',       getItems: () => trainings },
@@ -293,11 +295,14 @@ function renderKanban() {
     statuses.forEach((status, colIdx) => {
         const isFinal     = _kbIsFinalStatusObj(status);
         const color       = _kbResolveColor(status.color);
+        const sortKey     = currentTab + '|' + status.name;
+        const defaultDir  = isFinal ? 'desc' : 'asc';
+        const sortDir     = _kbColSortDir[sortKey] || defaultDir;
         const colItems    = data.filter(i => i.status === status.name)
             .sort((a, b) => {
                 const da = a[dateFld] ? new Date(a[dateFld]) : new Date(8640000000000000);
                 const db = b[dateFld] ? new Date(b[dateFld]) : new Date(8640000000000000);
-                return da - db;
+                return sortDir === 'asc' ? da - db : db - da;
             });
         const isFirst     = colIdx === 0 && !isFinal;
         const nextIsFinal = !isFinal && _kbNextIsFinalOrEnd(statuses, colIdx);
@@ -341,10 +346,16 @@ function renderKanban() {
                         </button>
                         ` : (isFinal ? '<span class="kanban-locked-badge"><i class="fas fa-lock"></i></span>' : '')}
                     </div>
-                    <button class="kanban-ctrl-btn kanban-collapse-btn" title="Expandir/Recolher"
-                        onclick="toggleKanbanCol(this, '${_kbHtml(status.name)}')">
-                        <i class="fas fa-chevron-${isCollapsed ? 'down' : 'up'}"></i>
-                    </button>
+                    <div class="kanban-col-ctrl-right">
+                        <button class="kanban-ctrl-btn kanban-sort-btn" title="Ordenar: ${sortDir === 'asc' ? 'menor para maior' : 'maior para menor'}"
+                            onclick="toggleKanbanColSort('${_kbHtml(status.name)}')">
+                            <i class="fas fa-sort-amount-${sortDir === 'asc' ? 'down' : 'up'}"></i>
+                        </button>
+                        <button class="kanban-ctrl-btn kanban-collapse-btn" title="Expandir/Recolher"
+                            onclick="toggleKanbanCol(this, '${_kbHtml(status.name)}')">
+                            <i class="fas fa-chevron-${isCollapsed ? 'down' : 'up'}"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="kanban-col-body"
@@ -530,11 +541,11 @@ function kbDrop(event, targetStatus) {
     const _dropIsConcluido = _kbStatusIsConcluido(targetStatus);
     const _prevIsConcluido = _kbStatusIsConcluido(item.status);
 
-    // Saindo de Concluído → incrementa ciclo e pergunta sobre checklist
+    // Saindo de Concluído → incrementa ciclo (e, apenas em Rotinas, pergunta sobre checklist)
     if (_prevIsConcluido && !_dropIsConcluido) {
         item.pubCycleId = (item.pubCycleId || 1) + 1;
         const _hasChecklist = (item.checklist || []).length > 0 || (item.checklistPublicacao || []).length > 0;
-        if (_hasChecklist && typeof showChecklistResetModal === 'function') {
+        if (currentTab === 'auditoria' && _hasChecklist && typeof showChecklistResetModal === 'function') {
             const _kbDateField = item.dataPrevisao !== undefined ? 'dataPrevisao' : 'dataConclusao';
             showChecklistResetModal(
                 (novaData) => { if (novaData) item[_kbDateField] = novaData; _kbApplyDrop(item, targetStatus); },
@@ -938,6 +949,16 @@ function confirmKanbanDeleteCol(statusName) {
     if (modal) modal.remove();
 
     saveAll();
+    renderKanban();
+}
+
+function toggleKanbanColSort(statusName) {
+    const cfg = _kbGetConfig();
+    const statusObj  = cfg ? _kbFindStatusObj(statusName, cfg) : null;
+    const defaultDir = (statusObj && _kbIsFinalStatusObj(statusObj)) ? 'desc' : 'asc';
+    const key = currentTab + '|' + statusName;
+    const currentDir = _kbColSortDir[key] || defaultDir;
+    _kbColSortDir[key] = (currentDir === 'desc') ? 'asc' : 'desc';
     renderKanban();
 }
 

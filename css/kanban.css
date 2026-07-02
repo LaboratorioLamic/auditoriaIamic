@@ -122,6 +122,7 @@
     justify-content: space-between;
 }
 .kanban-col-ctrl { display: flex; gap: 4px; align-items: center; }
+.kanban-col-ctrl-right { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
 .kanban-collapse-btn { flex-shrink: 0; }
 .kanban-ctrl-btn {
     background: none;

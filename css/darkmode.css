@@ -1614,6 +1614,9 @@ body.dark-mode .cl-reset-date-label { color: #475569; }
 body.dark-mode .cl-reset-date-input { color: #e2e8f0; color-scheme: dark; }
 body.dark-mode .cl-reset-btn--cancel { border-color: #334155; color: #475569; }
 body.dark-mode .cl-reset-btn--manter { border-color: #334155; background: #253348; color: #94a3b8; }
+body.dark-mode .cl-reset-btn--descartar { border-color: #7f1d1d; background: #253348; color: #fca5a5; }
+body.dark-mode .cl-reset-btn--descartar:hover { background: rgba(220,38,38,0.15); }
+body.dark-mode .view-checklist-footer-count { color: #64748b; }
 
 body.dark-mode .pub-table-wrap { }
 body.dark-mode .pub-table thead tr { background: #0f172a !important; border-bottom-color: #334155 !important; }

@@ -98,10 +98,14 @@
 
     function isEditingCardOpen() {
         const drawerIds = ['modalAuditoria', 'modalTreinamentos', 'modalAtividades', 'modalManutencao', 'modalDocumentos', 'modalOcorrencia', 'modalRnc'];
-        return drawerIds.some(id => {
+        if (drawerIds.some(id => {
             const el = document.getElementById(id);
             return el && el.classList.contains('open');
-        });
+        })) return true;
+        // Checklist do viewModal com marcações pendentes (ainda não aplicadas):
+        // congela o listener para não sobrescrever as alterações locais antes do "Aplicar".
+        if (window._checklistPendingDirty) return true;
+        return false;
     }
 
     // === CACHE LOCAL (#5) — pintura instantânea da UI a partir do localStorage ===

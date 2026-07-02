@@ -1575,11 +1575,14 @@ function _checkTriPerm(permVal, item) {
             for (const id of modalIds) {
                 const el = document.getElementById(id);
                 if (el && el.style.display && el.style.display !== 'none') {
-                    el.style.display = 'none';
-                    if (id === 'viewModal') {
-                        if (typeof closeHistoryDrawer === 'function') closeHistoryDrawer();
-                        if (typeof window._flushChecklistSave === 'function') window._flushChecklistSave();
+                    // viewModal passa pelo closeModal() para respeitar o aviso de
+                    // checklist com marcações pendentes (não aplicadas)
+                    if (id === 'viewModal' && typeof closeModal === 'function') {
+                        closeModal('viewModal');
+                        closed = true;
+                        break;
                     }
+                    el.style.display = 'none';
                     // Fechar a publicação por ESC descarta imagens enviadas mas não publicadas
                     if (id === 'modalPublicacao' && typeof window._discardSessionImgBlobs === 'function') {
                         window._discardSessionImgBlobs('pub');

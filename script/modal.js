@@ -873,6 +873,9 @@ function resetModal(prefix) {
         currentHistoryPage = 1; // Garante que a primeira página seja carregada
         currentViewItemId = id;
         currentViewTab = tab;
+        // Nova sessão de visualização: descarta qualquer estado pendente de checklist anterior
+        window._checklistPendingDirty = false;
+        window._checklistPendingSnapshot = null;
         renderViewContent(id, tab);
     }
 
@@ -1696,8 +1699,18 @@ function viewHistoryItem(id, tab, historyIndex) {
             return;
         }
 
-        closeModal('viewModal');
-        editItem(currentViewItemId, currentViewTab);
+        const _idToEdit = currentViewItemId, _tabToEdit = currentViewTab;
+        const _proceed = () => {
+            closeModal('viewModal');
+            editItem(_idToEdit, _tabToEdit);
+        };
+        // Checklist com marcações pendentes: aguarda a decisão do usuário (aplicar/descartar)
+        // antes de trocar para o formulário de edição.
+        if (window._checklistPendingDirty && typeof window._checklistGuardedClose === 'function') {
+            window._checklistGuardedClose(_proceed);
+            return;
+        }
+        _proceed();
     }
 
     // List Manager & Color Selection
@@ -2256,16 +2269,24 @@ function viewHistoryItem(id, tab, historyIndex) {
         }
     }
     function closeModal(id) {
-        document.getElementById(id).style.display = 'none';
-        if (id === 'viewModal') {
-            closeHistoryDrawer();
-            if (typeof window._flushChecklistSave === 'function') window._flushChecklistSave();
+        function _doCloseModal() {
+            document.getElementById(id).style.display = 'none';
+            if (id === 'viewModal') {
+                closeHistoryDrawer();
+                if (typeof window._flushChecklistSave === 'function') window._flushChecklistSave();
+            }
+            // Cancelar/fechar a publicação descarta imagens enviadas mas não publicadas.
+            // Se a publicação foi salva, o blob já está referenciado e é preservado.
+            if (id === 'modalPublicacao' && typeof window._discardSessionImgBlobs === 'function') {
+                window._discardSessionImgBlobs('pub');
+            }
         }
-        // Cancelar/fechar a publicação descarta imagens enviadas mas não publicadas.
-        // Se a publicação foi salva, o blob já está referenciado e é preservado.
-        if (id === 'modalPublicacao' && typeof window._discardSessionImgBlobs === 'function') {
-            window._discardSessionImgBlobs('pub');
+        // Checklist com marcações pendentes: avisa antes de fechar o viewModal
+        if (id === 'viewModal' && typeof window._checklistGuardedClose === 'function') {
+            window._checklistGuardedClose(_doCloseModal);
+            return;
         }
+        _doCloseModal();
     }
 
     const FORM_DRAWER_IDS = ['modalAuditoria', 'modalTreinamentos', 'modalAtividades', 'modalDocumentos', 'modalManutencao'];

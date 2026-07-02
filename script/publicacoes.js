@@ -682,7 +682,10 @@ window.renderViewChecklist = function(item, tab) {
             ${canCL ? `<button class="view-checklist-select-all" onclick="selectAllViewChecklist(${item.id},'${tab}')">Selecionar todos</button>` : ''}
         </div>
         <div class="view-checklist-list">${itemsHtml}</div>
-        <div class="view-checklist-footer">${done}/${checklist.length} itens marcados</div>`;
+        <div class="view-checklist-footer">
+            <span class="view-checklist-footer-count">${done}/${checklist.length} itens marcados</span>
+            ${window._checklistPendingDirty ? `<button class="view-checklist-apply-btn" onclick="applyViewChecklistChanges()"><i class="fas fa-check"></i> Aplicar</button>` : ''}
+        </div>`;
 
     // Restaura foco e posição do cursor no textarea que estava sendo editado
     if (_savedFocusId) {
@@ -764,6 +767,106 @@ window._flushChecklistSave = function() {
     }
 };
 
+// ─── CHECKLIST — marcação pendente (exige clique em "Aplicar") ──
+// Ao marcar/desmarcar um item, a alteração fica só em memória até o
+// usuário clicar em "Aplicar". Guarda um snapshot para permitir descartar.
+window._checklistPendingDirty = false;
+window._checklistPendingSnapshot = null;
+
+function _clFindItemByTab(id, tab) {
+    if (tab === 'auditoria') return audits.find(i => i.id === id);
+    if (tab === 'atividades') return activities.find(i => i.id === id);
+    if (tab === 'treinamentos') return trainings.find(i => i.id === id);
+    if (tab === 'documentos') return documents.find(i => i.id === id);
+    if (tab === 'rnc') return (window.rncItems || []).find(i => i.id === id);
+    return null;
+}
+
+function _markChecklistPending(item, tab) {
+    if (!window._checklistPendingDirty) {
+        window._checklistPendingSnapshot = { id: item.id, tab, checklist: JSON.parse(JSON.stringify(item.checklist || [])) };
+        window._checklistPendingDirty = true;
+    }
+}
+
+// Aplica (salva) as marcações pendentes do checklist e fecha o viewModal
+window.applyViewChecklistChanges = function() {
+    if (!window._checklistPendingDirty) { closeModal('viewModal'); return; }
+    window._checklistPendingDirty = false;
+    window._checklistPendingSnapshot = null;
+    saveAll();
+    closeModal('viewModal');
+};
+
+// Descarta as marcações pendentes, restaurando o checklist ao estado salvo
+window._discardChecklistPendingChanges = function() {
+    if (window._checklistPendingSnapshot) {
+        const { id, tab, checklist } = window._checklistPendingSnapshot;
+        const found = _clFindItemByTab(id, tab);
+        if (found) found.checklist = checklist;
+        renderCards();
+    }
+    window._checklistPendingDirty = false;
+    window._checklistPendingSnapshot = null;
+};
+
+// Chamado por closeModal/ESC antes de fechar o viewModal: se há marcações
+// pendentes, exibe aviso em vez de fechar direto.
+window._checklistGuardedClose = function(doClose) {
+    if (window._checklistPendingDirty) {
+        _showChecklistUnsavedWarning(
+            () => { // Aplicar e fechar
+                window._checklistPendingDirty = false;
+                window._checklistPendingSnapshot = null;
+                saveAll();
+                doClose();
+            },
+            () => { // Descartar
+                window._discardChecklistPendingChanges();
+                doClose();
+            }
+        );
+        return;
+    }
+    doClose();
+};
+
+function _showChecklistUnsavedWarning(onApplyAndClose, onDiscardAndClose) {
+    const existing = document.getElementById('clUnsavedModal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'clUnsavedModal';
+    overlay.className = 'cl-reset-overlay';
+    overlay.innerHTML = `
+        <div class="cl-reset-card">
+            <div class="cl-reset-header">
+                <div class="cl-reset-header-icon"><i class="fas fa-triangle-exclamation"></i></div>
+                <div>
+                    <div class="cl-reset-title">Alterações não aplicadas</div>
+                    <div class="cl-reset-subtitle">O checklist tem marcações pendentes</div>
+                </div>
+            </div>
+            <div class="cl-reset-body">
+                <p class="cl-reset-text">
+                    Você marcou ou desmarcou itens do checklist, mas ainda não aplicou. Se fechar agora sem aplicar, essas alterações serão perdidas.
+                </p>
+                <div class="cl-reset-actions">
+                    <button id="clUnsavedBtnCancelar" class="cl-reset-btn cl-reset-btn--cancel">Continuar editando</button>
+                    <button id="clUnsavedBtnDescartar" class="cl-reset-btn cl-reset-btn--descartar">Descartar</button>
+                    <button id="clUnsavedBtnAplicar" class="cl-reset-btn cl-reset-btn--aplicar">Aplicar e fechar</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.remove();
+    overlay.querySelector('#clUnsavedBtnCancelar').onclick = close;
+    overlay.querySelector('#clUnsavedBtnDescartar').onclick = () => { close(); if (onDiscardAndClose) onDiscardAndClose(); };
+    overlay.querySelector('#clUnsavedBtnAplicar').onclick = () => { close(); if (onApplyAndClose) onApplyAndClose(); };
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+}
+
 window.selectAllViewChecklist = function(id, tab) {
     const finalTab = _normalizeTab(tab);
     let found;
@@ -795,6 +898,8 @@ window.selectAllViewChecklist = function(id, tab) {
     );
     const allDone = toggleable.length > 0 && toggleable.every(c => c.checked);
 
+    _markChecklistPending(found, finalTab);
+
     found.checklist.forEach((c, idx) => {
         if (_isPubLockedDone(idx)) return; // nunca toca em itens bloqueados por pub concluída
         if (_isPubBlocked(idx)) return;    // nunca marca itens com pub pendente
@@ -802,7 +907,6 @@ window.selectAllViewChecklist = function(id, tab) {
         c.checked = !allDone;
     });
 
-    _scheduleChecklistSave();
     renderViewChecklist(found, finalTab);
     renderCards();
 };
@@ -843,8 +947,8 @@ window.toggleViewChecklistItem = function(id, tab, index) {
             return;
         }
     }
+    _markChecklistPending(found, finalTab);
     c.checked = !c.checked;
-    _scheduleChecklistSave();
     renderViewChecklist(found, finalTab);
     renderCards();
 };
