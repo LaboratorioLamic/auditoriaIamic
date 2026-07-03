@@ -103,8 +103,9 @@
             if (_isConcluindo && typeof window.showConclusaoDateModal === 'function') {
                 window.showConclusaoDateModal(
                     '',
-                    function(dateStr) {
+                    function(dateStr, removeMarker) {
                         newItem.dataConclusao = dateStr;
+                        if (removeMarker) newItem.marcador = '';
                         _commitAtiv(newItem);
                     },
                     null

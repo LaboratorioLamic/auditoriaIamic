@@ -840,6 +840,11 @@ window.showConclusaoDateModal = function(currentDate, onConfirm, onCancel) {
                 " onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='var(--border,#e2e8f0)'">
             </div>
 
+            <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text,#0f172a);cursor:pointer;user-select:none;">
+                <input id="_conclusaoRemoveMarkerInput" type="checkbox" checked style="width:15px;height:15px;cursor:pointer;accent-color:#10b981;">
+                Remover marcadores deste item
+            </label>
+
             <div style="display:flex;gap:10px;justify-content:flex-end;">
                 <button id="_conclusaoCancelBtn" style="
                     background:transparent;
@@ -879,8 +884,9 @@ window.showConclusaoDateModal = function(currentDate, onConfirm, onCancel) {
 
     overlay.querySelector('#_conclusaoConfirmBtn').addEventListener('click', function() {
         var val = document.getElementById('_conclusaoDateInput').value;
+        var removeMarker = document.getElementById('_conclusaoRemoveMarkerInput').checked;
         _close();
-        if (typeof onConfirm === 'function') onConfirm(val || todayStr);
+        if (typeof onConfirm === 'function') onConfirm(val || todayStr, removeMarker);
     });
 
     // Fechar clicando no overlay

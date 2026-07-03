@@ -2697,6 +2697,8 @@
             </div>
             <button onclick="closeModal('modalPublicacao')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;">&times;</button>
         </div>
+        <!-- Corpo com rolagem -->
+        <div class="pub-modal-body">
         <!-- Campos dinâmicos por tipo -->
         <div id="pubModalFields">
             <!-- preenchido por JS -->
@@ -2734,7 +2736,7 @@
                 <div style="height:5px;background:#e5e7eb;border-radius:99px;overflow:hidden;">
                     <div id="pub-img-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#a855f7);border-radius:99px;transition:width .2s ease;"></div>
                 </div>
-            </div>01
+            </div>
             <div id="pub-upload-zone" class="upload-drop-zone">
                 <input type="file" id="pub-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -2744,6 +2746,7 @@
             <div id="pub-link-wrap" style="display:none;">
                 <input type="url" id="pub-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
             </div>
+        </div>
         </div>
         <div class="modal-actions">
             <button class="btn-cancel" onclick="closeModal('modalPublicacao')">Cancelar</button>

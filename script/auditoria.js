@@ -136,8 +136,9 @@
         if (_isConcluindoAudit && typeof window.showConclusaoDateModal === 'function') {
             window.showConclusaoDateModal(
                 '',
-                function(dateStr) {
+                function(dateStr, removeMarker) {
                     newItem.dataPublicacao = dateStr;
+                    if (removeMarker) newItem.marcador = '';
                     _commitAudit(newItem);
                 },
                 null

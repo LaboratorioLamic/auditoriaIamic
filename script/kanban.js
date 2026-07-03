@@ -577,11 +577,12 @@ function kbDrop(event, targetStatus) {
 }
 
 function _kbApplyDrop(item, targetStatus) {
-    const _doApply = function(dateVal, dateField) {
+    const _doApply = function(dateVal, dateField, removeMarker) {
         const prevStatus = item.status;
         item.status = targetStatus;
         item._statusChangedOnce = true;
         if (dateVal && dateField) item[dateField] = dateVal;
+        if (removeMarker) item.marcador = '';
 
         if (!Array.isArray(item.historico)) item.historico = [];
         item.historico.push({
@@ -602,7 +603,7 @@ function _kbApplyDrop(item, targetStatus) {
         const _dateField = currentTab === 'auditoria' ? 'dataPublicacao' : 'dataConclusao';
         window.showConclusaoDateModal(
             '',
-            function(dateStr) { _doApply(dateStr, _dateField); },
+            function(dateStr, removeMarker) { _doApply(dateStr, _dateField, removeMarker); },
             function() { renderKanban(); }
         );
         return;

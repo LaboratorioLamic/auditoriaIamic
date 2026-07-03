@@ -1736,6 +1736,109 @@
     font-size: 11px;
     color: #3b82f6;
 }
+.view-info-card-marker { position: relative; overflow: visible; }
+
+.marker-field-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    border-radius: 20px;
+    transition: transform 0.15s ease;
+}
+.marker-field-btn:hover { transform: translateY(-1px); }
+.marker-field-btn:active { transform: translateY(0); }
+.marker-field-chevron {
+    font-size: 9px;
+    color: #94a3b8;
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+}
+.marker-field-btn.popover-open .marker-field-chevron { transform: rotate(180deg); }
+.marker-field-empty {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px dashed #cbd5e1;
+    border-radius: 20px;
+    padding: 3px 12px 3px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.marker-field-btn:hover .marker-field-empty {
+    background: #e0e7ff;
+    border-color: #a5b4fc;
+    color: #4338ca;
+}
+.marker-field-empty i { font-size: 10px; }
+
+.marker-popover {
+    display: block;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 14px;
+    min-width: 210px;
+    max-width: 260px;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 14px;
+    box-shadow: 0 20px 45px -10px rgba(15,23,42,0.28), 0 4px 12px rgba(15,23,42,0.08);
+    padding: 8px;
+    z-index: 10001;
+    max-height: 280px;
+    overflow-y: auto;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px) scale(0.96);
+    transform-origin: top left;
+    transition: opacity 0.18s ease, transform 0.2s cubic-bezier(.34,1.56,.64,1), visibility 0.18s;
+}
+.marker-popover.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+.marker-popover-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 10px;
+    border: none;
+    background: transparent;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text, #0f172a);
+    text-align: left;
+    transition: background 0.15s ease, transform 0.12s ease, padding-left 0.15s ease;
+}
+.marker-popover-item + .marker-popover-item { margin-top: 2px; }
+.marker-popover-item:hover { background: var(--bg, #f1f5f9); padding-left: 13px; }
+.marker-popover-item:active { transform: scale(0.98); }
+.marker-popover-item.current { background: linear-gradient(90deg, rgba(37,99,235,0.1), rgba(37,99,235,0.03)); }
+.marker-popover-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 3px currentColor;
+    opacity: 0.9;
+}
+.marker-popover-item.current .marker-popover-dot { box-shadow: 0 0 0 4px currentColor; }
+.marker-popover-item .fa-check { margin-left: auto; font-size: 11px; color: var(--accent, #2563eb); }
+.marker-popover-item.marker-popover-add { color: #2563eb; }
+.marker-popover-item.marker-popover-add i { font-size: 11px; }
+.marker-popover-item.marker-popover-clear { color: #dc2626; }
+.marker-popover-sep { height: 1px; background: var(--border, #e2e8f0); margin: 6px 4px; }
+
 .view-info-nd {
     color: #94a3b8;
     font-weight: 400;
@@ -2123,7 +2226,19 @@
 .btn-danger:hover { background: #dc2626; }
 
 /* Publicação modal */
-.pub-modal-content { max-width: 580px; }
+.pub-modal-content {
+    max-width: 580px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.pub-modal-content .modal-header,
+.pub-modal-content .modal-actions { flex-shrink: 0; }
+.pub-modal-body {
+    overflow-y: auto;
+    min-height: 0;
+}
 .req-star { color: #ef4444; font-weight: 700; margin-left: 2px; }
 .field-required-error { border-color: #ef4444 !important; background: #fff5f5 !important; }
 .field-required-error:focus { box-shadow: 0 0 0 3px rgba(239,68,68,.15) !important; }

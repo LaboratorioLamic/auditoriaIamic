@@ -949,11 +949,12 @@ function resetModal(prefix) {
             return;
         }
 
-        var _apply = function(dateVal) {
+        var _apply = function(dateVal, removeMarker) {
             var prevStatus = item.status;
             item.status = newStatus;
             item._statusChangedOnce = true;
             if (dateVal && cfg.dateField) item[cfg.dateField] = dateVal;
+            if (removeMarker) item.marcador = '';
 
             if (!Array.isArray(item.historico)) item.historico = [];
             item.historico.push({
@@ -971,7 +972,7 @@ function resetModal(prefix) {
         };
 
         if (isConcluido && cfg.dateField && typeof window.showConclusaoDateModal === 'function') {
-            window.showConclusaoDateModal('', function(dateStr) { _apply(dateStr); }, null);
+            window.showConclusaoDateModal('', function(dateStr, removeMarker) { _apply(dateStr, removeMarker); }, null);
             return;
         }
 
@@ -1006,18 +1007,126 @@ function resetModal(prefix) {
         renderViewContent(id, normalizedTab);
     }
 
-function _markerBadgeHtml(item) {
-    if (!item || !item.marcador) return null;
+var _MARKER_COLOR_MAP = {
+    blue: '#2563eb', green: '#16a34a', red: '#dc2626',
+    orange: '#ea580c', yellow: '#ca8a04', purple: '#9333ea',
+    default: '#64748b'
+};
+
+var _MARKER_TAB_MAP = {
+    auditoria:    { listKey: 'auditMarcadores', getItems: () => audits,       setItems: v => audits = v },
+    atividades:   { listKey: 'ativMarcadores',  getItems: () => activities,   setItems: v => activities = v },
+    treinamentos: { listKey: 'trainMarcadores', getItems: () => trainings,    setItems: v => trainings = v },
+    documentos:   { listKey: 'docMarcadores',   getItems: () => documents,    setItems: v => documents = v },
+    manutencao:   { listKey: 'mantMarcadores',  getItems: () => maintenances, setItems: v => maintenances = v }
+};
+
+function _markerFieldHtml(item) {
     var _esc = function(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-    var colorKeyMap = {
-        blue: '#2563eb', green: '#16a34a', red: '#dc2626',
-        orange: '#ea580c', yellow: '#ca8a04', purple: '#9333ea',
-        default: '#64748b'
-    };
-    var bg = colorKeyMap[item.marcadorCor] || colorKeyMap['default'];
-    return { html: '<span style="display:inline-flex;align-items:center;gap:5px;background:' + bg + ';color:#fff;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;">' +
-        '<i class="fas fa-bookmark" style="font-size:10px"></i> ' + _esc(item.marcador) + '</span>' };
+    var hasMarker = !!(item && item.marcador);
+    var bg = hasMarker ? (_MARKER_COLOR_MAP[item.marcadorCor] || _MARKER_COLOR_MAP['default']) : null;
+    var btnContent = hasMarker
+        ? '<span style="display:inline-flex;align-items:center;gap:5px;background:' + bg + ';color:#fff;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;">' +
+          '<i class="fas fa-bookmark" style="font-size:10px"></i> ' + _esc(item.marcador) + '</span>'
+        : '<span class="marker-field-empty"><i class="fas fa-plus"></i> Adicionar marcador</span>';
+    return { html: '<button type="button" class="marker-field-btn" id="viewModalMarkerBtn" onclick="toggleMarkerPopover(event)">' +
+        btnContent + '<i class="fas fa-chevron-down marker-field-chevron"></i></button>' +
+        '<div class="marker-popover" id="markerPopover"></div>' };
 }
+
+function toggleMarkerPopover(event) {
+    event.stopPropagation();
+    var pop = document.getElementById('markerPopover');
+    var btn = document.getElementById('viewModalMarkerBtn');
+    if (!pop) return;
+    if (pop.classList.contains('active')) {
+        closeMarkerPopover();
+        return;
+    }
+    var tab = window._currentViewTab;
+    var cfg = _MARKER_TAB_MAP[tab];
+    if (!cfg) return;
+    var item = (cfg.getItems() || []).find(i => i.id === window._currentViewId);
+    if (!item || item.deleted || (typeof userCanEditCards === 'function' && !userCanEditCards(item))) return;
+
+    renderMarkerPopover(item, tab, cfg);
+    pop.classList.add('active');
+    if (btn) btn.classList.add('popover-open');
+    document.addEventListener('click', _markerPopoverOutsideClick);
+}
+
+function _markerPopoverOutsideClick(e) {
+    var pop = document.getElementById('markerPopover');
+    var btn = document.getElementById('viewModalMarkerBtn');
+    if (!pop) return;
+    if (pop.contains(e.target) || (btn && btn.contains(e.target))) return;
+    closeMarkerPopover();
+}
+
+function closeMarkerPopover() {
+    var pop = document.getElementById('markerPopover');
+    var btn = document.getElementById('viewModalMarkerBtn');
+    if (pop) pop.classList.remove('active');
+    if (btn) btn.classList.remove('popover-open');
+    document.removeEventListener('click', _markerPopoverOutsideClick);
+}
+
+function renderMarkerPopover(item, tab, cfg) {
+    var pop = document.getElementById('markerPopover');
+    if (!pop) return;
+    var list = (masterLists && masterLists[cfg.listKey]) ? masterLists[cfg.listKey] : [];
+    var _esc = function(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,"\\'"); };
+
+    var itemsHtml;
+    if (list.length === 0) {
+        itemsHtml = '<button type="button" class="marker-popover-item marker-popover-add" onclick="closeMarkerPopover();openListManager(\'marcadores\')">' +
+            '<i class="fas fa-plus"></i><span>Adicionar marcador</span></button>';
+    } else {
+        itemsHtml = list.map(function(m) {
+            var color = _MARKER_COLOR_MAP[m.color] || _MARKER_COLOR_MAP['default'];
+            var isCurrent = m.name === item.marcador;
+            return '<button type="button" class="marker-popover-item' + (isCurrent ? ' current' : '') + '" onclick="selectItemMarker(\'' + _esc(m.name) + '\',\'' + (m.color || 'default') + '\')">' +
+                '<span class="marker-popover-dot" style="color:' + color + ';background:' + color + '"></span>' +
+                '<span>' + _esc(m.name) + '</span>' +
+                (isCurrent ? '<i class="fas fa-check"></i>' : '') +
+                '</button>';
+        }).join('') +
+        (item.marcador ? '<div class="marker-popover-sep"></div><button type="button" class="marker-popover-item marker-popover-clear" onclick="selectItemMarker(\'\',\'\')"><i class="fas fa-ban"></i><span>Remover marcador</span></button>' : '');
+    }
+    pop.innerHTML = '<div class="status-popover-label">Marcador</div>' + itemsHtml;
+}
+
+function selectItemMarker(newMarker, newColor) {
+    closeMarkerPopover();
+    var tab = window._currentViewTab;
+    var cfg = _MARKER_TAB_MAP[tab];
+    if (!cfg) return;
+    var items = cfg.getItems() || [];
+    var item = items.find(i => i.id === window._currentViewId);
+    if (!item || item.marcador === newMarker) return;
+
+    var prevMarker = item.marcador || '(nenhum)';
+    item.marcador = newMarker || '';
+    item.marcadorCor = newMarker ? (newColor || 'default') : '';
+
+    if (!Array.isArray(item.historico)) item.historico = [];
+    item.historico.push({
+        timestamp: new Date().toISOString(),
+        acao: 'Alteração de Marcador',
+        usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
+        detalhes: [{ campo: 'Marcador', de: prevMarker, para: newMarker || '(nenhum)' }],
+        snapshot: _safeSnapshot(item)
+    });
+
+    saveAll();
+    renderViewContent(item.id, tab);
+    if (typeof renderCards === 'function') renderCards();
+    if (typeof isKanbanActive === 'function' && isKanbanActive(tab) && typeof renderKanban === 'function') renderKanban();
+}
+
+window.toggleMarkerPopover = toggleMarkerPopover;
+window.closeMarkerPopover = closeMarkerPopover;
+window.selectItemMarker = selectItemMarker;
 
 function renderViewContent(id, tab) {
     if (typeof closeStatusPopover === 'function') closeStatusPopover();
@@ -1136,7 +1245,7 @@ function renderViewContent(id, tab) {
             ['Frequência', freqLabelAudit],
             ['Publicação', formatBR(item.dataPublicacao)],
             ['Previsão', formatBR(item.dataPrevisao)],
-            ['Marcador', _markerBadgeHtml(item)],
+            ['Marcador', _markerFieldHtml(item)],
             ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'],
             ['Ao Alertar →', item.alertStatus || null],
             ['Ao Vencer →', item.overdueStatus || null]
@@ -1146,7 +1255,7 @@ function renderViewContent(id, tab) {
             ['Setor', item.setor], ['Categoria', item.categoria],
             ['Responsável', item.responsavel], ['Revisor', item.revisor],
             ['Data Início', formatBR(item.dataInicio)], ['Data Conclusão', formatBR(item.dataConclusao)],
-            ['Marcador', _markerBadgeHtml(item)],
+            ['Marcador', _markerFieldHtml(item)],
             ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
         ]);
     } else if (finalTab === 'manutencao') {
@@ -1160,7 +1269,7 @@ function renderViewContent(id, tab) {
             ['Resp. Técnico', item.responsavelTecnico],
             ['Resp. Manutenção', item.responsavelManutencao],
             ['Empresa', item.empresaResponsavel],
-            ['Marcador', _markerBadgeHtml(item)],
+            ['Marcador', _markerFieldHtml(item)],
             ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
         ]);
     } else if (finalTab === 'treinamentos') {
@@ -1174,7 +1283,7 @@ function renderViewContent(id, tab) {
             ['Frequência', freqLabelTrain],
             ['Data Publicação', formatBR(item.dataPublicacao)],
             ['Data Previsão', item.dataPrevisao ? formatBR(item.dataPrevisao) : 'N/A'],
-            ['Marcador', _markerBadgeHtml(item)],
+            ['Marcador', _markerFieldHtml(item)],
             ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'],
             ['Ao Alertar →', item.alertStatus || null],
             ['Ao Vencer →', item.overdueStatus || null]
@@ -1190,7 +1299,7 @@ function renderViewContent(id, tab) {
             ['Frequência', freqLabelDoc],
             ['Data do Documento', formatBR(item.dataCriacao)],
             ['Próx. Revisão', item.dataProximaRevisao ? formatBR(item.dataProximaRevisao) : 'N/A'],
-            ['Marcador', _markerBadgeHtml(item)],
+            ['Marcador', _markerFieldHtml(item)],
             ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'],
             ['Ao Alertar →', item.alertStatus || null],
             ['Ao Vencer →', item.overdueStatus || null]
@@ -1304,7 +1413,7 @@ function _viewCards(pairs) {
         return _esc(val) || '<span class="view-info-nd">ND</span>';
     };
     return pairs.filter(([, val]) => val !== null && val !== undefined).map(([label, val]) =>
-        `<div class="view-info-card"><label>${label}</label><div>${_renderVal(val)}</div></div>`
+        `<div class="view-info-card${label === 'Marcador' ? ' view-info-card-marker' : ''}"><label>${label}</label><div>${_renderVal(val)}</div></div>`
     ).join('');
 }
 
