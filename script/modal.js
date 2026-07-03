@@ -869,6 +869,119 @@ function resetModal(prefix) {
     }
 
     // View Modal e Histórico com Paginação
+    // ---- Popover de status (view modal) ----
+
+    var _STATUS_TAB_MAP = {
+        auditoria:    { statusKey: 'auditStatus',  colOrderKey: 'kanban_audit_col_order', dateField: 'dataPublicacao', getItems: () => audits,       setItems: v => audits = v },
+        atividades:   { statusKey: 'ativStatus',   colOrderKey: 'kanban_ativ_col_order',  dateField: 'dataConclusao',  getItems: () => activities,   setItems: v => activities = v },
+        treinamentos: { statusKey: 'trainStatus',  colOrderKey: 'kanban_train_col_order', dateField: null,             getItems: () => trainings,    setItems: v => trainings = v },
+        documentos:   { statusKey: 'docStatus',    colOrderKey: 'kanban_doc_col_order',   dateField: null,             getItems: () => documents,    setItems: v => documents = v },
+        manutencao:   { statusKey: 'mantStatus',   colOrderKey: 'kanban_mant_col_order',  dateField: null,             getItems: () => maintenances, setItems: v => maintenances = v }
+    };
+
+    function toggleStatusPopover(event) {
+        event.stopPropagation();
+        var pop = document.getElementById('statusPopover');
+        var btn = document.getElementById('viewModalStatus');
+        if (!pop) return;
+        if (pop.classList.contains('active')) {
+            closeStatusPopover();
+            return;
+        }
+        var tab = window._currentViewTab;
+        var cfg = _STATUS_TAB_MAP[tab];
+        if (!cfg || !userCanEditCards) return;
+        var item = (cfg.getItems() || []).find(i => i.id === window._currentViewId);
+        if (!item || item.deleted || !userCanEditCards(item)) return;
+
+        renderStatusPopover(item, tab, cfg);
+        pop.classList.add('active');
+        if (btn) btn.classList.add('popover-open');
+        document.addEventListener('click', _statusPopoverOutsideClick);
+    }
+
+    function _statusPopoverOutsideClick(e) {
+        var pop = document.getElementById('statusPopover');
+        var btn = document.getElementById('viewModalStatus');
+        if (!pop) return;
+        if (pop.contains(e.target) || (btn && btn.contains(e.target))) return;
+        closeStatusPopover();
+    }
+
+    function closeStatusPopover() {
+        var pop = document.getElementById('statusPopover');
+        var btn = document.getElementById('viewModalStatus');
+        if (pop) pop.classList.remove('active');
+        if (btn) btn.classList.remove('popover-open');
+        document.removeEventListener('click', _statusPopoverOutsideClick);
+    }
+
+    function renderStatusPopover(item, tab, cfg) {
+        var pop = document.getElementById('statusPopover');
+        if (!pop) return;
+        var list = (typeof _kbGetSortedStatuses === 'function')
+            ? _kbGetSortedStatuses(cfg)
+            : ((masterLists && masterLists[cfg.statusKey]) ? masterLists[cfg.statusKey] : []);
+        var itemsHtml = list.map(function(s) {
+            var color = colorMap[s.color] || colorMap['default'];
+            var isCurrent = s.name === item.status;
+            return '<button type="button" class="status-popover-item' + (isCurrent ? ' current' : '') + '" onclick="selectNewStatus(\'' + s.name.replace(/'/g, "\\'") + '\')">' +
+                '<span class="status-popover-dot" style="color:' + color + ';background:' + color + '"></span>' +
+                '<span>' + s.name + '</span>' +
+                (isCurrent ? '<i class="fas fa-check"></i>' : '') +
+                '</button>';
+        }).join('');
+        pop.innerHTML = '<div class="status-popover-label">Alterar status</div>' + itemsHtml;
+    }
+
+    function selectNewStatus(newStatus) {
+        closeStatusPopover();
+        var tab = window._currentViewTab;
+        var cfg = _STATUS_TAB_MAP[tab];
+        if (!cfg) return;
+        var items = cfg.getItems() || [];
+        var item = items.find(i => i.id === window._currentViewId);
+        if (!item || item.status === newStatus) return;
+
+        var isConcluido = _kbStatusIsConcluido(newStatus, { statusKey: cfg.statusKey });
+        if (isConcluido && !canSetConcluido(item.checklist, item)) {
+            if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist de publicação antes de marcar como Concluído.', 'error');
+            return;
+        }
+
+        var _apply = function(dateVal) {
+            var prevStatus = item.status;
+            item.status = newStatus;
+            item._statusChangedOnce = true;
+            if (dateVal && cfg.dateField) item[cfg.dateField] = dateVal;
+
+            if (!Array.isArray(item.historico)) item.historico = [];
+            item.historico.push({
+                timestamp: new Date().toISOString(),
+                acao: 'Alteração de Status',
+                usuario: currentuser ? (currentuser.name || currentuser.user) : 'Sistema',
+                detalhes: [{ campo: 'Status', de: prevStatus, para: newStatus }],
+                snapshot: _safeSnapshot(item)
+            });
+
+            saveAll();
+            renderViewContent(item.id, tab);
+            if (typeof renderCards === 'function') renderCards();
+            if (typeof isKanbanActive === 'function' && isKanbanActive(tab) && typeof renderKanban === 'function') renderKanban();
+        };
+
+        if (isConcluido && cfg.dateField && typeof window.showConclusaoDateModal === 'function') {
+            window.showConclusaoDateModal('', function(dateStr) { _apply(dateStr); }, null);
+            return;
+        }
+
+        _apply(null);
+    }
+
+    window.toggleStatusPopover = toggleStatusPopover;
+    window.selectNewStatus = selectNewStatus;
+    window.closeStatusPopover = closeStatusPopover;
+
     function openView(id, tab) {
         currentHistoryPage = 1; // Garante que a primeira página seja carregada
         currentViewItemId = id;
@@ -907,6 +1020,7 @@ function _markerBadgeHtml(item) {
 }
 
 function renderViewContent(id, tab) {
+    if (typeof closeStatusPopover === 'function') closeStatusPopover();
     var item, statusList, finalTab = tab;
 
     // Normaliza o tab para os valores esperados
@@ -986,10 +1100,12 @@ function renderViewContent(id, tab) {
     const metaEl = document.getElementById('viewModalMeta');
     const iconWrap = document.getElementById('viewModalIconWrap');
     const statusEl = document.getElementById('viewModalStatus');
+    const statusTextEl = document.getElementById('viewModalStatusText');
     if (titleEl) titleEl.textContent = item.titulo + (item.deleted ? ' [DELETADO]' : '');
     if (metaEl) metaEl.textContent = `${tabLabelMap[finalTab] || ''} · ${item.setor || ''} · ${item.categoria || ''}`;
     if (iconWrap) iconWrap.innerHTML = `<i class="fas ${iconMap[finalTab] || 'fa-file'}"></i>`;
-    if (statusEl) { statusEl.textContent = item.status; statusEl.style.background = statusColorVar; }
+    if (statusTextEl) statusTextEl.textContent = item.status;
+    if (statusEl) statusEl.style.background = statusColorVar;
 
     // ── Edit button ───────────────────────────────────────────
     var btnEdit = document.getElementById('btnViewEdit');
@@ -1134,6 +1250,14 @@ function renderViewContent(id, tab) {
 
     // ── Anexos tab ────────────────────────────────────────────
     if (typeof renderViewAnexos === 'function') renderViewAnexos(item);
+
+    // Badge de anexos
+    const anexosBadge = document.getElementById('anexosTabBadge');
+    if (anexosBadge) {
+        const anexosCount = (item.anexos || []).length;
+        anexosBadge.textContent = anexosCount;
+        anexosBadge.style.display = anexosCount > 0 ? '' : 'none';
+    }
 
     // ── Publicações tab ───────────────────────────────────────
     window._pubSubtabAtivo = 'Todos';
@@ -2273,6 +2397,7 @@ function viewHistoryItem(id, tab, historyIndex) {
             document.getElementById(id).style.display = 'none';
             if (id === 'viewModal') {
                 closeHistoryDrawer();
+                closeStatusPopover();
                 if (typeof window._flushChecklistSave === 'function') window._flushChecklistSave();
             }
             // Cancelar/fechar a publicação descarta imagens enviadas mas não publicadas.

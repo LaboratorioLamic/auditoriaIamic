@@ -10,6 +10,7 @@ const UPLOAD_ALLOWED_TYPES = [
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/vnd.oasis.opendocument.spreadsheet',
+  'text/csv',
   'application/vnd.ms-powerpoint',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'application/vnd.oasis.opendocument.presentation'
@@ -17,9 +18,56 @@ const UPLOAD_ALLOWED_TYPES = [
 const UPLOAD_ALLOWED_EXT = [
   '.pdf',
   '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
-  '.xls', '.xlsx', '.ods',
+  '.xls', '.xlsx', '.ods', '.csv',
   '.ppt', '.pptx', '.odp'
 ];
+
+// ── Tag de tipo de anexo (persistida no BD como anexo.fileExt) ──
+// Fonte única de verdade para o ícone de cada anexo em qualquer lugar do app.
+// Itens sem tag (dados legados) caem no fallback: ícone de arquivo vermelho.
+function _extFromName(name) {
+  if (!name) return '';
+  const clean = String(name).split(/[?#]/)[0];
+  return clean.includes('.') ? clean.slice(clean.lastIndexOf('.')).toLowerCase() : '';
+}
+
+// Calcula a tag fileExt a partir do File real (extensão confiável no momento do upload)
+function _tagFromFile(file) {
+  return _extFromName(file && file.name);
+}
+
+// Retorna { icon: 'pdf'|'sheet'|'slide'|'image'|'link'|'file', color } para um anexo salvo.
+// Prioridade: tipo explícito (link/imagem) > tag fileExt persistida > fallback genérico vermelho.
+window._anexoIconInfo = function(a) {
+  if (!a) return { icon: 'file', color: '#ef4444' };
+  if (a.tipo === 'link') return { icon: 'link', color: '#2563eb' };
+  if (a.tipo === 'imagem') return { icon: 'image', color: '#7c3aed' };
+
+  const ext = a.fileExt || '';
+  if (ext === '.pdf') return { icon: 'pdf', color: '#ef4444' };
+  if (['.xls', '.xlsx', '.ods', '.csv'].includes(ext)) return { icon: 'sheet', color: '#16a34a' };
+  if (['.ppt', '.pptx', '.odp'].includes(ext)) return { icon: 'slide', color: '#ea580c' };
+  if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'].includes(ext)) return { icon: 'image', color: '#0891b2' };
+
+  // Sem tag: ícone de arquivo vermelho padrão
+  return { icon: 'file', color: '#ef4444' };
+};
+
+const _ANEXO_ICON_SVG = {
+  pdf:   p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:${p};height:${p};color:{{C}};flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`,
+  sheet: p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:${p};height:${p};color:{{C}};flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="10" y1="9" x2="14" y2="9"/></svg>`,
+  slide: p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:${p};height:${p};color:{{C}};flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="12" width="8" height="5" rx="1"/></svg>`,
+  image: p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:${p};height:${p};color:{{C}};flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
+  link:  p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:${p};height:${p};color:{{C}};flex-shrink:0;"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>`,
+  file:  p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:${p};height:${p};color:{{C}};flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`
+};
+
+// Gera o SVG do ícone de um anexo salvo. size: string CSS (ex: '15px').
+window._anexoIconSvg = function(a, size) {
+  const info = window._anexoIconInfo(a);
+  const tpl = _ANEXO_ICON_SVG[info.icon] || _ANEXO_ICON_SVG.file;
+  return tpl(size || '15px').replace('{{C}}', info.color);
+};
 
 // ── Estado temporário de upload ──────────────────────────────
 const _uploadQueues = {
@@ -232,7 +280,7 @@ function _validateUploadFile(file, ctx) {
     const okType = UPLOAD_ALLOWED_TYPES_NO_IMG.includes(file.type);
     const okExt  = UPLOAD_ALLOWED_EXT_NO_IMG.some(ext => file.name.toLowerCase().endsWith(ext));
     if (!okType && !okExt) {
-      if (typeof showToast === 'function') showToast('Tipo de arquivo não permitido. Use PDF, planilha ou apresentação. Para imagens, selecione o tipo "Imagem".', 'error');
+      if (typeof showToast === 'function') showToast('Tipo de arquivo não permitido. Use PDF, planilha (xls/xlsx/ods/csv) ou apresentação. Para imagens, selecione o tipo "Imagem".', 'error');
       return false;
     }
   } else {
@@ -255,11 +303,13 @@ function _getFileTypeIcon(file) {
   const type = file.type;
   if (type === 'application/pdf' || name.endsWith('.pdf'))
     return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;color:#ef4444;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`;
-  if (['.xls','.xlsx','.ods'].some(e => name.endsWith(e)))
+  if (['.xls','.xlsx','.ods','.csv'].some(e => name.endsWith(e)))
     return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;color:#16a34a;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="10" y1="9" x2="14" y2="9"/></svg>`;
   if (['.ppt','.pptx','.odp'].some(e => name.endsWith(e)))
     return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;color:#ea580c;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="12" width="8" height="5" rx="1"/></svg>`;
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;color:#0891b2;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+  if (['.jpg','.jpeg','.png','.gif','.webp','.svg'].some(e => name.endsWith(e)) || type.startsWith('image/'))
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;color:#0891b2;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;color:#6b7280;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
 }
 
 function _renderUploadPreview(ctx) {
@@ -573,9 +623,10 @@ async function doUploadAnexo(ctx, onSuccess, getPrefixo) {
       throw new Error(typeof result === 'string' ? result : 'Falha no upload.');
     }
 
+    const fileExt = _tagFromFile(q.file);
     if (titleInput) titleInput.value = '';
     _clearUploadFile(ctx);
-    if (typeof onSuccess === 'function') onSuccess({ titulo: title, url: fileUrl, fileId });
+    if (typeof onSuccess === 'function') onSuccess({ titulo: title, url: fileUrl, fileId, fileExt });
     if (typeof showToast === 'function') showToast('Arquivo enviado com sucesso!', 'success');
   } catch (err) {
     if (typeof showToast === 'function') showToast('Erro ao enviar: ' + err.message, 'error');
@@ -656,23 +707,7 @@ function _renderAnexosList(ctx) {
   }
   list.innerHTML = items.map((a, i) => {
     const name = a.titulo || a.url || 'Arquivo';
-    const isLink = a.tipo === 'link';
-    const ext = name.includes('.') ? name.slice(name.lastIndexOf('.')).toLowerCase() : '';
-    let iconColor = '#6b7280';
-    let iconSvg;
-    if (isLink) {
-      iconColor = '#2563eb';
-      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;color:${iconColor};flex-shrink:0;"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>`;
-    } else if (a.tipo === 'imagem') {
-      iconColor = '#7c3aed';
-      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;color:${iconColor};flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
-    } else {
-      if (ext === '.pdf') iconColor = '#ef4444';
-      else if (['.xls','.xlsx','.ods'].includes(ext)) iconColor = '#16a34a';
-      else if (['.ppt','.pptx','.odp'].includes(ext)) iconColor = '#ea580c';
-      else if (['.jpg','.jpeg','.png','.gif','.webp','.svg'].includes(ext)) iconColor = '#0891b2';
-      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;color:${iconColor};flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
-    }
+    const iconSvg = window._anexoIconSvg(a, '15px');
     const nameEsc = name.replace(/"/g, '&quot;').replace(/</g, '&lt;');
     const safeBlobId = (a.fileId || '').replace(/'/g, "\\'");
     const nameLink = a.tipo === 'imagem'
@@ -763,10 +798,11 @@ function _commitRenameAnexo(ctx, index, input) {
 
   anexo.titulo = newName;
 
-  // Renomeia no Drive se tiver fileId (arquivos; links não têm arquivo no Drive)
+  // Renomeia no Drive se tiver fileId (arquivos; links não têm arquivo no Drive).
+  // A tag fileExt (usada para o ícone) é independente do título e não é alterada aqui.
   if (anexo.fileId && anexo.tipo !== 'link') {
-    const ext = oldName.includes('.') ? oldName.slice(oldName.lastIndexOf('.')) : '';
-    const driveName = newName.endsWith(ext) ? newName : newName + ext;
+    const ext = anexo.fileExt || (oldName.includes('.') ? oldName.slice(oldName.lastIndexOf('.')) : '');
+    const driveName = newName.toLowerCase().endsWith(ext.toLowerCase()) ? newName : newName + ext;
     renameAnexoDrive(anexo.fileId, driveName).catch(() => {});
   }
 
@@ -818,7 +854,7 @@ async function submitAnexoUpload(ctx, getPrefixo) {
     }
     if (!window._anexosData) window._anexosData = {};
     if (!window._anexosData[ctx]) window._anexosData[ctx] = [];
-    window._anexosData[ctx].push({ titulo: title, url, fileId: null, tipo: 'link' });
+    window._anexosData[ctx].push({ titulo: title, url, fileId: null, tipo: 'link', fileExt: '' });
     _renderAnexosList(ctx);
     if (titleInput) titleInput.value = '';
     if (linkInput) linkInput.value = '';

@@ -1081,16 +1081,15 @@ window.renderViewAnexos = function(item) {
         container.innerHTML = '<div class="pub-empty"><i class="fas fa-paperclip"></i><p>Nenhum anexo cadastrado.</p></div>';
         return;
     }
+    const _faIconMap = { pdf: 'fa-file-pdf', sheet: 'fa-file-excel', slide: 'fa-file-powerpoint', image: 'fa-file-image', link: 'fa-link', file: 'fa-file' };
+    const _faClassMap = { pdf: 'icon-pdf', sheet: 'icon-sheet', slide: 'icon-slide', image: 'icon-image', link: 'icon-link', file: 'icon-file' };
     container.innerHTML = `<div class="view-anexos-grid">${anexos.map(a => {
         const name = a.titulo || a.url || 'Arquivo';
-        const ext = name.includes('.') ? name.slice(name.lastIndexOf('.')).toLowerCase() : '';
-        let icon = 'fa-file';
-        if (ext === '.pdf') icon = 'fa-file-pdf';
-        else if (['.xls','.xlsx','.ods'].includes(ext)) icon = 'fa-file-excel';
-        else if (['.ppt','.pptx','.odp'].includes(ext)) icon = 'fa-file-powerpoint';
-        else if (['.jpg','.jpeg','.png','.gif','.webp','.svg'].includes(ext)) icon = 'fa-file-image';
+        const info = window._anexoIconInfo ? window._anexoIconInfo(a) : { icon: 'file' };
+        const icon = _faIconMap[info.icon] || 'fa-file';
+        const iconClass = _faClassMap[info.icon] || 'icon-file';
         return `<a href="${a.url}" target="_blank" class="view-anexo-card">
-            <i class="fas ${icon} anexo-icon"></i>
+            <i class="fas ${icon} anexo-icon ${iconClass}"></i>
             <span class="anexo-name">${name}</span>
         </a>`;
     }).join('')}</div>`;
@@ -2133,18 +2132,14 @@ window.verPublicacao = function(id, tab, index) {
     const anexos = pub.anexos || [];
     let anexosBlock = '';
     if (anexos.length > 0) {
-        const _extIcon = (name, tipo) => {
-            if (tipo === 'link') return `<i class="fas fa-link" style="color:#2563eb"></i>`;
-            if (tipo === 'imagem') return `<i class="fas fa-image" style="color:#7c3aed"></i>`;
-            const ext = (name.includes('.') ? name.slice(name.lastIndexOf('.')).toLowerCase() : '');
-            if (ext === '.pdf') return `<i class="fas fa-file-pdf" style="color:#ef4444"></i>`;
-            if (['.xls','.xlsx','.ods'].includes(ext)) return `<i class="fas fa-file-excel" style="color:#16a34a"></i>`;
-            if (['.ppt','.pptx','.odp'].includes(ext)) return `<i class="fas fa-file-powerpoint" style="color:#ea580c"></i>`;
-            if (['.jpg','.jpeg','.png','.gif','.webp','.svg'].includes(ext)) return `<i class="fas fa-file-image" style="color:#0891b2"></i>`;
-            return `<i class="fas fa-file" style="color:#6b7280"></i>`;
+        const _pubFaIconMap = { pdf: 'fa-file-pdf', sheet: 'fa-file-excel', slide: 'fa-file-powerpoint', image: 'fa-file-image', link: 'fa-link', file: 'fa-file' };
+        const _extIcon = (a) => {
+            const info = window._anexoIconInfo ? window._anexoIconInfo(a) : { icon: 'file', color: '#ef4444' };
+            const icon = _pubFaIconMap[info.icon] || 'fa-file';
+            return `<i class="fas ${icon}" style="color:${info.color}"></i>`;
         };
         const _cardHtml = (a) => {
-            const icon  = _extIcon(a.titulo || '', a.tipo);
+            const icon  = _extIcon(a);
             const label = (a.titulo || 'Arquivo').replace(/"/g, '&quot;').replace(/</g, '&lt;');
             if (a.tipo === 'imagem') {
                 const blobId = (a.fileId || '').replace(/'/g, "\\'");

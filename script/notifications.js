@@ -462,6 +462,24 @@
         content.innerHTML = cards.map(card => {
             const age = Math.floor((Date.now() - new Date(card.createdAt).getTime()) / 86400000);
             const ageStr = age === 0 ? 'Hoje' : `${age} dia${age > 1 ? 's' : ''} atrás`;
+
+            const deadlineField = getDeadlineFieldForTab(card._type, card);
+            let prazoHtml = '';
+            if (deadlineField) {
+                const dt = new Date(deadlineField);
+                const dd = String(dt.getDate()).padStart(2, '0');
+                const mm = String(dt.getMonth() + 1).padStart(2, '0');
+                const yyyy = dt.getFullYear();
+                const d = daysDiff(deadlineField);
+                const venceStr = d < 0
+                    ? `Venceu há ${Math.abs(d)} dia${Math.abs(d) > 1 ? 's' : ''}`
+                    : d === 0
+                        ? 'Vence hoje'
+                        : `Vence em ${d} dia${d > 1 ? 's' : ''}`;
+                const venceColor = d < 0 ? 'var(--c-red)' : 'var(--c-yellow)';
+                prazoHtml = `<div class="notification-item-details-row"><i class="fas fa-calendar-alt"></i><span>Prazo: ${dd}/${mm}/${yyyy} - <span style="color:${venceColor};font-weight:600">${venceStr}</span></span></div>`;
+            }
+
             return `
                 <div class="notification-item" onclick="closeNewCardsModal(); currentHistoryPage = 1; openView(${card.id}, '${card._type}')">
                     <div class="notification-item-header">
@@ -471,6 +489,7 @@
                     <div class="notification-item-details">
                         ${card.setor ? `<div class="notification-item-details-row"><i class="fas fa-building"></i><span>${_e(card.setor)}</span></div>` : ''}
                         <div class="notification-item-details-row"><i class="fas fa-clock"></i><span>${ageStr}</span></div>
+                        ${prazoHtml}
                     </div>
                 </div>`;
         }).join('');

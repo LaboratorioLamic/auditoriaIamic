@@ -2033,7 +2033,7 @@
             </div>
             <div id="audit-file-preview" style="display:none;"></div>
             <div id="audit-upload-zone" class="upload-drop-zone">
-                <input type="file" id="audit-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
+                <input type="file" id="audit-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span class="upload-drop-label">Clique ou arraste o arquivo</span>
                 <span class="upload-drop-hint">PDF, imagem, planilha ou slides (máx. 30 MB)</span>
@@ -2246,7 +2246,7 @@
             </div>
             <div id="train-file-preview" style="display:none;"></div>
             <div id="train-upload-zone" class="upload-drop-zone">
-                <input type="file" id="train-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
+                <input type="file" id="train-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span class="upload-drop-label">Clique ou arraste o arquivo</span>
                 <span class="upload-drop-hint">PDF, imagem, planilha ou slides (máx. 30 MB)</span>
@@ -2394,7 +2394,7 @@
             </div>
             <div id="ativ-file-preview" style="display:none;"></div>
             <div id="ativ-upload-zone" class="upload-drop-zone">
-                <input type="file" id="ativ-file-input" style="display:none" accept=".pdf,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
+                <input type="file" id="ativ-file-input" style="display:none" accept=".pdf,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span class="upload-drop-label">Clique ou arraste o arquivo</span>
                 <span class="upload-drop-hint">PDF, planilha ou slides (máx. 30 MB)</span>
@@ -2608,7 +2608,7 @@
             </div>
             <div id="doc-file-preview" style="display:none;"></div>
             <div id="doc-upload-zone" class="upload-drop-zone">
-                <input type="file" id="doc-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
+                <input type="file" id="doc-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span class="upload-drop-label">Clique ou arraste o arquivo</span>
                 <span class="upload-drop-hint">PDF, imagem, planilha ou slides (máx. 30 MB)</span>
@@ -2638,8 +2638,12 @@
                         <div class="view-modal-meta" id="viewModalMeta"></div>
                     </div>
                 </div>
-                <div class="view-modal-header-actions">
-                    <span class="view-modal-status" id="viewModalStatus"></span>
+                <div class="view-modal-header-actions" style="position:relative;">
+                    <button type="button" class="view-modal-status" id="viewModalStatus" onclick="toggleStatusPopover(event)">
+                        <span id="viewModalStatusText"></span>
+                        <i class="fas fa-chevron-down status-chevron"></i>
+                    </button>
+                    <div class="status-popover" id="statusPopover"></div>
                     <button class="view-modal-btn" id="btnOpenHistory" onclick="openHistoryDrawer()" title="Histórico de Alterações"><i class="fas fa-clock-rotate-left"></i></button>
                     <button class="view-modal-btn view-modal-btn-close" onclick="closeModal('viewModal')" title="Fechar"><i class="fas fa-times"></i></button>
                 </div>
@@ -2648,7 +2652,7 @@
             <div class="view-modal-tabs">
                 <button class="view-modal-tab active" onclick="switchViewTab('info',this)"><i class="fas fa-info-circle"></i><span class="vmt-label"> Informações</span></button>
                 <button class="view-modal-tab" onclick="switchViewTab('checklist',this)"><i class="fas fa-check-square"></i><span class="vmt-label"> Checklist</span></button>
-                <button class="view-modal-tab" onclick="switchViewTab('anexos',this)"><i class="fas fa-paperclip"></i><span class="vmt-label"> Anexos</span></button>
+                <button class="view-modal-tab" onclick="switchViewTab('anexos',this)"><i class="fas fa-paperclip"></i><span class="vmt-label"> Anexos</span> <span class="view-tab-badge" id="anexosTabBadge" style="display:none;"></span></button>
                 <button class="view-modal-tab" onclick="switchViewTab('publicacoes',this)"><i class="fas fa-paper-plane"></i><span class="vmt-label"> Publicações</span> <span class="view-tab-badge" id="pubTabBadge" style="display:none;"></span></button>
             </div>
         </div>
@@ -2732,7 +2736,7 @@
                 </div>
             </div>01
             <div id="pub-upload-zone" class="upload-drop-zone">
-                <input type="file" id="pub-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp">
+                <input type="file" id="pub-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span class="upload-drop-label">Clique ou arraste o arquivo</span>
                 <span class="upload-drop-hint">PDF, imagem, planilha ou slides (máx. 30 MB)</span>
