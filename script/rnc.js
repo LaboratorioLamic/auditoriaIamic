@@ -983,6 +983,9 @@
         board.innerHTML = statuses.map(function(s, idx) {
             var color = rncResolveColor(s.color);
             var items = arr.filter(function(r){ return r.status === s.name; });
+            if (s.finalKind === 'concluido' || s.finalKind === 'cancelado') {
+                items = items.slice().sort(function(a,b){ return (b.id||0) - (a.id||0); });
+            }
             var collapsed = !!s.collapsed;
             return '<div class="rnc-kb-col">' +
                 '<div class="rnc-kb-col-header" style="--rnc-col-color:' + color + '">' +
