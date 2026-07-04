@@ -1181,13 +1181,29 @@ function _renderPubClItem(c, i) {
     }
     const needsWarning = isRequired && !c.checked;
     const ncMismatch = showNc && (!!c.checked !== !!c.conformidade);
+    const hasComment = !!(c.comentario && c.comentario.trim());
+    const commentOpen = !!c._commentOpen;
     return `
-    <label class="pub-cl-item ${c.checked ? 'checked' : ''} ${needsWarning ? 'pub-cl-required-warn' : ''} ${ncMismatch ? 'pub-cl-nc-warn' : ''}" data-pub-cl-index="${i}">
-        <input type="checkbox" ${c.checked ? 'checked' : ''} onchange="togglePubClItem(${i}, this)">
-        ${isRequired ? `<i class="fas fa-exclamation-circle pub-cl-required-icon" title="Item obrigatório para publicar"></i>` : ''}
-        <span>${c.texto || ''}</span>
-        ${showNc ? _pubNcBtnHtml(c, i) : ''}
-    </label>`;
+    <div class="pub-cl-item-wrap" data-pub-cl-wrap="${i}">
+        <label class="pub-cl-item ${c.checked ? 'checked' : ''} ${needsWarning ? 'pub-cl-required-warn' : ''} ${ncMismatch ? 'pub-cl-nc-warn' : ''}" data-pub-cl-index="${i}">
+            <input type="checkbox" ${c.checked ? 'checked' : ''} onchange="togglePubClItem(${i}, this)">
+            ${isRequired ? `<i class="fas fa-exclamation-circle pub-cl-required-icon" title="Item obrigatório para publicar"></i>` : ''}
+            <span class="pub-cl-item-text">${c.texto || ''}</span>
+            <span class="pub-cl-item-actions">
+                <button type="button" class="pub-cl-comment-btn ${hasComment ? 'has-comment' : ''}" data-pub-comment-index="${i}"
+                    onclick="event.preventDefault();event.stopPropagation();_pubClToggleComment(${i})"
+                    title="${hasComment ? 'Ver/editar comentário' : 'Adicionar comentário'}">
+                    <i class="fas fa-comment${hasComment ? '' : '-dots'}"></i>
+                </button>
+                ${showNc ? _pubNcBtnHtml(c, i) : ''}
+            </span>
+        </label>
+        <div class="pub-cl-comment-box ${commentOpen ? 'open' : ''}" data-pub-comment-box="${i}">
+            <textarea class="pub-cl-comment-input" data-pub-comment-input="${i}" rows="2"
+                placeholder="Escreva um comentário para este item..."
+                oninput="_pubClCommentInput(${i}, this.value)">${c.comentario || ''}</textarea>
+        </div>
+    </div>`;
 }
 
 window._pubNcShowDropdown = function(btn, i) {
@@ -1216,6 +1232,34 @@ window._pubNcSelect = function(i, val) {
     const label = document.querySelector(`.pub-cl-item[data-pub-cl-index="${i}"]`);
     if (label) label.classList.toggle('pub-cl-nc-warn', !!c.checked !== !!c.conformidade);
     _updatePubRncSection();
+    _updatePubQualityScore();
+};
+
+window._pubClToggleComment = function(i) {
+    const c = (window._pubChecklistState || [])[i];
+    if (!c) return;
+    c._commentOpen = !c._commentOpen;
+    const box = document.querySelector(`.pub-cl-comment-box[data-pub-comment-box="${i}"]`);
+    if (box) {
+        box.classList.toggle('open', c._commentOpen);
+        if (c._commentOpen) {
+            const ta = box.querySelector('.pub-cl-comment-input');
+            if (ta) setTimeout(() => ta.focus(), 50);
+        }
+    }
+};
+
+window._pubClCommentInput = function(i, val) {
+    const c = (window._pubChecklistState || [])[i];
+    if (!c) return;
+    c.comentario = val;
+    const btn = document.querySelector(`.pub-cl-comment-btn[data-pub-comment-index="${i}"]`);
+    if (btn) {
+        const hasComment = !!(val && val.trim());
+        btn.classList.toggle('has-comment', hasComment);
+        btn.innerHTML = `<i class="fas fa-comment${hasComment ? '' : '-dots'}"></i>`;
+        btn.title = hasComment ? 'Ver/editar comentário' : 'Adicionar comentário';
+    }
 };
 
 // ─── ASSOCIAÇÃO OPCIONAL A RNC (modal de publicação) ─────────
@@ -1323,6 +1367,7 @@ window._pubRncToggleQuickCreate = function() {
             <div class="pub-rnc-quick-row3">
                 <div class="rnc-ac-wrap">
                     <input type="text" id="pubRncQcSetor" placeholder="Setor..." maxlength="120" autocomplete="off"
+                        value="${(window._pubCurrentItemSetor || '').replace(/"/g, '&quot;')}"
                         oninput="_pubRncQcAcInput('pubRncQcSetor','pubRncQcSetorDropdown', typeof getRncSetores==='function'?getRncSetores():[])"
                         onclick="_pubRncQcAcInput('pubRncQcSetor','pubRncQcSetorDropdown', typeof getRncSetores==='function'?getRncSetores():[])">
                     <i class="fas fa-chevron-down rnc-ac-caret"></i>
@@ -1505,7 +1550,50 @@ window.togglePubClItem = function(i, cb) {
         }
     }
     _updatePubClToggleBtn();
+    _updatePubQualityScore();
 };
+
+// ─── NOTA DE QUALIDADE — baseada em N/C dos itens marcados ────
+function _computePubQualityScore() {
+    const state = window._pubChecklistState || [];
+    const eligible = state.filter(c => c.ncEnabled && c.checked);
+    const total = eligible.length;
+    if (total === 0) return null;
+    const ok = eligible.filter(c => c.conformidade === 'conforme').length;
+    const nota = Math.round((ok / total) * 10 * 10) / 10;
+    return { nota, ok, total };
+}
+
+function _pubQualityTier(nota) {
+    if (nota >= 8) return 'good';
+    if (nota >= 5) return 'mid';
+    return 'bad';
+}
+
+function _updatePubQualityScore() {
+    const wrap = document.getElementById('pubQualityScoreWrap');
+    if (!wrap) return;
+    if (!window._pubNcUiEnabled) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+    const score = _computePubQualityScore();
+    if (!score) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+    const tier = _pubQualityTier(score.nota);
+    const pct = Math.max(0, Math.min(100, (score.nota / 10) * 100));
+    wrap.style.display = '';
+    wrap.innerHTML = `
+        <div class="pub-quality-card pub-quality-${tier}">
+            <div class="pub-quality-icon"><i class="fas fa-gauge-high"></i></div>
+            <div class="pub-quality-body">
+                <div class="pub-quality-top">
+                    <span class="pub-quality-label">Qualidade</span>
+                    <span class="pub-quality-value">${score.nota.toFixed(1).replace('.0','')}<span class="pub-quality-max">/10</span></span>
+                </div>
+                <div class="pub-quality-bar-track">
+                    <div class="pub-quality-bar-fill" style="width:${pct}%"></div>
+                </div>
+                <div class="pub-quality-sub">${score.ok} de ${score.total} itens em conformidade</div>
+            </div>
+        </div>`;
+}
 
 window.toggleAllPubChecklist = function() {
     if (!window._pubChecklistState || window._pubChecklistState.length === 0) return;
@@ -1514,6 +1602,7 @@ window.toggleAllPubChecklist = function() {
     window._pubChecklistState.forEach(c => c.checked = newState);
     document.getElementById('pubChecklistItems').innerHTML = _renderPubChecklistItems();
     _updatePubClToggleBtn();
+    _updatePubQualityScore();
 };
 
 window.openPublicacaoModal = function(editIndex) {
@@ -1550,6 +1639,7 @@ window.openPublicacaoModal = function(editIndex) {
     // Registro de conformidade (N/C) — exclusivo para rotinas
     window._pubNcUiEnabled = (finalTab === 'auditoria');
     window._pubRncSelected = existingPub ? [...(existingPub.rncIds || [])] : [];
+    window._pubCurrentItemSetor = item.setor || '';
 
     // Carrega anexos existentes ou limpa
     if (typeof restoreAnexosUpload === 'function') {
@@ -1708,6 +1798,7 @@ window.openPublicacaoModal = function(editIndex) {
     }
 
     _updatePubRncSection();
+    _updatePubQualityScore();
 
     closeModal('modalVerPublicacao');
     document.getElementById('modalPublicacao').style.display = 'flex';
@@ -1800,7 +1891,8 @@ window.confirmarPublicacao = function() {
             checked: c.checked,
             requiredForPub: !!c.requiredForPub,
             geralIndex: c.geralIndex != null ? c.geralIndex : null,
-            ...(c.ncEnabled && c.conformidade ? { ncEnabled: true, conformidade: c.conformidade } : {})
+            ...(c.ncEnabled && c.conformidade ? { ncEnabled: true, conformidade: c.conformidade } : {}),
+            ...(c.comentario && c.comentario.trim() ? { comentario: c.comentario.trim() } : {})
         }));
     } else if (isEditing && item.publicacoes[editIndex]?.checklistSnapshot) {
         pub.checklistSnapshot = item.publicacoes[editIndex].checklistSnapshot;

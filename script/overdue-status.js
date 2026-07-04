@@ -158,9 +158,9 @@ window.setSchedStatusValues = function(prefix, overdueVal, alertVal, resetCl) {
     if (statusBtn) statusBtn.disabled = !hasValue;
     _updateStatusBtnUI(prefix);
 
-    // Restaura toggle reset checklist
+    // Restaura toggle reset checklist (padrão marcado para novos registros)
     const resetEl = document.getElementById(`${prefix}ResetChecklistOnAuto`);
-    if (resetEl) resetEl.checked = !!resetCl;
+    if (resetEl) resetEl.checked = resetCl === undefined ? true : !!resetCl;
 };
 
 // Lê o valor do toggle de reset de checklist

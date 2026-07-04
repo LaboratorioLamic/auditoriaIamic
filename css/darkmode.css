@@ -2311,6 +2311,29 @@ body.dark-mode .pub-cl-nc-btn.nc-conforme { background: rgba(22,163,74,.12) !imp
 body.dark-mode .pub-cl-nc-btn.nc-menor    { background: rgba(37,99,235,.12) !important; border-color: rgba(96,165,250,.3) !important; color: #60a5fa !important; }
 body.dark-mode .pub-cl-nc-btn.nc-maior    { background: rgba(217,119,6,.12) !important; border-color: rgba(251,191,36,.3) !important; color: #fbbf24 !important; }
 body.dark-mode .pub-cl-nc-btn.nc-critica  { background: rgba(220,38,38,.12) !important; border-color: rgba(248,113,113,.3) !important; color: #f87171 !important; }
+/* Comentário por item de checklist de publicação */
+body.dark-mode .pub-cl-comment-btn { background: #253348 !important; border-color: #334155 !important; color: #94a3b8 !important; }
+body.dark-mode .pub-cl-comment-btn:hover { background: #2d3f57 !important; color: #cbd5e1 !important; }
+body.dark-mode .pub-cl-comment-btn.has-comment { background: rgba(37,99,235,.15) !important; border-color: rgba(96,165,250,.4) !important; color: #60a5fa !important; }
+body.dark-mode .pub-cl-comment-btn.has-comment:hover { background: rgba(37,99,235,.22) !important; }
+body.dark-mode .pub-cl-comment-input { background: #1e293b !important; border-color: #334155 !important; color: #e2e8f0 !important; }
+body.dark-mode .pub-cl-comment-input:focus { border-color: #60a5fa !important; box-shadow: 0 0 0 3px rgba(96,165,250,.15) !important; }
+
+/* Nota de Qualidade */
+body.dark-mode .pub-quality-card { background: linear-gradient(135deg, #1e293b 0%, #172033 100%) !important; border-color: #334155 !important; box-shadow: none !important; }
+body.dark-mode .pub-quality-icon { background: rgba(99,102,241,.15) !important; color: #a5b4fc !important; }
+body.dark-mode .pub-quality-label { color: #94a3b8 !important; }
+body.dark-mode .pub-quality-value { color: #e2e8f0 !important; }
+body.dark-mode .pub-quality-max { color: #64748b !important; }
+body.dark-mode .pub-quality-bar-track { background: #334155 !important; }
+body.dark-mode .pub-quality-sub { color: #94a3b8 !important; }
+body.dark-mode .pub-quality-good .pub-quality-icon { background: rgba(22,163,74,.15) !important; color: #4ade80 !important; }
+body.dark-mode .pub-quality-good .pub-quality-value { color: #4ade80 !important; }
+body.dark-mode .pub-quality-mid .pub-quality-icon { background: rgba(217,119,6,.15) !important; color: #fbbf24 !important; }
+body.dark-mode .pub-quality-mid .pub-quality-value { color: #fbbf24 !important; }
+body.dark-mode .pub-quality-bad .pub-quality-icon { background: rgba(220,38,38,.15) !important; color: #f87171 !important; }
+body.dark-mode .pub-quality-bad .pub-quality-value { color: #f87171 !important; }
+
 body.dark-mode .ver-pub-nc-badge.nc-conforme { background: rgba(22,163,74,.12) !important; border-color: rgba(74,222,128,.3) !important; color: #4ade80 !important; }
 body.dark-mode .ver-pub-nc-badge.nc-menor    { background: rgba(37,99,235,.12) !important; border-color: rgba(96,165,250,.3) !important; color: #60a5fa !important; }
 body.dark-mode .ver-pub-nc-badge.nc-maior    { background: rgba(217,119,6,.12) !important; border-color: rgba(251,191,36,.3) !important; color: #fbbf24 !important; }
