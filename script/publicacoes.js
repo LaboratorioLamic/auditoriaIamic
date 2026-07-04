@@ -1161,7 +1161,7 @@ function _pubNcBadgeHtml(conf) {
     return `<span class="ver-pub-nc-badge nc-${opt.v}"><i class="fas ${opt.icon}"></i> ${opt.label}</span>`;
 }
 function _pubNcCount(pub) {
-    return (pub.checklistSnapshot || []).filter(c => c.conformidade && c.conformidade !== 'conforme').length;
+    return (pub.checklistSnapshot || []).filter(c => c.checked && c.conformidade && c.conformidade !== 'conforme').length;
 }
 
 function _renderPubClItem(c, i) {
