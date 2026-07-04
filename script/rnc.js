@@ -2234,7 +2234,7 @@
             descricao: descricao,
             planoAcao: '', status: (stList && stList.length) ? stList[0].name : '',
             marcador: '',
-            dataInicio: new Date().toISOString().split('T')[0], dataConclusao: '',
+            dataInicio: '', dataConclusao: '',
             responsavel: meId ? [meId] : [], revisor: [],
             alertaDias: null,
             anexos: [], checklist: [], checklistPublicacao: [],
