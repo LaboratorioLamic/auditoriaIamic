@@ -179,6 +179,8 @@ function _syncGeralIndexAfterRemove(geralPrefix, removedIndex) {
 
 function _renderPubEditorItem(prefix, item, i, geralItems) {
     const req = !!item.requiredForPub;
+    const showNc = prefix === 'audit-pub';
+    const nc = !!item.ncEnabled;
     const geralOpts = ['<option value="">Sem grupo</option>',
         ...geralItems.map((g, gi) =>
             `<option value="${gi}"${item.geralIndex === gi ? ' selected' : ''}>${(g.texto || `Item ${gi+1}`).slice(0, 28)}</option>`)
@@ -200,6 +202,12 @@ function _renderPubEditorItem(prefix, item, i, geralItems) {
             <i class="fas fa-exclamation-circle"></i>
             <span>${req ? 'Obrigatório' : 'Opcional'}</span>
         </button>
+        ${showNc ? `<button class="cl-pub-item-nc-btn${nc ? ' active' : ''}"
+            onclick="toggleChecklistItemNc('${prefix}', ${i}, this)"
+            title="${nc ? 'Exige registro de conformidade ao publicar — clique para desabilitar' : 'Habilitar registro de conformidade (N/C) ao publicar'}">
+            <i class="fas fa-clipboard-check"></i>
+            <span>N/C</span>
+        </button>` : ''}
         <button class="cl-pub-item-link-btn${item.geralIndex != null ? ' linked' : ''}"
             onclick="_clPubShowGroupDropdown(this,'${prefix}',${i})"
             title="${item.geralIndex != null ? 'Associado a grupo — clique para alterar' : 'Sem associação — clique para associar'}">
@@ -371,6 +379,16 @@ window.toggleChecklistItemRequiredForPub = function(prefix, index, btn) {
     btn.innerHTML = `<i class="fas fa-exclamation-circle" style="font-size:11px;"></i> ${isNow ? 'Obrigatório' : 'Opcional'}`;
 };
 
+window.toggleChecklistItemNc = function(prefix, index, btn) {
+    const items = _getChecklistData(prefix);
+    if (!items[index]) return;
+    items[index].ncEnabled = !items[index].ncEnabled;
+    _setChecklistData(prefix, items);
+    const isNow = items[index].ncEnabled;
+    btn.classList.toggle('active', isNow);
+    btn.title = isNow ? 'Exige registro de conformidade ao publicar — clique para desabilitar' : 'Habilitar registro de conformidade (N/C) ao publicar';
+};
+
 window.setChecklistItemGeralIndex = function(prefix, index, value) {
     const items = _getChecklistData(prefix);
     if (!items[index]) return;
@@ -391,8 +409,14 @@ function _clPubCloseDropdown() {
 document.addEventListener('click', function(e) {
     if (!e.target.closest('.cl-pub-link-dropdown') &&
         !e.target.closest('.cl-pub-item-link-btn') &&
-        !e.target.closest('.cl-pub-add-group-btn')) {
+        !e.target.closest('.cl-pub-add-group-btn') &&
+        !e.target.closest('.pub-cl-nc-btn')) {
         _clPubCloseDropdown();
+    }
+    if (!e.target.closest('.pub-rnc-results-dropdown') &&
+        !e.target.closest('#pubRncSearch')) {
+        const dd = document.getElementById('pubRncResults');
+        if (dd) dd.remove();
     }
 });
 
@@ -495,6 +519,7 @@ window.getChecklistPub = function(prefix) {
         checked: !!i.checked,
         requiresComment: !!i.requiresComment,
         requiredForPub: !!i.requiredForPub,
+        ncEnabled: !!i.ncEnabled,
         geralIndex: i.geralIndex != null ? i.geralIndex : null,
         comment: i.comment || ''
     }));
@@ -1105,9 +1130,44 @@ window._editingPubIndex = null;
 window._pubChecklistState = [];
 window._pubChecklistGeralItems = [];
 
+// ─── CONFORMIDADE (N/C) — exclusivo para rotinas ─────────────
+const _PUB_NC_OPTS = [
+    { v: 'conforme', label: 'Em conformidade', icon: 'fa-check-circle' },
+    { v: 'menor',    label: 'N/C Menor',       icon: 'fa-flag' },
+    { v: 'maior',    label: 'N/C Maior',       icon: 'fa-triangle-exclamation' },
+    { v: 'critica',  label: 'N/C Crítica',     icon: 'fa-circle-exclamation' }
+];
+function _pubNcOpt(v) {
+    return _PUB_NC_OPTS.find(o => o.v === v) || null;
+}
+function _pubNcBtnHtml(c, i) {
+    const opt = _pubNcOpt(c.conformidade);
+    if (!opt) {
+        return `<button type="button" class="pub-cl-nc-btn nc-unset" data-pub-nc-index="${i}"
+            onclick="event.preventDefault();event.stopPropagation();_pubNcShowDropdown(this, ${i})"
+            title="Registro de conformidade — clique para selecionar">
+            <i class="fas fa-circle-question"></i><span>Selecionar tipo</span><i class="fas fa-chevron-down pub-cl-nc-chevron"></i>
+        </button>`;
+    }
+    return `<button type="button" class="pub-cl-nc-btn nc-${opt.v}" data-pub-nc-index="${i}"
+        onclick="event.preventDefault();event.stopPropagation();_pubNcShowDropdown(this, ${i})"
+        title="Registro de conformidade — clique para alterar">
+        <i class="fas ${opt.icon}"></i><span>${opt.label}</span><i class="fas fa-chevron-down pub-cl-nc-chevron"></i>
+    </button>`;
+}
+function _pubNcBadgeHtml(conf) {
+    const opt = _pubNcOpt(conf);
+    if (!opt) return '';
+    return `<span class="ver-pub-nc-badge nc-${opt.v}"><i class="fas ${opt.icon}"></i> ${opt.label}</span>`;
+}
+function _pubNcCount(pub) {
+    return (pub.checklistSnapshot || []).filter(c => c.conformidade && c.conformidade !== 'conforme').length;
+}
+
 function _renderPubClItem(c, i) {
     const isRequired = !!c.requiredForPub;
     const isEditing = window._editingPubIndex != null;
+    const showNc = !!c.ncEnabled && window._pubNcUiEnabled;
 
     if (c.previouslyDone) return '';
     if (isEditing) {
@@ -1116,16 +1176,247 @@ function _renderPubClItem(c, i) {
             <span class="pub-cl-ro-dot">${c.checked ? '<i class="fas fa-check"></i>' : ''}</span>
             ${isRequired ? `<i class="fas fa-exclamation-circle pub-cl-required-icon" title="Item obrigatório para publicar"></i>` : ''}
             <span>${c.texto || ''}</span>
+            ${showNc ? (_pubNcBadgeHtml(c.conformidade) || '<span class="ver-pub-nc-badge nc-unset"><i class="fas fa-circle-question"></i> Não selecionado</span>') : ''}
         </div>`;
     }
     const needsWarning = isRequired && !c.checked;
+    const ncMismatch = showNc && (!!c.checked !== !!c.conformidade);
     return `
-    <label class="pub-cl-item ${c.checked ? 'checked' : ''} ${needsWarning ? 'pub-cl-required-warn' : ''}" data-pub-cl-index="${i}">
+    <label class="pub-cl-item ${c.checked ? 'checked' : ''} ${needsWarning ? 'pub-cl-required-warn' : ''} ${ncMismatch ? 'pub-cl-nc-warn' : ''}" data-pub-cl-index="${i}">
         <input type="checkbox" ${c.checked ? 'checked' : ''} onchange="togglePubClItem(${i}, this)">
         ${isRequired ? `<i class="fas fa-exclamation-circle pub-cl-required-icon" title="Item obrigatório para publicar"></i>` : ''}
         <span>${c.texto || ''}</span>
+        ${showNc ? _pubNcBtnHtml(c, i) : ''}
     </label>`;
 }
+
+window._pubNcShowDropdown = function(btn, i) {
+    _clPubCloseDropdown();
+    const c = (window._pubChecklistState || [])[i];
+    if (!c) return;
+    const current = c.conformidade || null;
+    const dropdown = document.createElement('div');
+    dropdown.className = 'cl-pub-link-dropdown pub-nc-dropdown';
+    dropdown.innerHTML = _PUB_NC_OPTS.map(opt => `
+        <div class="cl-pub-link-dropdown-item pub-nc-dropdown-item nc-${opt.v}${current === opt.v ? ' selected' : ''}"
+            onclick="_pubNcSelect(${i}, '${opt.v}')">
+            <i class="fas ${opt.icon}"></i>
+            ${opt.label}
+        </div>`).join('');
+    _clPubPositionDropdown(dropdown, btn);
+};
+
+window._pubNcSelect = function(i, val) {
+    _clPubCloseDropdown();
+    const c = (window._pubChecklistState || [])[i];
+    if (!c) return;
+    c.conformidade = val;
+    const btn = document.querySelector(`.pub-cl-nc-btn[data-pub-nc-index="${i}"]`);
+    if (btn) btn.outerHTML = _pubNcBtnHtml(c, i);
+    const label = document.querySelector(`.pub-cl-item[data-pub-cl-index="${i}"]`);
+    if (label) label.classList.toggle('pub-cl-nc-warn', !!c.checked !== !!c.conformidade);
+    _updatePubRncSection();
+};
+
+// ─── ASSOCIAÇÃO OPCIONAL A RNC (modal de publicação) ─────────
+window._pubRncSelected = [];
+
+function _pubRncNormId(id) {
+    const n = Number(id);
+    return isNaN(n) ? id : n;
+}
+function _pubRncFind(id) {
+    id = _pubRncNormId(id);
+    return (window.rncItems || []).find(r => r.id === id);
+}
+
+function _updatePubRncSection() {
+    const wrap = document.getElementById('pubRncWrap');
+    if (!wrap) return;
+    const hasNc = !!window._pubNcUiEnabled &&
+        (window._pubChecklistState || []).some(c => c.conformidade && c.conformidade !== 'conforme');
+    wrap.style.display = hasNc ? '' : 'none';
+    if (hasNc) {
+        _renderPubRncChips();
+        const qc = document.getElementById('pubRncQuickCreate');
+        if (qc) { qc.style.display = 'none'; qc.innerHTML = ''; }
+        const search = document.getElementById('pubRncSearch');
+        if (search) search.value = '';
+        _pubRncCloseResults();
+    }
+}
+
+function _renderPubRncChips() {
+    const el = document.getElementById('pubRncChips');
+    if (!el) return;
+    const ids = window._pubRncSelected || [];
+    if (!ids.length) { el.innerHTML = ''; return; }
+    el.innerHTML = ids.map(id => {
+        const r = _pubRncFind(id);
+        if (!r) return `<span class="pub-rnc-chip pub-rnc-chip-missing"><i class="fas fa-ban"></i> RNC removida</span>`;
+        return `<span class="pub-rnc-chip nc-${r.classificacao || 'menor'}" title="${(r.titulo || '').replace(/"/g, '&quot;')}">
+            <i class="fas fa-file-circle-exclamation"></i>
+            <span class="pub-rnc-chip-title">${(r.titulo || 'RNC sem título').slice(0, 40)}</span>
+            <button type="button" class="pub-rnc-chip-x" onclick="_pubRncRemove('${id}')" title="Remover associação">&times;</button>
+        </span>`;
+    }).join('');
+}
+
+window._pubRncRemove = function(id) {
+    id = _pubRncNormId(id);
+    window._pubRncSelected = (window._pubRncSelected || []).filter(x => x !== id);
+    _renderPubRncChips();
+};
+
+function _pubRncCloseResults() {
+    const dd = document.getElementById('pubRncResults');
+    if (dd) dd.remove();
+}
+
+window._pubRncSearchInput = function(inputEl) {
+    _pubRncCloseResults();
+    const q = (inputEl.value || '').trim().toLowerCase();
+    if (!q) return;
+    const selected = new Set(window._pubRncSelected || []);
+    const results = (window.rncItems || [])
+        .filter(r => !r.deleted && !selected.has(r.id))
+        .filter(r => (r.titulo || '').toLowerCase().includes(q) || (r.setor || '').toLowerCase().includes(q))
+        .slice(0, 8);
+    const dd = document.createElement('div');
+    dd.id = 'pubRncResults';
+    dd.className = 'pub-rnc-results-dropdown';
+    dd.innerHTML = results.length
+        ? results.map(r => `
+            <div class="pub-rnc-result-item" onclick="_pubRncSelect('${r.id}')">
+                <span class="pub-rnc-result-dot nc-${r.classificacao || 'menor'}"></span>
+                <span class="pub-rnc-result-title">${(r.titulo || 'RNC sem título').slice(0, 60)}</span>
+                ${r.setor ? `<span class="pub-rnc-result-setor">${r.setor}</span>` : ''}
+            </div>`).join('')
+        : `<div class="pub-rnc-result-empty">Nenhuma RNC encontrada.</div>`;
+    inputEl.parentElement.appendChild(dd);
+};
+
+window._pubRncSelect = function(id) {
+    id = _pubRncNormId(id);
+    if (!window._pubRncSelected) window._pubRncSelected = [];
+    if (!window._pubRncSelected.includes(id)) window._pubRncSelected.push(id);
+    const search = document.getElementById('pubRncSearch');
+    if (search) search.value = '';
+    _pubRncCloseResults();
+    _renderPubRncChips();
+};
+
+window._pubRncToggleQuickCreate = function() {
+    const qc = document.getElementById('pubRncQuickCreate');
+    if (!qc) return;
+    if (qc.style.display !== 'none') { qc.style.display = 'none'; qc.innerHTML = ''; return; }
+    qc.innerHTML = `
+        <div class="pub-rnc-quick-form">
+            <input type="text" id="pubRncQcTitulo" placeholder="Título da nova RNC..." maxlength="120">
+            <div class="pub-rnc-quick-class">
+                ${['menor','maior','critica'].map((v, i) => `
+                <label class="pub-rnc-quick-class-opt nc-${v}">
+                    <input type="radio" name="pubRncQcClass" value="${v}"${i === 0 ? ' checked' : ''}>
+                    ${_pubNcOpt(v).label.replace('N/C ', '')}
+                </label>`).join('')}
+            </div>
+            <div class="pub-rnc-quick-row3">
+                <div class="rnc-ac-wrap">
+                    <input type="text" id="pubRncQcSetor" placeholder="Setor..." maxlength="120" autocomplete="off"
+                        oninput="_pubRncQcAcInput('pubRncQcSetor','pubRncQcSetorDropdown', typeof getRncSetores==='function'?getRncSetores():[])"
+                        onclick="_pubRncQcAcInput('pubRncQcSetor','pubRncQcSetorDropdown', typeof getRncSetores==='function'?getRncSetores():[])">
+                    <i class="fas fa-chevron-down rnc-ac-caret"></i>
+                    <div class="rnc-ac-dropdown" id="pubRncQcSetorDropdown"></div>
+                </div>
+                <div class="rnc-ac-wrap">
+                    <input type="text" id="pubRncQcOrigem" placeholder="Origem..." maxlength="120" autocomplete="off"
+                        oninput="_pubRncQcAcInput('pubRncQcOrigem','pubRncQcOrigemDropdown', (typeof getRncOrigens==='function'?getRncOrigens():[]).map(o=>o.name))"
+                        onclick="_pubRncQcAcInput('pubRncQcOrigem','pubRncQcOrigemDropdown', (typeof getRncOrigens==='function'?getRncOrigens():[]).map(o=>o.name))">
+                    <i class="fas fa-chevron-down rnc-ac-caret"></i>
+                    <div class="rnc-ac-dropdown" id="pubRncQcOrigemDropdown"></div>
+                </div>
+                <div class="rnc-ac-wrap">
+                    <input type="text" id="pubRncQcDetalhamento" placeholder="Detalhamento..." maxlength="120" autocomplete="off"
+                        oninput="_pubRncQcAcInput('pubRncQcDetalhamento','pubRncQcDetalhamentoDropdown', (typeof getRncDetalhamentos==='function'?getRncDetalhamentos():[]).map(d=>d.name))"
+                        onclick="_pubRncQcAcInput('pubRncQcDetalhamento','pubRncQcDetalhamentoDropdown', (typeof getRncDetalhamentos==='function'?getRncDetalhamentos():[]).map(d=>d.name))">
+                    <i class="fas fa-chevron-down rnc-ac-caret"></i>
+                    <div class="rnc-ac-dropdown" id="pubRncQcDetalhamentoDropdown"></div>
+                </div>
+            </div>
+            <textarea id="pubRncQcDescricao" placeholder="Descrição do ocorrido..." rows="2" maxlength="1000"></textarea>
+            <div class="pub-rnc-quick-actions">
+                <span class="pub-rnc-quick-note"><i class="fas fa-info-circle"></i> A RNC será criada imediatamente.</span>
+                <button type="button" class="pub-rnc-quick-confirm" onclick="_pubRncQuickCreateConfirm()">
+                    <i class="fas fa-plus"></i> Criar e associar
+                </button>
+            </div>
+        </div>`;
+    qc.style.display = '';
+    document.getElementById('pubRncQcTitulo')?.focus();
+};
+
+function _pubRncQcCloseAllAc() {
+    ['pubRncQcSetorDropdown', 'pubRncQcOrigemDropdown', 'pubRncQcDetalhamentoDropdown'].forEach(id => {
+        const dd = document.getElementById(id);
+        if (dd) dd.classList.remove('open');
+    });
+}
+
+window._pubRncQcAcInput = function(inputId, dropId, items) {
+    const input = document.getElementById(inputId);
+    const dd = document.getElementById(dropId);
+    if (!input || !dd) return;
+    const val = (input.value || '').toLowerCase();
+    const filtered = val ? items.filter(x => String(x).toLowerCase().indexOf(val) !== -1) : items;
+    if (!filtered.length) { dd.classList.remove('open'); return; }
+    dd.innerHTML = filtered.map(x => `<button type="button" class="rnc-ac-option" onclick="_pubRncQcAcSelect('${inputId}','${dropId}', this.textContent)">${(x+'').replace(/</g,'&lt;')}</button>`).join('');
+    dd.classList.add('open');
+};
+
+window._pubRncQcAcSelect = function(inputId, dropId, value) {
+    const input = document.getElementById(inputId);
+    if (input) input.value = value;
+    const dd = document.getElementById(dropId);
+    if (dd) dd.classList.remove('open');
+};
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#pubRncQuickCreate .rnc-ac-wrap')) _pubRncQcCloseAllAc();
+});
+
+window._pubRncQuickCreateConfirm = function() {
+    const _val = idEl => (document.getElementById(idEl)?.value || '').trim();
+    const _markReq = (idEl, bad) => { const el = document.getElementById(idEl); if (el) el.classList.toggle('field-required-error', bad); };
+
+    const titulo = _val('pubRncQcTitulo');
+    const setor = _val('pubRncQcSetor');
+    const origem = _val('pubRncQcOrigem');
+    const detalhamento = _val('pubRncQcDetalhamento');
+    const descricao = _val('pubRncQcDescricao');
+
+    _markReq('pubRncQcTitulo', !titulo);
+    _markReq('pubRncQcSetor', !setor);
+    _markReq('pubRncQcOrigem', !origem);
+    _markReq('pubRncQcDetalhamento', !detalhamento);
+    _markReq('pubRncQcDescricao', !descricao);
+
+    if (!titulo) { if (typeof showToast === 'function') showToast('Informe o título da RNC.', 'error'); document.getElementById('pubRncQcTitulo')?.focus(); return; }
+    if (!setor) { if (typeof showToast === 'function') showToast('Informe o setor da RNC.', 'error'); document.getElementById('pubRncQcSetor')?.focus(); return; }
+    if (!origem) { if (typeof showToast === 'function') showToast('Informe a origem da RNC.', 'error'); document.getElementById('pubRncQcOrigem')?.focus(); return; }
+    if (!detalhamento) { if (typeof showToast === 'function') showToast('Informe o detalhamento da RNC.', 'error'); document.getElementById('pubRncQcDetalhamento')?.focus(); return; }
+    if (!descricao) { if (typeof showToast === 'function') showToast('Informe a descrição da RNC.', 'error'); document.getElementById('pubRncQcDescricao')?.focus(); return; }
+
+    const classificacao = document.querySelector('input[name="pubRncQcClass"]:checked')?.value || 'menor';
+    if (typeof window.rncQuickCreate !== 'function') {
+        if (typeof showToast === 'function') showToast('Módulo de RNC não carregado.', 'error');
+        return;
+    }
+    const newId = window.rncQuickCreate({ titulo, setor, origem, detalhamento, descricao, classificacao });
+    if (!newId) return;
+    window._pubRncSelect(newId);
+    window._pubRncToggleQuickCreate();
+    if (typeof showToast === 'function') showToast('RNC criada e associada.', 'success');
+};
 
 function _renderPubChecklistItems() {
     const state = window._pubChecklistState || [];
@@ -1201,12 +1492,16 @@ function _updatePubClToggleBtn() {
 
 window.togglePubClItem = function(i, cb) {
     if (!window._pubChecklistState || !window._pubChecklistState[i]) return;
-    window._pubChecklistState[i].checked = cb.checked;
+    const c = window._pubChecklistState[i];
+    c.checked = cb.checked;
     const label = cb.closest('.pub-cl-item');
     if (label) {
         label.classList.toggle('checked', cb.checked);
-        if (window._pubChecklistState[i].requiredForPub) {
+        if (c.requiredForPub) {
             label.classList.toggle('pub-cl-required-warn', !cb.checked);
+        }
+        if (c.ncEnabled && window._pubNcUiEnabled) {
+            label.classList.toggle('pub-cl-nc-warn', !!c.checked !== !!c.conformidade);
         }
     }
     _updatePubClToggleBtn();
@@ -1251,6 +1546,10 @@ window.openPublicacaoModal = function(editIndex) {
 
     window._editingPubIndex = isEditing ? editIndex : null;
     const existingPub = isEditing ? (item.publicacoes || [])[editIndex] : null;
+
+    // Registro de conformidade (N/C) — exclusivo para rotinas
+    window._pubNcUiEnabled = (finalTab === 'auditoria');
+    window._pubRncSelected = existingPub ? [...(existingPub.rncIds || [])] : [];
 
     // Carrega anexos existentes ou limpa
     if (typeof restoreAnexosUpload === 'function') {
@@ -1334,6 +1633,7 @@ window.openPublicacaoModal = function(editIndex) {
         </div>` : ''}`;
     } else {
         const tipoVal = existingPub ? (existingPub.tipo || 'Comentário') : 'Comentário';
+        const showHora = finalTab !== 'auditoria';
         fieldsHtml = `
         <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;">
             <div class="field-group">
@@ -1348,10 +1648,10 @@ window.openPublicacaoModal = function(editIndex) {
                 <label>Data <span class="req-star">*</span></label>
                 <input type="date" id="pubData" value="${dateVal}">
             </div>
-            <div class="field-group">
+            ${showHora ? `<div class="field-group">
                 <label>Hora <span class="req-star">*</span></label>
                 <input type="time" id="pubHora" value="${timeVal}">
-            </div>
+            </div>` : ''}
             <div class="field-group full-width">
                 <label>Descrição <span class="req-star">*</span></label>
                 <textarea id="pubDescricao" rows="3" placeholder="Descreva o comentário, atualização ou evidência...">${descVal}</textarea>
@@ -1394,7 +1694,8 @@ window.openPublicacaoModal = function(editIndex) {
             window._pubChecklistState = pubCL.map(c => ({
                 ...c,
                 checked: false,
-                previouslyDone: completedKeys.has(_key(c))
+                previouslyDone: completedKeys.has(_key(c)),
+                conformidade: null
             }));
             clItems.innerHTML = _renderPubChecklistItems();
             clWrap.style.display = '';
@@ -1405,6 +1706,8 @@ window.openPublicacaoModal = function(editIndex) {
             window._pubChecklistGeralItems = [];
         }
     }
+
+    _updatePubRncSection();
 
     closeModal('modalVerPublicacao');
     document.getElementById('modalPublicacao').style.display = 'flex';
@@ -1433,7 +1736,7 @@ window.confirmarPublicacao = function() {
 
     // Validações obrigatórias
     const _markReq = (id, bad) => { const el = document.getElementById(id); if (el) el.classList.toggle('field-required-error', bad); };
-    const _dataOk = !!dataVal, _horaOk = finalTab === 'documentos' ? true : !!horaVal, _descOk = !!descVal;
+    const _dataOk = !!dataVal, _horaOk = (finalTab === 'documentos' || finalTab === 'auditoria') ? true : !!horaVal, _descOk = !!descVal;
     _markReq('pubData', !_dataOk); _markReq('pubHora', !_horaOk); _markReq('pubDescricao', !_descOk);
     if (!_dataOk) { if (typeof showToast === 'function') showToast('Data é obrigatória.', 'error'); document.getElementById('pubData')?.focus(); return; }
     if (!_horaOk) { if (typeof showToast === 'function') showToast('Hora é obrigatória.', 'error'); document.getElementById('pubHora')?.focus(); return; }
@@ -1447,6 +1750,20 @@ window.confirmarPublicacao = function() {
             document.getElementById('pubChecklistItems').innerHTML = _renderPubChecklistItems();
             const count = requiredItems.filter(c => !c.checked).length;
             if (typeof showToast === 'function') showToast(`${count} item(s) obrigatório(s) do checklist não foram marcados.`, 'error');
+            return;
+        }
+    }
+    // Registro de conformidade (N/C): se o checkbox está marcado, exige tipo selecionado;
+    // se um tipo foi selecionado, exige o checkbox marcado.
+    if (!isEditing && window._pubNcUiEnabled && window._pubChecklistState && window._pubChecklistState.length > 0) {
+        const ncItems = window._pubChecklistState.filter(c => !!c.ncEnabled);
+        const mismatched = ncItems.filter(c => !!c.checked !== !!c.conformidade);
+        if (mismatched.length > 0) {
+            document.getElementById('pubChecklistItems').innerHTML = _renderPubChecklistItems();
+            const msg = mismatched.some(c => c.checked && !c.conformidade)
+                ? 'Selecione o tipo de conformidade para os itens marcados.'
+                : 'Marque o checkbox dos itens com tipo de conformidade selecionado.';
+            if (typeof showToast === 'function') showToast(msg, 'error');
             return;
         }
     }
@@ -1482,11 +1799,19 @@ window.confirmarPublicacao = function() {
             texto: c.texto,
             checked: c.checked,
             requiredForPub: !!c.requiredForPub,
-            geralIndex: c.geralIndex != null ? c.geralIndex : null
+            geralIndex: c.geralIndex != null ? c.geralIndex : null,
+            ...(c.ncEnabled && c.conformidade ? { ncEnabled: true, conformidade: c.conformidade } : {})
         }));
     } else if (isEditing && item.publicacoes[editIndex]?.checklistSnapshot) {
         pub.checklistSnapshot = item.publicacoes[editIndex].checklistSnapshot;
     }
+
+    // Associação opcional a RNCs quando houver não conformidade registrada
+    const _hasNc = (pub.checklistSnapshot || []).some(c => c.conformidade && c.conformidade !== 'conforme');
+    if (_hasNc && Array.isArray(window._pubRncSelected) && window._pubRncSelected.length > 0) {
+        pub.rncIds = [...window._pubRncSelected];
+    }
+    window._pubRncSelected = [];
 
     if (finalTab === 'treinamentos') {
         const horas = parseInt(document.getElementById('pubCHoras')?.value) || 0;
@@ -1779,9 +2104,10 @@ window.renderViewPublicacoes = function(item) {
         const dateStr = p.data ? _formatDateBR(p.data) : '–';
         const descPreview = (p.descricao || '').slice(0, 60) + ((p.descricao || '').length > 60 ? '…' : '');
         const nAnexos = (p.anexos || []).length;
+        const nNc = _pubNcCount(p);
         return `<tr onclick="verPublicacao(${item.id},'${window._currentViewTab}',${i})" title="Ver publicação">
             <td><span class="pub-type-badge ${typeClass}">${p.tipo || '–'}</span></td>
-            <td>${p.titulo || descPreview || '–'}</td>
+            <td>${p.titulo || descPreview || '–'}${nNc > 0 ? ` <span class="pub-row-nc-badge" title="${nNc} não conformidade(s) registrada(s)"><i class="fas fa-triangle-exclamation"></i> ${nNc} N/C</span>` : ''}</td>
             <td>${dateStr}${window._currentViewTab !== 'documentos' && p.hora ? ' ' + p.hora : ''}</td>
             <td>${p.usuario || '–'}</td>
             <td>${nAnexos > 0 ? `<i class="fas fa-paperclip" style="color:#94a3b8"></i> ${nAnexos}` : '–'}</td>
@@ -2094,6 +2420,7 @@ window.verPublicacao = function(id, tab, index) {
                         <div class="ver-pub-cl-item ${c.checked ? 'done' : ''}">
                             <span class="ver-pub-cl-dot">${c.checked ? '<i class="fas fa-check"></i>' : ''}</span>
                             <span>${c.texto || ''}</span>
+                            ${_pubNcBadgeHtml(c.conformidade)}
                         </div>`).join('')}
                     ${_prevDivider(prevItems.length)}
                     ${prevItems.map(_prevItemHtml).join('')}
@@ -2106,6 +2433,7 @@ window.verPublicacao = function(id, tab, index) {
                     <div class="ver-pub-cl-item ${c.checked ? 'done' : ''}">
                         <span class="ver-pub-cl-dot">${c.checked ? '<i class="fas fa-check"></i>' : ''}</span>
                         <span>${c.texto || ''}</span>
+                        ${_pubNcBadgeHtml(c.conformidade)}
                     </div>`).join('');
                 clListHtml += _prevDivider(soloPrev.length);
                 clListHtml += soloPrev.map(_prevItemHtml).join('');
@@ -2115,6 +2443,7 @@ window.verPublicacao = function(id, tab, index) {
                 <div class="ver-pub-cl-item ${c.checked ? 'done' : ''}">
                     <span class="ver-pub-cl-dot">${c.checked ? '<i class="fas fa-check"></i>' : ''}</span>
                     <span>${c.texto || ''}</span>
+                    ${_pubNcBadgeHtml(c.conformidade)}
                 </div>`).join('');
             clListHtml += _prevDivider(prevCompleted.length);
             clListHtml += prevCompleted.map(_prevItemHtml).join('');
@@ -2125,6 +2454,25 @@ window.verPublicacao = function(id, tab, index) {
             <div class="ver-pub-section-label"><i class="fas fa-list-check"></i> Checklist de Publicação <span class="ver-pub-cl-badge">${done}/${total}</span></div>
             <div class="ver-pub-cl-progress"><div class="ver-pub-cl-progress-bar" style="width:${pct}%"></div></div>
             <div class="ver-pub-cl-list">${clListHtml}</div>
+        </div>`;
+    }
+
+    // RNCs associadas (referência — exclusivo de rotinas)
+    let rncBlock = '';
+    if (Array.isArray(pub.rncIds) && pub.rncIds.length > 0) {
+        const chips = pub.rncIds.map(rid => {
+            const r = (window.rncItems || []).find(x => x.id === rid);
+            if (!r) return `<span class="ver-pub-rnc-chip ver-pub-rnc-chip-missing"><i class="fas fa-ban"></i> RNC removida</span>`;
+            return `<button type="button" class="ver-pub-rnc-chip nc-${r.classificacao || 'menor'}"
+                onclick="closeModal('modalVerPublicacao'); if (typeof rncOpenView === 'function') rncOpenView('${rid}');"
+                title="Abrir RNC">
+                <i class="fas fa-file-circle-exclamation"></i> ${(r.titulo || 'RNC sem título').slice(0, 50)}
+            </button>`;
+        }).join('');
+        rncBlock = `
+        <div class="ver-pub-section">
+            <div class="ver-pub-section-label"><i class="fas fa-triangle-exclamation"></i> RNCs Associadas</div>
+            <div class="ver-pub-rnc-chips">${chips}</div>
         </div>`;
     }
 
@@ -2163,7 +2511,7 @@ window.verPublicacao = function(id, tab, index) {
         </div>`;
     }
 
-    document.getElementById('verPubContent').innerHTML = metaPills + extras + descBlock + clBlock + anexosBlock;
+    document.getElementById('verPubContent').innerHTML = metaPills + extras + descBlock + clBlock + rncBlock + anexosBlock;
 
     window._verPubId = id;
     window._verPubTab = tab;

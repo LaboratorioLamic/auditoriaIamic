@@ -2711,6 +2711,21 @@
             </div>
             <div id="pubChecklistItems"></div>
         </div>
+        <!-- Associação opcional a RNC (exibida quando há não conformidade registrada) -->
+        <div id="pubRncWrap" style="display:none; margin-top:12px;">
+            <div class="pub-rnc-header">
+                <i class="fas fa-triangle-exclamation"></i>
+                <span>Não conformidades detectadas — associar RNC <em>(opcional)</em></span>
+            </div>
+            <div class="pub-rnc-chips" id="pubRncChips"></div>
+            <div class="pub-rnc-controls">
+                <div class="pub-rnc-search-wrap">
+                    <input type="text" id="pubRncSearch" placeholder="Buscar RNC existente..." autocomplete="off" oninput="_pubRncSearchInput(this)">
+                </div>
+                <button type="button" class="pub-rnc-new-btn" onclick="_pubRncToggleQuickCreate()"><i class="fas fa-plus"></i> Nova RNC</button>
+            </div>
+            <div id="pubRncQuickCreate" style="display:none"></div>
+        </div>
         <!-- Upload -->
         <div class="field-group full-width" style="margin-top:12px;">
             <label>Anexos</label>

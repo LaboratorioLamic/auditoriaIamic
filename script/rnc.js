@@ -394,6 +394,10 @@
             return String(a).localeCompare(String(b),'pt');
         });
     }
+    // Expostas para reuso fora do módulo (ex.: criação rápida de RNC no modal de publicação de rotinas)
+    window.getRncOrigens = getOrigens;
+    window.getRncDetalhamentos = getDetalhamentos;
+    window.getRncSetores = getSetores;
 
     // ── Confirm modal ──
     function rncConfirm(opts, callback) {
@@ -2196,6 +2200,56 @@
         updateRncNotificationBell();
     };
 
+    // Criação rápida de RNC a partir do modal de publicação de rotinas.
+    // Cria e persiste imediatamente uma RNC com os campos mínimos exigidos pelo form completo
+    // (título, setor, origem, detalhamento, descrição); demais detalhes editáveis depois no card.
+    window.rncQuickCreate = function(data) {
+        data = data || {};
+        var titulo = String(data.titulo || '').trim();
+        var setor = String(data.setor || '').trim();
+        var origem = String(data.origem || '').trim();
+        var detalhamento = String(data.detalhamento || '').trim();
+        var descricao = String(data.descricao || '').trim();
+        if (!titulo || !setor || !origem || !detalhamento || !descricao) return null;
+        var cls = ['critica', 'maior', 'menor'].indexOf(data.classificacao) !== -1 ? data.classificacao : 'menor';
+        var stList = (typeof getRncStatusList === 'function') ? getRncStatusList() : [];
+
+        ensureLists();
+        var origens = getOrigens();
+        if (!origens.some(function(o){ return String(o.name).trim().toLowerCase() === origem.toLowerCase(); })) {
+            origens.push({ id: Date.now() + '_o', name: origem });
+            origens.sort(function(a,b){ return String(a.name).localeCompare(String(b.name), 'pt'); });
+        }
+        var dets = getDetalhamentos();
+        if (!dets.some(function(d){ return String(d.name).trim().toLowerCase() === detalhamento.toLowerCase(); })) {
+            dets.push({ id: Date.now() + '_d', name: detalhamento });
+            dets.sort(function(a,b){ return String(a.name).localeCompare(String(b.name), 'pt'); });
+        }
+
+        var meId = (typeof currentuser !== 'undefined' && currentuser && currentuser.id) ? currentuser.id : meName();
+        var newRnc = {
+            id: uid(),
+            titulo: titulo, setor: setor, classificacao: cls,
+            origem: origem, detalhamento: detalhamento,
+            descricao: descricao,
+            planoAcao: '', status: (stList && stList.length) ? stList[0].name : '',
+            marcador: '',
+            dataInicio: new Date().toISOString().split('T')[0], dataConclusao: '',
+            responsavel: meId ? [meId] : [], revisor: [],
+            alertaDias: null,
+            anexos: [], checklist: [], checklistPublicacao: [],
+            publicacoes: [],
+            historico: [{ acao: 'Criado (via publicação de rotina)', usuario: meName(), data: new Date().toISOString() }],
+            createdAt: new Date().toISOString()
+        };
+        if (!window.rncItems) window.rncItems = [];
+        window.rncItems.push(newRnc);
+        persist();
+        renderRnc();
+        updateRncNotificationBell();
+        return newRnc.id;
+    };
+
     window.rncDelete = function(id) {
         id = Number(id);
         if (!canDeleteRnc()) { toast('Sem permissão para excluir.', 'error'); return; }
@@ -2329,6 +2383,10 @@
     //  VIEW MODAL (modal de visualização)
     // ══════════════════════════════════════════════════════════════════
 
+    // Guarda o card (rotina/atividade/etc.) que estava aberto por trás, para restaurar
+    // ao fechar a visualização da RNC aberta como referência (ex.: a partir de uma publicação).
+    var _rncViewPrevContext = null;
+
     window.rncOpenView = function(id) {
         id = Number(id);
         var r = (window.rncItems || []).find(function(x){ return x.id === id; });
@@ -2336,6 +2394,10 @@
         rncViewId = id;
         rncPubSubtab = 'Geral';
         rncPubPage = 1;
+        // Preserva o contexto anterior (outro card pode estar aberto por trás desta RNC)
+        if (window._currentViewTab !== 'rnc' || window._currentViewId !== id) {
+            _rncViewPrevContext = { id: window._currentViewId, tab: window._currentViewTab, itemId: window.currentViewItemId };
+        }
         // Expõe para o sistema de publicações reutilizar o #modalPublicacao
         window._currentViewId = id;
         window._currentViewTab = 'rnc';
@@ -2356,9 +2418,17 @@
         if (modal) modal.classList.remove('open');
         if (bk) bk.classList.remove('open');
         rncViewId = null;
-        window._currentViewId = null;
-        window._currentViewTab = null;
-        window.currentViewItemId = null;
+        // Restaura o contexto do card que estava aberto por trás (se houver)
+        if (_rncViewPrevContext) {
+            window._currentViewId = _rncViewPrevContext.id;
+            window._currentViewTab = _rncViewPrevContext.tab;
+            window.currentViewItemId = _rncViewPrevContext.itemId;
+            _rncViewPrevContext = null;
+        } else {
+            window._currentViewId = null;
+            window._currentViewTab = null;
+            window.currentViewItemId = null;
+        }
     };
 
     window.rncSwitchViewTab = function(panelId, btn) {
