@@ -698,9 +698,14 @@
             // Falha de gravação: NÃO adota o resultado mesclado. As edições locais e
             // o baseline são preservados, então a alteração do usuário não é perdida
             // nem revertida pelo listener — bastará uma nova tentativa de salvar.
+            // Mesmo em saves silenciosos (showAlert=false), avisa o usuário — do
+            // contrário uma falha de permissão/rede no BD passa despercebida e a
+            // alteração local parece "salva" quando na verdade não foi persistida.
             if (showAlert) {
                 if (typeof showToast === 'function') showToast('Erro ao salvar. Verifique a conexão — suas alterações não foram perdidas.', 'error');
                 else alert("Erro ao sincronizar dados. Verifique a conexão.");
+            } else if (typeof showToast === 'function') {
+                showToast('Erro ao salvar no banco de dados. Verifique a conexão e tente novamente.', 'error');
             }
         }
     }

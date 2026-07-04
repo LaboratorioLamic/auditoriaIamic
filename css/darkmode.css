@@ -759,6 +759,11 @@ body.dark-mode .ver-pub-cl-item-prev .ver-pub-cl-dot { background: #3d4f42 !impo
 body.dark-mode .ver-pub-cl-prev-box { background: #1a2029 !important; border-color: #2b3542 !important; }
 body.dark-mode .ver-pub-cl-prev-box-hdr { background: #202834 !important; color: #64748b !important; }
 body.dark-mode .ver-pub-cl-prev-box .ver-pub-cl-item-prev { border-top-color: #2b3542 !important; }
+body.dark-mode .ver-pub-cl-comment { background: rgba(22,163,74,.1); border-color: rgba(74,222,128,.25); }
+body.dark-mode .ver-pub-cl-comment-box { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+body.dark-mode .ver-pub-cl-comment-box i { color: #4ade80; }
+body.dark-mode .ver-pub-cl-group .ver-pub-cl-comment { border-bottom-color: #253348; }
+body.dark-mode .ver-pub-cl-item-prev + .ver-pub-cl-comment { background: #202b38 !important; border-color: #2f3d4a !important; }
 
 body.dark-mode .btn-close { color: #64748b; }
 body.dark-mode .btn-close:hover { background: rgba(220,38,38,.15); color: #f87171; }

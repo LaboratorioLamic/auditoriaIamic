@@ -2911,6 +2911,7 @@
     var _rncManagerNewColor = 'default';
 
     function _renderRncManagerList() {
+        _sortManagerListIfNeeded();
         var list = _getManagerList();
         var body = document.getElementById('rncManagerList');
         if (!body) return;

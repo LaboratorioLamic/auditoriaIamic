@@ -1218,7 +1218,11 @@ window._pubNcShowDropdown = function(btn, i) {
             onclick="_pubNcSelect(${i}, '${opt.v}')">
             <i class="fas ${opt.icon}"></i>
             ${opt.label}
-        </div>`).join('');
+        </div>`).join('') + (current ? `
+        <div class="cl-pub-link-dropdown-item pub-nc-dropdown-item nc-clear" onclick="_pubNcSelect(${i}, null)">
+            <i class="fas fa-rotate-left"></i>
+            Remover seleção
+        </div>` : '');
     _clPubPositionDropdown(dropdown, btn);
 };
 
@@ -2500,12 +2504,16 @@ window.verPublicacao = function(id, tab, index) {
             prevByGroup.get(key).push(c);
         });
 
+        const _verPubCommentHtml = c => (c.comentario && c.comentario.trim())
+            ? `<div class="ver-pub-cl-comment"><div class="ver-pub-cl-comment-box"><i class="fas fa-comment-dots"></i> ${c.comentario.trim().replace(/\n/g,'<br>')}</div></div>`
+            : '';
         const _prevItemHtml = c => `
             <div class="ver-pub-cl-item ver-pub-cl-item-prev">
                 <span class="ver-pub-cl-dot"><i class="fas fa-check"></i></span>
                 <span>${c.texto || ''}</span>
                 ${_pubNcBadgeHtml(c.conformidade)}
-            </div>`;
+            </div>
+            ${_verPubCommentHtml(c)}`;
         const _prevDivider = n => n > 0 ? `<div class="ver-pub-cl-prev-divider"><i class="fas fa-history"></i> Concluídos anteriormente</div>` : '';
         const _itemKey = c => c.id || (c.texto || '').trim();
 
@@ -2545,7 +2553,8 @@ window.verPublicacao = function(id, tab, index) {
                                     <span class="ver-pub-cl-dot"><i class="fas fa-check"></i></span>
                                     <span>${c.texto || ''}</span>
                                     ${_pubNcBadgeHtml(prevMatch.conformidade)}
-                                </div>`;
+                                </div>
+                                ${_verPubCommentHtml(prevMatch)}`;
                             }).join('')}
                         </div>
                     </div>`;
@@ -2566,7 +2575,8 @@ window.verPublicacao = function(id, tab, index) {
                             <span class="ver-pub-cl-dot">${c.checked ? '<i class="fas fa-check"></i>' : ''}</span>
                             <span>${c.texto || ''}</span>
                             ${_pubNcBadgeHtml(c.conformidade)}
-                        </div>`).join('')}
+                        </div>
+                        ${_verPubCommentHtml(c)}`).join('')}
                     ${_prevDivider(prevItems.length)}
                     ${prevItems.map(_prevItemHtml).join('')}
                 </div>`;
@@ -2579,7 +2589,8 @@ window.verPublicacao = function(id, tab, index) {
                         <span class="ver-pub-cl-dot">${c.checked ? '<i class="fas fa-check"></i>' : ''}</span>
                         <span>${c.texto || ''}</span>
                         ${_pubNcBadgeHtml(c.conformidade)}
-                    </div>`).join('');
+                    </div>
+                    ${_verPubCommentHtml(c)}`).join('');
                 clListHtml += _prevDivider(soloPrev.length);
                 clListHtml += soloPrev.map(_prevItemHtml).join('');
             }
@@ -2589,7 +2600,8 @@ window.verPublicacao = function(id, tab, index) {
                     <span class="ver-pub-cl-dot">${c.checked ? '<i class="fas fa-check"></i>' : ''}</span>
                     <span>${c.texto || ''}</span>
                     ${_pubNcBadgeHtml(c.conformidade)}
-                </div>`).join('');
+                </div>
+                ${_verPubCommentHtml(c)}`).join('');
             clListHtml += _prevDivider(prevCompleted.length);
             clListHtml += prevCompleted.map(_prevItemHtml).join('');
         }
