@@ -1368,6 +1368,7 @@
 
 /* ── Nota de Qualidade (N/C do checklist) ─────────────────── */
 #pubQualityScoreWrap { margin-top: 14px; }
+.ver-pub-quality-wrap { margin-top: 12px; }
 .pub-quality-card {
     display: flex;
     align-items: center;
@@ -2674,6 +2675,34 @@
     border-color: #8fa892;
     color: #fff;
 }
+
+/* Grupo inteiro concluído em publicação anterior */
+.ver-pub-cl-group-prev { border: none; }
+.ver-pub-cl-prev-box {
+    border: 1px solid #d7e3d8;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #eef2ee;
+}
+.ver-pub-cl-prev-box-hdr {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #e3ebe3;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #7c8f7e;
+    letter-spacing: .2px;
+}
+.ver-pub-cl-prev-box .ver-pub-cl-item-prev {
+    border-radius: 0;
+    border: none;
+    border-top: 1px solid #dde6dd;
+    margin: 0;
+    background: transparent;
+}
+.ver-pub-cl-prev-box .ver-pub-cl-item-prev:first-of-type { border-top: none; }
 
 /* Anexos no ver publicação */
 .ver-pub-anexos-grid { display: flex; flex-wrap: wrap; gap: 8px; }

@@ -1190,12 +1190,12 @@ function _renderPubClItem(c, i) {
             ${isRequired ? `<i class="fas fa-exclamation-circle pub-cl-required-icon" title="Item obrigatório para publicar"></i>` : ''}
             <span class="pub-cl-item-text">${c.texto || ''}</span>
             <span class="pub-cl-item-actions">
+                ${showNc ? _pubNcBtnHtml(c, i) : ''}
                 <button type="button" class="pub-cl-comment-btn ${hasComment ? 'has-comment' : ''}" data-pub-comment-index="${i}"
                     onclick="event.preventDefault();event.stopPropagation();_pubClToggleComment(${i})"
                     title="${hasComment ? 'Ver/editar comentário' : 'Adicionar comentário'}">
                     <i class="fas fa-comment${hasComment ? '' : '-dots'}"></i>
                 </button>
-                ${showNc ? _pubNcBtnHtml(c, i) : ''}
             </span>
         </label>
         <div class="pub-cl-comment-box ${commentOpen ? 'open' : ''}" data-pub-comment-box="${i}">
@@ -1556,7 +1556,8 @@ window.togglePubClItem = function(i, cb) {
 // ─── NOTA DE QUALIDADE — baseada em N/C dos itens marcados ────
 function _computePubQualityScore() {
     const state = window._pubChecklistState || [];
-    const eligible = state.filter(c => c.ncEnabled && c.checked);
+    // Considera marcados nesta publicação + já concluídos anteriormente no mesmo ciclo
+    const eligible = state.filter(c => c.ncEnabled && (c.checked || c.previouslyDone));
     const total = eligible.length;
     if (total === 0) return null;
     const ok = eligible.filter(c => c.conformidade === 'conforme').length;
@@ -1570,16 +1571,10 @@ function _pubQualityTier(nota) {
     return 'bad';
 }
 
-function _updatePubQualityScore() {
-    const wrap = document.getElementById('pubQualityScoreWrap');
-    if (!wrap) return;
-    if (!window._pubNcUiEnabled) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
-    const score = _computePubQualityScore();
-    if (!score) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+function _pubQualityCardHtml(score) {
     const tier = _pubQualityTier(score.nota);
     const pct = Math.max(0, Math.min(100, (score.nota / 10) * 100));
-    wrap.style.display = '';
-    wrap.innerHTML = `
+    return `
         <div class="pub-quality-card pub-quality-${tier}">
             <div class="pub-quality-icon"><i class="fas fa-gauge-high"></i></div>
             <div class="pub-quality-body">
@@ -1593,6 +1588,26 @@ function _updatePubQualityScore() {
                 <div class="pub-quality-sub">${score.ok} de ${score.total} itens em conformidade</div>
             </div>
         </div>`;
+}
+
+// Versão para snapshot já salvo (visualização de publicação existente)
+function _computePubQualityScoreFromSnapshot(clItems) {
+    const eligible = (clItems || []).filter(c => c.ncEnabled && c.checked);
+    const total = eligible.length;
+    if (total === 0) return null;
+    const ok = eligible.filter(c => c.conformidade === 'conforme').length;
+    const nota = Math.round((ok / total) * 10 * 10) / 10;
+    return { nota, ok, total };
+}
+
+function _updatePubQualityScore() {
+    const wrap = document.getElementById('pubQualityScoreWrap');
+    if (!wrap) return;
+    if (!window._pubNcUiEnabled) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+    const score = _computePubQualityScore();
+    if (!score) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+    wrap.style.display = '';
+    wrap.innerHTML = _pubQualityCardHtml(score);
 }
 
 window.toggleAllPubChecklist = function() {
@@ -1769,23 +1784,28 @@ window.openPublicacaoModal = function(editIndex) {
             const _currentDateRef = item.dataPublicacao || item.dataConclusao || null;
             const _key = c => c.id || ('t:' + (c.texto || '').trim());
             const completedKeys = new Set();
+            const completedConformidade = new Map();
             (item.publicacoes || []).forEach(pub => {
                 const isCurrent = pub.pubCycleId
                     ? pub.pubCycleId === _currentCycle
                     : (pub.dataConclusaoRef === _currentDateRef);
                 if (!isCurrent) return;
                 (pub.checklistSnapshot || []).forEach(snap => {
-                    if (snap.checked) completedKeys.add(_key(snap));
+                    if (snap.checked) {
+                        completedKeys.add(_key(snap));
+                        if (snap.ncEnabled && snap.conformidade) completedConformidade.set(_key(snap), snap.conformidade);
+                    }
                 });
             });
 
             window._pubChecklistGeralItems = item.checklist || [];
             // Todos os itens do ciclo, marcando os já concluídos como "previouslyDone"
+            // (mantém a conformidade registrada anteriormente para entrar na nota de Qualidade)
             window._pubChecklistState = pubCL.map(c => ({
                 ...c,
                 checked: false,
                 previouslyDone: completedKeys.has(_key(c)),
-                conformidade: null
+                conformidade: completedConformidade.get(_key(c)) || null
             }));
             clItems.innerHTML = _renderPubChecklistItems();
             clWrap.style.display = '';
@@ -1847,7 +1867,7 @@ window.confirmarPublicacao = function() {
     // Registro de conformidade (N/C): se o checkbox está marcado, exige tipo selecionado;
     // se um tipo foi selecionado, exige o checkbox marcado.
     if (!isEditing && window._pubNcUiEnabled && window._pubChecklistState && window._pubChecklistState.length > 0) {
-        const ncItems = window._pubChecklistState.filter(c => !!c.ncEnabled);
+        const ncItems = window._pubChecklistState.filter(c => !!c.ncEnabled && !c.previouslyDone);
         const mismatched = ncItems.filter(c => !!c.checked !== !!c.conformidade);
         if (mismatched.length > 0) {
             document.getElementById('pubChecklistItems').innerHTML = _renderPubChecklistItems();
@@ -2449,8 +2469,10 @@ window.verPublicacao = function(id, tab, index) {
         const _sameCycle = p => p.pubCycleId
             ? p.pubCycleId === _thisCycle
             : (p.dataConclusaoRef === _thisDateRef);
-        const currentIds   = new Set(clItems.map(c => c.id).filter(Boolean));
-        const currentTexts = new Set(clItems.map(c => (c.texto || '').trim()));
+        // Itens do snapshot atual já marcados como concluídos NESTA publicação —
+        // esses não entram em prevCompleted (evita duplicidade na contagem)
+        const currentCheckedIds   = new Set(clItems.filter(c => c.checked && c.id).map(c => c.id));
+        const currentCheckedTexts = new Set(clItems.filter(c => c.checked && !c.id).map(c => (c.texto || '').trim()));
         const prevCompleted = [];
         const seenPrev = new Set();
         (item.publicacoes || []).slice(index + 1).forEach(p => {
@@ -2459,8 +2481,8 @@ window.verPublicacao = function(id, tab, index) {
                 if (!c.checked) return;
                 const key = c.id || (c.texto || '').trim();
                 if (seenPrev.has(key)) return;
-                if (c.id && currentIds.has(c.id)) return;
-                if (!c.id && currentTexts.has((c.texto || '').trim())) return;
+                if (c.id && currentCheckedIds.has(c.id)) return;
+                if (!c.id && currentCheckedTexts.has((c.texto || '').trim())) return;
                 seenPrev.add(key);
                 prevCompleted.push({ ...c, geralIndex: c.geralIndex ?? null });
             });
@@ -2482,8 +2504,10 @@ window.verPublicacao = function(id, tab, index) {
             <div class="ver-pub-cl-item ver-pub-cl-item-prev">
                 <span class="ver-pub-cl-dot"><i class="fas fa-check"></i></span>
                 <span>${c.texto || ''}</span>
+                ${_pubNcBadgeHtml(c.conformidade)}
             </div>`;
         const _prevDivider = n => n > 0 ? `<div class="ver-pub-cl-prev-divider"><i class="fas fa-history"></i> Concluídos anteriormente</div>` : '';
+        const _itemKey = c => c.id || (c.texto || '').trim();
 
         let clListHtml = '';
         if (hasGroups) {
@@ -2502,13 +2526,42 @@ window.verPublicacao = function(id, tab, index) {
                 const groupItems = snapGroups.get(gi) || [];
                 const prevItems  = prevByGroup.get(gi) || [];
                 const geralText  = geralSource[gi] ? (geralSource[gi].texto || `Item ${gi+1}`) : `Item Geral ${gi+1}`;
-                const allDone    = (groupItems.length > 0 || prevItems.length > 0) && groupItems.every(c => c.checked);
+
+                // Todo o grupo já foi concluído em publicação anterior: nenhum item
+                // pendente no snapshot atual, e todo item não-marcado é coberto por prevItems
+                const prevKeys = new Set(prevItems.map(_itemKey));
+                const uncheckedGroup = groupItems.filter(c => !c.checked);
+                const groupFullyPrev = groupItems.length > 0
+                    && groupItems.every(c => !c.checked)
+                    && uncheckedGroup.every(c => prevKeys.has(_itemKey(c)));
+
+                if (groupFullyPrev) {
+                    clListHtml += `<div class="ver-pub-cl-group ver-pub-cl-group-prev">
+                        <div class="ver-pub-cl-prev-box">
+                            <div class="ver-pub-cl-prev-box-hdr"><i class="fas fa-history"></i> ${geralText} — Concluído anteriormente</div>
+                            ${groupItems.map(c => {
+                                const prevMatch = prevItems.find(p => _itemKey(p) === _itemKey(c)) || c;
+                                return `<div class="ver-pub-cl-item ver-pub-cl-item-prev">
+                                    <span class="ver-pub-cl-dot"><i class="fas fa-check"></i></span>
+                                    <span>${c.texto || ''}</span>
+                                    ${_pubNcBadgeHtml(prevMatch.conformidade)}
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>`;
+                    return;
+                }
+
+                // Itens do grupo já cobertos por uma conclusão anterior não devem
+                // aparecer de novo como desmarcados na lista principal
+                const visibleGroupItems = groupItems.filter(c => c.checked || !prevKeys.has(_itemKey(c)));
+                const allDone = (visibleGroupItems.length > 0 || prevItems.length > 0) && visibleGroupItems.every(c => c.checked);
                 clListHtml += `<div class="ver-pub-cl-group">
                     <div class="ver-pub-cl-group-hdr${allDone ? ' done' : ''}">
                         <i class="fas fa-layer-group"></i> ${geralText}
                         ${allDone ? '<i class="fas fa-check-circle" style="margin-left:auto;color:#22c55e"></i>' : ''}
                     </div>
-                    ${groupItems.map(c => `
+                    ${visibleGroupItems.map(c => `
                         <div class="ver-pub-cl-item ${c.checked ? 'done' : ''}">
                             <span class="ver-pub-cl-dot">${c.checked ? '<i class="fas fa-check"></i>' : ''}</span>
                             <span>${c.texto || ''}</span>
@@ -2541,11 +2594,15 @@ window.verPublicacao = function(id, tab, index) {
             clListHtml += prevCompleted.map(_prevItemHtml).join('');
         }
 
+        const qualityScore = _computePubQualityScoreFromSnapshot(clItems.concat(prevCompleted));
+        const qualityHtml = qualityScore ? `<div class="ver-pub-quality-wrap">${_pubQualityCardHtml(qualityScore)}</div>` : '';
+
         clBlock = `
         <div class="ver-pub-section">
             <div class="ver-pub-section-label"><i class="fas fa-list-check"></i> Checklist de Publicação <span class="ver-pub-cl-badge">${done}/${total}</span></div>
             <div class="ver-pub-cl-progress"><div class="ver-pub-cl-progress-bar" style="width:${pct}%"></div></div>
             <div class="ver-pub-cl-list">${clListHtml}</div>
+            ${qualityHtml}
         </div>`;
     }
 
