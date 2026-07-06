@@ -1543,18 +1543,29 @@ window.togglePubClItem = function(i, cb) {
     if (!window._pubChecklistState || !window._pubChecklistState[i]) return;
     const c = window._pubChecklistState[i];
     c.checked = cb.checked;
+    const showNc = c.ncEnabled && window._pubNcUiEnabled;
+    if (showNc) {
+        if (cb.checked) {
+            if (!c.conformidade) c.conformidade = 'conforme';
+        } else {
+            c.conformidade = null;
+        }
+        const ncBtn = document.querySelector(`.pub-cl-nc-btn[data-pub-nc-index="${i}"]`);
+        if (ncBtn) ncBtn.outerHTML = _pubNcBtnHtml(c, i);
+    }
     const label = cb.closest('.pub-cl-item');
     if (label) {
         label.classList.toggle('checked', cb.checked);
         if (c.requiredForPub) {
             label.classList.toggle('pub-cl-required-warn', !cb.checked);
         }
-        if (c.ncEnabled && window._pubNcUiEnabled) {
+        if (showNc) {
             label.classList.toggle('pub-cl-nc-warn', !!c.checked !== !!c.conformidade);
         }
     }
     _updatePubClToggleBtn();
     _updatePubQualityScore();
+    _updatePubRncSection();
 };
 
 // ─── NOTA DE QUALIDADE — baseada em N/C dos itens marcados ────
@@ -1618,10 +1629,20 @@ window.toggleAllPubChecklist = function() {
     if (!window._pubChecklistState || window._pubChecklistState.length === 0) return;
     const allChecked = window._pubChecklistState.every(c => c.checked);
     const newState = !allChecked;
-    window._pubChecklistState.forEach(c => c.checked = newState);
+    window._pubChecklistState.forEach(c => {
+        c.checked = newState;
+        if (c.ncEnabled && window._pubNcUiEnabled) {
+            if (newState) {
+                if (!c.conformidade) c.conformidade = 'conforme';
+            } else {
+                c.conformidade = null;
+            }
+        }
+    });
     document.getElementById('pubChecklistItems').innerHTML = _renderPubChecklistItems();
     _updatePubClToggleBtn();
     _updatePubQualityScore();
+    _updatePubRncSection();
 };
 
 window.openPublicacaoModal = function(editIndex) {
