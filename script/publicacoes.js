@@ -1741,15 +1741,15 @@ window.openPublicacaoModal = function(editIndex) {
             <i class="fas fa-info-circle"></i> O anexo é obrigatório para documentos.
         </div>` : ''}`;
     } else {
-        const tipoVal = existingPub ? (existingPub.tipo || 'Comentário') : 'Comentário';
+        const tipoVal = existingPub ? (existingPub.tipo || 'Comentário') : 'Atualização';
         const showHora = finalTab !== 'auditoria';
         fieldsHtml = `
         <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;">
             <div class="field-group">
                 <label>Tipo</label>
                 <select id="pubTipo">
-                    <option value="Comentário"${tipoVal==='Comentário'?' selected':''}>Comentário</option>
                     <option value="Atualização"${tipoVal==='Atualização'?' selected':''}>Atualização</option>
+                    <option value="Comentário"${tipoVal==='Comentário'?' selected':''}>Comentário</option>
                     <option value="Evidência"${tipoVal==='Evidência'?' selected':''}>Evidência</option>
                 </select>
             </div>
