@@ -1082,7 +1082,7 @@ function renderMarkerPopover(item, tab, cfg) {
         itemsHtml = '<button type="button" class="marker-popover-item marker-popover-add" onclick="closeMarkerPopover();openListManager(\'marcadores\')">' +
             '<i class="fas fa-plus"></i><span>Adicionar marcador</span></button>';
     } else {
-        itemsHtml = list.map(function(m) {
+        itemsHtml = list.filter(function(m) { return m && !m.deleted && m.name; }).map(function(m) {
             var color = _MARKER_COLOR_MAP[m.color] || _MARKER_COLOR_MAP['default'];
             var isCurrent = m.name === item.marcador;
             return '<button type="button" class="marker-popover-item' + (isCurrent ? ' current' : '') + '" onclick="selectItemMarker(\'' + _esc(m.name) + '\',\'' + (m.color || 'default') + '\')">' +

@@ -13,13 +13,17 @@ const UPLOAD_ALLOWED_TYPES = [
   'text/csv',
   'application/vnd.ms-powerpoint',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'application/vnd.oasis.opendocument.presentation'
+  'application/vnd.oasis.opendocument.presentation',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.oasis.opendocument.text'
 ];
 const UPLOAD_ALLOWED_EXT = [
   '.pdf',
   '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
   '.xls', '.xlsx', '.ods', '.csv',
-  '.ppt', '.pptx', '.odp'
+  '.ppt', '.pptx', '.odp',
+  '.doc', '.docx', '.odt'
 ];
 
 // ── Tag de tipo de anexo (persistida no BD como anexo.fileExt) ──
@@ -45,6 +49,7 @@ window._anexoIconInfo = function(a) {
 
   const ext = a.fileExt || '';
   if (ext === '.pdf') return { icon: 'pdf', color: '#ef4444' };
+  if (['.doc', '.docx', '.odt'].includes(ext)) return { icon: 'doc', color: '#2563eb' };
   if (['.xls', '.xlsx', '.ods', '.csv'].includes(ext)) return { icon: 'sheet', color: '#16a34a' };
   if (['.ppt', '.pptx', '.odp'].includes(ext)) return { icon: 'slide', color: '#ea580c' };
   if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'].includes(ext)) return { icon: 'image', color: '#0891b2' };
@@ -55,6 +60,7 @@ window._anexoIconInfo = function(a) {
 
 const _ANEXO_ICON_SVG = {
   pdf:   p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:${p};height:${p};color:{{C}};flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`,
+  doc:   p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:${p};height:${p};color:{{C}};flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>`,
   sheet: p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:${p};height:${p};color:{{C}};flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="10" y1="9" x2="14" y2="9"/></svg>`,
   slide: p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:${p};height:${p};color:{{C}};flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="12" width="8" height="5" rx="1"/></svg>`,
   image: p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:${p};height:${p};color:{{C}};flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
@@ -189,13 +195,13 @@ function _onUploadTipoChange(ctx) {
     const sel = document.getElementById(`${ctx}-upload-tipo`);
     const hasImageOption = sel && Array.from(sel.options).some(o => o.value === 'imagem');
     if (hasImageOption) {
-      if (fileInput) fileInput.accept = '.pdf,.xls,.xlsx,.ods,.ppt,.pptx,.odp';
+      if (fileInput) fileInput.accept = '.pdf,.doc,.docx,.odt,.xls,.xlsx,.ods,.ppt,.pptx,.odp';
       const hint = zone ? zone.querySelector('.upload-drop-hint') : null;
-      if (hint) hint.textContent = 'PDF, planilha ou slides (máx. 30 MB)';
+      if (hint) hint.textContent = 'PDF, Word, planilha ou slides (máx. 30 MB)';
     } else {
-      if (fileInput) fileInput.accept = '.pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.xls,.xlsx,.ods,.ppt,.pptx,.odp';
+      if (fileInput) fileInput.accept = '.pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.doc,.docx,.odt,.xls,.xlsx,.ods,.ppt,.pptx,.odp';
       const hint = zone ? zone.querySelector('.upload-drop-hint') : null;
-      if (hint) hint.textContent = 'PDF, imagem, planilha ou slides (máx. 30 MB)';
+      if (hint) hint.textContent = 'PDF, imagem, Word, planilha ou slides (máx. 30 MB)';
     }
     if (btn) btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Enviar`;
     _renderUploadPreview(ctx);
@@ -303,6 +309,8 @@ function _getFileTypeIcon(file) {
   const type = file.type;
   if (type === 'application/pdf' || name.endsWith('.pdf'))
     return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;color:#ef4444;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`;
+  if (['.doc','.docx','.odt'].some(e => name.endsWith(e)))
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;color:#2563eb;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>`;
   if (['.xls','.xlsx','.ods','.csv'].some(e => name.endsWith(e)))
     return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;color:#16a34a;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="10" y1="9" x2="14" y2="9"/></svg>`;
   if (['.ppt','.pptx','.odp'].some(e => name.endsWith(e)))

@@ -1157,8 +1157,8 @@ window.renderViewAnexos = function(item) {
         container.innerHTML = '<div class="pub-empty"><i class="fas fa-paperclip"></i><p>Nenhum anexo cadastrado.</p></div>';
         return;
     }
-    const _faIconMap = { pdf: 'fa-file-pdf', sheet: 'fa-file-excel', slide: 'fa-file-powerpoint', image: 'fa-file-image', link: 'fa-link', file: 'fa-file' };
-    const _faClassMap = { pdf: 'icon-pdf', sheet: 'icon-sheet', slide: 'icon-slide', image: 'icon-image', link: 'icon-link', file: 'icon-file' };
+    const _faIconMap = { pdf: 'fa-file-pdf', doc: 'fa-file-word', sheet: 'fa-file-excel', slide: 'fa-file-powerpoint', image: 'fa-file-image', link: 'fa-link', file: 'fa-file' };
+    const _faClassMap = { pdf: 'icon-pdf', doc: 'icon-doc', sheet: 'icon-sheet', slide: 'icon-slide', image: 'icon-image', link: 'icon-link', file: 'icon-file' };
     container.innerHTML = `<div class="view-anexos-grid">${anexos.map(a => {
         const name = a.titulo || a.url || 'Arquivo';
         const info = window._anexoIconInfo ? window._anexoIconInfo(a) : { icon: 'file' };
@@ -2713,7 +2713,7 @@ window.verPublicacao = function(id, tab, index) {
     const anexos = pub.anexos || [];
     let anexosBlock = '';
     if (anexos.length > 0) {
-        const _pubFaIconMap = { pdf: 'fa-file-pdf', sheet: 'fa-file-excel', slide: 'fa-file-powerpoint', image: 'fa-file-image', link: 'fa-link', file: 'fa-file' };
+        const _pubFaIconMap = { pdf: 'fa-file-pdf', doc: 'fa-file-word', sheet: 'fa-file-excel', slide: 'fa-file-powerpoint', image: 'fa-file-image', link: 'fa-link', file: 'fa-file' };
         const _extIcon = (a) => {
             const info = window._anexoIconInfo ? window._anexoIconInfo(a) : { icon: 'file', color: '#ef4444' };
             const icon = _pubFaIconMap[info.icon] || 'fa-file';

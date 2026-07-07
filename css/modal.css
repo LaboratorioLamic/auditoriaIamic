@@ -2048,6 +2048,7 @@
 .view-anexo-card:hover { border-color: #cbd5e1; box-shadow: 0 4px 16px rgba(15,23,42,0.1); transform: translateY(-2px); }
 .view-anexo-card .anexo-icon { font-size: 28px; color: #ef4444; }
 .view-anexo-card .anexo-icon.icon-pdf { color: #ef4444; }
+.view-anexo-card .anexo-icon.icon-doc { color: #2563eb; }
 .view-anexo-card .anexo-icon.icon-sheet { color: #16a34a; }
 .view-anexo-card .anexo-icon.icon-slide { color: #ea580c; }
 .view-anexo-card .anexo-icon.icon-image { color: #7c3aed; }

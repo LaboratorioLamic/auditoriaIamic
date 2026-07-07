@@ -509,6 +509,12 @@
     var dashRevisorValue = currentValues.dash.revisor;
 
     // --- POPULAR MODAIS (Setores e Categorias) ---
+    var _prefixToKbCfg = {
+        audit: { statusKey: 'auditStatus', colOrderKey: 'kanban_audit_col_order' },
+        train: { statusKey: 'trainStatus', colOrderKey: 'kanban_train_col_order' },
+        ativ:  { statusKey: 'ativStatus',  colOrderKey: 'kanban_ativ_col_order' },
+        doc:   { statusKey: 'docStatus',   colOrderKey: 'kanban_doc_col_order' }
+    };
     ['audit', 'train', 'ativ', 'doc'].forEach(p => {
         const setorEl = document.getElementById(`${p}Setor`);
         const catEl = document.getElementById(`${p}Categoria`);
@@ -516,7 +522,11 @@
         if (!setorEl || !catEl || !statusEl) return;
         setorEl.innerHTML = '<option value=""></option>' + makeOpts(modalSetores);
         catEl.innerHTML = '<option value=""></option>' + makeOpts(masterLists[`${p}Categorias`] || []);
-        statusEl.innerHTML = makeStatusOpts(masterLists[`${p}Status`] || []);
+        // Mesma ordem exibida no Kanban (respeita reordenação por arrasto das colunas)
+        const statusList = typeof _kbGetSortedStatuses === 'function'
+            ? _kbGetSortedStatuses(_prefixToKbCfg[p])
+            : (masterLists[`${p}Status`] || []);
+        statusEl.innerHTML = makeStatusOpts(statusList);
 
         const markerSelect = document.getElementById(`${p}Marcador`);
         if (markerSelect) markerSelect.innerHTML = `<option value="">Selecionar marcador</option>` + makeStatusOpts(masterLists[`${p}Marcadores`] || []);
