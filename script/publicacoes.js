@@ -69,6 +69,13 @@ function _clEditorItemEl(target) {
 }
 
 window._clDragStart = function(e, prefix, index) {
+    // Clicar/selecionar texto no input ou textarea não deve iniciar o arraste da linha —
+    // só a área externa (alça, botões, espaço da linha) pode disparar a reordenação.
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') {
+        e.preventDefault();
+        return;
+    }
     window._clDragSrc = { prefix, index };
     e.dataTransfer.effectAllowed = 'move';
     const el = _clEditorItemEl(e.target);
@@ -193,7 +200,7 @@ function _renderPubEditorItem(prefix, item, i, geralItems) {
         ondrop="_clDrop(event,'${prefix}',${i})"
         ondragend="_clDragEnd(event)">
         <span class="checklist-drag-handle" title="Arrastar para reordenar"><i class="fas fa-grip-vertical"></i></span>
-        <input type="text" class="cl-pub-item-input" value="${(item.texto || '').replace(/"/g, '&quot;')}"
+        <input type="text" class="cl-pub-item-input" draggable="false" value="${(item.texto || '').replace(/"/g, '&quot;')}"
             oninput="updateChecklistItemText('${prefix}', ${i}, this.value)"
             placeholder="Descreva o item...">
         <button class="cl-pub-item-req-btn${req ? ' active' : ''}"
@@ -297,7 +304,7 @@ function renderChecklistEditor(prefix) {
             ondragend="_clDragEnd(event)">
             <div class="checklist-editor-item-top">
                 <span class="checklist-drag-handle" title="Arrastar para reordenar"><i class="fas fa-grip-vertical"></i></span>
-                <input type="text" class="checklist-item-text-input" value="${(item.texto || '').replace(/"/g, '&quot;')}"
+                <input type="text" class="checklist-item-text-input" draggable="false" value="${(item.texto || '').replace(/"/g, '&quot;')}"
                     oninput="updateChecklistItemText('${prefix}', ${i}, this.value)"
                     placeholder="Texto do item">
                 <button class="checklist-item-required-toggle ${requiresComment ? 'active' : ''}"
@@ -309,7 +316,7 @@ function renderChecklistEditor(prefix) {
             </div>
             ${requiresComment ? `
             <div class="checklist-editor-comment-area">
-                <textarea class="checklist-editor-comment-input"
+                <textarea class="checklist-editor-comment-input" draggable="false"
                     placeholder="Comentário pré-preenchido (opcional)…"
                     oninput="updateChecklistItemComment('${prefix}', ${i}, this.value)"
                     rows="2">${commentVal}</textarea>
@@ -523,6 +530,26 @@ window.getChecklistPub = function(prefix) {
         geralIndex: i.geralIndex != null ? i.geralIndex : null,
         comment: i.comment || ''
     }));
+};
+
+// Propaga alteração/remoção de itens do checklist de publicação (template do item)
+// para os snapshots já salvos em publicações antigas — mantém a "conexão" entre
+// o item do checklist e todo o histórico de publicações que o referenciam.
+window.syncChecklistPublicacaoHistory = function(item, newChecklistPub) {
+    if (!item || !Array.isArray(item.publicacoes) || item.publicacoes.length === 0) return;
+    const newById = new Map((newChecklistPub || []).filter(c => c.id != null).map(c => [c.id, c]));
+    item.publicacoes.forEach(pub => {
+        if (!Array.isArray(pub.checklistSnapshot) || pub.checklistSnapshot.length === 0) return;
+        pub.checklistSnapshot = pub.checklistSnapshot.filter(snap => {
+            if (snap.id == null) return true; // item legado sem id, sem como rastrear
+            const current = newById.get(snap.id);
+            if (!current) return false; // item removido do checklist geral: remove também do histórico
+            snap.texto = current.texto || snap.texto;
+            snap.requiredForPub = !!current.requiredForPub;
+            snap.geralIndex = current.geralIndex != null ? current.geralIndex : null;
+            return true;
+        });
+    });
 };
 
 // Limpa ao fechar/resetar

@@ -52,6 +52,9 @@
             ])) return;
         }
 
+        const _newChecklistPubAudit = (typeof getChecklistPub === 'function') ? getChecklistPub('audit') : (item.checklistPublicacao || []);
+        if (!isNew && typeof syncChecklistPublicacaoHistory === 'function') syncChecklistPublicacaoHistory(item, _newChecklistPubAudit);
+
         const newItem = {
             ...item,
             titulo: document.getElementById('auditTitulo').value,
@@ -75,7 +78,7 @@
             resetChecklistOnAutoStatus: (typeof getSchedResetChecklist === 'function') ? getSchedResetChecklist('audit') : false,
             anexos: getAnexos('audit'),
             checklist: (typeof getChecklist === 'function') ? getChecklist('audit') : (item.checklist || []),
-            checklistPublicacao: (typeof getChecklistPub === 'function') ? getChecklistPub('audit') : (item.checklistPublicacao || [])
+            checklistPublicacao: _newChecklistPubAudit
         };
 
         const _respArr = JSON.parse(responsavel || '[]');
@@ -152,16 +155,19 @@
         const _newIsNotConcluido = !(typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status));
         const _hasChecklistAudit = (newItem.checklist || []).length > 0 || (newItem.checklistPublicacao || []).length > 0;
         if (_prevWasConcluido && _newIsNotConcluido) {
-            newItem.pubCycleId = (newItem.pubCycleId || 1) + 1;
             if (_hasChecklistAudit && typeof showChecklistResetModal === 'function') {
                 showChecklistResetModal(
+                    // Manter Checklist: preserva o ciclo atual, para que publicações antigas
+                    // continuem contando os itens já marcados como concluídos.
                     (novaData) => { if (novaData) newItem.dataPrevisao = novaData; _commitAudit(newItem); },
-                    (novaData) => { if (novaData) newItem.dataPrevisao = novaData; resetChecklistItems(newItem); _commitAudit(newItem); },
+                    // Resetar Checklist: inicia um novo ciclo de publicação.
+                    (novaData) => { if (novaData) newItem.dataPrevisao = novaData; newItem.pubCycleId = (newItem.pubCycleId || 1) + 1; resetChecklistItems(newItem); _commitAudit(newItem); },
                     null,
                     { dataPrevisao: newItem.dataPrevisao || '' }
                 );
                 return;
             }
+            newItem.pubCycleId = (newItem.pubCycleId || 1) + 1;
         }
 
         _commitAudit(newItem);

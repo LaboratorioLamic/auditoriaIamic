@@ -2174,6 +2174,7 @@
                 r.responsavel = responsavel; r.revisor = revisor;
                 r.alertaDias = alertaDias;
                 r.dataInicio = dataInicio; r.dataConclusao = dataConclusao;
+                if (typeof syncChecklistPublicacaoHistory === 'function') syncChecklistPublicacaoHistory(r, checklistPublicacao);
                 r.anexos = anexos; r.checklist = checklist; r.checklistPublicacao = checklistPublicacao;
                 r.updatedAt = new Date().toISOString();
                 if (!r.historico) r.historico = [];

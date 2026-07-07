@@ -49,6 +49,9 @@
             return;
         }
 
+        const _newChecklistPubDoc = (typeof getChecklistPub === 'function') ? getChecklistPub('doc') : (item.checklistPublicacao || []);
+        if (!isNew && typeof syncChecklistPublicacaoHistory === 'function') syncChecklistPublicacaoHistory(item, _newChecklistPubDoc);
+
         const newItem = {
             ...item,
             titulo: document.getElementById('docTitulo').value,
@@ -72,7 +75,7 @@
             resetChecklistOnAutoStatus: (typeof getSchedResetChecklist === 'function') ? getSchedResetChecklist('doc') : false,
             anexos: getAnexos('doc'),
             checklist: (typeof getChecklist === 'function') ? getChecklist('doc') : (item.checklist || []),
-            checklistPublicacao: (typeof getChecklistPub === 'function') ? getChecklistPub('doc') : (item.checklistPublicacao || []),
+            checklistPublicacao: _newChecklistPubDoc,
             historico: item && Array.isArray(item.historico) ? [...item.historico] : []
         };
 

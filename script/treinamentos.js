@@ -62,6 +62,9 @@
         const selectedDays = Array.from(document.querySelectorAll('#trainWeekdays .wd-btn.active')).map(b => Number(b.dataset.day));
         const dataPrevisaoVal = document.getElementById('trainDataPrevisao').value;
 
+        const _newChecklistPubTrain = (typeof getChecklistPub === 'function') ? getChecklistPub('train') : (item.checklistPublicacao || []);
+        if (!isNew && typeof syncChecklistPublicacaoHistory === 'function') syncChecklistPublicacaoHistory(item, _newChecklistPubTrain);
+
         const newItem = {
             ...item,
             titulo: document.getElementById('trainTitulo').value,
@@ -85,7 +88,7 @@
             resetChecklistOnAutoStatus: (typeof getSchedResetChecklist === 'function') ? getSchedResetChecklist('train') : false,
             anexos: getAnexos('train'),
             checklist: (typeof getChecklist === 'function') ? getChecklist('train') : (item.checklist || []),
-            checklistPublicacao: (typeof getChecklistPub === 'function') ? getChecklistPub('train') : (item.checklistPublicacao || [])
+            checklistPublicacao: _newChecklistPubTrain
         };
 
         if (!isNew && originalItem) {
