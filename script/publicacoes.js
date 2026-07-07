@@ -68,9 +68,28 @@ function _clEditorItemEl(target) {
     return target.closest('.cl-pub-editor-item') || target.closest('.checklist-editor-item');
 }
 
+// Liga/desliga o atributo "draggable" da própria linha no mousedown, de acordo com o
+// elemento clicado. Fazer isso apenas no dragstart não é suficiente: em alguns navegadores
+// o gesto de arraste já é decidido a partir do draggable="true" herdado da linha antes do
+// dragstart disparar, então clicar/segurar no input para selecionar texto acaba movendo a
+// linha inteira. Alternar o atributo no mousedown (antes do gesto começar) resolve isso.
+window._clRowMouseDown = function(e) {
+    const row = _clEditorItemEl(e.target);
+    if (!row) return;
+    const tag = e.target.tagName;
+    row.draggable = !(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON');
+};
+
+window._clRowMouseUp = function(e) {
+    const row = _clEditorItemEl(e.target);
+    if (row) row.draggable = true;
+};
+
+document.addEventListener('mouseup', function() {
+    document.querySelectorAll('.checklist-editor-item, .cl-pub-editor-item').forEach(el => { el.draggable = true; });
+});
+
 window._clDragStart = function(e, prefix, index) {
-    // Clicar/selecionar texto no input ou textarea não deve iniciar o arraste da linha —
-    // só a área externa (alça, botões, espaço da linha) pode disparar a reordenação.
     const tag = e.target.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') {
         e.preventDefault();
@@ -144,6 +163,7 @@ window._clDropOnGroup = function(e, prefix, geralIndex) {
 window._clDragEnd = function() {
     document.querySelectorAll('.checklist-editor-item.dragging, .cl-pub-editor-item.dragging').forEach(el => el.classList.remove('dragging'));
     document.querySelectorAll('.checklist-editor-item.drag-over, .cl-pub-editor-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+    document.querySelectorAll('.checklist-editor-item, .cl-pub-editor-item').forEach(el => { el.draggable = true; });
     window._clDragSrc = null;
 };
 
@@ -194,6 +214,8 @@ function _renderPubEditorItem(prefix, item, i, geralItems) {
     ].join('');
     return `
     <div class="cl-pub-editor-item" draggable="true"
+        onmousedown="_clRowMouseDown(event)"
+        onmouseup="_clRowMouseUp(event)"
         ondragstart="_clDragStart(event,'${prefix}',${i})"
         ondragover="_clDragOver(event,'${prefix}',${i})"
         ondragleave="_clDragLeave(event)"
@@ -297,6 +319,8 @@ function renderChecklistEditor(prefix) {
         const commentVal = (item.comment || '').replace(/"/g, '&quot;');
         return `
         <div class="checklist-editor-item" draggable="true"
+            onmousedown="_clRowMouseDown(event)"
+            onmouseup="_clRowMouseUp(event)"
             ondragstart="_clDragStart(event,'${prefix}',${i})"
             ondragover="_clDragOver(event,'${prefix}',${i})"
             ondragleave="_clDragLeave(event)"
