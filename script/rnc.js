@@ -18,6 +18,8 @@
     var rncSetorFilter = [];
     var rncOrigemFilter = [];
     var rncDetFilter = [];
+    var _rncColPage = {}; // chave: nome do status -> página atual (1-based)
+    var RNC_CARDS_PER_PAGE = 10;
     var rncDateFilter = { type: 'all', month: null, year: null, ini: '', fim: '' };
     var rncPage = 1;
     var rncTableSort = { col: 'dataConclusao', dir: 'asc' };
@@ -967,6 +969,7 @@
     function renderRncKanban() {
         var board = document.getElementById('rncKanbanBoard');
         if (!board) return;
+        _rncCloseManagePopover();
         ensureLists();
         var statuses = getRncStatusList();
         var arr = getFiltered();
@@ -982,27 +985,42 @@
         var canMng = canManage();
         board.innerHTML = statuses.map(function(s, idx) {
             var color = rncResolveColor(s.color);
-            var items = arr.filter(function(r){ return r.status === s.name; });
+            var itemsAll = arr.filter(function(r){ return r.status === s.name; });
             if (s.finalKind === 'concluido' || s.finalKind === 'cancelado') {
-                items = items.slice().sort(function(a,b){ return (b.id||0) - (a.id||0); });
+                itemsAll = itemsAll.slice().sort(function(a,b){ return (b.id||0) - (a.id||0); });
             }
             var collapsed = !!s.collapsed;
+
+            var totalPages = Math.max(1, Math.ceil(itemsAll.length / RNC_CARDS_PER_PAGE));
+            var curPage = _rncColPage[s.name] || 1;
+            if (curPage > totalPages) curPage = totalPages;
+            if (curPage < 1) curPage = 1;
+            _rncColPage[s.name] = curPage;
+            var pageStart = (curPage - 1) * RNC_CARDS_PER_PAGE;
+            var items = itemsAll.slice(pageStart, pageStart + RNC_CARDS_PER_PAGE);
+
             return '<div class="rnc-kb-col">' +
                 '<div class="rnc-kb-col-header" style="--rnc-col-color:' + color + '">' +
                     '<div class="rnc-kb-col-title-row">' +
                         '<span class="rnc-kb-col-dot"></span>' +
                         '<span class="rnc-kb-col-name">' + esc(s.name) + '</span>' +
-                        '<span class="rnc-kb-col-count">' + items.length + '</span>' +
+                        '<span class="rnc-kb-col-count">' + itemsAll.length + '</span>' +
                     '</div>' +
-                    (canMng ? (
-                    '<div class="rnc-kb-col-actions">' +
-                        '<button class="rnc-kb-col-act" title="Mover para a esquerda"' + (idx === 0 ? ' disabled' : '') + ' onclick="rncMoveStatusCol(' + idx + ',-1)"><i class="fas fa-arrow-left"></i></button>' +
-                        '<button class="rnc-kb-col-act" title="Mover para a direita"' + (idx === statuses.length - 1 ? ' disabled' : '') + ' onclick="rncMoveStatusCol(' + idx + ',1)"><i class="fas fa-arrow-right"></i></button>' +
-                        '<button class="rnc-kb-col-act" title="Editar coluna" onclick="rncEditStatusCol(' + idx + ')"><i class="fas fa-pen"></i></button>' +
-                        '<button class="rnc-kb-col-act danger" title="Excluir coluna" onclick="rncRemoveStatusCol(' + idx + ')"><i class="fas fa-trash"></i></button>' +
+                    '<div class="rnc-kb-col-bottom">' +
+                        '<div class="rnc-kb-col-ctrl">' +
+                        (canMng ? '<button class="rnc-kb-col-act rnc-kb-manage-btn" title="Gerenciar coluna" onclick="rncToggleManagePopover(event,' + idx + ')"><i class="fas fa-ellipsis-v"></i></button>' : '') +
+                        '</div>' +
+                        '<div class="rnc-kb-col-pagination">' +
+                        (totalPages > 1 ?
+                            '<button class="rnc-kb-page-btn" title="Página anterior" onclick="rncChangeColPage(\'' + esc(s.name) + '\',-1)"' + (curPage <= 1 ? ' disabled' : '') + '><i class="fas fa-chevron-left"></i></button>' +
+                            '<span class="rnc-kb-page-info">' + curPage + ' / ' + totalPages + '</span>' +
+                            '<button class="rnc-kb-page-btn" title="Próxima página" onclick="rncChangeColPage(\'' + esc(s.name) + '\',1)"' + (curPage >= totalPages ? ' disabled' : '') + '><i class="fas fa-chevron-right"></i></button>'
+                        : '') +
+                        '</div>' +
+                        '<div class="rnc-kb-col-ctrl-right">' +
                         '<button class="rnc-kb-col-act rnc-kb-col-collapse" title="' + (collapsed ? 'Mostrar coluna' : 'Ocultar coluna') + '" onclick="rncToggleColCollapse(' + idx + ')"><i class="fas fa-chevron-' + (collapsed ? 'down' : 'up') + '"></i></button>' +
-                    '</div>'
-                    ) : '') +
+                        '</div>' +
+                    '</div>' +
                 '</div>' +
                 (collapsed ?
                     '<div class="rnc-kb-cards rnc-kb-cards-collapsed" data-status="' + esc(s.name) + '"></div>'
@@ -1035,7 +1053,7 @@
                                 donut +
                             '</div>';
                         }).join('') : '') +
-                        '<div class="rnc-kb-empty"' + (items.length > 0 ? ' style="display:none"' : '') + '><i class="fas fa-inbox"></i><span>Nenhum item</span></div>' +
+                        '<div class="rnc-kb-empty"' + (itemsAll.length > 0 ? ' style="display:none"' : '') + '><i class="fas fa-inbox"></i><span>Nenhum item</span></div>' +
                     '</div>'
                 ) +
             '</div>';
@@ -1062,6 +1080,50 @@
     window.rncEditStatusCol = function(idx) {
         rncOpenColumnEditModal(idx);
     };
+    window.rncChangeColPage = function(statusName, delta) {
+        _rncColPage[statusName] = (_rncColPage[statusName] || 1) + delta;
+        if (_rncColPage[statusName] < 1) _rncColPage[statusName] = 1;
+        renderRncKanban();
+    };
+
+    // ── Popover de gerenciamento de coluna (mover / editar / excluir) ──
+    function _rncCloseManagePopover() {
+        var existing = document.getElementById('rncManagePopover');
+        if (existing) existing.remove();
+        document.removeEventListener('click', _rncManagePopoverOutsideClick, true);
+    }
+    function _rncManagePopoverOutsideClick(e) {
+        var pop = document.getElementById('rncManagePopover');
+        if (pop && !pop.contains(e.target)) _rncCloseManagePopover();
+    }
+    window.rncToggleManagePopover = function(event, idx) {
+        event.stopPropagation();
+        var existing = document.getElementById('rncManagePopover');
+        if (existing) {
+            var wasSameCol = existing.dataset.idx === String(idx);
+            _rncCloseManagePopover();
+            if (wasSameCol) return;
+        }
+        var list = getRncStatusList();
+        var isFirst = idx === 0;
+        var isLast = idx === list.length - 1;
+
+        var pop = document.createElement('div');
+        pop.id = 'rncManagePopover';
+        pop.className = 'rnc-kb-manage-popover';
+        pop.dataset.idx = String(idx);
+        pop.innerHTML =
+            '<button class="rnc-kb-manage-item"' + (isFirst ? ' disabled' : '') + ' onclick="_rncCloseManagePopoverPublic(); rncMoveStatusCol(' + idx + ',-1)"><i class="fas fa-arrow-left"></i> Mover esquerda</button>' +
+            '<button class="rnc-kb-manage-item"' + (isLast ? ' disabled' : '') + ' onclick="_rncCloseManagePopoverPublic(); rncMoveStatusCol(' + idx + ',1)"><i class="fas fa-arrow-right"></i> Mover direita</button>' +
+            '<button class="rnc-kb-manage-item" onclick="_rncCloseManagePopoverPublic(); rncEditStatusCol(' + idx + ')"><i class="fas fa-pen"></i> Editar coluna</button>' +
+            '<button class="rnc-kb-manage-item rnc-kb-manage-item-danger" onclick="_rncCloseManagePopoverPublic(); rncRemoveStatusCol(' + idx + ')"><i class="fas fa-trash"></i> Excluir coluna</button>';
+
+        var btn = event.currentTarget;
+        btn.parentElement.style.position = 'relative';
+        btn.parentElement.appendChild(pop);
+        setTimeout(function(){ document.addEventListener('click', _rncManagePopoverOutsideClick, true); }, 0);
+    };
+    window._rncCloseManagePopoverPublic = _rncCloseManagePopover;
 
     // ── Modal moderno de edição de coluna do Kanban ──
     var _rncColEditIdx = null;

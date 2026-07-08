@@ -21,6 +21,9 @@ var _kanbanDragItemId = null;
 
 var _kbColSortDir = {}; // chave: `${tab}|${statusName}` -> 'asc' | 'desc' (padrão: 'asc')
 
+var _kbColPage = {}; // chave: `${tab}|${statusName}` -> página atual (1-based)
+var KB_CARDS_PER_PAGE = 10;
+
 var _KB_MODULES = {
     auditoria:    { prefix: 'Audit', statusKey: 'auditStatus',  colOrderKey: 'kanban_audit_col_order',  sortDateField: 'dataPrevisao',       getItems: () => audits },
     treinamentos: { prefix: 'Train', statusKey: 'trainStatus',  colOrderKey: 'kanban_train_col_order',  sortDateField: 'dataPrevisao',       getItems: () => trainings },
@@ -274,6 +277,9 @@ function renderKanban() {
     const cfg   = _kbGetConfig();
     if (!board || !cfg) return;
 
+    if (typeof updateNotificationCount === 'function') updateNotificationCount();
+    _kbCloseManagePopover();
+
     const statuses = _kbGetSortedStatuses(cfg);
     const data     = _kbGetFilteredItems();
     const canEdit  = typeof userCanEditCards === 'function' ? userCanEditCards() : false;
@@ -298,7 +304,7 @@ function renderKanban() {
         const sortKey     = currentTab + '|' + status.name;
         const defaultDir  = isFinal ? 'desc' : 'asc';
         const sortDir     = _kbColSortDir[sortKey] || defaultDir;
-        const colItems    = data.filter(i => i.status === status.name)
+        const colItemsAll = data.filter(i => i.status === status.name)
             .sort((a, b) => {
                 const da = a[dateFld] ? new Date(a[dateFld]) : new Date(8640000000000000);
                 const db = b[dateFld] ? new Date(b[dateFld]) : new Date(8640000000000000);
@@ -306,6 +312,14 @@ function renderKanban() {
             });
         const isFirst     = colIdx === 0 && !isFinal;
         const nextIsFinal = !isFinal && _kbNextIsFinalOrEnd(statuses, colIdx);
+
+        const totalPages = Math.max(1, Math.ceil(colItemsAll.length / KB_CARDS_PER_PAGE));
+        let curPage = _kbColPage[sortKey] || 1;
+        if (curPage > totalPages) curPage = totalPages;
+        if (curPage < 1) curPage = 1;
+        _kbColPage[sortKey] = curPage;
+        const pageStart = (curPage - 1) * KB_CARDS_PER_PAGE;
+        const colItems  = colItemsAll.slice(pageStart, pageStart + KB_CARDS_PER_PAGE);
 
         const col = document.createElement('div');
         col.className = 'kanban-col';
@@ -320,31 +334,25 @@ function renderKanban() {
                 <div class="kanban-col-title-row">
                     <span class="kanban-col-dot" style="background:${color}"></span>
                     <span class="kanban-col-name">${_kbHtml(status.name)}</span>
-                    <span class="kanban-col-count">${colItems.length}</span>
+                    <span class="kanban-col-count">${colItemsAll.length}</span>
                 </div>
                 <div class="kanban-col-bottom">
                     <div class="kanban-col-ctrl">
                         ${canManageLists ? `
-                        ${!isFinal ? `
-                            <button class="kanban-ctrl-btn" title="Mover esquerda"
-                                onclick="moveKanbanColumn('${_kbHtml(status.name)}', -1)"
-                                ${isFirst ? 'disabled' : ''}>
-                                <i class="fas fa-arrow-left"></i>
-                            </button>
-                            <button class="kanban-ctrl-btn" title="Mover direita"
-                                onclick="moveKanbanColumn('${_kbHtml(status.name)}', 1)"
-                                ${nextIsFinal ? 'disabled' : ''}>
-                                <i class="fas fa-arrow-right"></i>
-                            </button>
-                        ` : '<span class="kanban-locked-badge"><i class="fas fa-lock"></i></span>'}
-                        <button class="kanban-ctrl-btn" title="Editar coluna" onclick="startKanbanRename('${_kbHtml(status.name)}')">
-                            <i class="fas fa-pen"></i>
-                        </button>
-                        <button class="kanban-ctrl-btn kanban-ctrl-delete" title="Excluir coluna"
-                            onclick="openKanbanDeleteCol('${_kbHtml(status.name)}')">
-                            <i class="fas fa-trash"></i>
+                        <button class="kanban-ctrl-btn kanban-manage-btn" title="Gerenciar coluna" onclick="kbToggleManagePopover(event, this, '${_kbHtml(status.name)}')">
+                            <i class="fas fa-ellipsis-v"></i>
                         </button>
                         ` : (isFinal ? '<span class="kanban-locked-badge"><i class="fas fa-lock"></i></span>' : '')}
+                    </div>
+                    <div class="kanban-col-pagination">
+                        ${totalPages > 1 ? `
+                        <button class="kb-page-btn" title="Página anterior" onclick="kbChangeColPage('${_kbHtml(status.name)}', -1)" ${curPage <= 1 ? 'disabled' : ''}>
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <span class="kb-page-info">${curPage} / ${totalPages}</span>
+                        <button class="kb-page-btn" title="Próxima página" onclick="kbChangeColPage('${_kbHtml(status.name)}', 1)" ${curPage >= totalPages ? 'disabled' : ''}>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>` : ''}
                     </div>
                     <div class="kanban-col-ctrl-right">
                         <button class="kanban-ctrl-btn kanban-sort-btn" title="Ordenar: ${sortDir === 'asc' ? 'menor para maior' : 'maior para menor'}"
@@ -362,7 +370,7 @@ function renderKanban() {
                  ondragover="kbDragOver(event)"
                  ondrop="kbDrop(event,'${_kbHtml(status.name)}')"
                  ondragleave="kbDragLeave(event)">
-                <div class="kanban-drop-hint"${colItems.length > 0 ? ' style="display:none"' : ''}><i class="fas fa-inbox"></i><span>Arraste um card aqui</span></div>
+                <div class="kanban-drop-hint"${colItemsAll.length > 0 ? ' style="display:none"' : ''}><i class="fas fa-inbox"></i><span>Arraste um card aqui</span></div>
                 ${colItems.map(i => _kbRenderCard(i)).join('')}
             </div>`;
 
@@ -963,6 +971,73 @@ function toggleKanbanColSort(statusName) {
     const key = currentTab + '|' + statusName;
     const currentDir = _kbColSortDir[key] || defaultDir;
     _kbColSortDir[key] = (currentDir === 'desc') ? 'asc' : 'desc';
+    renderKanban();
+}
+
+// ---- Popover de gerenciamento de coluna ----
+
+function _kbCloseManagePopover() {
+    const existing = document.getElementById('kbManagePopover');
+    if (existing) existing.remove();
+    document.removeEventListener('click', _kbManagePopoverOutsideClick, true);
+}
+
+function _kbManagePopoverOutsideClick(e) {
+    const pop = document.getElementById('kbManagePopover');
+    if (pop && !pop.contains(e.target)) _kbCloseManagePopover();
+}
+
+function kbToggleManagePopover(event, btn, statusName) {
+    event.stopPropagation();
+    const existing = document.getElementById('kbManagePopover');
+    if (existing) {
+        const wasSameCol = existing.dataset.status === statusName;
+        _kbCloseManagePopover();
+        if (wasSameCol) return;
+    }
+
+    const cfg = _kbGetConfig();
+    if (!cfg) return;
+    const statuses  = _kbGetSortedStatuses(cfg);
+    const statusObj = statuses.find(s => s.name === statusName);
+    if (!statusObj) return;
+    const isFinal   = _kbIsFinalStatusObj(statusObj);
+    const regulars  = statuses.filter(s => !_kbIsFinalStatusObj(s));
+    const idx       = regulars.findIndex(s => s.name === statusName);
+    const isFirst   = idx === 0;
+    const isLast    = idx === regulars.length - 1;
+
+    const pop = document.createElement('div');
+    pop.id = 'kbManagePopover';
+    pop.className = 'kb-manage-popover';
+    pop.dataset.status = statusName;
+
+    pop.innerHTML = `
+        ${!isFinal ? `
+        <button class="kb-manage-item" ${isFirst ? 'disabled' : ''} onclick="_kbCloseManagePopover(); moveKanbanColumn('${_kbHtml(statusName)}', -1)">
+            <i class="fas fa-arrow-left"></i> Mover esquerda
+        </button>
+        <button class="kb-manage-item" ${isLast ? 'disabled' : ''} onclick="_kbCloseManagePopover(); moveKanbanColumn('${_kbHtml(statusName)}', 1)">
+            <i class="fas fa-arrow-right"></i> Mover direita
+        </button>
+        ` : ''}
+        <button class="kb-manage-item" onclick="_kbCloseManagePopover(); startKanbanRename('${_kbHtml(statusName)}')">
+            <i class="fas fa-pen"></i> Editar coluna
+        </button>
+        <button class="kb-manage-item kb-manage-item-danger" onclick="_kbCloseManagePopover(); openKanbanDeleteCol('${_kbHtml(statusName)}')">
+            <i class="fas fa-trash"></i> Excluir coluna
+        </button>`;
+
+    btn.parentElement.style.position = 'relative';
+    btn.parentElement.appendChild(pop);
+
+    setTimeout(() => document.addEventListener('click', _kbManagePopoverOutsideClick, true), 0);
+}
+
+function kbChangeColPage(statusName, delta) {
+    const key = currentTab + '|' + statusName;
+    _kbColPage[key] = (_kbColPage[key] || 1) + delta;
+    if (_kbColPage[key] < 1) _kbColPage[key] = 1;
     renderKanban();
 }
 

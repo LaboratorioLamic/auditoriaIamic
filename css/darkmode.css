@@ -1039,6 +1039,13 @@ body.dark-mode .rnc-kb-col-count { background: #253348; color: #94a3b8; }
 body.dark-mode .rnc-kb-col-act { color: #475569; }
 body.dark-mode .rnc-kb-col-act:hover { background: #253348; color: #94a3b8; }
 body.dark-mode .rnc-kb-col-act.danger:hover { background: rgba(220,38,38,.15); color: #f87171; }
+body.dark-mode .rnc-kb-page-btn { border-color: #334155; color: #64748b; }
+body.dark-mode .rnc-kb-page-btn:hover:not(:disabled) { background: #253348; color: #94a3b8; border-color: #475569; }
+body.dark-mode .rnc-kb-page-info { color: #94a3b8; }
+body.dark-mode .rnc-kb-manage-popover { background: #0f172a; border-color: #334155; }
+body.dark-mode .rnc-kb-manage-item { color: #e2e8f0; }
+body.dark-mode .rnc-kb-manage-item:hover:not(:disabled) { background: #253348; }
+body.dark-mode .rnc-kb-manage-item-danger:hover:not(:disabled) { background: rgba(220,38,38,.15); }
 body.dark-mode .rnc-kb-cards-collapsed { border-color: #334155; }
 body.dark-mode .rnc-kb-cards.rnc-kb-drop-over,
 body.dark-mode .rnc-kb-cards-collapsed.rnc-kb-drop-over {
