@@ -2330,10 +2330,10 @@ window.renderPubQualityChart = function(item) {
     const canNavNewer = window._pubChartOffset > 0;
     const showNav = allGroups.length > _PUB_CHART_WINDOW;
 
-    // Última nota e média sempre baseadas nas 12 conclusões mais recentes (independem da navegação)
+    // Última nota sempre é a mais recente do card; média acompanha a janela de 12 conclusões visível no gráfico
     const last12 = allGroups.slice(-_PUB_CHART_WINDOW);
-    const avg = Math.round((last12.reduce((s, g) => s + g.quality.nota, 0) / last12.length) * 10) / 10;
     const last = last12[last12.length - 1].quality.nota;
+    const avg = Math.round((groups.reduce((s, g) => s + g.quality.nota, 0) / groups.length) * 10) / 10;
 
     wrap.innerHTML = `
         <div class="pub-chart-summary">
@@ -2342,7 +2342,7 @@ window.renderPubQualityChart = function(item) {
                 <span class="pub-chart-stat-value pub-group-quality-${_pubQualityTier(last)}">${last.toFixed(1).replace('.0','')}<small>/10</small></span>
             </div>
             <div class="pub-chart-stat">
-                <span class="pub-chart-stat-label">Média (últimas ${last12.length} conclus${last12.length !== 1 ? 'ões' : 'ão'})</span>
+                <span class="pub-chart-stat-label">Média (${groups.length} conclus${groups.length !== 1 ? 'ões' : 'ão'} visívei${groups.length !== 1 ? 's' : 'l'})</span>
                 <span class="pub-chart-stat-value pub-group-quality-${_pubQualityTier(avg)}">${avg.toFixed(1).replace('.0','')}<small>/10</small></span>
             </div>
         </div>
