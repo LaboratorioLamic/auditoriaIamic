@@ -404,7 +404,10 @@ function _checkTriPerm(permVal, item) {
     function logout() {
         // Para o listener do Firebase
         stopFirebaseListener();
-        
+        // Para o listener de mensagens e fecha o drawer
+        try { if (typeof stopMessagesListener === 'function') stopMessagesListener(); } catch (_) {}
+        try { if (typeof msgCloseDrawer === 'function') msgCloseDrawer(); } catch (_) {}
+
         // Limpa usuário atual e volta para tela de login
         currentuser = null;
         updateCurrentuserUI();

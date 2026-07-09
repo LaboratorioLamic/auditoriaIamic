@@ -51,6 +51,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="css/calendar.css">
 <link rel="stylesheet" href="css/rnc.css">
+<link rel="stylesheet" href="css/messages.css">
 </head>
 <body>
 
@@ -197,6 +198,11 @@
                 <div class="notification-badge hidden" id="newCardsBadge">0</div>
             </div>
 
+            <div class="notification-container" id="messagesContainer" onclick="msgToggleDrawer()" title="Mensagens">
+                <i class="notification-icon fas fa-comments"></i>
+                <div class="notification-badge hidden" id="messagesBadge">0</div>
+            </div>
+
             <!-- Sino exclusivo da aba RNC -->
             <div class="notification-container" id="rncNotificationContainer" style="display:none;" onclick="rncToggleNotifications()">
                 <i class="notification-icon fas fa-bell"></i>
@@ -223,6 +229,244 @@
                 </button>
             </div>
             <div class="notification-modal-content" id="newCardsModalContent">
+            </div>
+        </div>
+
+        <!-- ═══ SISTEMA DE MENSAGENS ═══ -->
+        <div class="msg-backdrop" id="msgBackdrop" onclick="msgCloseDrawer()"></div>
+        <aside class="msg-drawer" id="msgDrawer" aria-hidden="true">
+            <!-- Cabeçalho -->
+            <header class="msg-drawer-head">
+                <div class="msg-drawer-head-title">
+                    <i class="fas fa-comments"></i>
+                    <span id="msgDrawerTitle">Mensagens</span>
+                </div>
+                <div class="msg-drawer-head-actions">
+                    <button class="msg-icon-btn" id="msgNewBtn" onclick="msgOpenComposer()" title="Nova mensagem">
+                        <i class="fas fa-pen-to-square"></i>
+                    </button>
+                    <button class="msg-icon-btn" onclick="msgCloseDrawer()" title="Fechar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- LISTA DE CONVERSAS -->
+            <section class="msg-view" id="msgViewList">
+                <div class="msg-thread-list" id="msgThreadList"></div>
+            </section>
+
+            <!-- VISUALIZAÇÃO DA THREAD -->
+            <section class="msg-view" id="msgViewThread" style="display:none;">
+                <div class="msg-thread-topbar">
+                    <button class="msg-icon-btn" onclick="msgBackToList()" title="Voltar">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div class="msg-thread-topbar-info">
+                        <span class="msg-thread-topbar-title" id="msgThreadTitle">Conversa</span>
+                        <span class="msg-thread-topbar-sub" id="msgThreadSub"></span>
+                    </div>
+                    <div class="msg-thread-actions" id="msgThreadActions"></div>
+                </div>
+                <div class="msg-thread-banner" id="msgThreadBanner" style="display:none;"></div>
+                <div class="msg-bubbles" id="msgBubbles"></div>
+                <!-- Barra de resposta -->
+                <div class="msg-reply-ctx" id="msgReplyCtx" style="display:none;">
+                    <div class="msg-reply-ctx-info">
+                        <i class="fas fa-reply"></i>
+                        <div>
+                            <span class="msg-reply-ctx-name" id="msgReplyCtxName"></span>
+                            <span class="msg-reply-ctx-text" id="msgReplyCtxText"></span>
+                        </div>
+                    </div>
+                    <button class="msg-icon-btn" onclick="msgCancelReply()"><i class="fas fa-times"></i></button>
+                </div>
+                <!-- Composer da thread (respostas) -->
+                <div class="msg-composer" id="msgThreadComposer">
+                    <div class="msg-mention-ac" id="msgMentionAC" style="display:none;"></div>
+                    <div class="msg-attach-chips" id="msgThreadAttachChips"></div>
+                    <div class="msg-composer-row">
+                        <div class="msg-composer-tools">
+                            <button class="msg-tool-btn" onclick="msgOpenMentionPicker('thread')" title="Mencionar"><i class="fas fa-at"></i></button>
+                            <button class="msg-tool-btn" onclick="msgOpenCardPicker('thread')" title="Vincular card"><i class="fas fa-link"></i></button>
+                            <button class="msg-tool-btn" onclick="msgOpenAttachMenu('thread')" title="Anexar"><i class="fas fa-paperclip"></i></button>
+                        </div>
+                        <textarea class="msg-textarea" id="msgThreadInput" rows="1" placeholder="Escreva uma resposta..."></textarea>
+                        <button class="msg-send-btn" onclick="msgSendReply()" title="Enviar"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COMPOSER DE NOVA MENSAGEM -->
+            <section class="msg-view msg-view--compose" id="msgViewCompose" style="display:none;">
+                <div class="msg-thread-topbar">
+                    <button class="msg-icon-btn" onclick="msgBackToList()" title="Voltar">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div class="msg-thread-topbar-info">
+                        <span class="msg-thread-topbar-title">Nova mensagem</span>
+                    </div>
+                </div>
+                <div class="msg-compose-body">
+                    <label class="msg-field-label"><i class="fas fa-heading"></i> Título <span style="font-weight:400;text-transform:none;color:var(--text-muted)">(opcional)</span></label>
+                    <input type="text" class="msg-popup-search" id="msgComposeTitulo" placeholder="Nome da conversa..." style="margin:0;">
+
+                    <label class="msg-field-label"><i class="fas fa-at"></i> Para</label>
+                    <div class="msg-mention-box" id="msgComposeMentions" onclick="msgOpenMentionPicker('compose')">
+                        <span class="msg-mention-placeholder">Selecione usuários...</span>
+                    </div>
+
+                    <label class="msg-field-label"><i class="fas fa-align-left"></i> Mensagem</label>
+                    <textarea class="msg-textarea msg-textarea--big" id="msgComposeInput" rows="4" placeholder="Escreva sua mensagem..."></textarea>
+
+                    <div class="msg-attach-chips" id="msgComposeAttachChips"></div>
+
+                    <div class="msg-compose-tools">
+                        <button class="msg-tool-btn msg-tool-btn--wide" onclick="msgOpenCardPicker('compose')"><i class="fas fa-link"></i> Vincular card</button>
+                        <button class="msg-tool-btn msg-tool-btn--wide" onclick="msgOpenAttachMenu('compose')"><i class="fas fa-paperclip"></i> Anexar</button>
+                    </div>
+                </div>
+                <div class="msg-compose-footer">
+                    <button class="msg-btn-ghost" onclick="msgBackToList()">Cancelar</button>
+                    <button class="msg-btn-primary" onclick="msgSendNew()"><i class="fas fa-paper-plane"></i> Enviar</button>
+                </div>
+            </section>
+        </aside>
+
+        <!-- Popover de notificações por conversa (mutar) — fora do drawer p/ não herdar containing block do transform -->
+        <div class="msg-mute-popover" id="msgMutePopover" style="display:none;">
+            <button class="msg-mute-opt" data-level="todas" onclick="msgPickMute('todas')">
+                <span class="msg-mute-opt-ic"><i class="fas fa-bell"></i></span>
+                <span class="msg-mute-opt-txt">
+                    <span class="msg-mute-opt-title">Todas notificações</span>
+                    <span class="msg-mute-opt-sub">Avisar sobre toda mensagem</span>
+                </span>
+                <i class="fas fa-check msg-mute-opt-check"></i>
+            </button>
+            <button class="msg-mute-opt" data-level="mencoes" onclick="msgPickMute('mencoes')">
+                <span class="msg-mute-opt-ic"><i class="fas fa-at"></i></span>
+                <span class="msg-mute-opt-txt">
+                    <span class="msg-mute-opt-title">Apenas marcações</span>
+                    <span class="msg-mute-opt-sub">Só quando eu for mencionado(a)</span>
+                </span>
+                <i class="fas fa-check msg-mute-opt-check"></i>
+            </button>
+            <button class="msg-mute-opt" data-level="mudo" onclick="msgPickMute('mudo')">
+                <span class="msg-mute-opt-ic"><i class="fas fa-bell-slash"></i></span>
+                <span class="msg-mute-opt-txt">
+                    <span class="msg-mute-opt-title">Mutar notificações</span>
+                    <span class="msg-mute-opt-sub">Não avisar nesta conversa</span>
+                </span>
+                <i class="fas fa-check msg-mute-opt-check"></i>
+            </button>
+        </div>
+
+        <!-- Popup: seletor de menções -->
+        <div class="msg-popup" id="msgMentionPopup" style="display:none;">
+            <div class="msg-popup-head">
+                <span>Marcar usuários</span>
+                <button class="msg-icon-btn" onclick="msgCloseMentionPicker()"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="text" class="msg-popup-search" id="msgMentionSearch" placeholder="Buscar usuário..." oninput="msgRenderMentionList()">
+            <div class="msg-popup-list" id="msgMentionList"></div>
+            <div class="msg-popup-foot">
+                <button class="msg-btn-primary" onclick="msgConfirmMentions()">Confirmar</button>
+            </div>
+        </div>
+
+        <!-- Popup: seletor de card (área -> card) -->
+        <div class="msg-popup" id="msgCardPopup" style="display:none;">
+            <div class="msg-popup-head">
+                <span id="msgCardPopupTitle">Vincular card</span>
+                <button class="msg-icon-btn" onclick="msgCloseCardPicker()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="msg-area-tabs" id="msgAreaTabs"></div>
+            <input type="text" class="msg-popup-search" id="msgCardSearch" placeholder="Buscar card..." oninput="msgRenderCardList()">
+            <div class="msg-popup-list" id="msgCardList"></div>
+        </div>
+
+        <!-- Modal de gerenciamento de membros -->
+        <div class="msg-popup" id="msgMembersModal" style="display:none;">
+            <div class="msg-popup-head">
+                <span><i class="fas fa-users" style="margin-right:8px;color:var(--accent)"></i>Participantes</span>
+                <button class="msg-icon-btn" onclick="msgCloseMembers()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="msg-popup-list" id="msgMembersList" style="max-height:200px;"></div>
+            <div class="msg-members-add">
+                <label class="msg-field-label" style="margin:0 16px;"><i class="fas fa-user-plus"></i> Adicionar participante</label>
+                <input type="text" class="msg-popup-search" id="msgMemberSearch" placeholder="Buscar usuário..." oninput="msgRenderMemberAddList()">
+                <div class="msg-popup-list" id="msgMemberAddList" style="max-height:200px;"></div>
+            </div>
+        </div>
+
+        <!-- Modal de anexo (arquivo / imagem / link) -->
+        <div class="msg-popup msg-attach-modal" id="msgAttachModal" style="display:none;">
+            <div class="msg-popup-head">
+                <span><i class="fas fa-paperclip" style="margin-right:8px;color:var(--accent)"></i>Anexar item</span>
+                <button class="msg-icon-btn" onclick="msgCloseAttachModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="msg-attach-modal-body">
+                <!-- Seleção de tipo -->
+                <div class="msg-attach-types">
+                    <button class="msg-attach-type" data-type="arquivo" onclick="msgSetAttachType('arquivo')">
+                        <span class="msg-attach-type-ic" style="background:#2563eb1a;color:#2563eb"><i class="fas fa-file-arrow-up"></i></span>
+                        <span class="msg-attach-type-lb">Arquivo</span>
+                    </button>
+                    <button class="msg-attach-type" data-type="imagem" onclick="msgSetAttachType('imagem')">
+                        <span class="msg-attach-type-ic" style="background:#16a34a1a;color:#16a34a"><i class="fas fa-image"></i></span>
+                        <span class="msg-attach-type-lb">Imagem</span>
+                    </button>
+                    <button class="msg-attach-type" data-type="link" onclick="msgSetAttachType('link')">
+                        <span class="msg-attach-type-ic" style="background:#9333ea1a;color:#9333ea"><i class="fas fa-link"></i></span>
+                        <span class="msg-attach-type-lb">Link</span>
+                    </button>
+                </div>
+
+                <!-- Dropzone (arquivo/imagem) -->
+                <div class="msg-dropzone" id="msgDropzone" onclick="msgDropzoneClick()">
+                    <input type="file" id="msgAttachFileInput" style="display:none;">
+                    <div class="msg-dropzone-empty" id="msgDropzoneEmpty">
+                        <i class="fas fa-cloud-arrow-up"></i>
+                        <span id="msgDropzoneText">Clique para selecionar o arquivo</span>
+                        <small>ou arraste e solte aqui</small>
+                    </div>
+                    <div class="msg-dropzone-preview" id="msgDropzonePreview" style="display:none;"></div>
+                </div>
+
+                <!-- Campo de link (só para tipo link) -->
+                <div class="msg-attach-field" id="msgLinkField" style="display:none;">
+                    <label class="msg-field-label"><i class="fas fa-globe"></i> URL</label>
+                    <input type="text" class="msg-popup-search" id="msgLinkUrl" placeholder="https://..." style="margin:0;">
+                </div>
+
+                <!-- Nome do item -->
+                <div class="msg-attach-field">
+                    <label class="msg-field-label"><i class="fas fa-tag"></i> Nome do item</label>
+                    <input type="text" class="msg-popup-search" id="msgAttachName" placeholder="Dê um nome ao anexo..." style="margin:0;">
+                </div>
+            </div>
+            <div class="msg-popup-foot" style="gap:10px;">
+                <button class="msg-btn-ghost" onclick="msgCloseAttachModal()">Cancelar</button>
+                <button class="msg-btn-primary" id="msgAttachConfirmBtn" onclick="msgConfirmAttach()"><i class="fas fa-paper-plane"></i> Enviar</button>
+            </div>
+        </div>
+
+        <!-- Lightbox de imagem -->
+        <div class="msg-lightbox" id="msgLightbox" style="display:none;" onclick="msgCloseLightbox()">
+            <img id="msgLightboxImg" src="" alt="">
+        </div>
+
+        <!-- Diálogo do chat (confirm / prompt bonito) -->
+        <div class="msg-dialog-backdrop" id="msgDialogBackdrop" style="display:none;">
+            <div class="msg-dialog" id="msgDialog" role="dialog" aria-modal="true">
+                <div class="msg-dialog-icon" id="msgDialogIcon"><i class="fas fa-circle-question"></i></div>
+                <h3 class="msg-dialog-title" id="msgDialogTitle">Confirmar</h3>
+                <p class="msg-dialog-text" id="msgDialogText"></p>
+                <input type="text" class="msg-dialog-input" id="msgDialogInput" style="display:none;">
+                <div class="msg-dialog-actions">
+                    <button class="msg-btn-ghost" id="msgDialogCancel">Cancelar</button>
+                    <button class="msg-btn-primary" id="msgDialogConfirm">Confirmar</button>
+                </div>
             </div>
         </div>
 
@@ -3388,5 +3632,6 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="script/ocorrencias-dashboard.js"></script>
+<script src="script/messages.js"></script>
 </body>
 </html>
