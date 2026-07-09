@@ -62,6 +62,7 @@ body.msg-drawer-open .rnc-view-modal { z-index: 1260; }
 }
 .msg-drawer-head-title i { font-size: 18px; opacity: 0.95; }
 .msg-drawer-head-actions { display: flex; gap: 6px; }
+#msgCloseBtn { margin-right: 100px; }
 
 .msg-icon-btn {
     width: 36px;
