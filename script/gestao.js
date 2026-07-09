@@ -137,6 +137,9 @@
             return;
         }
 
+        const originalAtivDup = editingAtivId ? activities.find(a => a.id === editingAtivId) : null;
+        const dupChecklistAtiv = originalAtivDup ? JSON.parse(JSON.stringify({ checklist: originalAtivDup.checklist || [], checklistPublicacao: originalAtivDup.checklistPublicacao || [] })) : null;
+        if (dupChecklistAtiv && typeof resetChecklistItems === 'function') resetChecklistItems(dupChecklistAtiv);
         const formData = {
             titulo: document.getElementById('ativTitulo').value,
             descricao: document.getElementById('ativDescricao').value,
@@ -172,6 +175,8 @@
             document.getElementById('ativMarcador').value = formData.marcador;
 
             if (typeof restoreAnexos === 'function') restoreAnexos('ativ', formData.anexos);
+
+            if (typeof restoreChecklist === 'function') restoreChecklist('ativ', dupChecklistAtiv?.checklist, dupChecklistAtiv?.checklistPublicacao);
 
             onCategoryChange('ativ');
             openFormDrawer('modalAtividades');

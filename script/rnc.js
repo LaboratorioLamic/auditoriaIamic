@@ -2104,6 +2104,69 @@
         openRncDrawer();
     };
 
+    window.rncDuplicate = function() {
+        if (!canEdit()) { toast('Você não tem permissão para duplicar RNCs.', 'error'); return; }
+        var original = (window.rncItems || []).find(function(x){ return x.id === rncEditingId; });
+        if (!original) return;
+
+        var formData = {
+            titulo: getVal('rncFTitulo'),
+            setor: getVal('rncFSetor'),
+            origem: getVal('rncFOrigem'),
+            detalhamento: getVal('rncFDetalhamento'),
+            descricao: getVal('rncFDescricao'),
+            planoAcao: getVal('rncFPlanoAcao'),
+            status: getVal('rncFStatus'),
+            dataInicio: getVal('rncFDataInicio'),
+            dataConclusao: getVal('rncFDataConclusao'),
+            classificacao: (function(){ var c = document.querySelector('.rnc-class-chip.active'); return c ? c.getAttribute('data-cls') : 'critica'; })(),
+            marcador: getVal('rncFMarcador'),
+            responsavel: (typeof msGetValue === 'function') ? msGetValue('rnc-resp') : [],
+            revisor: (typeof msGetValue === 'function') ? msGetValue('rnc-rev') : [],
+            alerta: getVal('rncFAlerta'),
+            anexos: (typeof getAnexosUpload === 'function') ? getAnexosUpload('rnc') : []
+        };
+
+        var dupChecklist = JSON.parse(JSON.stringify({ checklist: original.checklist || [], checklistPublicacao: original.checklistPublicacao || [] }));
+        if (typeof resetChecklistItems === 'function') resetChecklistItems(dupChecklist);
+
+        rncCloseDrawer();
+
+        setTimeout(function() {
+            rncEditingId = null;
+            document.getElementById('rncDrawerTitle').textContent = 'Nova RNC';
+            document.getElementById('rncDrawerSubtitle').textContent = 'Preencha os dados abaixo';
+
+            setVal('rncFTitulo', formData.titulo);
+            setVal('rncFSetor', formData.setor);
+            setVal('rncFOrigem', formData.origem);
+            setVal('rncFDetalhamento', formData.detalhamento);
+            setVal('rncFDescricao', formData.descricao);
+            setVal('rncFPlanoAcao', formData.planoAcao);
+            setVal('rncFStatus', formData.status);
+            setVal('rncFDataInicio', formData.dataInicio);
+            setVal('rncFDataConclusao', formData.dataConclusao);
+            if (typeof msRefreshUsers === 'function') msRefreshUsers();
+            if (typeof msSetValue === 'function') {
+                msSetValue('rnc-resp', formData.responsavel || []);
+                msSetValue('rnc-rev', formData.revisor || []);
+            }
+            setVal('rncFAlerta', formData.alerta);
+            setVal('rncFMarcador', formData.marcador);
+            renderMarkerChips(formData.marcador || '');
+            document.querySelectorAll('.rnc-class-chip').forEach(function(b){
+                b.classList.toggle('active', b.getAttribute('data-cls') === formData.classificacao);
+            });
+
+            if (typeof clearAnexosUpload === 'function') clearAnexosUpload('rnc');
+            if (typeof restoreAnexosUpload === 'function') restoreAnexosUpload('rnc', formData.anexos);
+            if (typeof restoreChecklist === 'function') restoreChecklist('rnc', dupChecklist.checklist, dupChecklist.checklistPublicacao);
+
+            rncCloseAllDropdowns();
+            openRncDrawer();
+        }, 200);
+    };
+
     function clearRncForm() {
         var todayVal = typeof today === 'function' ? today() : new Date().toISOString().split('T')[0];
         setVal('rncFTitulo', '');
@@ -2163,6 +2226,9 @@
         if (bk) bk.classList.add('open');
         var firstTab = d && d.querySelector('.drawer-tab');
         if (firstTab && typeof switchDrawerTab === 'function') switchDrawerTab('rnc', 'info', firstTab);
+        // Mostra botão Duplicar apenas ao editar (não ao criar novo)
+        var dupBtn = document.getElementById('btnDuplicateRnc');
+        if (dupBtn) dupBtn.style.display = rncEditingId ? '' : 'none';
     }
 
     window.rncCloseDrawer = function() {

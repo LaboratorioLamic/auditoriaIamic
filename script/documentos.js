@@ -141,6 +141,9 @@
             return;
         }
 
+        const originalDocDup = editingDocId ? documents.find(d => d.id === editingDocId) : null;
+        const dupChecklistDoc = originalDocDup ? JSON.parse(JSON.stringify({ checklist: originalDocDup.checklist || [], checklistPublicacao: originalDocDup.checklistPublicacao || [] })) : null;
+        if (dupChecklistDoc && typeof resetChecklistItems === 'function') resetChecklistItems(dupChecklistDoc);
         const rotinaValDup = document.getElementById('docRotina').value;
         const formData = {
             title: document.getElementById('docTitulo').value,
@@ -186,6 +189,8 @@
             document.getElementById('docDescricao').value = formData.descricao;
 
             if (typeof restoreAnexos === 'function') restoreAnexos('doc', formData.anexos);
+
+            if (typeof restoreChecklist === 'function') restoreChecklist('doc', dupChecklistDoc?.checklist, dupChecklistDoc?.checklistPublicacao);
 
             onCategoryChange('doc');
             if (typeof onDocRotinaChange === 'function') onDocRotinaChange(true);

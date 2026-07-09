@@ -167,6 +167,9 @@
             return;
         }
 
+        const originalTrainDup = editingTrainId ? trainings.find(t => t.id === editingTrainId) : null;
+        const dupChecklistTrain = originalTrainDup ? JSON.parse(JSON.stringify({ checklist: originalTrainDup.checklist || [], checklistPublicacao: originalTrainDup.checklistPublicacao || [] })) : null;
+        if (dupChecklistTrain && typeof resetChecklistItems === 'function') resetChecklistItems(dupChecklistTrain);
         const rotinaValDup = document.getElementById('trainRotina').value;
         const formData = {
             titulo: document.getElementById('trainTitulo').value,
@@ -213,6 +216,8 @@
             document.getElementById('trainMarcador').value = formData.marcador;
 
             if (typeof restoreAnexos === 'function') restoreAnexos('train', formData.anexos);
+
+            if (typeof restoreChecklist === 'function') restoreChecklist('train', dupChecklistTrain?.checklist, dupChecklistTrain?.checklistPublicacao);
 
             onCategoryChange('train');
             if (typeof onTrainRotinaChange === 'function') onTrainRotinaChange(true);

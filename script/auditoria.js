@@ -183,6 +183,9 @@
             return;
         }
 
+        const originalAuditDup = editingAuditId ? audits.find(a => a.id === editingAuditId) : null;
+        const dupChecklistAudit = originalAuditDup ? JSON.parse(JSON.stringify({ checklist: originalAuditDup.checklist || [], checklistPublicacao: originalAuditDup.checklistPublicacao || [] })) : null;
+        if (dupChecklistAudit && typeof resetChecklistItems === 'function') resetChecklistItems(dupChecklistAudit);
         const formData = {
             titulo: document.getElementById('auditTitulo').value,
             descricao: document.getElementById('auditDescricao').value,
@@ -231,6 +234,8 @@
             document.getElementById('auditMarcador').value = formData.marcador;
 
             if (typeof restoreAnexos === 'function') restoreAnexos('audit', formData.anexos);
+
+            if (typeof restoreChecklist === 'function') restoreChecklist('audit', dupChecklistAudit?.checklist, dupChecklistAudit?.checklistPublicacao);
 
             onCategoryChange('audit');
             openFormDrawer('modalAuditoria');
