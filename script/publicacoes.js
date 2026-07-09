@@ -2237,8 +2237,191 @@ window._vpGoPage = function(page) {
     if (item) renderViewPublicacoes(item);
 };
 
+// ─── Agrupamento de publicações por ciclo de conclusão + nota de qualidade ───
+// Reaproveitado pelo header dos grupos (aba Todos) e pelo gráfico (aba Gráfico).
+function _getPubGroupsWithQuality(item) {
+    const allPubs = item.publicacoes || [];
+    const _clKey = c => c.id || ('t:' + (c.texto || '').trim());
+    const _currentCycle = item.pubCycleId || 1;
+    const _currentDateRef = item.dataPublicacao || item.dataConclusao || null;
+    const _hasConclusaoGroups = allPubs.some(p => !!p.pubCycleId || !!p.dataConclusaoRef);
+    if (!_hasConclusaoGroups) return [];
+
+    const _groups = {};
+    const _SEM_GRUPO = '__sem_conclusao__';
+    const _CURRENT_KEY = `cycle_${_currentCycle}`;
+    allPubs.forEach(p => {
+        let key;
+        if (p.pubCycleId) key = `cycle_${p.pubCycleId}`;
+        else if (p.dataConclusaoRef) key = (p.dataConclusaoRef === _currentDateRef) ? _CURRENT_KEY : p.dataConclusaoRef;
+        else key = _SEM_GRUPO;
+        if (!_groups[key]) _groups[key] = { pubs: [], dateRef: p.dataConclusaoRef || null };
+        _groups[key].pubs.push(p);
+    });
+
+    const _sortedKeys = Object.keys(_groups).sort((a, b) => {
+        if (a === _SEM_GRUPO) return 1;
+        if (b === _SEM_GRUPO) return -1;
+        if (a === _CURRENT_KEY) return -1;
+        if (b === _CURRENT_KEY) return 1;
+        const aIsCycle = a.startsWith('cycle_');
+        const bIsCycle = b.startsWith('cycle_');
+        if (aIsCycle && bIsCycle) return parseInt(b.slice(6)) - parseInt(a.slice(6));
+        if (aIsCycle) return -1;
+        if (bIsCycle) return 1;
+        return b.localeCompare(a);
+    });
+
+    return _sortedKeys.filter(k => k !== _SEM_GRUPO).map(key => {
+        const grp = _groups[key];
+        const labelDate = (key === _CURRENT_KEY) ? _currentDateRef : grp.dateRef;
+        // Ordena as pubs do grupo por data/hora para deduplicar mantendo o preenchimento mais recente
+        const sortedPubs = grp.pubs.slice().sort((a, b) => {
+            const ka = (a.data || '') + 'T' + (a.hora || '');
+            const kb = (b.data || '') + 'T' + (b.hora || '');
+            return ka.localeCompare(kb);
+        });
+        const byKey = new Map();
+        sortedPubs.forEach(pub => {
+            (pub.checklistSnapshot || []).forEach(snap => {
+                if (snap.ncEnabled && snap.checked) byKey.set(_clKey(snap), snap);
+            });
+        });
+        const quality = _computePubQualityScoreFromSnapshot(Array.from(byKey.values()));
+        return { key, dateRef: labelDate, pubs: grp.pubs, quality };
+    }).reverse(); // cronológico (mais antigo → mais recente) para o gráfico
+}
+
+// ─── GRÁFICO — evolução da nota de qualidade nas últimas 12 conclusões ──────
+let _pubQualityChartInstance = null;
+const _PUB_CHART_WINDOW = 12;
+// Offset da janela a partir do fim (0 = as 12 mais recentes). Reset a cada troca de item.
+window._pubChartOffset = 0;
+window._pubChartItemId = null;
+
+window.pubChartNavigate = function(dir, item) {
+    window._pubChartOffset = Math.max(0, window._pubChartOffset + dir);
+    renderPubQualityChart(item);
+};
+
+window.renderPubQualityChart = function(item) {
+    const wrap = document.getElementById('viewPublicacoesChart');
+    if (!wrap) return;
+
+    if (window._pubChartItemId !== item.id) { window._pubChartOffset = 0; window._pubChartItemId = item.id; }
+
+    const allGroups = _getPubGroupsWithQuality(item).filter(g => g.quality);
+
+    if (_pubQualityChartInstance) { _pubQualityChartInstance.destroy(); _pubQualityChartInstance = null; }
+
+    if (allGroups.length === 0) {
+        wrap.innerHTML = `<div class="pub-empty"><i class="fas fa-chart-line"></i><p>Sem dados de qualidade suficientes ainda. A nota aparece quando há itens de não conformidade (N/C) preenchidos em publicações concluídas.</p></div>`;
+        return;
+    }
+
+    // Janela deslizante de 12 conclusões: offset 0 = as mais recentes
+    const maxOffset = Math.max(0, allGroups.length - _PUB_CHART_WINDOW);
+    window._pubChartOffset = Math.min(window._pubChartOffset, maxOffset);
+    const endIdx = allGroups.length - window._pubChartOffset;
+    const startIdx = Math.max(0, endIdx - _PUB_CHART_WINDOW);
+    const groups = allGroups.slice(startIdx, endIdx);
+
+    const canNavOlder = startIdx > 0;
+    const canNavNewer = window._pubChartOffset > 0;
+    const showNav = allGroups.length > _PUB_CHART_WINDOW;
+
+    // Última nota e média sempre baseadas nas 12 conclusões mais recentes (independem da navegação)
+    const last12 = allGroups.slice(-_PUB_CHART_WINDOW);
+    const avg = Math.round((last12.reduce((s, g) => s + g.quality.nota, 0) / last12.length) * 10) / 10;
+    const last = last12[last12.length - 1].quality.nota;
+
+    wrap.innerHTML = `
+        <div class="pub-chart-summary">
+            <div class="pub-chart-stat">
+                <span class="pub-chart-stat-label">Última nota</span>
+                <span class="pub-chart-stat-value pub-group-quality-${_pubQualityTier(last)}">${last.toFixed(1).replace('.0','')}<small>/10</small></span>
+            </div>
+            <div class="pub-chart-stat">
+                <span class="pub-chart-stat-label">Média (últimas ${last12.length} conclus${last12.length !== 1 ? 'ões' : 'ão'})</span>
+                <span class="pub-chart-stat-value pub-group-quality-${_pubQualityTier(avg)}">${avg.toFixed(1).replace('.0','')}<small>/10</small></span>
+            </div>
+        </div>
+        <div class="pub-chart-canvas-wrap">
+            ${showNav ? `<button type="button" class="pub-chart-nav-btn pub-chart-nav-prev" title="Conclusões mais antigas" ${canNavOlder ? '' : 'disabled'} onclick="pubChartNavigate(1, window._pubChartCurrentItem)"><i class="fas fa-chevron-left"></i></button>` : ''}
+            <canvas id="pubQualityChartCanvas"></canvas>
+            ${showNav ? `<button type="button" class="pub-chart-nav-btn pub-chart-nav-next" title="Conclusões mais recentes" ${canNavNewer ? '' : 'disabled'} onclick="pubChartNavigate(-1, window._pubChartCurrentItem)"><i class="fas fa-chevron-right"></i></button>` : ''}
+            ${showNav ? `<div class="pub-chart-range-label">${startIdx + 1}–${endIdx} de ${allGroups.length} conclusões</div>` : ''}
+        </div>`;
+
+    window._pubChartCurrentItem = item;
+
+    const canvas = document.getElementById('pubQualityChartCanvas');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    const labels = groups.map(g => g.dateRef ? _formatDateBR(g.dateRef) : '—');
+    const notas = groups.map(g => g.quality.nota);
+    const pointColors = notas.map(n => n >= 8 ? '#16a34a' : n >= 5 ? '#d97706' : '#dc2626');
+
+    const isDark = document.body.classList.contains('dark-mode');
+    const gridColor = isDark ? 'rgba(148,163,184,0.12)' : 'rgba(100,116,139,0.12)';
+    const tickColor = isDark ? '#94a3b8' : '#64748b';
+
+    _pubQualityChartInstance = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Nota de qualidade',
+                data: notas,
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99,102,241,0.12)',
+                borderWidth: 2.5,
+                pointBackgroundColor: pointColors,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                fill: true,
+                tension: 0.35
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'nearest', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: isDark ? '#1e293b' : '#0f172a',
+                    padding: 10,
+                    titleFont: { weight: '700' },
+                    callbacks: {
+                        title: (items) => `Conclusão: ${items[0].label}`,
+                        label: (ctx) => {
+                            const g = groups[ctx.dataIndex];
+                            return [`Nota: ${g.quality.nota.toFixed(1).replace('.0','')}/10`, `${g.quality.ok} de ${g.quality.total} itens em conformidade`, `${g.pubs.length} publicaç${g.pubs.length !== 1 ? 'ões' : 'ão'}`];
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: { min: 0, max: 10, ticks: { stepSize: 2, color: tickColor }, grid: { color: gridColor } },
+                x: { ticks: { color: tickColor }, grid: { display: false } }
+            },
+            onClick: (evt, elements) => {
+                if (!elements.length) return;
+                const g = groups[elements[0].index];
+                const lastPub = g.pubs.slice().sort((a, b) => ((a.data||'')+'T'+(a.hora||'')).localeCompare((b.data||'')+'T'+(b.hora||'')))[g.pubs.length - 1];
+                const idx = (item.publicacoes || []).indexOf(lastPub);
+                if (idx !== -1 && typeof verPublicacao === 'function') verPublicacao(item.id, window._currentViewTab, idx);
+            }
+        }
+    });
+};
+
 window.renderViewPublicacoes = function(item) {
     const container = document.getElementById('viewPublicacoesContent');
+    const chartWrap = document.getElementById('viewPublicacoesChart');
     if (!container) return;
     const allPubs = item.publicacoes || [];
 
@@ -2253,8 +2436,27 @@ window.renderViewPublicacoes = function(item) {
         if (el) { el.textContent = cnt || ''; el.style.display = cnt ? '' : 'none'; }
     });
 
+    // Aba Gráfico: só existe se houver ao menos uma conclusão com nota de qualidade
+    const _hasQualityData = _getPubGroupsWithQuality(item).some(g => g.quality);
+    const graficoBtn = document.getElementById('pubSubtabGrafico');
+    if (graficoBtn) graficoBtn.style.display = _hasQualityData ? '' : 'none';
+
+    let filtroAtivo = window._pubSubtabAtivo || 'Todos';
+    if (filtroAtivo === 'Gráfico' && !_hasQualityData) {
+        filtroAtivo = window._pubSubtabAtivo = 'Todos';
+        document.querySelectorAll('.pub-subtab').forEach(b => b.classList.toggle('active', b.dataset.tipo === 'Todos'));
+    }
+
+    // Aba Gráfico: modo especial, não usa a tabela de publicações
+    if (filtroAtivo === 'Gráfico') {
+        container.style.display = 'none';
+        if (chartWrap) { chartWrap.style.display = ''; renderPubQualityChart(item); }
+        return;
+    }
+    container.style.display = '';
+    if (chartWrap) chartWrap.style.display = 'none';
+
     // Filtra pelo tipo ativo
-    const filtroAtivo = window._pubSubtabAtivo || 'Todos';
     let pubs = filtroAtivo === 'Todos' ? allPubs.slice() : allPubs.filter(p => p.tipo === filtroAtivo);
 
     // Ordena

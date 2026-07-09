@@ -1611,6 +1611,17 @@ body.dark-mode .pub-subtab.active { color: #93c5fd !important; border-bottom-col
 body.dark-mode .pub-subtab-badge { background: #253348 !important; color: #94a3b8 !important; }
 body.dark-mode .pub-subtab.active .pub-subtab-badge { background: rgba(37,99,235,0.18) !important; color: #93c5fd !important; }
 
+body.dark-mode .pub-chart-stat { background: #1e293b !important; border-color: #334155 !important; }
+body.dark-mode .pub-chart-stat-label { color: #94a3b8 !important; }
+body.dark-mode .pub-chart-stat-value { color: #e2e8f0 !important; }
+body.dark-mode .pub-chart-stat-value.pub-group-quality-good { color: #4ade80 !important; }
+body.dark-mode .pub-chart-stat-value.pub-group-quality-mid { color: #fbbf24 !important; }
+body.dark-mode .pub-chart-stat-value.pub-group-quality-bad { color: #f87171 !important; }
+body.dark-mode .pub-chart-canvas-wrap { background: #1e293b !important; border-color: #334155 !important; }
+body.dark-mode .pub-chart-nav-btn { background: #0f172a !important; border-color: #334155 !important; color: #94a3b8 !important; }
+body.dark-mode .pub-chart-nav-btn:hover:not(:disabled) { background: rgba(99,102,241,0.15) !important; border-color: #4f46e5 !important; color: #a5b4fc !important; }
+body.dark-mode .pub-chart-range-label { color: #64748b !important; }
+
 /* Grupos de conclusão */
 body.dark-mode .pub-conclusao-group { border-color: #334155; }
 body.dark-mode .pub-conclusao-group-header { background: #0f172a; }
