@@ -466,8 +466,9 @@ function msgOpenSeenPopover(ev, msgId) {
     const seenRows = rows.filter(r => r.seen).sort((a, b) => a.ts - b.ts);
     const pendingRows = rows.filter(r => !r.seen);
     const line = (r) => `<div class="msg-seen-row">
+        <i class="fas fa-circle msg-seen-row-dot ${r.seen ? 'seen' : ''}"></i>
         <span class="msg-seen-row-name">${_esc(r.name)}</span>
-        ${r.seen ? `<span class="msg-seen-row-time">${_esc(_seenDateTime(r.ts))}</span>` : `<span class="msg-seen-row-pending">Não visualizou</span>`}
+        ${r.seen ? `<span class="msg-seen-row-time">${_esc(_seenDateTime(r.ts))}</span>` : `<i class="fas fa-check-double msg-seen-row-pending" title="Não visualizou"></i>`}
     </div>`;
     let html = '';
     if (seenRows.length) html += `<div class="msg-seen-group-label">Visualizaram</div>` + seenRows.map(line).join('');
@@ -543,13 +544,13 @@ function _bubbleHtml(m, thread, me) {
                 ${chips ? `<div class="msg-bubble-chips">${chips}</div>` : ''}
             </div>
             <div class="msg-bubble-actions">
-                <span class="msg-bubble-time">${_hora(m.createdAt)}${editado}</span>
-                ${seenIcon}
                 <button class="msg-bubble-act" onclick="msgStartReply('${m._id}')" title="Responder"><i class="fas fa-reply"></i> Responder</button>
                 ${_canModify(m) ? `
                     <button class="msg-bubble-act" onclick="msgEditMessage('${m._id}')" title="Editar"><i class="fas fa-pen"></i></button>
                     <button class="msg-bubble-act msg-bubble-act--danger" onclick="msgDeleteMessage('${m._id}')" title="Apagar"><i class="fas fa-trash-can"></i></button>
                 ` : ''}
+                <span class="msg-bubble-time">${_hora(m.createdAt)}${editado}</span>
+                ${seenIcon}
             </div>
         </div>`;
 }

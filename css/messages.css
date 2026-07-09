@@ -382,29 +382,26 @@ body.dark-mode .theirs .msg-bubble.mentions-me { background: rgba(37,99,235,0.16
 .msg-bubble-actions {
     display: flex; align-items: center; gap: 2px;
     margin: 2px 4px 0;
-    opacity: 0.55;
-    transition: opacity var(--t-fast);
 }
-.msg-bubble-row:hover .msg-bubble-actions { opacity: 1; }
 .mine .msg-bubble-actions { justify-content: flex-end; }
 .msg-bubble-time { font-size: 10px; color: var(--text-muted); margin: 0 4px; }
-.mine .msg-bubble-time { order: 3; }
 .msg-bubble-edited { margin-left: 4px; font-style: italic; opacity: 0.8; }
 .msg-bubble-act {
     background: none; border: none; cursor: pointer;
     font-size: 11px; color: var(--text-muted);
     padding: 3px 6px; border-radius: var(--r-sm);
     display: inline-flex; align-items: center; gap: 4px;
-    transition: color var(--t-fast), background var(--t-fast);
+    opacity: 0.55;
+    transition: color var(--t-fast), background var(--t-fast), opacity var(--t-fast);
 }
+.msg-bubble-row:hover .msg-bubble-act { opacity: 1; }
 .msg-bubble-act:hover { color: var(--accent); background: var(--surface-hover); }
 .msg-bubble-act--danger:hover { color: var(--c-red); background: rgba(220,38,38,0.08); }
 body.dark-mode .msg-bubble-act:hover { background: #1a2740; }
 
 /* Ícone "visualizado" nas bolhas próprias */
-.msg-seen-ic { color: var(--text-muted); }
-.msg-seen-ic.all-seen { color: var(--accent); }
-.msg-seen-ic:hover { color: var(--accent); }
+.msg-seen-ic { color: var(--text-muted); padding: 0; opacity: 1; }
+.msg-seen-ic.all-seen { color: #2563eb; text-shadow: 0 0 8px rgba(37,99,235,0.5); }
 
 /* Popover "quem visualizou" */
 .msg-seen-popover {
@@ -427,13 +424,15 @@ body.dark-mode .msg-bubble-act:hover { background: #1a2740; }
     padding: 6px 8px 4px;
 }
 .msg-seen-row {
-    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    display: flex; align-items: center; gap: 8px;
     padding: 6px 8px;
     border-radius: var(--r-sm);
 }
-.msg-seen-row-name { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg-seen-row-dot { font-size: 8px; color: var(--text-muted); flex-shrink: 0; }
+.msg-seen-row-dot.seen { color: #2563eb; }
+.msg-seen-row-name { flex: 1; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .msg-seen-row-time { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
-.msg-seen-row-pending { font-size: 11px; color: var(--text-muted); opacity: 0.7; flex-shrink: 0; }
+.msg-seen-row-pending { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
 body.dark-mode .msg-seen-popover { background: #0f1826; border-color: #1e2a3d; }
 body.dark-mode .msg-seen-row-name { color: #e6edf7; }
 
