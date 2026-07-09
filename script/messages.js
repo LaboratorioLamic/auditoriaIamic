@@ -1077,31 +1077,36 @@ function _isRncStatusFinal(status) {
     } catch (_) {}
     return _isStatusFinal(status);
 }
-// Nomes (lowercase, sem acento) dos usuários mencionados/participantes-alvo
+const _norm = s => (typeof normalizeText === 'function') ? normalizeText(s) : String(s || '').trim().toLowerCase();
+// Nomes (lowercase, sem acento) dos usuários mencionados/participantes-alvo (sem incluir eu mesmo)
 function _targetUserNames() {
     let ids = [];
+    const me = _me();
     if (_cardTarget === 'compose') {
         ids = _draft.compose.mentions.slice();
     } else if (_activeThreadId && _threads[_activeThreadId]) {
-        const me = _me();
         ids = (_threads[_activeThreadId].participants || []).filter(p => String(p) !== (me && me.id));
     }
-    const norm = s => (typeof normalizeText === 'function') ? normalizeText(s) : String(s || '').trim().toLowerCase();
-    return ids.map(id => norm(_userName(id))).filter(Boolean);
+    return ids.map(id => _norm(_userName(id))).filter(Boolean);
 }
-// O card tem algum dos usuários-alvo como responsável OU revisor (OU colaborador)?
-// Basta 1 pessoa em 1 papel bater — nunca exige que todos os alvos estejam envolvidos.
+// Nome (lowercase, sem acento) do usuário logado (dono do chat)
+function _ownerUserName() {
+    const me = _me();
+    return me ? _norm(me.name) : '';
+}
+// O card liga o DONO do chat e o(s) usuário(s) adicionados: cada um dos dois lados precisa
+// estar no card como responsável OU revisor (não basta um lado sozinho).
 function _cardHasTargetPerson(card, targets) {
+    const owner = _ownerUserName();
     if (!targets.length) return true; // sem alvo definido → não filtra por pessoa
     const parse = (typeof _parseUserField === 'function')
         ? _parseUserField
         : (v => String(v || '').toLowerCase().split(/[;,]/).map(s => s.trim()).filter(Boolean));
-    const norm = s => (typeof normalizeText === 'function') ? normalizeText(s) : String(s || '').trim().toLowerCase();
-    // Normaliza os nomes do card (responsavel/revisor/colaborador) do mesmo jeito que os alvos,
-    // para acentos/caixa não impedirem o match (ex.: "José" vs "jose").
-    const names = [].concat(parse(card.responsavel), parse(card.revisor), parse(card.colaborador)).map(norm).filter(Boolean);
-    // OU lógico: qualquer alvo casando com qualquer papel já inclui o card.
-    return targets.some(t => names.some(n => n === t));
+    // Só responsável/revisor contam como "envolvido" (colaborador não conta para o vínculo).
+    const names = [].concat(parse(card.responsavel), parse(card.revisor)).map(_norm).filter(Boolean);
+    const ownerIn = !owner || names.includes(owner);
+    const targetIn = targets.some(t => names.includes(t));
+    return ownerIn && targetIn;
 }
 function _renderCardList() {
     const src = _AREA_SOURCES.find(a => a.key === _cardArea);
