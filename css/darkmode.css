@@ -2360,6 +2360,7 @@ body.dark-mode .ver-pub-nc-badge.nc-menor    { background: rgba(37,99,235,.12) !
 body.dark-mode .ver-pub-nc-badge.nc-maior    { background: rgba(217,119,6,.12) !important; border-color: rgba(251,191,36,.3) !important; color: #fbbf24 !important; }
 body.dark-mode .ver-pub-nc-badge.nc-critica  { background: rgba(220,38,38,.12) !important; border-color: rgba(248,113,113,.3) !important; color: #f87171 !important; }
 body.dark-mode .pub-row-nc-badge { background: rgba(220,38,38,.12) !important; border-color: rgba(248,113,113,.3) !important; color: #f87171 !important; }
+body.dark-mode .pub-row-rnc-badge { background: rgba(194,65,12,.15) !important; border-color: rgba(251,146,60,.3) !important; color: #fb923c !important; }
 body.dark-mode #pubRncWrap { background: rgba(217,119,6,.07) !important; border-color: rgba(251,191,36,.25) !important; }
 body.dark-mode .pub-rnc-header { color: #fbbf24 !important; }
 body.dark-mode .pub-rnc-chip { background: #1e293b !important; border-color: #334155 !important; color: #e2e8f0 !important; }

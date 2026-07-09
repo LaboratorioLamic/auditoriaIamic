@@ -2301,12 +2301,17 @@ window.renderViewPublicacoes = function(item) {
         const descPreview = (p.descricao || '').slice(0, 60) + ((p.descricao || '').length > 60 ? '…' : '');
         const nAnexos = (p.anexos || []).length;
         const nNc = _pubNcCount(p);
+        const nRnc = Array.isArray(p.rncIds) ? p.rncIds.length : 0;
+        const anexosCell = [
+            nAnexos > 0 ? `<span><i class="fas fa-paperclip" style="color:#94a3b8"></i> ${nAnexos}</span>` : '',
+            nRnc > 0 ? `<span class="pub-row-rnc-badge" title="${nRnc} RNC(s) associada(s)"><i class="fas fa-file-circle-exclamation"></i> ${nRnc} RNC</span>` : ''
+        ].filter(Boolean).join(' ') || '–';
         return `<tr onclick="verPublicacao(${item.id},'${window._currentViewTab}',${i})" title="Ver publicação">
             <td><span class="pub-type-badge ${typeClass}">${p.tipo || '–'}</span></td>
             <td>${p.titulo || descPreview || '–'}${nNc > 0 ? ` <span class="pub-row-nc-badge" title="${nNc} não conformidade(s) registrada(s)"><i class="fas fa-triangle-exclamation"></i> ${nNc} N/C</span>` : ''}</td>
             <td>${dateStr}${window._currentViewTab !== 'documentos' && p.hora ? ' ' + p.hora : ''}</td>
             <td>${p.usuario || '–'}</td>
-            <td>${nAnexos > 0 ? `<i class="fas fa-paperclip" style="color:#94a3b8"></i> ${nAnexos}` : '–'}</td>
+            <td>${anexosCell}</td>
             <td onclick="event.stopPropagation();" style="white-space:nowrap;">
                 ${_canMgPubs ? `<button class="pub-action-btn" title="Editar" onclick="openPublicacaoModal(${i})"><i class="fas fa-pencil-alt"></i></button>` : ''}
                 ${_canMgPubs ? `<button class="pub-action-btn pub-action-btn-del" title="Excluir" onclick="excluirPublicacao(${item.id},'${window._currentViewTab}',${i})"><i class="fas fa-trash"></i></button>` : ''}
@@ -2407,15 +2412,22 @@ window.renderViewPublicacoes = function(item) {
                     <span class="pub-group-cl-bar-label${clPct.pct === 100 ? ' done' : ''}">${clPct.pct}%</span>
                 </div>` : '';
 
-            // Nota de qualidade da última publicação do grupo (baseada nos itens N/C do snapshot)
-            const _lastPub = groupPubs.reduce((best, p) => {
-                const key2 = (p.data || '') + 'T' + (p.hora || '');
-                const bestKey = best ? (best.data || '') + 'T' + (best.hora || '') : '';
-                return (!best || key2 > bestKey) ? p : best;
-            }, null);
-            const _qScore = _lastPub ? _computePubQualityScoreFromSnapshot(_lastPub.checklistSnapshot || []) : null;
+            // Nota de qualidade acumulada do grupo: junta os itens N/C de todas as publicações
+            // do grupo, deduplicando por item (mantém o preenchimento mais recente de cada um).
+            const _qcSorted = groupPubs.slice().sort((a, b) => {
+                const ka = (a.data || '') + 'T' + (a.hora || '');
+                const kb = (b.data || '') + 'T' + (b.hora || '');
+                return ka.localeCompare(kb);
+            });
+            const _qcByKey = new Map();
+            _qcSorted.forEach(pub => {
+                (pub.checklistSnapshot || []).forEach(snap => {
+                    if (snap.ncEnabled && snap.checked) _qcByKey.set(_clKey(snap), snap);
+                });
+            });
+            const _qScore = _computePubQualityScoreFromSnapshot(Array.from(_qcByKey.values()));
             const qualityHtml = _qScore ? `
-                <span class="pub-group-quality-badge pub-group-quality-${_pubQualityTier(_qScore.nota)}" title="Nota de qualidade da última publicação (${_qScore.ok} de ${_qScore.total} itens em conformidade)">
+                <span class="pub-group-quality-badge pub-group-quality-${_pubQualityTier(_qScore.nota)}" title="Nota de qualidade acumulada do grupo (${_qScore.ok} de ${_qScore.total} itens em conformidade)">
                     <i class="fas fa-gauge-high"></i><span class="pgqb-num">${_qScore.nota.toFixed(1).replace('.0','')}</span><span class="pgqb-max">/10</span>
                 </span>` : '';
 

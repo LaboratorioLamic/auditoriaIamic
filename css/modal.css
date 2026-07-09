@@ -3742,6 +3742,22 @@ button.ver-pub-anexo-card {
 }
 .pub-row-nc-badge i { font-size: 9px; }
 
+/* Badge de contagem de RNC associada na coluna Anexos da tabela de publicações */
+.pub-row-rnc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #c2410c;
+    font-size: 10.5px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.pub-row-rnc-badge i { font-size: 9px; }
+
 /* Seção de associação a RNC no modal de publicação */
 #pubRncWrap {
     border: 1px solid #fde68a;
