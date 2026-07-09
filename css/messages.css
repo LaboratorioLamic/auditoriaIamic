@@ -401,6 +401,42 @@ body.dark-mode .theirs .msg-bubble.mentions-me { background: rgba(37,99,235,0.16
 .msg-bubble-act--danger:hover { color: var(--c-red); background: rgba(220,38,38,0.08); }
 body.dark-mode .msg-bubble-act:hover { background: #1a2740; }
 
+/* Ícone "visualizado" nas bolhas próprias */
+.msg-seen-ic { color: var(--text-muted); }
+.msg-seen-ic.all-seen { color: var(--accent); }
+.msg-seen-ic:hover { color: var(--accent); }
+
+/* Popover "quem visualizou" */
+.msg-seen-popover {
+    position: fixed;
+    width: 240px;
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 1360;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 8px;
+    display: flex; flex-direction: column; gap: 1px;
+    animation: msgAnchorIn 0.16s var(--ease-spring);
+}
+.msg-seen-group-label {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+    color: var(--text-muted);
+    padding: 6px 8px 4px;
+}
+.msg-seen-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--r-sm);
+}
+.msg-seen-row-name { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg-seen-row-time { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.msg-seen-row-pending { font-size: 11px; color: var(--text-muted); opacity: 0.7; flex-shrink: 0; }
+body.dark-mode .msg-seen-popover { background: #0f1826; border-color: #1e2a3d; }
+body.dark-mode .msg-seen-row-name { color: #e6edf7; }
+
 /* Edição in-place da mensagem */
 .msg-edit-box { margin-top: 8px; }
 .msg-edit-textarea {

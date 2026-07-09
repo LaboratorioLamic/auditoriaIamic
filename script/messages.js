@@ -432,6 +432,77 @@ function _renderThread(threadId) {
     box.innerHTML = msgs.map(m => _bubbleHtml(m, t, me)).join('');
     box.scrollTop = box.scrollHeight;
 }
+// ---------------------------------------------------------------------------
+// Ícone "visualizado" (bolhas próprias): cinza se falta alguém ler, azul se todos leram
+// ---------------------------------------------------------------------------
+function _seenInfo(m, thread, me) {
+    const others = (thread.participants || []).filter(p => String(p) !== (me && me.id));
+    const lidoPor = thread.lidoPor || {};
+    const rows = others.map(pid => {
+        const ts = lidoPor[pid] || 0;
+        const seen = ts >= (m.createdAt || 0);
+        return { id: pid, name: _userName(pid), seen, ts: seen ? ts : 0 };
+    });
+    const allSeen = rows.length > 0 && rows.every(r => r.seen);
+    return { rows, allSeen };
+}
+function _seenIconHtml(m, thread, me) {
+    const { rows, allSeen } = _seenInfo(m, thread, me);
+    if (!rows.length) return '';
+    return `<button class="msg-bubble-act msg-seen-ic ${allSeen ? 'all-seen' : ''}" onclick="msgOpenSeenPopover(event, '${m._id}')" title="${allSeen ? 'Todos visualizaram' : 'Falta visualizar'}"><i class="fas fa-check-double"></i></button>`;
+}
+let _seenMsgId = null;
+function msgOpenSeenPopover(ev, msgId) {
+    ev.stopPropagation();
+    const pop = document.getElementById('msgSeenPopover');
+    if (!pop) return;
+    if (_seenMsgId === msgId && pop.style.display === 'flex') { msgCloseSeenPopover(); return; }
+    const t = _threads[_activeThreadId];
+    const me = _me();
+    const m = t && t.mensagens && t.mensagens[msgId];
+    if (!t || !m) return;
+    _seenMsgId = msgId;
+    const { rows } = _seenInfo(m, t, me);
+    const seenRows = rows.filter(r => r.seen).sort((a, b) => a.ts - b.ts);
+    const pendingRows = rows.filter(r => !r.seen);
+    const line = (r) => `<div class="msg-seen-row">
+        <span class="msg-seen-row-name">${_esc(r.name)}</span>
+        ${r.seen ? `<span class="msg-seen-row-time">${_esc(_seenDateTime(r.ts))}</span>` : `<span class="msg-seen-row-pending">Não visualizou</span>`}
+    </div>`;
+    let html = '';
+    if (seenRows.length) html += `<div class="msg-seen-group-label">Visualizaram</div>` + seenRows.map(line).join('');
+    if (pendingRows.length) html += `<div class="msg-seen-group-label">Ainda não visualizaram</div>` + pendingRows.map(line).join('');
+    pop.innerHTML = html;
+
+    pop.style.display = 'flex';
+    const r = ev.currentTarget.getBoundingClientRect();
+    const pw = 240;
+    let left = r.right - pw;
+    if (left < 8) left = 8;
+    const spaceBelow = window.innerHeight - r.bottom;
+    if (spaceBelow < 160) pop.style.top = (r.top - 8) + 'px', pop.style.transform = 'translateY(-100%)';
+    else pop.style.top = (r.bottom + 6) + 'px', pop.style.transform = 'none';
+    pop.style.left = left + 'px';
+    setTimeout(() => document.addEventListener('mousedown', _closeSeenOnOutside), 0);
+}
+function _closeSeenOnOutside(e) {
+    const pop = document.getElementById('msgSeenPopover');
+    if (pop && !pop.contains(e.target)) msgCloseSeenPopover();
+}
+function msgCloseSeenPopover() {
+    const pop = document.getElementById('msgSeenPopover');
+    if (pop) pop.style.display = 'none';
+    _seenMsgId = null;
+    document.removeEventListener('mousedown', _closeSeenOnOutside);
+}
+function _seenDateTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const hoje = new Date();
+    const mesmodia = d.toDateString() === hoje.toDateString();
+    const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return mesmodia ? hora : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + hora;
+}
 function _bubbleHtml(m, thread, me) {
     // Mensagem de sistema (centralizada, sem autor/ações)
     if (m.sistema) {
@@ -461,6 +532,7 @@ function _bubbleHtml(m, thread, me) {
     });
     const texto = m.texto ? `<div class="msg-bubble-text">${_linkifyMentions(m.texto)}</div>` : '';
     const editado = m.editedAt ? `<span class="msg-bubble-edited" title="Editada">(editada)</span>` : '';
+    const seenIcon = mine ? _seenIconHtml(m, thread, me) : '';
     return `
         <div class="msg-bubble-row ${mine ? 'mine' : 'theirs'}" data-mid="${m._id}">
             ${!mine ? `<span class="msg-bubble-author">${_esc(m.autor && m.autor.name)}</span>` : ''}
@@ -472,6 +544,7 @@ function _bubbleHtml(m, thread, me) {
             </div>
             <div class="msg-bubble-actions">
                 <span class="msg-bubble-time">${_hora(m.createdAt)}${editado}</span>
+                ${seenIcon}
                 <button class="msg-bubble-act" onclick="msgStartReply('${m._id}')" title="Responder"><i class="fas fa-reply"></i> Responder</button>
                 ${_canModify(m) ? `
                     <button class="msg-bubble-act" onclick="msgEditMessage('${m._id}')" title="Editar"><i class="fas fa-pen"></i></button>
@@ -1513,6 +1586,7 @@ Object.assign(window, {
     msgOpenComposer, msgSendNew, msgSendReply,
     msgOpenThread, msgLeaveThread, msgDeleteThread,
     msgOpenMutePopover, msgCloseMutePopover, msgPickMute,
+    msgOpenSeenPopover, msgCloseSeenPopover,
     msgOpenMembers, msgCloseMembers, msgAddMember, msgRemoveMember, msgTransferOwnership, msgRenderMemberAddList: _renderMemberAddList,
     msgEditTitle,
     msgStartReply, msgCancelReply, msgEditMessage, msgDeleteMessage,
