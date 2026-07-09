@@ -1164,6 +1164,14 @@ window.renderViewAnexos = function(item) {
         const info = window._anexoIconInfo ? window._anexoIconInfo(a) : { icon: 'file' };
         const icon = _faIconMap[info.icon] || 'fa-file';
         const iconClass = _faClassMap[info.icon] || 'icon-file';
+        if (a.tipo === 'imagem') {
+            const blobId = (a.fileId || '').replace(/'/g, "\\'");
+            const safeName = name.replace(/'/g, "\\'");
+            return `<button type="button" class="view-anexo-card" onclick="openImgLightboxBlob('${blobId}','${safeName}')">
+                <i class="fas ${icon} anexo-icon ${iconClass}"></i>
+                <span class="anexo-name">${name}</span>
+            </button>`;
+        }
         return `<a href="${a.url}" target="_blank" class="view-anexo-card">
             <i class="fas ${icon} anexo-icon ${iconClass}"></i>
             <span class="anexo-name">${name}</span>
@@ -2399,6 +2407,18 @@ window.renderViewPublicacoes = function(item) {
                     <span class="pub-group-cl-bar-label${clPct.pct === 100 ? ' done' : ''}">${clPct.pct}%</span>
                 </div>` : '';
 
+            // Nota de qualidade da última publicação do grupo (baseada nos itens N/C do snapshot)
+            const _lastPub = groupPubs.reduce((best, p) => {
+                const key2 = (p.data || '') + 'T' + (p.hora || '');
+                const bestKey = best ? (best.data || '') + 'T' + (best.hora || '') : '';
+                return (!best || key2 > bestKey) ? p : best;
+            }, null);
+            const _qScore = _lastPub ? _computePubQualityScoreFromSnapshot(_lastPub.checklistSnapshot || []) : null;
+            const qualityHtml = _qScore ? `
+                <span class="pub-group-quality-badge pub-group-quality-${_pubQualityTier(_qScore.nota)}" title="Nota de qualidade da última publicação (${_qScore.ok} de ${_qScore.total} itens em conformidade)">
+                    <i class="fas fa-gauge-high"></i><span class="pgqb-num">${_qScore.nota.toFixed(1).replace('.0','')}</span><span class="pgqb-max">/10</span>
+                </span>` : '';
+
             groupsHtml += `
                 <div class="pub-conclusao-group${_gcOpen ? ' open' : ''}" id="${groupId}">
                     <div class="pub-conclusao-group-header" onclick="(function(el){el.classList.toggle('open');localStorage.setItem('${_gcKey}',el.classList.contains('open')?'1':'0');})(document.getElementById('${groupId}'))">
@@ -2406,6 +2426,7 @@ window.renderViewPublicacoes = function(item) {
                         <i class="fas fa-calendar-check pub-conclusao-group-cal"></i>
                         <span class="pub-conclusao-group-label">${groupLabel}</span>
                         ${pctHtml}
+                        ${qualityHtml}
                         <span class="pub-conclusao-group-count">${groupPubs.length} publicaç${groupPubs.length !== 1 ? 'ões' : 'ão'}</span>
                     </div>
                     <div class="pub-conclusao-group-body" style="display:${_gcOpen ? '' : 'none'};">

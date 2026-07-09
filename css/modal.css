@@ -2041,9 +2041,11 @@
     color: #374151;
     font-size: 12px;
     font-weight: 500;
+    font-family: inherit;
     text-align: center;
     transition: all 0.18s;
     cursor: pointer;
+    width: 100%;
 }
 .view-anexo-card:hover { border-color: #cbd5e1; box-shadow: 0 4px 16px rgba(15,23,42,0.1); transform: translateY(-2px); }
 .view-anexo-card .anexo-icon { font-size: 28px; color: #ef4444; }
@@ -2159,6 +2161,40 @@
     white-space: nowrap;
 }
 .pub-group-cl-bar-label.done { color: #16a34a; }
+
+/* Selo de nota de qualidade na linha de conclusão (baseado na última publicação do grupo) */
+.pub-group-quality-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 8px;
+    padding: 3px 10px 3px 7px;
+    border-radius: 99px;
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    flex-shrink: 0;
+}
+.pub-group-quality-badge i { font-size: 11px; }
+.pub-group-quality-badge .pgqb-num { font-size: 12.5px; }
+.pub-group-quality-badge .pgqb-max { font-weight: 600; opacity: 0.65; font-size: 10px; margin-left: 1px; }
+
+.pub-group-quality-good {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    color: #15803d;
+    border-color: #a7f3d0;
+}
+.pub-group-quality-mid {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    color: #b45309;
+    border-color: #fde68a;
+}
+.pub-group-quality-bad {
+    background: linear-gradient(135deg, #fef2f2, #fee2e2);
+    color: #b91c1c;
+    border-color: #fecaca;
+}
 
 /* Modal reset checklist */
 .cl-reset-overlay {
