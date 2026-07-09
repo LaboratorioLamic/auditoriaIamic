@@ -642,8 +642,10 @@ function _calRenderEventChip(entry, canEdit) {
         const icon = realizada ? 'check-circle' : 'clock';
         const pubLabel = realizada && pub ? (pub.tipo || 'Publicação') : 'Previsto';
         const dateInfo = realizada && pub ? ` · ${pub.hora || ''}` : '';
-        chip.innerHTML = `<i class="fas fa-${icon}"></i> ${_calEsc(titulo)}`;
-        chip.title = `${pubLabel}${dateInfo} — ${item.titulo}`;
+        const nRnc = realizada && pub && Array.isArray(pub.rncIds) ? pub.rncIds.length : 0;
+        const rncBadge = nRnc > 0 ? `<span class="cal-evt-rnc-badge" title="${nRnc} RNC gerada(s) nesta publicação"><i class="fas fa-triangle-exclamation"></i> ${nRnc}</span>` : '';
+        chip.innerHTML = `<i class="fas fa-${icon}"></i> ${_calEsc(titulo)}${rncBadge}`;
+        chip.title = `${pubLabel}${dateInfo} — ${item.titulo}${nRnc > 0 ? ` (${nRnc} RNC associada${nRnc > 1 ? 's' : ''})` : ''}`;
         chip.onclick = (e) => { e.stopPropagation(); _calOpenPubEntry(item, pub, pubIdx); };
     } else {
         chip.classList.add('cal-evt-tarefa');
@@ -695,10 +697,13 @@ function _calRenderEventCard(entry, canEdit) {
         const pubDate = realizada && pub ? `<div class="cal-ecard-resp"><i class="fas fa-calendar" style="font-size:10px;"></i> ${pub.data || ''} ${pub.hora || ''}</div>` : '';
         const _pubUsrName = (realizada && pub && pub.usuario) ? ((typeof resolveUserId === 'function' ? resolveUserId(pub.usuario) : null) || pub.usuario) : '';
         const pubUser = _pubUsrName ? `<div class="cal-ecard-resp"><i class="fas fa-user" style="font-size:10px;"></i> ${_calEsc(_pubUsrName)}</div>` : '';
+        const nRnc = realizada && pub && Array.isArray(pub.rncIds) ? pub.rncIds.length : 0;
+        const rncBadge = nRnc > 0 ? `<span class="cal-evt-rnc-badge" title="${nRnc} RNC gerada(s) nesta publicação"><i class="fas fa-triangle-exclamation"></i> ${nRnc} RNC</span>` : '';
         card.innerHTML = `
             <div class="cal-ecard-top">
                 <i class="fas fa-${realizada ? 'check-circle' : 'clock'}" style="color:${realizada ? 'var(--c-green)' : 'var(--c-orange)'}"></i>
                 <span class="cal-ecard-type">${_calEsc(pubTipo)}</span>
+                ${rncBadge}
             </div>
             <div class="cal-ecard-title">${_calEsc(item.titulo)}</div>
             ${pubDesc ? `<div class="cal-ecard-desc">${_calEsc(pubDesc)}</div>` : ''}

@@ -2113,6 +2113,7 @@ body.dark-mode #historyViewContent      { background: transparent !important; co
 body.dark-mode .cal-day-modal           { background: #1e293b !important; box-shadow: -8px 0 32px rgba(0,0,0,0.45) !important; }
 body.dark-mode .cal-day-modal-body      { background: #0f172a !important; }
 body.dark-mode .cal-day-modal-body .cal-event-card { background: #1e293b !important; }
+body.dark-mode .cal-evt-rnc-badge { background: rgba(220,38,38,.15) !important; color: #f87171 !important; border-color: rgba(248,113,113,.3) !important; }
 
 /* =========================================================================
    DARK MODE — Cabeçalhos de janelas (gradientes escurecidos)

@@ -200,6 +200,24 @@
     border-left: 3px solid #f59e0b;
 }
 
+.cal-evt-rnc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: auto;
+    padding: 0 5px;
+    border-radius: 99px;
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    font-size: 9.5px;
+    font-weight: 700;
+    line-height: 1.6;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.cal-evt-rnc-badge i { font-size: 8.5px; }
+
 .cal-evt-dot {
     width: 7px;
     height: 7px;
