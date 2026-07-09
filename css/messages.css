@@ -290,7 +290,7 @@ body.dark-mode .msg-members-add { border-top-color: #1e2a3d; }
         radial-gradient(circle at 100% 0%, rgba(37,99,235,0.04), transparent 40%),
         var(--bg);
 }
-.msg-bubble-row { display: flex; flex-direction: column; max-width: 82%; }
+.msg-bubble-row { display: flex; flex-direction: column; max-width: 82%; min-width: 0; }
 .msg-bubble-row.mine { align-self: flex-end; align-items: flex-end; }
 .msg-bubble-row.theirs { align-self: flex-start; align-items: flex-start; }
 
@@ -306,6 +306,9 @@ body.dark-mode .msg-members-add { border-top-color: #1e2a3d; }
     box-shadow: var(--shadow-xs);
     word-wrap: break-word;
     overflow-wrap: anywhere;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 .mine .msg-bubble {
     background: var(--grad-accent);
@@ -350,7 +353,7 @@ body.dark-mode .theirs .msg-bubble.mentions-me { background: rgba(37,99,235,0.16
 /* Chips de card e anexos dentro da bolha */
 .msg-bubble-chips { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .msg-chip {
-    display: inline-flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; gap: 8px;
     padding: 7px 10px;
     border-radius: var(--r-sm);
     background: var(--surface-muted);
@@ -360,11 +363,14 @@ body.dark-mode .theirs .msg-bubble.mentions-me { background: rgba(37,99,235,0.16
     cursor: pointer;
     transition: background var(--t-fast), transform var(--t-fast);
     text-decoration: none;
+    width: 100%;
     max-width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
 }
 .msg-chip:hover { background: var(--surface-hover); transform: translateY(-1px); }
 .msg-chip i { color: var(--accent); flex-shrink: 0; }
-.msg-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .mine .msg-chip { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.25); color: #fff; }
 .mine .msg-chip i { color: #fff; }
 .msg-chip--card i { color: var(--c-purple); }

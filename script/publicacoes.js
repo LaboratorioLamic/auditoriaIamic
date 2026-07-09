@@ -2799,9 +2799,16 @@ window.verPublicacao = function(id, tab, index) {
             });
         });
 
-        // Progresso inclui concluídos anteriores
-        const done  = clItems.filter(c => c.checked).length + prevCompleted.length;
-        const total = clItems.length + prevCompleted.length;
+        // Progresso inclui concluídos anteriores — usa união de chaves para não contar
+        // duas vezes um item que já vem completo no snapshot atual (checklistSnapshot de
+        // novas publicações sempre inclui a lista inteira, não só os itens pendentes)
+        const _pKey = c => c.id || (c.texto || '').trim();
+        const totalKeys = new Set(clItems.map(_pKey));
+        prevCompleted.forEach(c => totalKeys.add(_pKey(c)));
+        const total = totalKeys.size;
+        const doneKeys = new Set(clItems.filter(c => c.checked).map(_pKey));
+        prevCompleted.forEach(c => doneKeys.add(_pKey(c)));
+        const done = doneKeys.size;
         const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
         // Agrupa prev por geralIndex para injetar nos grupos corretos
         const prevByGroup = new Map();

@@ -520,7 +520,8 @@ function _bubbleHtml(m, thread, me) {
     let chips = '';
     (m.cardsVinculados || []).forEach(c => {
         const am = _areaMeta(c.area);
-        chips += `<a class="msg-chip msg-chip--card" onclick="msgOpenCard('${_esc(c.area)}','${_esc(c.id)}')"><i class="fas ${am.icon}" style="color:${am.color}"></i><span>${_esc(c.titulo || 'Card')} · ${_esc(am.label)}</span></a>`;
+        const _titulo = (c.titulo || 'Card').slice(0, 60) + ((c.titulo || '').length > 60 ? '…' : '');
+        chips += `<a class="msg-chip msg-chip--card" onclick="msgOpenCard('${_esc(c.area)}','${_esc(c.id)}')" title="${_esc(c.titulo || 'Card')}"><i class="fas ${am.icon}" style="color:${am.color}"></i><span>${_esc(_titulo)} · ${_esc(am.label)}</span></a>`;
     });
     (m.anexos || []).forEach(a => {
         if (a.tipo === 'imagem') {
