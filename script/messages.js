@@ -1655,9 +1655,29 @@ function _acKeydown(e) {
 }
 
 function _autoGrow(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 130) + 'px'; }
+
+// Colar imagem da área de transferência (Ctrl+V) direto no chat, com nome "Printscreen"
+function _handlePasteImage(e, target) {
+    if (!_me()) return;
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    for (const it of items) {
+        if (it.kind === 'file' && it.type && it.type.indexOf('image/') === 0) {
+            const file = it.getAsFile();
+            if (!file) continue;
+            e.preventDefault();
+            _attachTarget = target;
+            _handleAttachFile(file, 'imagem', 'Printscreen').catch(err => _toast('Erro ao colar imagem: ' + (err.message || err), 'error'));
+            return;
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    const ci = document.getElementById('msgComposeInput');
+    if (ci) ci.addEventListener('paste', e => _handlePasteImage(e, 'compose'));
     const ti = document.getElementById('msgThreadInput');
     if (ti) {
+        ti.addEventListener('paste', e => _handlePasteImage(e, 'thread'));
         ti.addEventListener('input', () => { _autoGrow(ti); _acCheck(ti); });
         ti.addEventListener('click', () => _acCheck(ti));
         ti.addEventListener('keyup', (e) => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') _acCheck(ti); });
