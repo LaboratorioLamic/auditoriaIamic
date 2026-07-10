@@ -274,11 +274,16 @@ function startMessagesListener() {
     if (_msgListener || !window.firebaseOnValue || !window.firebaseDatabase) return;
     _msgListener = window.firebaseOnValue(_ref('messages'), (snap) => {
         _threads = (snap && snap.exists()) ? (snap.val() || {}) : {};
-        _refreshBadge();
         // Re-render se drawer aberto
         const drawer = document.getElementById('msgDrawer');
+        const threadOpen = drawer && drawer.classList.contains('open') &&
+            _activeThreadId && document.getElementById('msgViewThread').style.display !== 'none';
+        // Thread aberta na tela: msgs recém-chegadas já estão sendo vistas → marca lido
+        // ANTES de calcular o badge, para não notificar o que está visível.
+        if (threadOpen && _threads[_activeThreadId]) _markRead(_activeThreadId);
+        _refreshBadge();
         if (drawer && drawer.classList.contains('open')) {
-            if (_activeThreadId && document.getElementById('msgViewThread').style.display !== 'none') {
+            if (threadOpen) {
                 // Não destrói uma edição in-place em aberto
                 if (document.querySelector('#msgBubbles .msg-edit-box')) { /* adia re-render */ }
                 else if (_threads[_activeThreadId]) _renderThread(_activeThreadId);
@@ -671,7 +676,13 @@ function _markRead(threadId) {
     const me = _me();
     const t = _threads[threadId];
     if (!me || !t) return;
-    const patch = {}; patch['lidoPor/' + me.id] = Date.now();
+    const now = Date.now();
+    // Já marcado como lido neste instante? Evita reescrita/loop no listener.
+    if (((t.lidoPor && t.lidoPor[me.id]) || 0) >= (t.lastMsgAt || 0)) return;
+    // Atualiza local otimisticamente para o badge não piscar antes do próximo snapshot.
+    if (!t.lidoPor) t.lidoPor = {};
+    t.lidoPor[me.id] = now;
+    const patch = {}; patch['lidoPor/' + me.id] = now;
     _updateThread(threadId, patch).catch(() => {});
     setTimeout(_refreshBadge, 200);
 }
