@@ -258,6 +258,15 @@ async function _updateThread(threadId, patch) {
     await window.firebaseUpdate(_ref('messages/' + threadId), patch);
 }
 async function _removeThread(threadId) {
+    // Apaga imgBlobs de todas as imagens anexadas às mensagens desta thread,
+    // evitando que virem órfãos quando a thread inteira é removida.
+    const t = _threads[threadId];
+    const mensagens = (t && t.mensagens) || {};
+    Object.keys(mensagens).forEach(mid => {
+        (mensagens[mid].anexos || []).forEach(a => {
+            if (a && a.blobId && typeof window._deleteImgBlob === 'function') window._deleteImgBlob(a.blobId);
+        });
+    });
     await window.firebaseSet(_ref('messages/' + threadId), null);
 }
 
@@ -306,10 +315,7 @@ function _purgeExpiredMessages() {
         (async () => {
             try {
                 if (expired.length >= msgs.length) {
-                    // Todas as mensagens expiraram: apaga a thread inteira (limpa imagens antes)
-                    msgs.forEach(m => (m.anexos || []).forEach(a => {
-                        if (a.blobId && typeof window._deleteImgBlob === 'function') window._deleteImgBlob(a.blobId);
-                    }));
+                    // Todas as mensagens expiraram: apaga a thread inteira (_removeThread limpa as imagens)
                     await _removeThread(threadId);
                 } else {
                     const patch = {};
@@ -802,6 +808,7 @@ async function msgDeleteMessage(msgId, skipConfirm) {
     const msgs = _msgsArr(t);
     // Se for a única mensagem da conversa, apagar a mensagem esvaziaria a thread → apaga a thread toda
     if (msgs.length <= 1) {
+        // _removeThread limpa os imgBlobs das mensagens antes de apagar a thread
         try { await _removeThread(_activeThreadId); msgBackToList(); _toast('Mensagem apagada.', 'success'); }
         catch (e) { _toast('Erro ao apagar: ' + (e.message || e), 'error'); }
         return;

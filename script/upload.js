@@ -440,6 +440,21 @@ window.purgeOrphanImgBlobs = async function(collections) {
     });
   });
 
+  // Coleta blobIds de imagens anexadas a mensagens do batepapo (/messages).
+  // Sem isso, imagens do chat seriam tratadas como órfãs e apagadas.
+  try {
+    const msgSnap  = await dbGet(dbRef(db, 'messages'));
+    const threads  = msgSnap.exists() ? (msgSnap.val() || {}) : {};
+    Object.keys(threads).forEach(tid => {
+      const mensagens = (threads[tid] && threads[tid].mensagens) || {};
+      Object.keys(mensagens).forEach(mid => {
+        (mensagens[mid].anexos || []).forEach(a => {
+          if (a && a.blobId) referenced.add(a.blobId);
+        });
+      });
+    });
+  } catch (_) {}
+
   const orphans = storedIds.filter(id => !referenced.has(id));
 
   await Promise.all(
