@@ -26,6 +26,19 @@ const _draft = {
 let _mentionSel = [];           // seleção temporária no popup de menções
 let _cardArea = 'ativ';         // área ativa no seletor de card
 
+// Cooldown de envio: evita sobrecarregar o Firebase com envios em rajada
+const MSG_SEND_COOLDOWN_MS = 2000;
+let _lastMsgSendAt = 0;
+function _msgSendOnCooldown() {
+    const remaining = MSG_SEND_COOLDOWN_MS - (Date.now() - _lastMsgSendAt);
+    if (remaining > 0) {
+        _toast('Aguarde ' + Math.ceil(remaining / 1000) + 's para enviar outra mensagem.', 'error');
+        return true;
+    }
+    _lastMsgSendAt = Date.now();
+    return false;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -747,6 +760,7 @@ async function msgSendNew() {
     d.titulo = tInput ? tInput.value.trim() : '';
     if (!d.mentions.length) { _toast('Selecione ao menos um usuário.', 'error'); return; }
     if (!texto && !d.cards.length && !d.anexos.length) { _toast('Escreva uma mensagem ou anexe algo.', 'error'); return; }
+    if (_msgSendOnCooldown()) return;
 
     const btn = document.querySelector('#msgViewCompose .msg-btn-primary');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...'; }
@@ -810,6 +824,7 @@ async function msgSendReply() {
     const texto = input.value.trim();
     const d = _draft.thread;
     if (!texto && !d.cards.length && !d.anexos.length) return;
+    if (_msgSendOnCooldown()) return;
 
     const now = Date.now();
     const msgId = _uid();
@@ -827,6 +842,7 @@ async function msgSendReply() {
     patch['lidoPor/' + me.id] = now;
 
     input.value = '';
+    _autoGrow(input);
     _draft.thread = { cards: [], anexos: [] };
     _replyTo = null;
     document.getElementById('msgReplyCtx').style.display = 'none';

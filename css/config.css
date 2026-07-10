@@ -378,6 +378,17 @@
 .list-manager .list-actions .remove-icon { color: var(--ind-red); }
 .list-manager .list-actions .remove-icon:hover { background: #fef2f2; transform: scale(1.1); }
 .color-dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; margin-right: 8px; border: 1px solid rgba(0,0,0,0.08); }
+.list-item-edit-input {
+    width: 100%;
+    font-size: 13.5px;
+    font-family: inherit;
+    padding: 4px 6px;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    outline: none;
+    background: var(--bg-elevated, #fff);
+    color: inherit;
+}
 
 .color-picker { display: flex; gap: 10px; margin-top: 12px; justify-content: center; flex-wrap: wrap; }
 .color-option {

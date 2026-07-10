@@ -1994,10 +1994,11 @@ function viewHistoryItem(id, tab, historyIndex) {
             isStatus = true;
             listname = 'STATUS';
         } else if (genericKey === 'marcadores') {
-            if(currentTab === 'auditoria') currentListKey = 'auditMarcadores';
-            else if(currentTab === 'treinamentos') currentListKey = 'trainMarcadores';
-            else if(currentTab === 'atividades') currentListKey = 'ativMarcadores';
-            else if(currentTab === 'manutencao') currentListKey = 'mantMarcadores';
+            const markerTab = window._currentViewTab || currentTab;
+            if(markerTab === 'auditoria') currentListKey = 'auditMarcadores';
+            else if(markerTab === 'treinamentos') currentListKey = 'trainMarcadores';
+            else if(markerTab === 'atividades') currentListKey = 'ativMarcadores';
+            else if(markerTab === 'manutencao') currentListKey = 'mantMarcadores';
             else currentListKey = 'docMarcadores';
             isStatus = true; // usa a mesma lógica de objetos com cor
             listname = 'MARCADORES';
@@ -2084,12 +2085,13 @@ function viewHistoryItem(id, tab, historyIndex) {
             const canEdit = !isUser;
             const canDelete = !isUser;
 
+            const escVal = itemVal.replace(/'/g, "\\'");
             body.innerHTML += `<tr>
-                <td>${displayHtml}${isUser ? ' <span style="color: #666; font-size: 11px;">(Usuário cadastrado)</span>' : ''}</td>
+                <td class="list-item-cell" data-name="${_escAttr(itemVal)}">${displayHtml}${isUser ? ' <span style="color: #666; font-size: 11px;">(Usuário cadastrado)</span>' : ''}</td>
                 <td>
                     <div class="list-actions">
-                        ${canEdit ? `<i class="fas fa-pen edit-icon" onclick="editListItem('${currentListKey}','${itemVal.replace(/'/g, "\\'")}')" title="Editar nome"></i>` : ''}
-                        ${canDelete ? `<i class="fas fa-trash remove-icon" onclick="removeFromList('${currentListKey}','${itemVal.replace(/'/g, "\\'")}')" title="Excluir"></i>` : ''}
+                        ${canEdit ? `<i class="fas fa-pen edit-icon" onclick="editListItem('${currentListKey}','${escVal}')" title="Editar nome"></i>` : ''}
+                        ${canDelete ? `<i class="fas fa-trash remove-icon" onclick="removeFromList('${currentListKey}','${escVal}')" title="Excluir"></i>` : ''}
                     </div>
                 </td>
             </tr>`;
@@ -2130,6 +2132,10 @@ function viewHistoryItem(id, tab, historyIndex) {
         document.getElementById('modalListManager').style.display = 'flex';
     }
 
+    function _escAttr(s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
     function selectColor(color, el) {
         selectedColorTemp = color;
         document.querySelectorAll('.color-option').forEach(c => c.classList.remove('selected'));
@@ -2166,11 +2172,25 @@ function viewHistoryItem(id, tab, historyIndex) {
         }
 
         if (isStatus || isMarcadorList) {
-            if(list.some(s => s.name === val)) return;
-            list.push({ name: val, color: selectedColorTemp });
+            const existing = list.find(s => s.name === val);
+            if (existing) {
+                if (!existing.deleted) return; // já existe e está ativo
+                existing.deleted = false;      // revive item soft-deletado
+                existing.color = selectedColorTemp;
+            } else {
+                list.push({ name: val, color: selectedColorTemp });
+            }
         } else {
-            if(list.includes(val)) return;
-            list.push(val);
+            const existingIdx = list.findIndex(v => (typeof v === 'object' ? v.value : v) === val);
+            if (existingIdx >= 0) {
+                if (typeof list[existingIdx] === 'object' && list[existingIdx].deleted) {
+                    list[existingIdx] = val; // revive item soft-deletado (volta a ser string simples)
+                } else {
+                    return; // já existe e está ativo
+                }
+            } else {
+                list.push(val);
+            }
         }
 
         // Ordenação - Função robusta para comparar valores que podem ser strings ou objetos
@@ -2216,15 +2236,37 @@ function viewHistoryItem(id, tab, historyIndex) {
     }
 
     function editListItem(key, val) {
+        // Ativa edição inline na própria linha da lista, em vez de um prompt() nativo
+        const cell = document.querySelector(`#listBody td.list-item-cell[data-name="${CSS.escape(val)}"]`);
+        if (!cell) return;
+
+        const original = cell.innerHTML;
+        cell.innerHTML = `<input type="text" class="list-item-edit-input" value="${_escAttr(val)}" style="width:100%">`;
+        const inp = cell.querySelector('input');
+        inp.focus();
+        inp.select();
+
+        let done = false;
+        const cancel = () => { if (done) return; done = true; cell.innerHTML = original; };
+        const commit = () => {
+            if (done) return; done = true;
+            const newName = inp.value;
+            if (!newName || newName.trim() === '' || newName.trim() === val) { cell.innerHTML = original; return; }
+            _applyListItemRename(key, val, newName.trim());
+        };
+
+        inp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commit(); }
+            else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+        });
+        inp.addEventListener('blur', commit);
+    }
+
+    function _applyListItemRename(key, val, trimmedNewName) {
         const isStatus = key.toLowerCase().includes('status');
         const isMarcadorList = key.toLowerCase().includes('marcadores');
         const isObjectList = isStatus || isMarcadorList;
         const isSubcat = key.includes('_');
-
-        const newName = prompt(`Editar nome de "${val}":`, val);
-        if (!newName || newName.trim() === '' || newName.trim() === val) return;
-
-        const trimmedNewName = newName.trim();
 
         // Atualiza na lista mestra
         let list;
