@@ -2398,9 +2398,9 @@ window.openPubGeralChart = function(groupKey) {
                     <span class="pub-geral-summary-nota">Nota final: ${scores.nota.toFixed(1).replace('.0','').replace('.', ',')}</span>
                     <span class="pub-geral-summary-tier">${tierLabel}</span>
                     <div class="pub-geral-summary-counts">
-                        <span><i class="fas fa-circle-check"></i> ${scores.ok} itens conformes</span>
-                        <span><i class="fas fa-triangle-exclamation"></i> ${scores.ncCount} não conformes</span>
-                        <span><i class="fas fa-list-check"></i> ${scores.total} itens avaliados</span>
+                        <span>${scores.ok} itens conformes</span>
+                        <span>${scores.ncCount} não conformes</span>
+                        <span>${scores.total} itens avaliados</span>
                     </div>
                 </div>
                 <div class="pub-geral-chart-wrap">
@@ -2431,6 +2431,25 @@ window.openPubGeralChart = function(groupKey) {
     const gridColor = isDark ? 'rgba(148,163,184,0.12)' : 'rgba(100,116,139,0.12)';
     const tickColor = isDark ? '#94a3b8' : '#475569';
     const barColors = scores.bars.map(b => b.pct >= 80 ? '#10b981' : (b.pct >= 50 ? '#f59e0b' : '#ef4444'));
+    const valueColor = isDark ? '#e2e8f0' : '#334155';
+
+    // Plugin inline: desenha o valor numérico ao lado de cada barra
+    const barValueLabels = {
+        id: 'barValueLabels',
+        afterDatasetsDraw(chart) {
+            const { ctx } = chart;
+            const meta = chart.getDatasetMeta(0);
+            ctx.save();
+            ctx.font = '600 12px system-ui, -apple-system, sans-serif';
+            ctx.fillStyle = valueColor;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            meta.data.forEach((bar, i) => {
+                ctx.fillText(String(scores.bars[i].pct), bar.x + 6, bar.y);
+            });
+            ctx.restore();
+        }
+    };
 
     _pubGeralChartInstance = new Chart(canvas, {
         type: 'bar',
@@ -2440,15 +2459,17 @@ window.openPubGeralChart = function(groupKey) {
                 label: 'Conformidade (%)',
                 data: scores.bars.map(b => b.pct),
                 backgroundColor: barColors,
-                borderRadius: 5,
+                borderRadius: 4,
                 borderSkipped: false,
                 barThickness: 20
             }]
         },
+        plugins: [barValueLabels],
         options: {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { right: 28 } },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -2589,9 +2610,7 @@ window.renderPubQualityChart = function(item) {
             onClick: (evt, elements) => {
                 if (!elements.length) return;
                 const g = groups[elements[0].index];
-                const lastPub = g.pubs.slice().sort((a, b) => ((a.data||'')+'T'+(a.hora||'')).localeCompare((b.data||'')+'T'+(b.hora||'')))[g.pubs.length - 1];
-                const idx = (item.publicacoes || []).indexOf(lastPub);
-                if (idx !== -1 && typeof verPublicacao === 'function') verPublicacao(item.id, window._currentViewTab, idx);
+                if (g && g.key && typeof openPubGeralChart === 'function') openPubGeralChart(g.key);
             }
         }
     });
