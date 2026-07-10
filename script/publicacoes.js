@@ -2622,6 +2622,23 @@ window.renderViewPublicacoes = function(item) {
     if (!container) return;
     const allPubs = item.publicacoes || [];
 
+    // Rotinas (aba auditoria): esconde Comentário/Atualização/Evidência e renomeia "Todos" → "Conclusão"
+    const _isRotina = (typeof _normalizeTab === 'function' ? _normalizeTab(window._currentViewTab) : window._currentViewTab) === 'auditoria';
+    ['Comentário', 'Atualização', 'Evidência'].forEach(t => {
+        const b = document.querySelector(`.pub-subtab[data-tipo="${t}"]`);
+        if (b) b.style.display = _isRotina ? 'none' : '';
+    });
+    const _todosBtn = document.querySelector('.pub-subtab[data-tipo="Todos"]');
+    if (_todosBtn) {
+        const _lbl = _todosBtn.childNodes[0];
+        if (_lbl && _lbl.nodeType === Node.TEXT_NODE) _lbl.textContent = _isRotina ? 'Conclusão ' : 'Todos ';
+    }
+    // Se uma aba agora oculta estava ativa, volta para "Todos"
+    if (_isRotina && ['Comentário', 'Atualização', 'Evidência'].includes(window._pubSubtabAtivo)) {
+        window._pubSubtabAtivo = 'Todos';
+        document.querySelectorAll('.pub-subtab').forEach(b => b.classList.toggle('active', b.dataset.tipo === 'Todos'));
+    }
+
     // Badges das sub-abas
     const tiposSubtab = ['Comentário', 'Atualização', 'Evidência'];
     const badgeMap = { 'Comentário': 'pubSubBadgeComentario', 'Atualização': 'pubSubBadgeAtualizacao', 'Evidência': 'pubSubBadgeEvidencia' };
