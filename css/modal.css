@@ -2419,6 +2419,13 @@
 .pub-geral-summary-pct { font-size: 52px; font-weight: 800; line-height: 1; }
 .pub-geral-summary-pct small { font-size: 26px; font-weight: 700; opacity: 0.85; }
 .pub-geral-summary-nota { font-size: 15px; opacity: 0.85; margin-top: 6px; }
+.pub-geral-summary-rnc {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 9px;
+    font-size: 12px; font-weight: 600;
+    color: rgba(255,255,255,0.72);
+}
+.pub-geral-summary-rnc i { font-size: 11px; opacity: 0.9; }
 .pub-geral-summary-tier {
     width: 100%;
     margin-top: 16px;
@@ -2663,6 +2670,13 @@ button.pub-geral-tier-btn:active { transform: translateY(0) scale(0.99); }
     font-size: 11.5px; color: #64748b; font-weight: 600;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.pub-nc-rnc-date {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-top: 2px; padding-top: 7px;
+    border-top: 1px dashed #e2e8f0;
+    font-size: 11px; color: #94a3b8; font-weight: 600;
+}
+.pub-nc-rnc-date i { font-size: 10px; color: #6366f1; }
 @media (max-width: 560px) {
     .pub-nc-rnc-grid { grid-template-columns: 1fr; }
 }

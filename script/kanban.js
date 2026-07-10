@@ -423,6 +423,7 @@ function _kbRenderCard(item) {
                 <div class="kanban-card-foot">
                     ${item.marcador ? `<span class="kanban-card-tag" style="background:${marcColor}">${_kbHtml(item.marcador)}</span>` : '<span></span>'}
                     <div class="kanban-card-acts" onclick="event.stopPropagation()">
+                        ${_kbHasChartData(item) ? `<button onclick="kbOpenChart(${item.id})" title="Ver gráfico de indicadores"><i class="fas fa-chart-line"></i></button>` : ''}
                         ${canEdit ? `<button onclick="kbEditCard(${item.id})" title="Editar"><i class="fas fa-pen"></i></button>` : ''}
                         ${canDelete ? `<button onclick="deleteItem(${item.id},'${currentTab}')" title="Excluir" class="kanban-card-act-del"><i class="fas fa-trash"></i></button>` : ''}
                     </div>
@@ -639,6 +640,30 @@ function kbViewCard(itemId) {
 
 function kbEditCard(itemId) {
     if (typeof editItem === 'function') editItem(itemId, currentTab);
+}
+
+// Só mostra o botão de gráfico quando o card tem dados de qualidade (aba Publicações > Gráfico)
+function _kbHasChartData(item) {
+    return typeof window._pubHasChartData === 'function' && window._pubHasChartData(item);
+}
+
+// Abre a visualização do card já na aba Publicações > sub-aba Gráfico
+function kbOpenChart(itemId) {
+    kbViewCard(itemId);
+    // Após o modal montar, ativa a aba Publicações e a sub-aba Gráfico (com retry curto
+    // enquanto o painel de publicações ainda está sendo renderizado)
+    let tries = 0;
+    const go = () => {
+        const pubTab = document.querySelector('.view-modal-tab[onclick*="publicacoes"]');
+        if (pubTab && typeof switchViewTab === 'function') switchViewTab('publicacoes', pubTab);
+        const grafBtn = document.getElementById('pubSubtabGrafico');
+        if (grafBtn && grafBtn.style.display !== 'none') {
+            if (typeof switchPubSubtab === 'function') switchPubSubtab('Gráfico', grafBtn);
+            return;
+        }
+        if (++tries < 10) setTimeout(go, 60);
+    };
+    setTimeout(go, 60);
 }
 
 // ---- Editar coluna (nome + cor) ----

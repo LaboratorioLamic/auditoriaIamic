@@ -1671,6 +1671,8 @@ body.dark-mode .pub-nc-critica .pub-nc-rnc-dot { background: rgba(220,38,38,.16)
 body.dark-mode .pub-nc-maior   .pub-nc-rnc-dot { background: rgba(217,119,6,.16); }
 body.dark-mode .pub-nc-menor   .pub-nc-rnc-dot { background: rgba(202,138,4,.16); }
 body.dark-mode .pub-nc-rnc-card[role="button"]:hover .pub-nc-rnc-open { color: #a5b4fc; }
+body.dark-mode .pub-nc-rnc-date { border-top-color: #334155; color: #94a3b8; }
+body.dark-mode .pub-nc-rnc-date i { color: #a5b4fc; }
 
 /* Modal reset checklist */
 body.dark-mode .cl-reset-card { background: #1e293b; }

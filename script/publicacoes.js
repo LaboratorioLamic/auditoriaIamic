@@ -2239,6 +2239,13 @@ window._vpGoPage = function(page) {
 
 // ─── Agrupamento de publicações por ciclo de conclusão + nota de qualidade ───
 // Reaproveitado pelo header dos grupos (aba Todos) e pelo gráfico (aba Gráfico).
+// Indica se o item tem dados suficientes para a aba Gráfico (nota de qualidade)
+window._pubHasChartData = function(item) {
+    if (!item) return false;
+    try { return _getPubGroupsWithQuality(item).some(g => g.quality); }
+    catch (_) { return false; }
+};
+
 function _getPubGroupsWithQuality(item) {
     const allPubs = item.publicacoes || [];
     const _clKey = c => c.id || ('t:' + (c.texto || '').trim());
@@ -2588,6 +2595,9 @@ window.openPubGeralChart = function(groupKey) {
                                <i class="fas fa-chevron-right pub-geral-tier-arrow"></i>
                            </button>`
                         : `<span class="pub-geral-summary-tier">${tierLabel}</span>`}
+                    ${(scores.rncs && scores.rncs.length)
+                        ? `<span class="pub-geral-summary-rnc"><i class="fas fa-file-circle-exclamation"></i>${scores.rncs.length} RNC${scores.rncs.length !== 1 ? 's' : ''} associada${scores.rncs.length !== 1 ? 's' : ''}</span>`
+                        : ''}
                     <div class="pub-geral-summary-counts">
                         <span>${scores.ok} itens conformes</span>
                         <span>${scores.ncCount} não conformes</span>
@@ -2784,12 +2794,53 @@ window.renderPubQualityChart = function(item) {
     const notas = groups.map(g => g.quality.nota);
     const pointColors = notas.map(n => n >= 8 ? '#16a34a' : n >= 5 ? '#d97706' : '#dc2626');
 
+    // Quantas RNCs associadas (deduplicadas) cada conclusão possui
+    const rncCounts = groups.map(g => {
+        const ids = new Set();
+        (g.pubs || []).forEach(p => (p.rncIds || []).forEach(id => ids.add(id)));
+        return ids.size;
+    });
+
     const isDark = document.body.classList.contains('dark-mode');
     const gridColor = isDark ? 'rgba(148,163,184,0.12)' : 'rgba(100,116,139,0.12)';
     const tickColor = isDark ? '#94a3b8' : '#64748b';
 
+    // Plugin: desenha um ícone de alerta acima dos pontos com RNC associadas
+    const rncAlertPlugin = {
+        id: 'rncAlert',
+        afterDatasetsDraw(chart) {
+            const meta = chart.getDatasetMeta(0);
+            if (!meta || !meta.data) return;
+            const ctx = chart.ctx;
+            meta.data.forEach((pt, i) => {
+                if (!rncCounts[i]) return;
+                const x = pt.x, y = pt.y - 16;
+                ctx.save();
+                // triângulo de alerta
+                ctx.fillStyle = '#f59e0b';
+                ctx.strokeStyle = isDark ? '#1e293b' : '#fff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x, y - 7);
+                ctx.lineTo(x + 7, y + 6);
+                ctx.lineTo(x - 7, y + 6);
+                ctx.closePath();
+                ctx.stroke();
+                ctx.fill();
+                // "!" dentro
+                ctx.fillStyle = '#fff';
+                ctx.font = '700 9px system-ui, -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('!', x, y + 2);
+                ctx.restore();
+            });
+        }
+    };
+
     _pubQualityChartInstance = new Chart(canvas, {
         type: 'line',
+        plugins: [rncAlertPlugin],
         data: {
             labels,
             datasets: [{
@@ -2821,7 +2872,10 @@ window.renderPubQualityChart = function(item) {
                         title: (items) => `Conclusão: ${items[0].label}`,
                         label: (ctx) => {
                             const g = groups[ctx.dataIndex];
-                            return [`Nota: ${g.quality.nota.toFixed(1).replace('.0','')}/10`, `${g.quality.ok} de ${g.quality.total} itens em conformidade`, `${g.pubs.length} publicaç${g.pubs.length !== 1 ? 'ões' : 'ão'}`];
+                            const n = rncCounts[ctx.dataIndex];
+                            const lines = [`Nota: ${g.quality.nota.toFixed(1).replace('.0','')}/10`, `${g.quality.ok} de ${g.quality.total} itens em conformidade`, `${g.pubs.length} publicaç${g.pubs.length !== 1 ? 'ões' : 'ão'}`];
+                            if (n) lines.push(`⚠ ${n} RNC${n !== 1 ? 's' : ''} associada${n !== 1 ? 's' : ''}`);
+                            return lines;
                         }
                     }
                 }
@@ -2850,8 +2904,17 @@ function _renderPubNcTrend(item, groups) {
     const totals = { critica: 0, maior: 0, menor: 0 };
     const byItem = new Map(); // texto -> { critica, maior, menor, total, geralLabel }
     const byGeral = new Map(); // label do checklist geral -> { ok, total, order }
+    const rncAssoc = []; // { id, titulo, classificacao, setor, status, missing, dateRef }
+    const _rncSeen = new Set(); // evita duplicar a mesma RNC na mesma conclusão
     groups.forEach(g => {
         const sc = _computePubGeralScores(item, g.pubs);
+        // RNCs associadas nesta conclusão (com a data da conclusão)
+        (sc && sc.rncs ? sc.rncs : []).forEach(r => {
+            const dedupKey = (g.key || g.dateRef || '') + '::' + r.id;
+            if (_rncSeen.has(dedupKey)) return;
+            _rncSeen.add(dedupKey);
+            rncAssoc.push({ ...r, dateRef: g.dateRef });
+        });
         if (!sc) return;
         // Agrega ok/total por checklist geral (para a nota média por checklist)
         (sc.bars || []).forEach((b, idx) => {
@@ -2870,8 +2933,12 @@ function _renderPubNcTrend(item, groups) {
         });
     });
 
+    // Ordena RNCs por data (mais recente primeiro) e depois por gravidade
+    const _rncRank = { critica: 3, maior: 2, menor: 1 };
+    rncAssoc.sort((a, b) => String(b.dateRef || '').localeCompare(String(a.dateRef || '')) || ((_rncRank[b.classificacao] || 0) - (_rncRank[a.classificacao] || 0)));
+
     const totalNc = totals.critica + totals.maior + totals.menor;
-    if (totalNc === 0 && byGeral.size === 0) { host.innerHTML = ''; return; }
+    if (totalNc === 0 && byGeral.size === 0 && rncAssoc.length === 0) { host.innerHTML = ''; return; }
 
     // Nota média por checklist geral (média ponderada pelas conclusões visíveis)
     const geralData = [...byGeral.entries()]
@@ -2904,6 +2971,33 @@ function _renderPubNcTrend(item, groups) {
             </div>
         </div>` : '';
 
+    // Cards de RNCs associadas (apenas das conclusões visíveis na janela)
+    const rncCards = rncAssoc.map((r, i) => {
+        const cls = _PUB_NC_META[r.classificacao] ? r.classificacao : 'menor';
+        const meta = _PUB_NC_META[cls];
+        const clickable = !r.missing;
+        const dataStr = r.dateRef ? _formatDateBR(r.dateRef) : '—';
+        return `
+            <div class="pub-nc-rnc-card pub-nc-${cls}${r.missing ? ' missing' : ''}" style="--i:${i}"
+                ${clickable ? `onclick="_pubNcOpenRnc('${String(r.id).replace(/'/g, "\\'")}')" role="button" tabindex="0" title="Abrir RNC"` : ''}>
+                <div class="pub-nc-rnc-top">
+                    <span class="pub-nc-rnc-dot"><i class="fas ${r.missing ? 'fa-ban' : 'fa-file-circle-exclamation'}"></i></span>
+                    ${r.missing ? '' : `<span class="pub-nc-rnc-tag pub-nc-${cls}">${meta.label}</span>`}
+                    ${clickable ? '<i class="fas fa-arrow-up-right-from-square pub-nc-rnc-open"></i>' : ''}
+                </div>
+                <span class="pub-nc-rnc-title" title="${_pubEsc(r.titulo)}">${_pubEsc(r.titulo)}</span>
+                ${r.setor ? `<span class="pub-nc-rnc-meta">${_pubEsc(r.setor)}${r.status ? ' · ' + _pubEsc(r.status) : ''}</span>` : (r.status ? `<span class="pub-nc-rnc-meta">${_pubEsc(r.status)}</span>` : '')}
+                <span class="pub-nc-rnc-date"><i class="fas fa-calendar-check"></i> Associada em ${dataStr}</span>
+            </div>`;
+    }).join('');
+    const rncSection = rncAssoc.length ? `
+        <div class="pub-nc-trend-section">
+            <div class="pub-nc-trend-title"><i class="fas fa-file-circle-exclamation"></i> RNCs Associadas
+                <span class="pub-nc-trend-sub">${rncAssoc.length} em ${groups.length} conclus${groups.length !== 1 ? 'ões' : 'ão'} visívei${groups.length !== 1 ? 's' : 'l'}</span>
+            </div>
+            <div class="pub-nc-rnc-grid">${rncCards}</div>
+        </div>` : '';
+
     host.innerHTML = `
         ${geralSection}
         ${totalNc ? `<div class="pub-nc-trend-section">
@@ -2924,7 +3018,8 @@ function _renderPubNcTrend(item, groups) {
             <div class="pub-nc-trend-bar-wrap" style="height:${Math.max(120, topItems.length * 34 + 30)}px">
                 <canvas id="pubNcTrendBar"></canvas>
             </div>
-        </div>` : ''}`;
+        </div>` : ''}
+        ${rncSection}`;
 
     if (typeof Chart === 'undefined') return;
     const isDark = document.body.classList.contains('dark-mode');
