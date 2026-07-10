@@ -1637,6 +1637,11 @@ body.dark-mode .pub-group-quality-good { background: rgba(22,163,74,.15) !import
 body.dark-mode .pub-group-quality-mid { background: rgba(217,119,6,.15) !important; color: #fbbf24 !important; border-color: rgba(251,191,36,.3) !important; }
 body.dark-mode .pub-group-quality-bad { background: rgba(220,38,38,.15) !important; color: #f87171 !important; border-color: rgba(248,113,113,.3) !important; }
 
+/* Botão de gráfico + modal de indicadores por checklist geral */
+body.dark-mode .pub-group-chart-btn { background: rgba(99,102,241,.15) !important; color: #a5b4fc !important; border-color: rgba(129,140,248,.35) !important; }
+body.dark-mode .pub-group-chart-btn:hover { background: linear-gradient(135deg, #6366f1, #4f46e5) !important; color: #fff !important; border-color: #6366f1 !important; }
+body.dark-mode .pub-geral-card { background: #1e293b; }
+
 /* Modal reset checklist */
 body.dark-mode .cl-reset-card { background: #1e293b; }
 body.dark-mode .cl-reset-text { color: #cbd5e1; }

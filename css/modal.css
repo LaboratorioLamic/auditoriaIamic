@@ -2270,6 +2270,122 @@
     border-color: #fecaca;
 }
 
+/* Botão de gráfico ao lado da nota (indicadores por checklist geral) */
+.pub-group-chart-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 26px;
+    margin-left: 6px;
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid #c7d2fe;
+    background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+    color: #4f46e5;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+.pub-group-chart-btn i { font-size: 12.5px; }
+.pub-group-chart-btn:hover {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #fff;
+    border-color: #4f46e5;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79,70,229,0.28);
+}
+
+/* Modal de indicadores por checklist geral */
+.pub-geral-card {
+    background: #fff;
+    border-radius: 18px;
+    max-width: 640px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.22);
+    overflow: hidden;
+    animation: clResetIn 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+}
+.pub-geral-header {
+    background: linear-gradient(135deg,#6366f1,#4f46e5);
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.pub-geral-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s ease;
+}
+.pub-geral-close:hover { background: rgba(255,255,255,0.32); }
+.pub-geral-body {
+    padding: 18px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.pub-geral-summary {
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    color: #fff;
+    background: linear-gradient(135deg, #0f766e, #115e59);
+}
+.pub-geral-summary.pub-geral-mid { background: linear-gradient(135deg, #b45309, #92400e); }
+.pub-geral-summary.pub-geral-bad { background: linear-gradient(135deg, #b91c1c, #991b1b); }
+.pub-geral-summary-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.85;
+}
+.pub-geral-summary-pct { font-size: 38px; font-weight: 800; line-height: 1.1; }
+.pub-geral-summary-pct small { font-size: 20px; font-weight: 700; opacity: 0.8; }
+.pub-geral-summary-nota { font-size: 13px; opacity: 0.9; }
+.pub-geral-summary-tier {
+    align-self: flex-start;
+    margin-top: 8px;
+    padding: 5px 14px;
+    border-radius: 99px;
+    background: rgba(255,255,255,0.18);
+    font-size: 12px;
+    font-weight: 700;
+}
+.pub-geral-summary-counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    font-size: 12px;
+}
+.pub-geral-summary-counts span { display: inline-flex; align-items: center; gap: 5px; opacity: 0.92; }
+
+.pub-geral-chart-wrap {
+    position: relative;
+    width: 100%;
+    min-height: 160px;
+}
+
 /* Modal reset checklist */
 .cl-reset-overlay {
     position: fixed;

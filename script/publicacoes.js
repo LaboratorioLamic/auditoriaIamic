@@ -2292,6 +2292,184 @@ function _getPubGroupsWithQuality(item) {
     }).reverse(); // cronológico (mais antigo → mais recente) para o gráfico
 }
 
+// ─── INDICADORES POR CHECKLIST GERAL — nota de conformidade de cada grupo ────
+// Para as publicações de um grupo de conclusão, deduplica os itens N/C (mantendo
+// o preenchimento mais recente) e calcula a conformidade de cada checklist geral
+// (agrupado por geralIndex). Retorna também o resumo de conformidade geral.
+function _computePubGeralScores(item, groupPubs) {
+    const _clKey = c => c.id || ('t:' + (c.texto || '').trim());
+    const geralItems = item.checklist || [];
+
+    // Deduplica itens N/C mantendo o preenchimento mais recente por item
+    const sortedPubs = (groupPubs || []).slice().sort((a, b) => {
+        const ka = (a.data || '') + 'T' + (a.hora || '');
+        const kb = (b.data || '') + 'T' + (b.hora || '');
+        return ka.localeCompare(kb);
+    });
+    const byKey = new Map();
+    sortedPubs.forEach(pub => {
+        (pub.checklistSnapshot || []).forEach(snap => {
+            if (snap.ncEnabled && snap.checked) byKey.set(_clKey(snap), snap);
+        });
+    });
+    const items = Array.from(byKey.values());
+    if (items.length === 0) return null;
+
+    // Agrupa por geralIndex
+    const buckets = new Map(); // geralIndex (ou '__solo__') -> { ok, total }
+    items.forEach(snap => {
+        const key = (snap.geralIndex != null) ? snap.geralIndex : '__solo__';
+        if (!buckets.has(key)) buckets.set(key, { ok: 0, total: 0 });
+        const b = buckets.get(key);
+        b.total++;
+        if (snap.conformidade === 'conforme') b.ok++;
+    });
+
+    const bars = [];
+    // Preserva a ordem do checklist geral
+    const geralKeys = [...buckets.keys()].filter(k => k !== '__solo__').sort((a, b) => a - b);
+    geralKeys.forEach(gi => {
+        const b = buckets.get(gi);
+        const geralItem = geralItems[gi];
+        const label = geralItem ? (geralItem.texto || `Item Geral ${gi + 1}`) : `Item Geral ${gi + 1}`;
+        bars.push({ label, ok: b.ok, total: b.total, pct: Math.round((b.ok / b.total) * 100) });
+    });
+    if (buckets.has('__solo__')) {
+        const b = buckets.get('__solo__');
+        bars.push({ label: 'Outros itens', ok: b.ok, total: b.total, pct: Math.round((b.ok / b.total) * 100) });
+    }
+
+    // Resumo de conformidade geral
+    const totalOk = items.filter(s => s.conformidade === 'conforme').length;
+    const total = items.length;
+    const pctGeral = Math.round((totalOk / total) * 1000) / 10; // 1 casa decimal
+    const nota = Math.round((totalOk / total) * 10 * 10) / 10;
+    return { bars, ok: totalOk, total, ncCount: total - totalOk, pctGeral, nota };
+}
+
+function _pubGeralTierPct(pct) {
+    if (pct >= 80) return 'good';
+    if (pct >= 50) return 'mid';
+    return 'bad';
+}
+
+let _pubGeralChartInstance = null;
+
+// Abre o modal de indicadores (gráfico de barras por checklist geral) de um grupo de conclusão
+window.openPubGeralChart = function(groupKey) {
+    const itemId = window._currentViewId;
+    const tab = window._currentViewTab;
+    const finalTab = (typeof _normalizeTab === 'function') ? _normalizeTab(tab) : tab;
+    let item;
+    if (finalTab === 'auditoria') item = audits.find(i => i.id === itemId);
+    else if (finalTab === 'atividades') item = activities.find(i => i.id === itemId);
+    else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === itemId);
+    else if (finalTab === 'documentos') item = documents.find(i => i.id === itemId);
+    else if (finalTab === 'rnc') item = (window.rncItems || []).find(i => i.id === itemId);
+    if (!item) return;
+
+    const group = _getPubGroupsWithQuality(item).find(g => g.key === groupKey);
+    if (!group) return;
+    const scores = _computePubGeralScores(item, group.pubs);
+    if (!scores) return;
+
+    const tier = _pubGeralTierPct(scores.pctGeral);
+    const tierLabel = tier === 'good' ? 'Satisfatório' : (tier === 'mid' ? 'Atenção' : 'Crítico');
+    const dateLabel = group.dateRef ? _formatDateBR(group.dateRef) : '—';
+    const pctStr = scores.pctGeral.toFixed(1).replace('.0', '').replace('.', ',');
+
+    const overlay = document.createElement('div');
+    overlay.id = 'pubGeralChartModal';
+    overlay.className = 'cl-reset-overlay pub-geral-overlay';
+    overlay.innerHTML = `
+        <div class="pub-geral-card pub-geral-${tier}">
+            <div class="pub-geral-header">
+                <div class="cl-reset-header-icon"><i class="fas fa-chart-column"></i></div>
+                <div style="flex:1;min-width:0;">
+                    <div class="cl-reset-title">Indicadores por Checklist Geral</div>
+                    <div class="cl-reset-subtitle">Conclusão: ${dateLabel}</div>
+                </div>
+                <button type="button" class="pub-geral-close" title="Fechar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="pub-geral-body">
+                <div class="pub-geral-summary pub-geral-${tier}">
+                    <span class="pub-geral-summary-label">Conformidade Geral</span>
+                    <span class="pub-geral-summary-pct">${pctStr}<small>%</small></span>
+                    <span class="pub-geral-summary-nota">Nota final: ${scores.nota.toFixed(1).replace('.0','').replace('.', ',')}</span>
+                    <span class="pub-geral-summary-tier">${tierLabel}</span>
+                    <div class="pub-geral-summary-counts">
+                        <span><i class="fas fa-circle-check"></i> ${scores.ok} itens conformes</span>
+                        <span><i class="fas fa-triangle-exclamation"></i> ${scores.ncCount} não conformes</span>
+                        <span><i class="fas fa-list-check"></i> ${scores.total} itens avaliados</span>
+                    </div>
+                </div>
+                <div class="pub-geral-chart-wrap">
+                    <canvas id="pubGeralChartCanvas"></canvas>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    const close = () => {
+        if (_pubGeralChartInstance) { _pubGeralChartInstance.destroy(); _pubGeralChartInstance = null; }
+        overlay.remove();
+    };
+    const onEsc = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
+    const _close = () => { close(); document.removeEventListener('keydown', onEsc); };
+    overlay.querySelector('.pub-geral-close').onclick = _close;
+    overlay.addEventListener('click', e => { if (e.target === overlay) _close(); });
+    document.addEventListener('keydown', onEsc);
+
+    const canvas = overlay.querySelector('#pubGeralChartCanvas');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    // Altura dinâmica: ~34px por barra
+    const barsWrap = overlay.querySelector('.pub-geral-chart-wrap');
+    if (barsWrap) barsWrap.style.height = Math.max(160, scores.bars.length * 40 + 24) + 'px';
+
+    const isDark = document.body.classList.contains('dark-mode');
+    const gridColor = isDark ? 'rgba(148,163,184,0.12)' : 'rgba(100,116,139,0.12)';
+    const tickColor = isDark ? '#94a3b8' : '#475569';
+    const barColors = scores.bars.map(b => b.pct >= 80 ? '#10b981' : (b.pct >= 50 ? '#f59e0b' : '#ef4444'));
+
+    _pubGeralChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: scores.bars.map(b => b.label),
+            datasets: [{
+                label: 'Conformidade (%)',
+                data: scores.bars.map(b => b.pct),
+                backgroundColor: barColors,
+                borderRadius: 5,
+                borderSkipped: false,
+                barThickness: 20
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: isDark ? '#1e293b' : '#0f172a',
+                    padding: 10,
+                    callbacks: {
+                        label: (ctx) => {
+                            const b = scores.bars[ctx.dataIndex];
+                            return [`${b.pct}% em conformidade`, `${b.ok} de ${b.total} ${b.total === 1 ? 'item' : 'itens'}`];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { min: 0, max: 100, ticks: { stepSize: 20, color: tickColor, callback: v => v }, grid: { color: gridColor } },
+                y: { ticks: { color: tickColor, font: { size: 11 } }, grid: { display: false } }
+            }
+        }
+    });
+};
+
 // ─── GRÁFICO — evolução da nota de qualidade nas últimas 12 conclusões ──────
 let _pubQualityChartInstance = null;
 const _PUB_CHART_WINDOW = 12;
@@ -2631,7 +2809,11 @@ window.renderViewPublicacoes = function(item) {
             const qualityHtml = _qScore ? `
                 <span class="pub-group-quality-badge pub-group-quality-${_pubQualityTier(_qScore.nota)}" title="Nota de qualidade acumulada do grupo (${_qScore.ok} de ${_qScore.total} itens em conformidade)">
                     <i class="fas fa-gauge-high"></i><span class="pgqb-num">${_qScore.nota.toFixed(1).replace('.0','')}</span><span class="pgqb-max">/10</span>
-                </span>` : '';
+                </span>
+                <button type="button" class="pub-group-chart-btn" title="Ver indicadores por checklist geral"
+                    onclick="event.stopPropagation();openPubGeralChart('${key}')">
+                    <i class="fas fa-chart-column"></i>
+                </button>` : '';
 
             groupsHtml += `
                 <div class="pub-conclusao-group${_gcOpen ? ' open' : ''}" id="${groupId}">
