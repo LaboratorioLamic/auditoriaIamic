@@ -97,7 +97,9 @@
                 } else {
                     // Firebase desconectado — só exibe overlay se já houve conexão antes,
                     // evitando falso-positivo no carregamento inicial.
-                    if (wasEverConnected) {
+                    // NÃO exibe quando a desconexão foi intencional (connection-manager:
+                    // aba em background / inatividade) — senão o overlay pisca à toa.
+                    if (wasEverConnected && !window._intentionalOffline) {
                         showOfflineOverlay();
                     }
                 }
@@ -161,6 +163,11 @@
         }, 6000);
     };
 
+    // Exposto para ser ligado APÓS o login (economia de conexões): antes de logar,
+    // não abrimos socket ao RTDB via .info/connected — evita que bots, preview de
+    // link e abas paradas na tela de login contem como conexão simultânea.
+    window.setupOfflineDetection = setupFirebaseListener;
+
     // --- Verificação inicial ao carregar a página ---
     function initialCheck() {
         if (!navigator.onLine) {
@@ -168,8 +175,8 @@
             showOfflineOverlay();
             setStatus('offline', 'Sem internet');
         }
-        // Inicia o listener do Firebase independentemente
-        setupFirebaseListener();
+        // NÃO inicia o listener .info/connected aqui: ele é ligado no login
+        // (window.setupOfflineDetection) para não abrir conexão antes de logar.
     }
 
     // Inicia após o DOM estar pronto

@@ -27,7 +27,7 @@ let _mentionSel = [];           // seleção temporária no popup de menções
 let _cardArea = 'ativ';         // área ativa no seletor de card
 
 // Cooldown de envio: evita sobrecarregar o Firebase com envios em rajada
-const MSG_SEND_COOLDOWN_MS = 2000;
+const MSG_SEND_COOLDOWN_MS = 5000;
 let _lastMsgSendAt = 0;
 function _msgSendOnCooldown() {
     const remaining = MSG_SEND_COOLDOWN_MS - (Date.now() - _lastMsgSendAt);
@@ -38,6 +38,13 @@ function _msgSendOnCooldown() {
     _lastMsgSendAt = Date.now();
     return false;
 }
+
+// Retenção: mensagens mais antigas que o limite (por thread) são apagadas automaticamente
+const MSG_RETENTION_DEFAULT_DAYS = 30;
+const MSG_RETENTION_MAX_DAYS = 365;
+const MSG_RETENTION_MIN_DAYS = 1;
+const DAY_MS = 24 * 60 * 60 * 1000;
+let _purgingThreads = new Set();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -271,7 +278,82 @@ function startMessagesListener() {
                 _renderThreadList();
             }
         }
+        _purgeExpiredMessages();
     });
+}
+
+// ---------------------------------------------------------------------------
+// Retenção automática: apaga mensagens (e imagens vinculadas) mais antigas
+// que o limite configurado por thread (padrão 30 dias, máx. 365).
+// ---------------------------------------------------------------------------
+function _retentionDays(t) {
+    const n = Number(t && t.retencaoDias);
+    if (!n || n < MSG_RETENTION_MIN_DAYS || n > MSG_RETENTION_MAX_DAYS) return MSG_RETENTION_DEFAULT_DAYS;
+    return n;
+}
+function _purgeExpiredMessages() {
+    const now = Date.now();
+    Object.keys(_threads).forEach(threadId => {
+        if (_purgingThreads.has(threadId)) return;
+        const t = _threads[threadId];
+        const msgs = _msgsArr(t);
+        if (!msgs.length) return;
+        const limitMs = _retentionDays(t) * DAY_MS;
+        const expired = msgs.filter(m => !m.sistema && (now - (m.createdAt || 0)) > limitMs);
+        if (!expired.length) return;
+
+        _purgingThreads.add(threadId);
+        (async () => {
+            try {
+                if (expired.length >= msgs.length) {
+                    // Todas as mensagens expiraram: apaga a thread inteira (limpa imagens antes)
+                    msgs.forEach(m => (m.anexos || []).forEach(a => {
+                        if (a.blobId && typeof window._deleteImgBlob === 'function') window._deleteImgBlob(a.blobId);
+                    }));
+                    await _removeThread(threadId);
+                } else {
+                    const patch = {};
+                    expired.forEach(m => {
+                        (m.anexos || []).forEach(a => {
+                            if (a.blobId && typeof window._deleteImgBlob === 'function') window._deleteImgBlob(a.blobId);
+                        });
+                        patch['mensagens/' + m._id] = null;
+                    });
+                    const remaining = msgs.filter(m => !expired.some(e => e._id === m._id));
+                    patch['lastMsgAt'] = remaining.length ? remaining[remaining.length - 1].createdAt : (t.createdAt || now);
+                    await _updateThread(threadId, patch);
+                }
+            } catch (_) { /* tenta de novo no próximo snapshot */ }
+            finally { _purgingThreads.delete(threadId); }
+        })();
+    });
+}
+
+function _renderRetentionBox() {
+    const t = _threads[_activeThreadId];
+    const box = document.getElementById('msgRetentionBox');
+    const input = document.getElementById('msgRetentionInput');
+    if (!t || !box || !input) return;
+    box.style.display = 'block';
+    input.value = _retentionDays(t);
+    input.disabled = !_isOwner(t);
+    input.title = _isOwner(t) ? '' : 'Apenas o dono pode alterar o prazo de retenção.';
+}
+async function msgSetRetention(value) {
+    const t = _threads[_activeThreadId];
+    const me = _me();
+    if (!t || !me || !_isOwner(t)) return;
+    let days = Math.round(Number(value));
+    if (!Number.isFinite(days)) days = MSG_RETENTION_DEFAULT_DAYS;
+    days = Math.min(MSG_RETENTION_MAX_DAYS, Math.max(MSG_RETENTION_MIN_DAYS, days));
+    const input = document.getElementById('msgRetentionInput');
+    if (input) input.value = days;
+    if (days === _retentionDays(t)) return;
+    const threadId = _activeThreadId;
+    try {
+        await _updateThread(threadId, { retencaoDias: days });
+        await _postSystem(threadId, `${me.name} definiu o prazo de retenção de mensagens para ${days} dia(s).`);
+    } catch (e) { _toast('Erro ao salvar retenção: ' + (e.message || e), 'error'); }
 }
 function stopMessagesListener() {
     if (_msgListener && window.firebaseOff) {
@@ -950,6 +1032,7 @@ function msgOpenMembers() {
     _renderMembers();
     document.getElementById('msgMemberSearch').value = '';
     _renderMemberAddList();
+    _renderRetentionBox();
     _openPopup('msgMembersModal');
 }
 function msgCloseMembers() { _closePopup('msgMembersModal'); }
@@ -1606,6 +1689,7 @@ Object.assign(window, {
     msgOpenMutePopover, msgCloseMutePopover, msgPickMute,
     msgOpenSeenPopover, msgCloseSeenPopover,
     msgOpenMembers, msgCloseMembers, msgAddMember, msgRemoveMember, msgTransferOwnership, msgRenderMemberAddList: _renderMemberAddList,
+    msgSetRetention,
     msgEditTitle,
     msgStartReply, msgCancelReply, msgEditMessage, msgDeleteMessage,
     msgAcPick, msgAcHover,

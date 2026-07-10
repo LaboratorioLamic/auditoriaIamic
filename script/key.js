@@ -407,6 +407,17 @@ function _checkTriPerm(permVal, item) {
         // Para o listener de mensagens e fecha o drawer
         try { if (typeof stopMessagesListener === 'function') stopMessagesListener(); } catch (_) {}
         try { if (typeof msgCloseDrawer === 'function') msgCloseDrawer(); } catch (_) {}
+        // Para o gerenciador de conexão e fecha o socket RTDB: sessão deslogada
+        // não deve segurar uma conexão simultânea. Marca a desconexão como
+        // INTENCIONAL para o offline.js NÃO exibir o overlay vermelho de "Sem
+        // conexão" (que é reservado a quedas reais de energia/internet/servidor).
+        // stopConnectionManager zera o flag, então marcamos DEPOIS dele.
+        try { if (typeof window.stopConnectionManager === 'function') window.stopConnectionManager(); } catch (_) {}
+        window._intentionalOffline = true;
+        try { if (typeof window.firebaseGoOffline === 'function') window.firebaseGoOffline(); } catch (_) {}
+        // Aviso calmo (azul) distinto do overlay vermelho de queda real: comunica que
+        // a desconexão foi proposital e que a sessão fica offline até um novo login.
+        try { if (typeof showToast === 'function') showToast('Sessão encerrada. Você ficará desconectado até fazer login novamente.', 'info'); } catch (_) {}
 
         // Limpa usuário atual e volta para tela de login
         currentuser = null;
@@ -454,6 +465,11 @@ function _checkTriPerm(permVal, item) {
         passInput.disabled = true;
         loading.style.display = 'block';
 
+        // Garante socket ativo antes de ler usuários: um logout anterior pode ter
+        // deixado o RTDB em goOffline, o que faria loadusers() (get) travar.
+        try { if (typeof window.firebaseGoOnline === 'function') window.firebaseGoOnline(); } catch (_) {}
+        window._intentionalOffline = false;
+
         try {
             await loadusers();
             const found = users.find(u => String(u.user).trim().toLowerCase() === login.toLowerCase() && String(u.password) === String(senha));
@@ -466,6 +482,11 @@ function _checkTriPerm(permVal, item) {
                     userInput.focus();
                 } else {
                     currentuser = found;
+                    // Só agora (logado) abrimos o listener .info/connected e ligamos o
+                    // gerenciador de conexão (desconecta em background/inatividade) —
+                    // economiza conexões simultâneas do RTDB.
+                    if (typeof window.setupOfflineDetection === 'function') window.setupOfflineDetection();
+                    if (typeof window.startConnectionManager === 'function') window.startConnectionManager();
                     updateCurrentuserUI();
                     applyuserPermissionsToTabs();
                     applyListManagerPermissions();

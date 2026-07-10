@@ -400,6 +400,14 @@
                 <input type="text" class="msg-popup-search" id="msgMemberSearch" placeholder="Buscar usuário..." oninput="msgRenderMemberAddList()">
                 <div class="msg-popup-list" id="msgMemberAddList" style="max-height:200px;"></div>
             </div>
+            <div class="msg-members-add" id="msgRetentionBox" style="display:none;">
+                <label class="msg-field-label" style="margin:0 16px;"><i class="fas fa-clock-rotate-left"></i> Apagar mensagens automaticamente após</label>
+                <div style="display:flex;align-items:center;gap:8px;margin:8px 16px 4px;">
+                    <input type="number" class="msg-popup-search" id="msgRetentionInput" min="1" max="365" step="1" style="margin:0;width:90px;" onchange="msgSetRetention(this.value)">
+                    <span style="color:var(--text-muted);font-size:13px;">dias (máx. 365)</span>
+                </div>
+                <small style="margin:0 16px 8px;display:block;color:var(--text-muted);">Mensagens e imagens mais antigas que este prazo são apagadas automaticamente.</small>
+            </div>
         </div>
 
         <!-- Modal de anexo (arquivo / imagem / link) -->
@@ -3604,6 +3612,7 @@
 </div>
 
 <script src="script/offline.js"></script>
+<script src="script/connection-manager.js"></script>
 <script src="script/firebase.js"></script>
 <script src="script/cache.js"></script>
 <script src="script/state.js"></script>
