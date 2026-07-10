@@ -428,15 +428,17 @@ window.purgeOrphanImgBlobs = async function(collections) {
   const blobs = snap.exists() ? snap.val() : {};
   const storedIds = Object.keys(blobs);
 
-  // Coleta todos os fileId referenciados em publicações
+  // Coleta todos os fileId referenciados em anexos de cards E de publicações.
+  // ATENÇÃO: escanear item.anexos é obrigatório — sem isso, imagens anexadas
+  // diretamente ao card viram órfãs falsas e são apagadas indevidamente.
   const referenced = new Set();
+  const scan = (anexos) => (anexos || []).forEach(a => {
+    if (a && a.tipo === 'imagem' && a.fileId) referenced.add(a.fileId);
+  });
   (collections || []).forEach(arr => {
     (arr || []).forEach(item => {
-      (item.publicacoes || []).forEach(pub => {
-        (pub.anexos || []).forEach(a => {
-          if (a.tipo === 'imagem' && a.fileId) referenced.add(a.fileId);
-        });
-      });
+      scan(item.anexos);
+      (item.publicacoes || []).forEach(pub => scan(pub && pub.anexos));
     });
   });
 
