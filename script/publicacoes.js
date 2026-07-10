@@ -2339,18 +2339,202 @@ function _computePubGeralScores(item, groupPubs) {
         bars.push({ label: 'Outros itens', ok: b.ok, total: b.total, pct: Math.round((b.ok / b.total) * 100) });
     }
 
+    // Lista de itens NÃO CONFORMES (para o painel de detalhamento)
+    const _NC_RANK = { critica: 3, maior: 2, menor: 1 };
+    const ncItems = items
+        .filter(s => s.conformidade && s.conformidade !== 'conforme')
+        .map(s => {
+            const gi = s.geralIndex;
+            const geralLabel = (gi != null && geralItems[gi])
+                ? (geralItems[gi].texto || `Item Geral ${gi + 1}`)
+                : 'Outros itens';
+            return { texto: s.texto || 'Item sem descrição', conformidade: s.conformidade, geralLabel, comentario: (s.comentario || '').trim() };
+        })
+        .sort((a, b) => (_NC_RANK[b.conformidade] || 0) - (_NC_RANK[a.conformidade] || 0));
+
+    // RNCs associadas às publicações do grupo (deduplicadas)
+    const rncIdSet = new Set();
+    (groupPubs || []).forEach(pub => (pub.rncIds || []).forEach(rid => rncIdSet.add(rid)));
+    const rncs = [...rncIdSet].map(rid => {
+        const r = (window.rncItems || []).find(x => x.id === rid || x.id === Number(rid));
+        return r
+            ? { id: r.id, titulo: r.titulo || 'RNC sem título', classificacao: r.classificacao || 'menor', setor: r.setor || '', status: r.status || '' }
+            : { id: rid, titulo: 'RNC removida', classificacao: 'menor', setor: '', status: '', missing: true };
+    }).sort((a, b) => (_NC_RANK[b.classificacao] || 0) - (_NC_RANK[a.classificacao] || 0));
+
+    // Contagem por nível de N/C (para o gráfico donut)
+    const ncByLevel = { critica: 0, maior: 0, menor: 0 };
+    ncItems.forEach(n => { if (ncByLevel[n.conformidade] != null) ncByLevel[n.conformidade]++; });
+
     // Resumo de conformidade geral
     const totalOk = items.filter(s => s.conformidade === 'conforme').length;
     const total = items.length;
     const pctGeral = Math.round((totalOk / total) * 1000) / 10; // 1 casa decimal
     const nota = Math.round((totalOk / total) * 10 * 10) / 10;
-    return { bars, ok: totalOk, total, ncCount: total - totalOk, pctGeral, nota };
+    return { bars, ok: totalOk, total, ncCount: total - totalOk, pctGeral, nota, ncItems, rncs, ncByLevel };
 }
 
 function _pubGeralTierPct(pct) {
     if (pct >= 80) return 'good';
     if (pct >= 50) return 'mid';
     return 'bad';
+}
+
+// Metadados visuais de cada nível de não conformidade
+const _PUB_NC_META = {
+    critica: { label: 'Crítica', icon: 'fa-circle-exclamation', score: 100 },
+    maior:   { label: 'Maior',   icon: 'fa-triangle-exclamation', score: 66 },
+    menor:   { label: 'Menor',   icon: 'fa-flag', score: 33 }
+};
+
+const _PUB_NC_COLOR = { critica: '#ef4444', maior: '#f97316', menor: '#eab308' };
+let _pubNcDonutInstance = null;
+
+// Painel bonito com a lista de itens não conformes, o nível de cada um,
+// as RNCs associadas e um gráfico donut com a % por nível de N/C
+function _openPubNcPanel(scores, tierLabel, tier) {
+    const ncItems = scores.ncItems || [];
+    const rncs = scores.rncs || [];
+    const counts = scores.ncByLevel || { critica: 0, maior: 0, menor: 0 };
+    const totalNc = ncItems.length || 1;
+
+    const chip = (k) => counts[k]
+        ? `<span class="pub-nc-count pub-nc-${k}"><i class="fas ${_PUB_NC_META[k].icon}"></i>${counts[k]} ${_PUB_NC_META[k].label}</span>`
+        : '';
+
+    const rows = ncItems.map((n, i) => {
+        const meta = _PUB_NC_META[n.conformidade] || _PUB_NC_META.menor;
+        return `
+            <li class="pub-nc-item pub-nc-${n.conformidade}" style="--i:${i}">
+                <span class="pub-nc-item-icon"><i class="fas ${meta.icon}"></i></span>
+                <div class="pub-nc-item-body">
+                    <span class="pub-nc-item-title">${_pubEsc(n.texto)}</span>
+                    <span class="pub-nc-item-group"><i class="fas fa-layer-group"></i>${_pubEsc(n.geralLabel)}</span>
+                    ${n.comentario ? `<div class="pub-nc-item-comment"><i class="fas fa-comment-dots"></i><span>${_pubEsc(n.comentario).replace(/\n/g, '<br>')}</span></div>` : ''}
+                </div>
+                <span class="pub-nc-item-badge pub-nc-${n.conformidade}">${meta.label}</span>
+            </li>`;
+    }).join('');
+
+    // Bloco de RNCs associadas (só aparece se houver) — grid de até 3 por linha
+    const rncCards = rncs.map((r, i) => {
+        const cls = _PUB_NC_META[r.classificacao] ? r.classificacao : 'menor';
+        const meta = _PUB_NC_META[cls];
+        const clickable = !r.missing;
+        const meta2 = [r.setor, r.status].filter(Boolean).map(_pubEsc).join(' · ');
+        return `
+            <div class="pub-nc-rnc-card pub-nc-${cls}${r.missing ? ' missing' : ''}" style="--i:${i}"
+                ${clickable ? `onclick="_pubNcOpenRnc('${String(r.id).replace(/'/g, "\\'")}')" role="button" tabindex="0" title="Abrir RNC"` : ''}>
+                <div class="pub-nc-rnc-top">
+                    <span class="pub-nc-rnc-dot"><i class="fas ${r.missing ? 'fa-ban' : 'fa-file-circle-exclamation'}"></i></span>
+                    ${r.missing ? '' : `<span class="pub-nc-rnc-tag pub-nc-${cls}">${meta.label}</span>`}
+                    ${clickable ? '<i class="fas fa-arrow-up-right-from-square pub-nc-rnc-open"></i>' : ''}
+                </div>
+                <span class="pub-nc-rnc-title" title="${_pubEsc(r.titulo)}">${_pubEsc(r.titulo)}</span>
+                ${meta2 ? `<span class="pub-nc-rnc-meta">${meta2}</span>` : ''}
+            </div>`;
+    }).join('');
+    const rncBlock = rncs.length ? `
+        <div class="pub-nc-section-label"><i class="fas fa-file-circle-exclamation"></i> RNCs Associadas <span class="pub-nc-section-badge">${rncs.length}</span></div>
+        <div class="pub-nc-rnc-grid">${rncCards}</div>` : '';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'pubNcPanelModal';
+    overlay.className = 'cl-reset-overlay pub-nc-overlay';
+    overlay.innerHTML = `
+        <div class="pub-nc-card pub-geral-${tier}">
+            <div class="pub-nc-header">
+                <div class="pub-nc-header-icon"><i class="fas fa-triangle-exclamation"></i></div>
+                <div style="flex:1;min-width:0;">
+                    <div class="pub-nc-title">Não Conformidades</div>
+                    <div class="pub-nc-subtitle">${ncItems.length} item(ns) fora de conformidade · Status ${tierLabel}</div>
+                </div>
+                <button type="button" class="pub-nc-close" title="Fechar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="pub-nc-scroll">
+                <div class="pub-nc-donut-wrap">
+                    <div class="pub-nc-donut-canvas"><canvas id="pubNcDonutCanvas"></canvas>
+                        <div class="pub-nc-donut-center"><strong>${ncItems.length}</strong><small>N/C</small></div>
+                    </div>
+                    <div class="pub-nc-donut-legend">
+                        ${['critica','maior','menor'].map(k => {
+                            const pct = ncItems.length ? Math.round((counts[k] / totalNc) * 100) : 0;
+                            return `<div class="pub-nc-legend-row${counts[k] ? '' : ' off'}">
+                                <span class="pub-nc-legend-dot" style="background:${_PUB_NC_COLOR[k]}"></span>
+                                <span class="pub-nc-legend-name">${_PUB_NC_META[k].label}</span>
+                                <span class="pub-nc-legend-pct">${pct}%</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+                <div class="pub-nc-counts">${chip('critica')}${chip('maior')}${chip('menor')}</div>
+                <ul class="pub-nc-list">${rows || '<li class="pub-nc-empty">Nenhuma não conformidade registrada.</li>'}</ul>
+                ${rncBlock}
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    const close = () => {
+        if (_pubNcDonutInstance) { _pubNcDonutInstance.destroy(); _pubNcDonutInstance = null; }
+        overlay.classList.add('closing'); setTimeout(() => overlay.remove(), 180);
+    };
+    const onEsc = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); document.removeEventListener('keydown', onEsc, true); } };
+    overlay.querySelector('.pub-nc-close').onclick = close;
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', onEsc, true);
+
+    // Donut de níveis de N/C
+    const canvas = overlay.querySelector('#pubNcDonutCanvas');
+    if (canvas && typeof Chart !== 'undefined' && ncItems.length) {
+        const isDark = document.body.classList.contains('dark-mode');
+        _pubNcDonutInstance = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['Crítica', 'Maior', 'Menor'],
+                datasets: [{
+                    data: [counts.critica, counts.maior, counts.menor],
+                    backgroundColor: [_PUB_NC_COLOR.critica, _PUB_NC_COLOR.maior, _PUB_NC_COLOR.menor],
+                    borderColor: isDark ? '#0f172a' : '#fff',
+                    borderWidth: 3,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                cutout: '68%',
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { animateRotate: true, duration: 700 },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (c) => {
+                                const pct = Math.round((c.parsed / totalNc) * 100);
+                                return ` ${c.label}: ${c.parsed} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+window._pubNcOpenRnc = function(id) {
+    const n = Number(id);
+    const rid = isNaN(n) ? id : n;
+    // Fecha o painel de N/C e o modal de indicadores para a RNC ficar à frente
+    const panel = document.getElementById('pubNcPanelModal');
+    if (panel) panel.remove();
+    if (_pubNcDonutInstance) { _pubNcDonutInstance.destroy(); _pubNcDonutInstance = null; }
+    const geral = document.getElementById('pubGeralChartModal');
+    if (geral) geral.remove();
+    if (_pubGeralChartInstance) { _pubGeralChartInstance.destroy(); _pubGeralChartInstance = null; }
+    if (typeof rncOpenView === 'function') rncOpenView(rid);
+};
+
+function _pubEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 let _pubGeralChartInstance = null;
@@ -2396,7 +2580,14 @@ window.openPubGeralChart = function(groupKey) {
                     <span class="pub-geral-summary-label">Conformidade Geral</span>
                     <span class="pub-geral-summary-pct">${pctStr}<small>%</small></span>
                     <span class="pub-geral-summary-nota">Nota final: ${scores.nota.toFixed(1).replace('.0','').replace('.', ',')}</span>
-                    <span class="pub-geral-summary-tier">${tierLabel}</span>
+                    ${scores.ncCount > 0
+                        ? `<button type="button" class="pub-geral-summary-tier pub-geral-tier-btn" title="Ver ${scores.ncCount} não conformidade(s)">
+                               <span class="pub-geral-tier-pulse"></span>
+                               <i class="fas fa-triangle-exclamation"></i>
+                               <span>${tierLabel}</span>
+                               <i class="fas fa-chevron-right pub-geral-tier-arrow"></i>
+                           </button>`
+                        : `<span class="pub-geral-summary-tier">${tierLabel}</span>`}
                     <div class="pub-geral-summary-counts">
                         <span>${scores.ok} itens conformes</span>
                         <span>${scores.ncCount} não conformes</span>
@@ -2419,6 +2610,10 @@ window.openPubGeralChart = function(groupKey) {
     overlay.querySelector('.pub-geral-close').onclick = _close;
     overlay.addEventListener('click', e => { if (e.target === overlay) _close(); });
     document.addEventListener('keydown', onEsc);
+
+    // Botão de status "Atenção/Crítico" → painel de não conformidades
+    const tierBtn = overlay.querySelector('.pub-geral-tier-btn');
+    if (tierBtn) tierBtn.onclick = () => _openPubNcPanel(scores, tierLabel, tier);
 
     const canvas = overlay.querySelector('#pubGeralChartCanvas');
     if (!canvas || typeof Chart === 'undefined') return;
@@ -2493,7 +2688,22 @@ window.openPubGeralChart = function(groupKey) {
 
 // ─── GRÁFICO — evolução da nota de qualidade nas últimas 12 conclusões ──────
 let _pubQualityChartInstance = null;
-const _PUB_CHART_WINDOW = 12;
+let _pubNcDonutTrendInstance = null;
+let _pubNcBarTrendInstance = null;
+let _pubNcGeralTrendInstance = null;
+const _PUB_CHART_WINDOW_DEFAULT = 12;
+// Quantas conclusões agrupar na janela do gráfico antes de exigir a navegação
+// (setas). Configurável pelo campo no topo da aba Gráfico. Afeta todos os dados.
+window._pubChartWindow = window._pubChartWindow || _PUB_CHART_WINDOW_DEFAULT;
+
+window.pubChartSetWindow = function(val) {
+    let n = parseInt(val, 10);
+    if (isNaN(n) || n < 1) n = _PUB_CHART_WINDOW_DEFAULT;
+    n = Math.max(1, Math.min(60, n));
+    window._pubChartWindow = n;
+    window._pubChartOffset = 0; // volta para as conclusões mais recentes
+    if (window._pubChartCurrentItem) renderPubQualityChart(window._pubChartCurrentItem);
+};
 // Offset da janela a partir do fim (0 = as 12 mais recentes). Reset a cada troca de item.
 window._pubChartOffset = 0;
 window._pubChartItemId = null;
@@ -2512,27 +2722,39 @@ window.renderPubQualityChart = function(item) {
     const allGroups = _getPubGroupsWithQuality(item).filter(g => g.quality);
 
     if (_pubQualityChartInstance) { _pubQualityChartInstance.destroy(); _pubQualityChartInstance = null; }
+    if (_pubNcDonutTrendInstance) { _pubNcDonutTrendInstance.destroy(); _pubNcDonutTrendInstance = null; }
+    if (_pubNcBarTrendInstance) { _pubNcBarTrendInstance.destroy(); _pubNcBarTrendInstance = null; }
+    if (_pubNcGeralTrendInstance) { _pubNcGeralTrendInstance.destroy(); _pubNcGeralTrendInstance = null; }
 
     if (allGroups.length === 0) {
+        const _wf = document.getElementById('pubChartWindowField');
+        if (_wf) _wf.style.display = 'none';
         wrap.innerHTML = `<div class="pub-empty"><i class="fas fa-chart-line"></i><p>Sem dados de qualidade suficientes ainda. A nota aparece quando há itens de não conformidade (N/C) preenchidos em publicações concluídas.</p></div>`;
         return;
     }
 
-    // Janela deslizante de 12 conclusões: offset 0 = as mais recentes
-    const maxOffset = Math.max(0, allGroups.length - _PUB_CHART_WINDOW);
+    // Janela deslizante configurável: offset 0 = as mais recentes
+    const winSize = window._pubChartWindow || _PUB_CHART_WINDOW_DEFAULT;
+    const maxOffset = Math.max(0, allGroups.length - winSize);
     window._pubChartOffset = Math.min(window._pubChartOffset, maxOffset);
     const endIdx = allGroups.length - window._pubChartOffset;
-    const startIdx = Math.max(0, endIdx - _PUB_CHART_WINDOW);
+    const startIdx = Math.max(0, endIdx - winSize);
     const groups = allGroups.slice(startIdx, endIdx);
 
     const canNavOlder = startIdx > 0;
     const canNavNewer = window._pubChartOffset > 0;
-    const showNav = allGroups.length > _PUB_CHART_WINDOW;
+    const showNav = allGroups.length > winSize;
 
-    // Última nota sempre é a mais recente do card; média acompanha a janela de 12 conclusões visível no gráfico
-    const last12 = allGroups.slice(-_PUB_CHART_WINDOW);
-    const last = last12[last12.length - 1].quality.nota;
+    // Última nota sempre é a mais recente do card; média acompanha a janela visível no gráfico
+    const lastWin = allGroups.slice(-winSize);
+    const last = lastWin[lastWin.length - 1].quality.nota;
     const avg = Math.round((groups.reduce((s, g) => s + g.quality.nota, 0) / groups.length) * 10) / 10;
+
+    // Sincroniza o campo (fica na linha das sub-abas) e o exibe
+    const _winField = document.getElementById('pubChartWindowField');
+    const _winInput = document.getElementById('pubChartWindowInput');
+    if (_winField) _winField.style.display = '';
+    if (_winInput) _winInput.value = winSize;
 
     wrap.innerHTML = `
         <div class="pub-chart-summary">
@@ -2550,7 +2772,8 @@ window.renderPubQualityChart = function(item) {
             <canvas id="pubQualityChartCanvas"></canvas>
             ${showNav ? `<button type="button" class="pub-chart-nav-btn pub-chart-nav-next" title="Conclusões mais recentes" ${canNavNewer ? '' : 'disabled'} onclick="pubChartNavigate(-1, window._pubChartCurrentItem)"><i class="fas fa-chevron-right"></i></button>` : ''}
             ${showNav ? `<div class="pub-chart-range-label">${startIdx + 1}–${endIdx} de ${allGroups.length} conclusões</div>` : ''}
-        </div>`;
+        </div>
+        <div id="pubNcTrendWrap"></div>`;
 
     window._pubChartCurrentItem = item;
 
@@ -2614,7 +2837,200 @@ window.renderPubQualityChart = function(item) {
             }
         }
     });
+
+    _renderPubNcTrend(item, groups);
 };
+
+// Agrega as N/C de todas as conclusões visíveis no gráfico e monta o donut
+// (proporção por nível) e a barra empilhada (principais itens N/C por nível).
+function _renderPubNcTrend(item, groups) {
+    const host = document.getElementById('pubNcTrendWrap');
+    if (!host) return;
+
+    const totals = { critica: 0, maior: 0, menor: 0 };
+    const byItem = new Map(); // texto -> { critica, maior, menor, total, geralLabel }
+    const byGeral = new Map(); // label do checklist geral -> { ok, total, order }
+    groups.forEach(g => {
+        const sc = _computePubGeralScores(item, g.pubs);
+        if (!sc) return;
+        // Agrega ok/total por checklist geral (para a nota média por checklist)
+        (sc.bars || []).forEach((b, idx) => {
+            if (!byGeral.has(b.label)) byGeral.set(b.label, { ok: 0, total: 0, order: idx });
+            const rec = byGeral.get(b.label);
+            rec.ok += b.ok; rec.total += b.total;
+        });
+        (sc.ncItems || []).forEach(n => {
+            const lvl = totals[n.conformidade] != null ? n.conformidade : null;
+            if (!lvl) return;
+            totals[lvl]++;
+            const key = n.texto || 'Item sem descrição';
+            if (!byItem.has(key)) byItem.set(key, { critica: 0, maior: 0, menor: 0, total: 0, geralLabel: n.geralLabel });
+            const rec = byItem.get(key);
+            rec[lvl]++; rec.total++;
+        });
+    });
+
+    const totalNc = totals.critica + totals.maior + totals.menor;
+    if (totalNc === 0 && byGeral.size === 0) { host.innerHTML = ''; return; }
+
+    // Nota média por checklist geral (média ponderada pelas conclusões visíveis)
+    const geralData = [...byGeral.entries()]
+        .map(([label, r]) => ({ label, order: r.order, nota: Math.round((r.ok / r.total) * 10 * 10) / 10 }))
+        .sort((a, b) => a.order - b.order);
+
+    // Top itens por frequência, ponderando gravidade em caso de empate
+    const _w = r => r.critica * 100 + r.maior * 10 + r.menor;
+    const topItems = [...byItem.entries()]
+        .map(([texto, r]) => ({ texto, ...r }))
+        .sort((a, b) => (b.total - a.total) || (_w(b) - _w(a)))
+        .slice(0, 8);
+
+    const C = _PUB_NC_COLOR;
+    const pct = v => Math.round((v / (totalNc || 1)) * 100);
+    const legend = ['critica', 'maior', 'menor'].map(k =>
+        `<div class="pub-nc-legend-row${totals[k] ? '' : ' off'}">
+            <span class="pub-nc-legend-dot" style="background:${C[k]}"></span>
+            <span class="pub-nc-legend-name">${_PUB_NC_META[k].label}</span>
+            <span class="pub-nc-legend-pct">${totals[k]} · ${pct(totals[k])}%</span>
+        </div>`).join('');
+
+    const geralSection = geralData.length ? `
+        <div class="pub-nc-trend-section">
+            <div class="pub-nc-trend-title"><i class="fas fa-list-check"></i> Nota por Checklist Geral
+                <span class="pub-nc-trend-sub">média de ${groups.length} conclus${groups.length !== 1 ? 'ões' : 'ão'} visívei${groups.length !== 1 ? 's' : 'l'}</span>
+            </div>
+            <div class="pub-nc-trend-bar-wrap" style="height:${Math.max(120, geralData.length * 36 + 30)}px">
+                <canvas id="pubNcTrendGeral"></canvas>
+            </div>
+        </div>` : '';
+
+    host.innerHTML = `
+        ${geralSection}
+        ${totalNc ? `<div class="pub-nc-trend-section">
+            <div class="pub-nc-trend-title"><i class="fas fa-chart-pie"></i> Tipos de Não Conformidade
+                <span class="pub-nc-trend-sub">${totalNc} N/C em ${groups.length} conclus${groups.length !== 1 ? 'ões' : 'ão'}</span>
+            </div>
+            <div class="pub-nc-trend-donut-row">
+                <div class="pub-nc-donut-canvas"><canvas id="pubNcTrendDonut"></canvas>
+                    <div class="pub-nc-donut-center"><strong>${totalNc}</strong><small>N/C</small></div>
+                </div>
+                <div class="pub-nc-donut-legend">${legend}</div>
+            </div>
+        </div>` : ''}
+        ${totalNc ? `<div class="pub-nc-trend-section">
+            <div class="pub-nc-trend-title"><i class="fas fa-ranking-star"></i> Principais Não Conformidades
+                <span class="pub-nc-trend-sub">por item · empilhado por nível</span>
+            </div>
+            <div class="pub-nc-trend-bar-wrap" style="height:${Math.max(120, topItems.length * 34 + 30)}px">
+                <canvas id="pubNcTrendBar"></canvas>
+            </div>
+        </div>` : ''}`;
+
+    if (typeof Chart === 'undefined') return;
+    const isDark = document.body.classList.contains('dark-mode');
+    const tickColor = isDark ? '#94a3b8' : '#64748b';
+    const gridColor = isDark ? 'rgba(148,163,184,0.12)' : 'rgba(100,116,139,0.12)';
+
+    // ── Nota média por checklist geral (barra horizontal) ──
+    const geralCanvas = document.getElementById('pubNcTrendGeral');
+    if (geralCanvas && geralData.length) {
+        const gColor = n => n >= 8 ? '#16a34a' : (n >= 5 ? '#d97706' : '#dc2626');
+        _pubNcGeralTrendInstance = new Chart(geralCanvas, {
+            type: 'bar',
+            data: {
+                labels: geralData.map(g => g.label.length > 34 ? g.label.slice(0, 33) + '…' : g.label),
+                datasets: [{
+                    label: 'Nota média',
+                    data: geralData.map(g => g.nota),
+                    backgroundColor: geralData.map(g => gColor(g.nota)),
+                    borderWidth: 0,
+                    borderRadius: 4,
+                    barThickness: 20
+                }]
+            },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: items => geralData[items[0].dataIndex].label,
+                            label: c => ` Nota média: ${c.parsed.x.toFixed(1).replace('.', ',')}/10`
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, max: 10, ticks: { stepSize: 2, color: tickColor }, grid: { color: gridColor } },
+                    y: { ticks: { color: tickColor, font: { size: 11 } }, grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // ── Donut de proporção por nível ──
+    const donutCanvas = document.getElementById('pubNcTrendDonut');
+    if (donutCanvas) {
+        _pubNcDonutTrendInstance = new Chart(donutCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['Crítica', 'Maior', 'Menor'],
+                datasets: [{
+                    data: [totals.critica, totals.maior, totals.menor],
+                    backgroundColor: [C.critica, C.maior, C.menor],
+                    borderColor: isDark ? '#1e293b' : '#fff',
+                    borderWidth: 3,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                cutout: '68%', responsive: true, maintainAspectRatio: false,
+                animation: { animateRotate: true, duration: 700 },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: c => ` ${c.label}: ${c.parsed} (${pct(c.parsed)}%)` } }
+                }
+            }
+        });
+    }
+
+    // ── Barra horizontal empilhada por item (proporção dos 3 níveis) ──
+    const barCanvas = document.getElementById('pubNcTrendBar');
+    if (barCanvas) {
+        const labels = topItems.map(t => t.texto.length > 34 ? t.texto.slice(0, 33) + '…' : t.texto);
+        const mk = (lvl, color) => ({
+            label: _PUB_NC_META[lvl].label,
+            data: topItems.map(t => t[lvl]),
+            backgroundColor: color,
+            borderWidth: 0,
+            borderRadius: 3,
+            barThickness: 18
+        });
+        _pubNcBarTrendInstance = new Chart(barCanvas, {
+            type: 'bar',
+            data: { labels, datasets: [mk('critica', C.critica), mk('maior', C.maior), mk('menor', C.menor)] },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: tickColor, boxWidth: 12, padding: 14, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            title: items => topItems[items[0].dataIndex].texto,
+                            label: c => ` ${c.dataset.label}: ${c.parsed.x}`,
+                            afterBody: items => {
+                                const t = topItems[items[0].dataIndex];
+                                return `Total: ${t.total}` + (t.geralLabel ? `\n${t.geralLabel}` : '');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { stacked: true, beginAtZero: true, ticks: { color: tickColor, precision: 0 }, grid: { color: gridColor } },
+                    y: { stacked: true, ticks: { color: tickColor, font: { size: 11 } }, grid: { display: false } }
+                }
+            }
+        });
+    }
+}
 
 window.renderViewPublicacoes = function(item) {
     const container = document.getElementById('viewPublicacoesContent');
@@ -2669,6 +3085,8 @@ window.renderViewPublicacoes = function(item) {
     }
     container.style.display = '';
     if (chartWrap) chartWrap.style.display = 'none';
+    const _winField = document.getElementById('pubChartWindowField');
+    if (_winField) _winField.style.display = 'none';
 
     // Filtra pelo tipo ativo
     let pubs = filtroAtivo === 'Todos' ? allPubs.slice() : allPubs.filter(p => p.tipo === filtroAtivo);
