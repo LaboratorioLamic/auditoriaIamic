@@ -1063,6 +1063,8 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                 const clDone = checklist.filter(c => c.checked).length;
                 const clPct = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0;
                 const donutHtml = clTotal > 0 ? _clDonutHtml(clDone, clTotal, clPct, 40, true) : '';
+                const qualityBadgeHtml = (currentTab === 'auditoria' && clTotal > 0 && clPct === 100)
+                    ? _cardQualityBadgeHtml(item, currentTab) : '';
 
                 let specificContent = '';
                 const _fmtEsc2 = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1112,7 +1114,11 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                         </div>
                     </div>
                     <div class="card-title"><h4 title="${fullTitle}">${displayTitle}</h4></div>
-                    <div class="card-body">${specificContent}${marcadorText?`<div class="card-marker" style="background:${marcadorColorVar}"><i class="fas fa-bookmark"></i> ${marcadorText}</div>`:''}</div>
+                    <div class="card-body">${specificContent}</div>
+                    ${(marcadorText || qualityBadgeHtml) ? `<div class="card-footer">
+                        ${marcadorText ? `<span class="card-marker" style="background:${marcadorColorVar}"><i class="fas fa-bookmark"></i> ${marcadorText}</span>` : ''}
+                        ${qualityBadgeHtml}
+                    </div>` : ''}
                     ${donutHtml}
                 </div>`;
             });
@@ -1183,6 +1189,8 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                 const clDone = checklist.filter(c => c.checked).length;
                 const clPct = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0;
                 const donutHtml = clTotal > 0 ? _clDonutHtml(clDone, clTotal, clPct, 40, true) : '';
+                const qualityBadgeHtml = (currentTab === 'auditoria' && clTotal > 0 && clPct === 100)
+                    ? _cardQualityBadgeHtml(item, currentTab) : '';
 
                 let specificContent = '';
                 const _fmtEsc3 = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1232,7 +1240,11 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                         </div>
                     </div>
                     <div class="card-title"><h4 title="${fullTitle}">${displayTitle}</h4></div>
-                    <div class="card-body">${specificContent}${marcadorText?`<div class="card-marker" style="background:${marcadorColorVar}"><i class="fas fa-bookmark"></i> ${marcadorText}</div>`:''}</div>
+                    <div class="card-body">${specificContent}</div>
+                    ${(marcadorText || qualityBadgeHtml) ? `<div class="card-footer">
+                        ${marcadorText ? `<span class="card-marker" style="background:${marcadorColorVar}"><i class="fas fa-bookmark"></i> ${marcadorText}</span>` : ''}
+                        ${qualityBadgeHtml}
+                    </div>` : ''}
                     ${donutHtml}
                 </div>`;
             });
