@@ -1,0 +1,47 @@
+/* =========================================================================
+   OTIMIZAÇÃO BASE (sempre ativa) — mantém TODAS as animações e efeitos,
+   inclusive mostrar/ocultar e abrir/fechar janelas. Só reduz o custo de
+   render/repaint, sem alterar a aparência.
+   ========================================================================= */
+
+/* 1. Pula a renderização de cards fora da tela. .card tem altura fixa
+   (196px) → contain-intrinsic-size evita pulo de scroll. Ganho grande em
+   listas longas, invisível ao usuário. */
+.card {
+    content-visibility: auto;
+    contain-intrinsic-size: 270px 196px;
+}
+
+/* 2. Isola layout/paint de cada card e coluna: hover/repaint de um não
+   força recálculo dos vizinhos. Cards já usam overflow:hidden, então
+   'paint' não muda o visual. */
+.card,
+.rnc-card,
+.kanban-card,
+.rnc-kb-card,
+.summary-card,
+.kpi-card {
+    contain: layout paint;
+}
+
+/* 3. Colunas kanban: isola layout ao arrastar/rolar. */
+.kanban-col,
+.rnc-kb-col {
+    contain: layout;
+}
+
+/* 4. Camada de composição própria para o que desliza (sidebar/drawers),
+   deixando abrir/fechar mais suave e sem repaint da página inteira. */
+.sidebar,
+.form-drawer {
+    will-change: transform;
+}
+
+/* =========================================================================
+   ANTI-EMPILHAMENTO DE BLUR
+   Aplicada via JS (perf-base.js) só nas janelas de baixo quando há mais de
+   uma aberta. A janela do topo mantém o blur. Sobrescreve blur inline. */
+.perf-blur-stacked {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
