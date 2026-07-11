@@ -505,7 +505,7 @@ function _calRenderMonthly(container) {
         const dateObj = new Date(calViewYear, calViewMonth, d);
         const dateStr = _calDateStr(dateObj);
         const isToday = (dateObj.getTime() === today.getTime());
-        const entries = map[dateStr] || [];
+        const entries = _calSortEntriesByStatus(map[dateStr] || []);
 
         const cell = document.createElement('div');
         cell.className = 'cal-day-cell' + (isToday ? ' cal-day-today' : '');
@@ -531,7 +531,7 @@ function _calRenderMonthly(container) {
             const evtsWrap = document.createElement('div');
             evtsWrap.className = 'cal-events-wrap';
 
-            const maxShow = 3;
+            const maxShow = 8;
             const shown = entries.slice(0, maxShow);
             shown.forEach(e => evtsWrap.appendChild(_calRenderEventChip(e, canEdit)));
             if (entries.length > maxShow) {
@@ -585,7 +585,7 @@ function _calRenderWeekly(container) {
         dateObj.setDate(dateObj.getDate() + i);
         const dateStr = _calDateStr(dateObj);
         const isToday = (dateObj.getTime() === today.getTime());
-        const entries = map[dateStr] || [];
+        const entries = _calSortEntriesByStatus(map[dateStr] || []);
 
         const col = document.createElement('div');
         col.className = 'cal-week-col' + (isToday ? ' cal-week-col-today' : '');
@@ -737,6 +737,27 @@ function _calRenderEventCard(entry, canEdit) {
     }
 
     return card;
+}
+
+function _calStatusOrderNames() {
+    // Usa exatamente a ordem de colunas do Kanban (regulars por ordem salva → concluídos → cancelados)
+    if (typeof _kbGetSortedStatuses === 'function' && typeof _kbGetConfig === 'function') {
+        const cfg = _kbGetConfig(currentTab);
+        if (cfg) return _kbGetSortedStatuses(cfg).map(s => s.name);
+    }
+    // Fallback: ordem crua da lista mestre
+    const cfg = _CAL_MODULES[currentTab];
+    return cfg && masterLists ? (masterLists[cfg.statusKey] || []).map(s => s.name) : [];
+}
+
+function _calSortEntriesByStatus(entries) {
+    const order = _calStatusOrderNames();
+    const rank = (it) => {
+        if (!it || !it.status) return 9999;
+        const idx = order.indexOf(it.status);
+        return idx === -1 ? 9999 : idx;
+    };
+    return entries.slice().sort((a, b) => rank(a.item) - rank(b.item));
 }
 
 function _calGetStatusColor(item) {

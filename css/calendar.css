@@ -156,12 +156,15 @@
 }
 
 .cal-events-wrap {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 2px;
     flex: 1;
     min-width: 0;
 }
+.cal-events-wrap > .cal-more-btn { grid-column: 1 / -1; }
+/* Chip solitário na linha (último e em posição ímpar) ocupa largura toda */
+.cal-events-wrap > .cal-event-chip:last-child:nth-child(odd) { grid-column: 1 / -1; }
 
 /* ── Chip de evento (mensal) ─────────────────────────────────────────────── */
 .cal-event-chip {
@@ -179,6 +182,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+    min-width: 0;
     transition: filter 0.1s;
     line-height: 1.4;
 }
