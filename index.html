@@ -52,6 +52,7 @@
 <link rel="stylesheet" href="css/calendar.css">
 <link rel="stylesheet" href="css/rnc.css">
 <link rel="stylesheet" href="css/messages.css">
+<link rel="stylesheet" href="css/perfmode.css">
 </head>
 <body>
 
@@ -115,6 +116,13 @@
         <button id="tabBackup"><i class="fa-solid fa-database"></i> Backup</button>
         <button id="tabConfiguracoes" style="display:none;"><i class="fa-solid fa-gear"></i> Configurações</button>
     </nav>
+    <div class="sidebar-darkmode-row">
+        <i class="fa-solid fa-bolt sidebar-perfmode-icon"></i>
+        <span class="sidebar-darkmode-label">Modo Leve</span>
+        <button id="btnPerfMode" class="darkmode-toggle" title="Otimizar desempenho (desativa animações e blur)" onclick="togglePerfMode()">
+            <span class="darkmode-toggle-thumb"></span>
+        </button>
+    </div>
     <div class="sidebar-darkmode-row">
         <i class="fa-solid fa-moon sidebar-darkmode-icon"></i>
         <span class="sidebar-darkmode-label">Modo noturno</span>

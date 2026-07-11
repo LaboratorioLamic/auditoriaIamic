@@ -5,7 +5,19 @@
         populateYearSelects();
         populateSelects();
         initDarkMode();
+        initPerfMode();
     });
+
+    // === MODO LEVE (perf-mode) ===
+    function initPerfMode() {
+        const on = localStorage.getItem('perfMode') === 'true';
+        document.body.classList.toggle('perf-mode', on);
+    }
+
+    function togglePerfMode() {
+        const on = document.body.classList.toggle('perf-mode');
+        localStorage.setItem('perfMode', on);
+    }
 
     // === DARK MODE ===
     function initDarkMode() {
