@@ -38,6 +38,37 @@
 }
 
 /* =========================================================================
+   PAINÉIS SOBRE BACKDROP-FILTER (N/C, modais, drawers)
+   Quando há blur de fundo (backdrop-filter), qualquer repaint DENTRO do
+   painel — hover, scroll da lista, animação do ícone, donut — pode obrigar
+   o navegador a recalcular o blur da tela inteira. Isolando o painel em
+   camada de composição própria, esses repaints não tocam mais no fundo.
+   Mantém 100% da aparência. */
+.pub-nc-card,
+.cl-reset-card,
+.modal-box {
+    will-change: transform;
+    isolation: isolate;
+}
+
+/* Lista rolável do painel de N/C em camada própria: rolar não reblura. */
+.pub-nc-scroll {
+    will-change: transform;
+    contain: layout paint;
+}
+
+/* Cada item/card isolado: hover de um não repinta os vizinhos. */
+.pub-nc-item,
+.pub-nc-rnc-card {
+    contain: layout paint;
+}
+
+/* Ícone com animação infinita roda na GPU, sem repintar o painel. */
+.pub-nc-header-icon {
+    will-change: transform;
+}
+
+/* =========================================================================
    ANTI-EMPILHAMENTO DE BLUR
    Aplicada via JS (perf-base.js) só nas janelas de baixo quando há mais de
    uma aberta. A janela do topo mantém o blur. Sobrescreve blur inline. */

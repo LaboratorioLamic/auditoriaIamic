@@ -634,7 +634,9 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             const clPct = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0;
             const _noChecklist = currentTab === 'treinamentos' || currentTab === 'documentos';
             const donutHtml = (!_noChecklist && clTotal > 0) ? _clDonutHtml(clDone, clTotal, clPct, 40, true) : '';
-            const qualityBadgeHtml = (currentTab === 'auditoria') ? _cardQualityBadgeHtml(item, currentTab) : '';
+            // Nota da qualidade só aparece com o checklist 100% concluído.
+            const qualityBadgeHtml = (currentTab === 'auditoria' && clTotal > 0 && clPct === 100)
+                ? _cardQualityBadgeHtml(item, currentTab) : '';
 
             div.innerHTML = `
                 <div class="card-header">

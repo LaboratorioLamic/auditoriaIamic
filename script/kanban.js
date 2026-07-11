@@ -402,7 +402,8 @@ function _kbRenderCard(item) {
     const donutHtml = clTotal > 0 && typeof _clDonutHtml === 'function'
         ? _clDonutHtml(clDone, clTotal, clPct, 36, true) : '';
     const isNewCard = _kbIsNew(item);
-    const qualityBadgeHtml = (currentTab === 'auditoria' && typeof _cardQualityBadgeHtml === 'function')
+    // Nota da qualidade só aparece com o checklist 100% concluído.
+    const qualityBadgeHtml = (currentTab === 'auditoria' && clTotal > 0 && clPct === 100 && typeof _cardQualityBadgeHtml === 'function')
         ? _cardQualityBadgeHtml(item, currentTab) : '';
 
     return `
