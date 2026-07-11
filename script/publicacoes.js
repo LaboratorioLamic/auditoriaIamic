@@ -2875,7 +2875,7 @@ window.renderPubQualityChart = function(item) {
                 <span class="pub-chart-stat-value pub-group-quality-${_pubQualityTier(last)}">${last.toFixed(1).replace('.0','')}<small>/10</small></span>
             </div>
             <div class="pub-chart-stat">
-                <span class="pub-chart-stat-label">Média (${groups.length} conclus${groups.length !== 1 ? 'ões' : 'ão'} visívei${groups.length !== 1 ? 's' : 'l'})</span>
+                <span class="pub-chart-stat-label">Média (${groups.length} conclus${groups.length !== 1 ? 'ões' : 'ão'} ${groups.length !== 1 ? 'visíveis' : 'visível'})</span>
                 <span class="pub-chart-stat-value pub-group-quality-${_pubQualityTier(avg)}">${avg.toFixed(1).replace('.0','')}<small>/10</small></span>
             </div>
         </div>
@@ -3067,7 +3067,7 @@ function _renderPubNcTrend(item, groups) {
     const geralSection = geralData.length ? `
         <div class="pub-nc-trend-section">
             <div class="pub-nc-trend-title"><i class="fas fa-list-check"></i> Nota por Checklist Geral
-                <span class="pub-nc-trend-sub">média de ${groups.length} conclus${groups.length !== 1 ? 'ões' : 'ão'} visívei${groups.length !== 1 ? 's' : 'l'}</span>
+                <span class="pub-nc-trend-sub">média de ${groups.length} conclus${groups.length !== 1 ? 'ões' : 'ão'} ${groups.length !== 1 ? 'visíveis' : 'visível'}</span>
             </div>
             <div class="pub-nc-trend-bar-wrap" style="height:${Math.max(120, geralData.length * 36 + 30)}px">
                 <canvas id="pubNcTrendGeral"></canvas>
@@ -3096,7 +3096,7 @@ function _renderPubNcTrend(item, groups) {
     const rncSection = rncAssoc.length ? `
         <div class="pub-nc-trend-section">
             <div class="pub-nc-trend-title"><i class="fas fa-file-circle-exclamation"></i> RNCs Associadas
-                <span class="pub-nc-trend-sub">${rncAssoc.length} em ${groups.length} conclus${groups.length !== 1 ? 'ões' : 'ão'} visívei${groups.length !== 1 ? 's' : 'l'}</span>
+                <span class="pub-nc-trend-sub">${rncAssoc.length} em ${groups.length} conclus${groups.length !== 1 ? 'ões' : 'ão'} ${groups.length !== 1 ? 'visíveis' : 'visível'}</span>
             </div>
             <div class="pub-nc-rnc-grid">${rncCards}</div>
         </div>` : '';
