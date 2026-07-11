@@ -64,6 +64,34 @@ function _cardQualityBadgeHtml(item, tab) {
         </button>`;
 }
 
+// Ícone de gráfico nas ações do card/tabela (listas/grupos/setores).
+// Só aparece quando o card tem dados de qualidade — igual ao kanban.
+function _chartIconHtml(item, asButton) {
+    const has = typeof window._pubHasChartData === 'function' && window._pubHasChartData(item);
+    if (!has) return '';
+    return asButton
+        ? `<button onclick="openChartView(${item.id}, '${currentTab}')" title="Ver gráfico de indicadores"><i class="fas fa-chart-line"></i></button>`
+        : `<i class="fas fa-chart-line" onclick="openChartView(${item.id}, '${currentTab}')" title="Ver gráfico de indicadores"></i>`;
+}
+
+// Abre a visualização do card já na aba Publicações > sub-aba Gráfico (fora do kanban).
+function openChartView(itemId, tab) {
+    if (typeof openView === 'function') openView(itemId, tab || currentTab);
+    let tries = 0;
+    const go = () => {
+        const pubTab = document.querySelector('.view-modal-tab[onclick*="publicacoes"]');
+        if (pubTab && typeof switchViewTab === 'function') switchViewTab('publicacoes', pubTab);
+        const grafBtn = document.getElementById('pubSubtabGrafico');
+        if (grafBtn && grafBtn.style.display !== 'none') {
+            if (typeof switchPubSubtab === 'function') switchPubSubtab('Gráfico', grafBtn);
+            return;
+        }
+        if (++tries < 10) setTimeout(go, 60);
+    };
+    setTimeout(go, 60);
+}
+window.openChartView = openChartView;
+
 function _fmtAttr(s) {
     return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
@@ -642,6 +670,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                 <div class="card-header">
                     <span class="tag" style="background-color:${statusColorVar}">${item.status || 'Novo'}</span>
                     <div class="card-actions" onclick="event.stopPropagation()">
+                        ${_chartIconHtml(item)}
                         ${editIconHtml}
                         ${deleteIconHtml}
                     </div>
@@ -1000,6 +1029,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                 <td><span class="lt-status" style="background:${statusColorVar}">${item.status||'Novo'}</span></td>
                 ${specificCols}
                 <td><div class="lt-actions" onclick="event.stopPropagation()">
+                    ${_chartIconHtml(item, true)}
                     ${canEdit ? `<button onclick="editItem(${item.id},'${currentTab}')" title="Editar"><i class="fas fa-pen"></i></button>` : ''}
                     ${canDelete ? `<button onclick="deleteItem(${item.id},'${currentTab}')" title="Excluir"><i class="fas fa-trash"></i></button>` : ''}
                 </div></td>
@@ -1109,6 +1139,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                     <div class="card-header">
                         <span class="tag" style="background-color:${statusColorVar}">${item.status||'Novo'}</span>
                         <div class="card-actions" onclick="event.stopPropagation()">
+                            ${_chartIconHtml(item)}
                             ${canEdit?`<i class="fas fa-pen" onclick="editItem(${item.id},'${currentTab}')" title="Editar"></i>`:''}
                             ${canDelete?`<i class="fas fa-trash" onclick="deleteItem(${item.id},'${currentTab}')" title="Excluir"></i>`:''}
                         </div>
@@ -1235,6 +1266,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                     <div class="card-header">
                         <span class="tag" style="background-color:${statusColorVar}">${item.status||'Novo'}</span>
                         <div class="card-actions" onclick="event.stopPropagation()">
+                            ${_chartIconHtml(item)}
                             ${canEdit?`<i class="fas fa-pen" onclick="editItem(${item.id},'${currentTab}')" title="Editar"></i>`:''}
                             ${canDelete?`<i class="fas fa-trash" onclick="deleteItem(${item.id},'${currentTab}')" title="Excluir"></i>`:''}
                         </div>
