@@ -2171,6 +2171,115 @@
     border: 1.5px solid #e2e8f0;
 }
 
+/* Caixa que envolve o gráfico de linha (título + filtro + KPIs + gráfico) */
+.pub-chart-box {
+    padding: 16px;
+    border-radius: 16px;
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+    margin-bottom: 14px;
+}
+.pub-chart-box .pub-chart-canvas-wrap { background: #fcfcfd; }
+.pub-chart-box-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.pub-chart-box-titles { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pub-chart-box-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pub-chart-box-title > i { color: #6366f1; font-size: 14px; }
+.pub-chart-box-sub { font-size: 11.5px; font-weight: 600; color: #94a3b8; }
+
+/* Botão de filtro por checklist geral (canto superior direito da caixa) */
+.pub-chart-filter { position: relative; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.pub-chart-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 240px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+}
+.pub-chart-filter-btn:hover { border-color: #cbd5e1; background: #f1f5f9; }
+.pub-chart-filter-btn > i:first-child { color: #6366f1; font-size: 12px; }
+.pub-chart-filter-btn > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pub-chart-filter-caret { font-size: 10px; opacity: 0.6; }
+.pub-chart-filter-btn.filtered { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; }
+.pub-chart-filter-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: #fee2e2;
+    border: 1.5px solid #fecaca;
+    color: #dc2626;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background .15s;
+}
+.pub-chart-filter-clear:hover { background: #fecaca; }
+.pub-chart-geral-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 40;
+    min-width: 240px;
+    max-width: 320px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 6px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    box-shadow: 0 10px 30px rgba(15,23,42,0.14);
+    display: none;
+}
+.pub-chart-geral-menu.open { display: block; }
+.pub-chart-geral-opt {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    text-align: left;
+    padding: 9px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+}
+.pub-chart-geral-opt > i { color: #94a3b8; font-size: 12px; width: 14px; text-align: center; }
+.pub-chart-geral-opt:hover { background: #f1f5f9; }
+.pub-chart-geral-opt.active { background: #eef2ff; color: #4338ca; }
+.pub-chart-geral-opt.active > i { color: #6366f1; }
+@media (max-width: 560px) {
+    .pub-chart-box-header { flex-direction: column; }
+    .pub-chart-filter { align-self: stretch; }
+    .pub-chart-filter-btn { flex: 1; max-width: none; }
+    .pub-chart-geral-menu { left: 0; right: 0; min-width: 0; max-width: none; }
+}
+
 /* Gráficos de tendência de N/C (donut + barra empilhada) abaixo do gráfico de nota */
 .pub-nc-trend-section {
     margin-top: 14px;

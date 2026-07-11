@@ -1625,6 +1625,20 @@ body.dark-mode .pub-chart-stat-value.pub-group-quality-bad { color: #f87171 !imp
 body.dark-mode .pub-chart-canvas-wrap { background: #1e293b !important; border-color: #334155 !important; }
 body.dark-mode .pub-chart-window { background: #1e293b; border-color: #334155; color: #cbd5e1; }
 body.dark-mode .pub-chart-window input { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+body.dark-mode .pub-chart-box { background: #172033 !important; border-color: #334155 !important; box-shadow: none !important; }
+body.dark-mode .pub-chart-box .pub-chart-canvas-wrap { background: #1e293b !important; }
+body.dark-mode .pub-chart-box-title { color: #e2e8f0; }
+body.dark-mode .pub-chart-box-sub { color: #64748b; }
+body.dark-mode .pub-chart-filter-btn { background: #1e293b; border-color: #334155; color: #cbd5e1; }
+body.dark-mode .pub-chart-filter-btn:hover { background: #263449; border-color: #475569; }
+body.dark-mode .pub-chart-filter-btn.filtered { background: #312e81; border-color: #4f46e5; color: #c7d2fe; }
+body.dark-mode .pub-chart-filter-clear { background: #3f1d1d; border-color: #7f1d1d; color: #f87171; }
+body.dark-mode .pub-chart-filter-clear:hover { background: #7f1d1d; }
+body.dark-mode .pub-chart-geral-menu { background: #1e293b; border-color: #334155; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+body.dark-mode .pub-chart-geral-opt { color: #cbd5e1; }
+body.dark-mode .pub-chart-geral-opt:hover { background: #263449; }
+body.dark-mode .pub-chart-geral-opt.active { background: #312e81; color: #c7d2fe; }
+body.dark-mode .pub-chart-geral-opt.active > i { color: #818cf8; }
 body.dark-mode .pub-nc-trend-section { background: #1e293b; border-color: #334155; }
 body.dark-mode .pub-nc-trend-title { color: #e2e8f0; }
 body.dark-mode .pub-chart-nav-btn { background: #0f172a !important; border-color: #334155 !important; color: #94a3b8 !important; }

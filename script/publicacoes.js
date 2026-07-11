@@ -2718,27 +2718,127 @@ window.pubChartSetWindow = function(val) {
 window._pubChartOffset = 0;
 window._pubChartItemId = null;
 
+// Filtro do gráfico de linha por checklist geral.
+// null = visão geral (nota de qualidade total); string = label do checklist geral escolhido.
+window._pubChartGeralFilter = null;
+
 window.pubChartNavigate = function(dir, item) {
     window._pubChartOffset = Math.max(0, window._pubChartOffset + dir);
     renderPubQualityChart(item);
+};
+
+// Lista (ordenada) de labels de checklist geral disponíveis em qualquer conclusão do card.
+function _pubChartGeralOptions(item, allGroups) {
+    const seen = new Map(); // label -> menor order encontrado
+    allGroups.forEach(g => {
+        const sc = _computePubGeralScores(item, g.pubs);
+        if (!sc || !sc.bars) return;
+        sc.bars.forEach((b, idx) => { if (!seen.has(b.label)) seen.set(b.label, idx); });
+    });
+    return [...seen.entries()].sort((a, b) => a[1] - b[1]).map(e => e[0]);
+}
+
+// Aplica/limpa o filtro por checklist geral e redesenha o gráfico.
+window.pubChartSetGeralFilter = function(label) {
+    window._pubChartGeralFilter = (label && label !== '__geral__') ? label : null;
+    window._pubChartOffset = 0;
+    const menu = document.getElementById('pubChartGeralMenu');
+    if (menu) menu.classList.remove('open');
+    if (window._pubChartCurrentItem) renderPubQualityChart(window._pubChartCurrentItem);
+};
+
+window.pubChartToggleGeralMenu = function(ev) {
+    if (ev) ev.stopPropagation();
+    const menu = document.getElementById('pubChartGeralMenu');
+    if (!menu) return;
+    const willOpen = !menu.classList.contains('open');
+    menu.classList.toggle('open', willOpen);
+    if (willOpen) {
+        const close = (e) => {
+            if (!menu.contains(e.target) && !e.target.closest('#pubChartGeralBtn')) {
+                menu.classList.remove('open');
+                document.removeEventListener('click', close, true);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', close, true), 0);
+    }
 };
 
 window.renderPubQualityChart = function(item) {
     const wrap = document.getElementById('viewPublicacoesChart');
     if (!wrap) return;
 
-    if (window._pubChartItemId !== item.id) { window._pubChartOffset = 0; window._pubChartItemId = item.id; }
+    if (window._pubChartItemId !== item.id) { window._pubChartOffset = 0; window._pubChartItemId = item.id; window._pubChartGeralFilter = null; }
 
-    const allGroups = _getPubGroupsWithQuality(item).filter(g => g.quality);
+    const allGroupsRaw = _getPubGroupsWithQuality(item).filter(g => g.quality);
+
+    // Opções de checklist geral disponíveis (para o botão de filtro)
+    const geralOptions = _pubChartGeralOptions(item, allGroupsRaw);
+    // Se o filtro atual não existe mais nos dados, volta para o geral
+    if (window._pubChartGeralFilter && !geralOptions.includes(window._pubChartGeralFilter)) {
+        window._pubChartGeralFilter = null;
+    }
+    const activeFilter = window._pubChartGeralFilter;
+
+    // Quando filtrado por um checklist geral, cada grupo passa a ter a nota daquele
+    // checklist (grupos sem aquele item são descartados). Sem filtro, usa a nota geral.
+    let allGroups;
+    if (activeFilter) {
+        allGroups = allGroupsRaw
+            .map(g => {
+                const sc = _computePubGeralScores(item, g.pubs);
+                const bar = sc && sc.bars ? sc.bars.find(b => b.label === activeFilter) : null;
+                if (!bar || !bar.total) return null;
+                const nota = Math.round((bar.ok / bar.total) * 10 * 10) / 10;
+                return { ...g, quality: { ...g.quality, nota, ok: bar.ok, total: bar.total } };
+            })
+            .filter(Boolean);
+    } else {
+        allGroups = allGroupsRaw;
+    }
 
     if (_pubQualityChartInstance) { _pubQualityChartInstance.destroy(); _pubQualityChartInstance = null; }
     if (_pubNcDonutTrendInstance) { _pubNcDonutTrendInstance.destroy(); _pubNcDonutTrendInstance = null; }
     if (_pubNcBarTrendInstance) { _pubNcBarTrendInstance.destroy(); _pubNcBarTrendInstance = null; }
     if (_pubNcGeralTrendInstance) { _pubNcGeralTrendInstance.destroy(); _pubNcGeralTrendInstance = null; }
 
+    // Título do gráfico e botão de filtro por checklist geral (canto superior direito da caixa)
+    const _fEsc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const chartTitle = activeFilter ? _fEsc(activeFilter) : 'Nota de Qualidade Geral';
+    const chartSub = activeFilter ? 'Checklist Geral · evolução por conclusão' : 'Evolução da nota por conclusão';
+    const geralMenuItems = [
+        `<button type="button" class="pub-chart-geral-opt${!activeFilter ? ' active' : ''}" onclick="pubChartSetGeralFilter('__geral__')"><i class="fas fa-layer-group"></i> Geral (todos os itens)</button>`,
+        ...geralOptions.map(lbl =>
+            `<button type="button" class="pub-chart-geral-opt${activeFilter === lbl ? ' active' : ''}" onclick="pubChartSetGeralFilter(this.dataset.lbl)" data-lbl="${_fEsc(lbl)}"><i class="fas fa-list-check"></i> ${_fEsc(lbl)}</button>`)
+    ].join('');
+    const filterUI = geralOptions.length ? `
+        <div class="pub-chart-filter">
+            <button type="button" id="pubChartGeralBtn" class="pub-chart-filter-btn${activeFilter ? ' filtered' : ''}" onclick="pubChartToggleGeralMenu(event)" title="Filtrar por checklist geral">
+                <i class="fas fa-filter"></i>
+                <span>${activeFilter ? _fEsc(activeFilter) : 'Checklist Geral'}</span>
+                <i class="fas fa-chevron-down pub-chart-filter-caret"></i>
+            </button>
+            ${activeFilter ? `<button type="button" class="pub-chart-filter-clear" title="Voltar para o geral" onclick="pubChartSetGeralFilter('__geral__')"><i class="fas fa-xmark"></i></button>` : ''}
+            <div class="pub-chart-geral-menu" id="pubChartGeralMenu">${geralMenuItems}</div>
+        </div>` : '';
+    const boxHeaderHTML = `
+        <div class="pub-chart-box-header">
+            <div class="pub-chart-box-titles">
+                <span class="pub-chart-box-title"><i class="fas fa-chart-line"></i> ${chartTitle}</span>
+                <span class="pub-chart-box-sub">${chartSub}</span>
+            </div>
+            ${filterUI}
+        </div>`;
+
     if (allGroups.length === 0) {
         const _wf = document.getElementById('pubChartWindowField');
         if (_wf) _wf.style.display = 'none';
+        if (activeFilter) {
+            // Filtro sem dados: mantém a caixa e o filtro para o usuário poder limpar
+            wrap.innerHTML = `<div class="pub-chart-box">${boxHeaderHTML}<div class="pub-empty"><i class="fas fa-filter"></i><p>Nenhuma conclusão possui nota para o checklist geral <strong>${_fEsc(activeFilter)}</strong>. <a href="javascript:void(0)" onclick="pubChartSetGeralFilter('__geral__')">Voltar para o geral</a>.</p></div></div>`;
+            window._pubChartCurrentItem = item;
+            return;
+        }
         wrap.innerHTML = `<div class="pub-empty"><i class="fas fa-chart-line"></i><p>Sem dados de qualidade suficientes ainda. A nota aparece quando há itens de não conformidade (N/C) preenchidos em publicações concluídas.</p></div>`;
         return;
     }
@@ -2767,9 +2867,11 @@ window.renderPubQualityChart = function(item) {
     if (_winInput) _winInput.value = winSize;
 
     wrap.innerHTML = `
+        <div class="pub-chart-box">
+        ${boxHeaderHTML}
         <div class="pub-chart-summary">
             <div class="pub-chart-stat">
-                <span class="pub-chart-stat-label">Última nota</span>
+                <span class="pub-chart-stat-label">Última nota${activeFilter ? ' · ' + _fEsc(activeFilter) : ''}</span>
                 <span class="pub-chart-stat-value pub-group-quality-${_pubQualityTier(last)}">${last.toFixed(1).replace('.0','')}<small>/10</small></span>
             </div>
             <div class="pub-chart-stat">
@@ -2782,6 +2884,7 @@ window.renderPubQualityChart = function(item) {
             <canvas id="pubQualityChartCanvas"></canvas>
             ${showNav ? `<button type="button" class="pub-chart-nav-btn pub-chart-nav-next" title="Conclusões mais recentes" ${canNavNewer ? '' : 'disabled'} onclick="pubChartNavigate(-1, window._pubChartCurrentItem)"><i class="fas fa-chevron-right"></i></button>` : ''}
             ${showNav ? `<div class="pub-chart-range-label">${startIdx + 1}–${endIdx} de ${allGroups.length} conclusões</div>` : ''}
+        </div>
         </div>
         <div id="pubNcTrendWrap"></div>`;
 
@@ -2844,7 +2947,7 @@ window.renderPubQualityChart = function(item) {
         data: {
             labels,
             datasets: [{
-                label: 'Nota de qualidade',
+                label: activeFilter || 'Nota de qualidade',
                 data: notas,
                 borderColor: '#6366f1',
                 backgroundColor: 'rgba(99,102,241,0.12)',
