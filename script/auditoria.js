@@ -14,6 +14,10 @@
             return;
         }
 
+        if (!isNew) {
+            originalItem = JSON.parse(JSON.stringify(item));
+        }
+
         const selectedAuditMarkerName = document.getElementById('auditMarcador').value;
         const auditMarkerObj = (masterLists.auditMarcadores || []).find(m => m.name === selectedAuditMarkerName);
 
@@ -203,6 +207,9 @@
             flagDias: document.getElementById('auditFlagDias').value,
             marcador: document.getElementById('auditMarcador').value,
             marcadorCor: (() => { const n = document.getElementById('auditMarcador').value; const mk = (masterLists.auditMarcadores || []).find(m => m.name === n); return mk ? mk.color : 'default'; })(),
+            overdueStatus: document.getElementById('auditOverdueStatus')?.value || '',
+            alertStatus: document.getElementById('auditAlertStatus')?.value || '',
+            resetChecklistOnAutoStatus: (typeof getSchedResetChecklist === 'function') ? getSchedResetChecklist('audit') : false,
             anexos: typeof getAnexos === 'function' ? getAnexos('audit') : []
         };
 
@@ -234,6 +241,11 @@
             document.getElementById('auditMarcador').value = formData.marcador;
 
             if (typeof restoreAnexos === 'function') restoreAnexos('audit', formData.anexos);
+
+            // Duplica a Programação de Status Concluído (se houver)
+            if (typeof setSchedStatusValues === 'function') {
+                setSchedStatusValues('audit', formData.overdueStatus, formData.alertStatus, formData.resetChecklistOnAutoStatus);
+            }
 
             if (typeof restoreChecklist === 'function') restoreChecklist('audit', dupChecklistAudit?.checklist, dupChecklistAudit?.checklistPublicacao);
 

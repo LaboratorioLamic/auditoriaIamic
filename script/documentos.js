@@ -161,6 +161,9 @@
             marcador: document.getElementById('docMarcador').value,
             marcadorCor: (() => { const n = document.getElementById('docMarcador').value; const mk = (masterLists.docMarcadores || []).find(m => m.name === n); return mk ? mk.color : 'default'; })(),
             descricao: document.getElementById('docDescricao').value,
+            overdueStatus: document.getElementById('docOverdueStatus')?.value || '',
+            alertStatus: document.getElementById('docAlertStatus')?.value || '',
+            resetChecklistOnAutoStatus: (typeof getSchedResetChecklist === 'function') ? getSchedResetChecklist('doc') : false,
             anexos: typeof getAnexos === 'function' ? getAnexos('doc') : []
         };
 
@@ -189,6 +192,11 @@
             document.getElementById('docDescricao').value = formData.descricao;
 
             if (typeof restoreAnexos === 'function') restoreAnexos('doc', formData.anexos);
+
+            // Duplica a Programação de Status Concluído (se houver)
+            if (typeof setSchedStatusValues === 'function') {
+                setSchedStatusValues('doc', formData.overdueStatus, formData.alertStatus, formData.resetChecklistOnAutoStatus);
+            }
 
             if (typeof restoreChecklist === 'function') restoreChecklist('doc', dupChecklistDoc?.checklist, dupChecklistDoc?.checklistPublicacao);
 

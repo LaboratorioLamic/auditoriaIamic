@@ -370,6 +370,11 @@ body.dark-mode .card-title + .card-body::before {
     background: #253348;
 }
 
+/* Nota da Qualidade — tiers mais claros no dark para contraste */
+body.dark-mode .card-quality-good { --q: #34d399; }
+body.dark-mode .card-quality-mid  { --q: #fbbf24; }
+body.dark-mode .card-quality-bad  { --q: #f87171; }
+
 body.dark-mode .card-actions i {
     color: #64748b;
 }

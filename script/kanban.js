@@ -402,6 +402,8 @@ function _kbRenderCard(item) {
     const donutHtml = clTotal > 0 && typeof _clDonutHtml === 'function'
         ? _clDonutHtml(clDone, clTotal, clPct, 36, true) : '';
     const isNewCard = _kbIsNew(item);
+    const qualityBadgeHtml = (currentTab === 'auditoria' && typeof _cardQualityBadgeHtml === 'function')
+        ? _cardQualityBadgeHtml(item, currentTab) : '';
 
     return `
         <div class="kanban-card"
@@ -421,7 +423,10 @@ function _kbRenderCard(item) {
                     ${item.setor ? `<span class="kanban-card-meta"><i class="fas fa-building"></i>${_kbHtml(item.setor)}</span>` : ''}
                 </div>
                 <div class="kanban-card-foot">
-                    ${item.marcador ? `<span class="kanban-card-tag" style="background:${marcColor}">${_kbHtml(item.marcador)}</span>` : '<span></span>'}
+                    <div class="kanban-card-foot-left">
+                        ${qualityBadgeHtml}
+                        ${item.marcador ? `<span class="kanban-card-tag" style="background:${marcColor}">${_kbHtml(item.marcador)}</span>` : ''}
+                    </div>
                     <div class="kanban-card-acts" onclick="event.stopPropagation()">
                         ${_kbHasChartData(item) ? `<button onclick="kbOpenChart(${item.id})" title="Ver gráfico de indicadores"><i class="fas fa-chart-line"></i></button>` : ''}
                         ${canEdit ? `<button onclick="kbEditCard(${item.id})" title="Editar"><i class="fas fa-pen"></i></button>` : ''}

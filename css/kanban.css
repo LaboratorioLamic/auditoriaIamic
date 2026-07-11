@@ -391,6 +391,25 @@
     padding-top: 6px;
     flex-shrink: 0;
 }
+/* Rodapé: marcador + nota (esquerda) e ações (direita) na mesma linha */
+.kanban-card-foot-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+}
+.kanban-card-foot-left .card-quality-badge {
+    padding: 2px 7px;
+    flex-shrink: 0;
+}
+.kanban-card-foot-left .kanban-card-tag {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .kanban-card-tag {
     font-size: 10px;
     font-weight: 700;

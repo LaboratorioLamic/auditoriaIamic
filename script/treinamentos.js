@@ -188,6 +188,9 @@
             flagDias: document.getElementById('trainFlagDias').value === '' ? 0 : Number(document.getElementById('trainFlagDias').value),
             marcador: document.getElementById('trainMarcador').value,
             marcadorCor: (() => { const n = document.getElementById('trainMarcador').value; const mk = (masterLists.trainMarcadores || []).find(m => m.name === n); return mk ? mk.color : 'default'; })(),
+            overdueStatus: document.getElementById('trainOverdueStatus')?.value || '',
+            alertStatus: document.getElementById('trainAlertStatus')?.value || '',
+            resetChecklistOnAutoStatus: (typeof getSchedResetChecklist === 'function') ? getSchedResetChecklist('train') : false,
             anexos: typeof getAnexos === 'function' ? getAnexos('train') : []
         };
 
@@ -216,6 +219,11 @@
             document.getElementById('trainMarcador').value = formData.marcador;
 
             if (typeof restoreAnexos === 'function') restoreAnexos('train', formData.anexos);
+
+            // Duplica a Programação de Status Concluído (se houver)
+            if (typeof setSchedStatusValues === 'function') {
+                setSchedStatusValues('train', formData.overdueStatus, formData.alertStatus, formData.resetChecklistOnAutoStatus);
+            }
 
             if (typeof restoreChecklist === 'function') restoreChecklist('train', dupChecklistTrain?.checklist, dupChecklistTrain?.checklistPublicacao);
 

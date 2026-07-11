@@ -35,6 +35,47 @@ function _clDonutHtml(done, total, pct, size, absolute) {
         </div>`;
 }
 
+// Badge de Nota da Qualidade no rodapé do card (aba Rotinas/auditoria).
+// Mostra a nota da ÚLTIMA publicação (grupo de conclusão mais recente) que
+// possua não conformidades. Ao clicar, abre "Indicadores por Checklist Geral".
+function _cardQualityBadgeHtml(item, tab) {
+    if (typeof _getPubGroupsWithQuality !== 'function' || typeof _computePubGeralScores !== 'function') return '';
+    let groups;
+    try { groups = _getPubGroupsWithQuality(item); } catch (_) { return ''; }
+    if (!groups || !groups.length) return '';
+    // _getPubGroupsWithQuality retorna cronológico (antigo → recente): último = mais recente
+    const last = groups[groups.length - 1];
+    let scores;
+    try { scores = _computePubGeralScores(item, last.pubs); } catch (_) { return ''; }
+    if (!scores || !scores.total) return '';
+    // Só exibe quando há não conformidade
+    if (!(scores.ncCount > 0)) return '';
+
+    const tier = (typeof _pubGeralTierPct === 'function') ? _pubGeralTierPct(scores.pctGeral) : 'good';
+    const notaStr = scores.nota.toFixed(1).replace('.0', '').replace('.', ',');
+    const groupKey = _fmtAttr(last.key);
+    return `
+        <button type="button" class="card-quality-badge card-quality-${tier}"
+                onclick="event.stopPropagation(); window._openCardQualityChart(${item.id}, '${tab}', '${groupKey}')"
+                title="Nota da qualidade da última publicação — ${scores.ncCount} não conformidade(s). Clique para ver os indicadores.">
+            <i class="fas fa-award card-quality-icon"></i>
+            <span class="card-quality-value">${notaStr}<small>/10</small></span>
+            <span class="card-quality-nc"><i class="fas fa-triangle-exclamation"></i>${scores.ncCount}</span>
+        </button>`;
+}
+
+function _fmtAttr(s) {
+    return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// Abre o modal "Indicadores por Checklist Geral" a partir de um card,
+// definindo o contexto de visualização exigido por openPubGeralChart.
+window._openCardQualityChart = function(id, tab, groupKey) {
+    window._currentViewId = id;
+    window._currentViewTab = tab;
+    if (typeof openPubGeralChart === 'function') openPubGeralChart(groupKey);
+};
+
     // --- CONFIGURAÇÃO DE DATAS ---
     function populateYearSelects() {
         const years = [];
@@ -593,6 +634,7 @@ function _clDonutHtml(done, total, pct, size, absolute) {
             const clPct = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0;
             const _noChecklist = currentTab === 'treinamentos' || currentTab === 'documentos';
             const donutHtml = (!_noChecklist && clTotal > 0) ? _clDonutHtml(clDone, clTotal, clPct, 40, true) : '';
+            const qualityBadgeHtml = (currentTab === 'auditoria') ? _cardQualityBadgeHtml(item, currentTab) : '';
 
             div.innerHTML = `
                 <div class="card-header">
@@ -607,8 +649,11 @@ function _clDonutHtml(done, total, pct, size, absolute) {
                 </div>
                 <div class="card-body">
                     ${specificContent}
-                    ${marcadorText ? `<div class="card-marker" style="background:${marcadorColorVar}"><i class="fas fa-bookmark"></i> ${marcadorText}</div>` : ''}
                 </div>
+                ${(marcadorText || qualityBadgeHtml) ? `<div class="card-footer">
+                    ${marcadorText ? `<span class="card-marker" style="background:${marcadorColorVar}"><i class="fas fa-bookmark"></i> ${marcadorText}</span>` : ''}
+                    ${qualityBadgeHtml}
+                </div>` : ''}
                 ${donutHtml}
             `;
             grid.appendChild(div);
