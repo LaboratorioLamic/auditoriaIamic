@@ -4055,6 +4055,18 @@
                ' às ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
     }
 
+    function _rncTrashExpiryHtml(deletedAt) {
+        var e = (typeof window.trashExpiry === 'function') ? window.trashExpiry(deletedAt) : null;
+        if (!e) return '';
+        var dateStr = e.expiresAt.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+        var warn = e.daysLeft <= 7;
+        var faltam = e.expired ? 'exclusão pendente'
+            : (e.daysLeft === 1 ? 'falta 1 dia' : 'faltam ' + e.daysLeft + ' dias');
+        return '<div class="rnc-trash-item-expiry" style="color:' + (warn ? '#ef4444' : '#f59e0b') + ';">' +
+            '<i class="fas fa-clock"></i> Exclusão automática em ' + dateStr + ' · ' + faltam +
+            '</div>';
+    }
+
     function _renderRncTrashList() {
         var list = document.getElementById('rncTrashList');
         if (!list) return;
@@ -4093,6 +4105,7 @@
                         '<span><i class="fas fa-circle-dot"></i> ' + esc(ci.label) + '</span>' +
                     '</div>' +
                     '<div class="rnc-trash-item-deleted">' + deletedInfo + '</div>' +
+                    _rncTrashExpiryHtml(r.deletedAt) +
                     (r.deletedMotivo ? '<div class="rnc-trash-item-motivo"><i class="fas fa-comment-slash"></i> ' + esc(r.deletedMotivo) + '</div>' : '') +
                 '</div>' +
                 '<div class="rnc-trash-item-actions">' +
@@ -4203,7 +4216,14 @@
                 '<span class="rnc-tv-chip" style="' + rncClassStyle(ci) + '"><i class="fas ' + ci.icon + '"></i> ' + esc(ci.label) + '</span>',
                 r.status ? '<span class="rnc-tv-chip"><i class="fas fa-circle-dot"></i> ' + esc(r.status) + '</span>' : '',
                 mk ? '<span class="rnc-tv-chip"><i class="fas ' + mk.icon + '"></i> ' + esc(mk.label) + '</span>' : '',
-                '<span class="rnc-tv-chip rnc-tv-chip--deleted"><i class="fas fa-clock-rotate-left"></i> Excluído em ' + _fmtTrashDate(r.deletedAt) + '</span>'
+                '<span class="rnc-tv-chip rnc-tv-chip--deleted"><i class="fas fa-clock-rotate-left"></i> Excluído em ' + _fmtTrashDate(r.deletedAt) + '</span>',
+                (function(){
+                    var e = (typeof window.trashExpiry === 'function') ? window.trashExpiry(r.deletedAt) : null;
+                    if (!e) return '';
+                    var ds = e.expiresAt.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+                    var f = e.expired ? 'exclusão pendente' : (e.daysLeft === 1 ? 'falta 1 dia' : 'faltam ' + e.daysLeft + ' dias');
+                    return '<span class="rnc-tv-chip rnc-tv-chip--deleted"><i class="fas fa-clock"></i> Exclusão em ' + ds + ' · ' + f + '</span>';
+                })()
             ].filter(Boolean).join('');
             hmeta.innerHTML = metaChips;
         }

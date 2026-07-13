@@ -64,6 +64,54 @@
             // Baseline para o merge 3-vias: estado remoto recém-adotado.
             captureSyncBaseline();
 
+            // Lixeira temporária: purga cards deletados há +30 dias.
+            // Roda APÓS captureSyncBaseline() de propósito — o baseline precisa
+            // conter os cards para que a remoção local seja reconhecida pelo
+            // merge 3-vias como exclusão real (item no base, ausente no local =>
+            // deletado). Se rodasse antes, o merge não propagaria a remoção e o
+            // card voltaria do remoto. Limpa imgBlobs órfãos e registra a
+            // exclusão no deletionHistory (auditoria) — exceto RNC, que tem
+            // lixeira própria sem histórico persistido (não cria nó/log extra).
+            if (typeof window.purgeExpiredTrash === 'function') {
+                let _purgedTotal = 0;
+                const _taskCols = [
+                    { arr: audits,       tab: 'auditoria',    tipo: 'Rotina' },
+                    { arr: trainings,    tab: 'treinamentos', tipo: 'Treinamento' },
+                    { arr: activities,   tab: 'atividades',   tipo: 'Atividade' },
+                    { arr: maintenances, tab: 'manutencao',   tipo: 'Manutenção' },
+                    { arr: documents,    tab: 'documentos',   tipo: 'Documento' }
+                ];
+                _taskCols.forEach(c => {
+                    const removed = window.purgeExpiredTrash(c.arr);
+                    _purgedTotal += removed.length;
+                    if (removed.length && masterLists) {
+                        if (!masterLists.deletionHistory) masterLists.deletionHistory = [];
+                        removed.forEach(it => {
+                            masterLists.deletionHistory.push({
+                                histId: Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                                titulo: it.titulo || it.categoria || '—',
+                                tipo: c.tipo,
+                                tab: c.tab,
+                                setor: it.setor || '',
+                                deletedAt: it.deletedAt || '',
+                                deletedBy: it.deletedBy || '',
+                                deletedReason: it.deletedReason || '',
+                                permanentlyDeletedAt: new Date().toISOString(),
+                                permanentlyDeletedBy: 'Sistema (expiração 30 dias)',
+                                permanentReason: 'Exclusão automática após 30 dias na lixeira'
+                            });
+                        });
+                    }
+                });
+                const _purgedRnc = window.purgeExpiredTrash(rncItems);
+                _purgedTotal += _purgedRnc.length;
+
+                if (_purgedTotal > 0 && typeof saveAll === 'function') {
+                    if (typeof window.rncItems !== 'undefined') window.rncItems = rncItems;
+                    saveAll();
+                }
+            }
+
             await loadusers();
             // Atualiza referência do currentuser para o objeto recém-carregado (com id)
             if (typeof currentuser !== 'undefined' && currentuser && currentuser.user) {

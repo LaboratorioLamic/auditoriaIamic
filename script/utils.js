@@ -1,5 +1,56 @@
 // === UTILITÁRIOS GERAIS ===
 
+// ── Lixeira: expiração automática (30 dias) ──────────────────────────────
+// Cards na lixeira (deleted=true) são temporários e apagados permanentemente
+// 30 dias após deletedAt. Helpers abaixo calculam prazo/data e fazem o purge.
+window.TRASH_RETENTION_DAYS = 30;
+
+// Retorna { expiresAt: Date, daysLeft: int, expired: bool } a partir de deletedAt.
+// daysLeft nunca fica negativo (mín. 0). Se deletedAt inválido, retorna null.
+window.trashExpiry = function(deletedAt) {
+    if (!deletedAt) return null;
+    const del = new Date(deletedAt);
+    if (isNaN(del)) return null;
+    const expiresAt = new Date(del.getTime() + window.TRASH_RETENTION_DAYS * 86400000);
+    const msLeft = expiresAt.getTime() - Date.now();
+    const daysLeft = Math.max(0, Math.ceil(msLeft / 86400000));
+    return { expiresAt: expiresAt, daysLeft: daysLeft, expired: msLeft <= 0 };
+};
+
+// Texto pronto p/ UI: "Exclusão em dd/mm/aaaa · faltam N dias".
+window.trashExpiryLabel = function(deletedAt) {
+    const e = window.trashExpiry(deletedAt);
+    if (!e) return '';
+    const dateStr = e.expiresAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    if (e.expired) return 'Exclusão em ' + dateStr + ' · exclusão pendente';
+    const faltam = e.daysLeft === 1 ? 'falta 1 dia' : 'faltam ' + e.daysLeft + ' dias';
+    return 'Exclusão em ' + dateStr + ' · ' + faltam;
+};
+
+// Remove in-place de `arr` os itens deletados há mais de 30 dias.
+// Retorna array com os itens removidos (vazio se nada). Limpa blobs de imagem
+// (base64 em /imgBlobs) de cada item removido para não deixar órfãos no banco.
+// Notificações são derivadas em runtime e somem junto; kanbanOrder guarda ordem
+// de colunas (por nome de status), não referencia cards — nada a limpar lá.
+window.purgeExpiredTrash = function(arr) {
+    if (!Array.isArray(arr)) return [];
+    const removed = [];
+    for (let i = arr.length - 1; i >= 0; i--) {
+        const item = arr[i];
+        if (item && item.deleted && item.deletedAt) {
+            const e = window.trashExpiry(item.deletedAt);
+            if (e && e.expired) {
+                if (typeof window._deleteItemImgBlobs === 'function') {
+                    try { window._deleteItemImgBlobs(item); } catch (_) {}
+                }
+                arr.splice(i, 1);
+                removed.push(item);
+            }
+        }
+    }
+    return removed;
+};
+
 // Validação de campos obrigatórios num drawer de registro
 // fields: [{ id, label, type }]  type: 'input'|'select'|'ms' (multi-select)
 // Retorna true se tudo ok, false se há erro (mostra toast e marca campo)

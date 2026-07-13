@@ -695,12 +695,23 @@ function resetModal(prefix) {
             html += '<th style="padding:12px; text-align:left; font-weight:600;">Setor</th>';
             html += '<th style="padding:12px; text-align:left; font-weight:600;">Deletado por</th>';
             html += '<th style="padding:12px; text-align:left; font-weight:600;">Data</th>';
+            html += '<th style="padding:12px; text-align:left; font-weight:600;">Exclusão automática</th>';
             html += '<th style="padding:12px; text-align:center; font-weight:600;">Ações</th>';
             html += '</tr></thead><tbody>';
 
             deletedItems.forEach(item => {
                 const deletedDate = new Date(item.deletedAt).toLocaleDateString('pt-BR') + ' ' + new Date(item.deletedAt).toLocaleTimeString('pt-BR');
                 const isAdmin = userIsAdmin();
+                const _exp = (typeof window.trashExpiry === 'function') ? window.trashExpiry(item.deletedAt) : null;
+                let expCell = 'ND';
+                if (_exp) {
+                    const _dateStr = _exp.expiresAt.toLocaleDateString('pt-BR');
+                    const _warn = _exp.daysLeft <= 7;
+                    const _faltam = _exp.expired ? 'exclusão pendente'
+                        : (_exp.daysLeft === 1 ? 'falta 1 dia' : 'faltam ' + _exp.daysLeft + ' dias');
+                    expCell = `<div style="font-size:12px; color:#6b7280;">${_dateStr}</div>` +
+                        `<div style="font-size:11px; font-weight:600; color:${_warn ? '#ef4444' : '#f59e0b'};"><i class="fas fa-clock" style="margin-right:4px;"></i>${_faltam}</div>`;
+                }
 
                 html += `<tr style="border-bottom:1px solid var(--border); transition:background 0.2s;" onmouseover="this.style.background='rgba(37,99,235,0.05)'" onmouseout="this.style.background='transparent'">
                     <td style="padding:12px; font-weight:500;">${item.titulo}</td>
@@ -708,6 +719,7 @@ function resetModal(prefix) {
                     <td style="padding:12px;">${item.setor || 'ND'}</td>
                     <td style="padding:12px;">${item.deletedBy || 'desconhecido'}</td>
                     <td style="padding:12px; font-size:12px; color:#6b7280;">${deletedDate}</td>
+                    <td style="padding:12px;">${expCell}</td>
                     <td style="padding:12px; text-align:center; white-space:nowrap;">
                         <button onclick="closeModal('modalTrashBin'); openView(${item.id}, '${item.tab}')" title="Visualizar" style="background:#3b82f6; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:500; margin-right:4px; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
                             <i class="fas fa-eye"></i>

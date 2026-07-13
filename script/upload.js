@@ -544,13 +544,21 @@ window._discardSessionImgBlobs = function _discardSessionImgBlobs(ctx) {
   set.clear();
 };
 
-// Apaga todos os blobs de imagem associados a um item (anexos do card +
-// anexos de todas as publicações). Usado ao excluir um item permanentemente.
+// Apaga todos os anexos associados a um item (anexos do card + anexos de todas
+// as publicações), evitando órfãos no banco. Usado ao excluir um item
+// permanentemente (exclusão manual ou expiração de 30 dias na lixeira):
+//  • imagens base64 (tipo 'imagem') → /imgBlobs/{fileId}
+//  • arquivos do Drive (fileId com tipo != 'imagem'/'link') → driveDelete
+//  • links (tipo 'link') não têm arquivo → nada a apagar
+// Mesma disciplina do _removeAnexoItem (remoção individual de anexo).
 window._deleteItemImgBlobs = function _deleteItemImgBlobs(item) {
   if (!item) return;
   const del = (anexos) => (anexos || []).forEach(a => {
-    if (a && a.tipo === 'imagem' && a.fileId && typeof window._deleteImgBlob === 'function') {
-      window._deleteImgBlob(a.fileId);
+    if (!a || !a.fileId) return;
+    if (a.tipo === 'imagem') {
+      if (typeof window._deleteImgBlob === 'function') window._deleteImgBlob(a.fileId);
+    } else if (a.tipo !== 'link' && typeof driveDelete === 'function') {
+      driveDelete(a.fileId).catch(() => {});
     }
   });
   del(item.anexos);

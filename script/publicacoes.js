@@ -1182,6 +1182,8 @@ window.renderViewAnexos = function(item) {
 // ─── PUBLICAÇÕES ─────────────────────────────────────────────
 // Índice da publicação sendo editada (null = nova publicação)
 window._editingPubIndex = null;
+// true quando a publicação em edição é a mais recente (checklist permanece editável)
+window._pubClEditable = false;
 
 // Abre modal de publicação para o item atualmente em view
 // editIndex: número = editar publicação existente; undefined/null = nova publicação
@@ -1226,10 +1228,13 @@ function _pubNcCount(pub) {
 function _renderPubClItem(c, i) {
     const isRequired = !!c.requiredForPub;
     const isEditing = window._editingPubIndex != null;
+    // Ao editar a última publicação, o checklist permanece editável (marcar/desmarcar,
+    // conformidade e comentário). Somente edições de publicações antigas são somente leitura.
+    const readonlyEdit = isEditing && !window._pubClEditable;
     const showNc = !!c.ncEnabled && window._pubNcUiEnabled;
 
     if (c.previouslyDone) return '';
-    if (isEditing) {
+    if (readonlyEdit) {
         return `
         <div class="pub-cl-item pub-cl-item-readonly ${c.checked ? 'checked' : ''}" data-pub-cl-index="${i}">
             <span class="pub-cl-ro-dot">${c.checked ? '<i class="fas fa-check"></i>' : ''}</span>
@@ -1530,6 +1535,7 @@ function _renderPubChecklistItems() {
     const state = window._pubChecklistState || [];
     const geralItems = window._pubChecklistGeralItems || [];
     const isEditing = window._editingPubIndex != null;
+    const readonlyEdit = isEditing && !window._pubClEditable;
 
     const activeItems = state.filter(c => !c.previouslyDone);
     if (state.length > 0 && activeItems.length === 0) {
@@ -1539,8 +1545,8 @@ function _renderPubChecklistItems() {
         return `<div class="pub-cl-empty-done"><i class="fas fa-circle-check"></i> Todos os itens já foram concluídos em publicações anteriores.</div>`;
     }
 
-    const roNotice = isEditing
-        ? `<div class="pub-cl-readonly-notice"><i class="fas fa-lock"></i> O checklist não pode ser alterado ao editar uma publicação.</div>`
+    const roNotice = readonlyEdit
+        ? `<div class="pub-cl-readonly-notice"><i class="fas fa-lock"></i> O checklist não pode ser alterado ao editar uma publicação antiga. Apenas a última publicação pode ser alterada.</div>`
         : '';
 
     // Agrupa itens por geralIndex
@@ -1592,8 +1598,9 @@ function _updatePubClToggleBtn() {
     const btn = document.getElementById('pubClToggleAllBtn');
     if (!btn) return;
     const state = window._pubChecklistState || [];
-    // Esconde botão ao editar (checklist é somente leitura)
-    if (window._editingPubIndex != null || state.length === 0) { btn.style.display = 'none'; return; }
+    // Esconde botão ao editar publicação antiga (somente leitura) ou sem itens
+    const readonlyEdit = window._editingPubIndex != null && !window._pubClEditable;
+    if (readonlyEdit || state.length === 0) { btn.style.display = 'none'; return; }
     btn.style.display = '';
     btn.textContent = state.every(c => c.checked) ? 'Desmarcar todos' : 'Marcar todos';
 }
@@ -1704,6 +1711,19 @@ window.toggleAllPubChecklist = function() {
     _updatePubRncSection();
 };
 
+// Índice da publicação mais recente (por data/hora; desempate pela ordem do array,
+// onde novas publicações entram no início via unshift). -1 se não houver publicações.
+function _latestPubIndex(item) {
+    const pubs = (item && item.publicacoes) || [];
+    if (pubs.length === 0) return -1;
+    let bestI = 0, bestKey = (pubs[0].data || '') + (pubs[0].hora || '');
+    for (let i = 1; i < pubs.length; i++) {
+        const key = (pubs[i].data || '') + (pubs[i].hora || '');
+        if (key > bestKey) { bestKey = key; bestI = i; }
+    }
+    return bestI;
+}
+
 window.openPublicacaoModal = function(editIndex) {
     const id = window._currentViewId;
     const tab = window._currentViewTab;
@@ -1734,6 +1754,8 @@ window.openPublicacaoModal = function(editIndex) {
 
     window._editingPubIndex = isEditing ? editIndex : null;
     const existingPub = isEditing ? (item.publicacoes || [])[editIndex] : null;
+    // Só a última publicação (mais recente) permite alterar o checklist ao editar
+    window._pubClEditable = isEditing && (editIndex === _latestPubIndex(item));
 
     // Registro de conformidade (N/C) — exclusivo para rotinas
     window._pubNcUiEnabled = (finalTab === 'auditoria');
@@ -1950,7 +1972,7 @@ window.confirmarPublicacao = function() {
     }
     // Registro de conformidade (N/C): se o checkbox está marcado, exige tipo selecionado;
     // se um tipo foi selecionado, exige o checkbox marcado.
-    if (!isEditing && window._pubNcUiEnabled && window._pubChecklistState && window._pubChecklistState.length > 0) {
+    if ((!isEditing || window._pubClEditable) && window._pubNcUiEnabled && window._pubChecklistState && window._pubChecklistState.length > 0) {
         const ncItems = window._pubChecklistState.filter(c => !!c.ncEnabled && !c.previouslyDone);
         const mismatched = ncItems.filter(c => !!c.checked !== !!c.conformidade);
         if (mismatched.length > 0) {

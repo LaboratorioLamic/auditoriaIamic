@@ -3677,6 +3677,14 @@
     color: #64748b;
     font-weight: 600;
 }
+.rnc-trash-item-expiry {
+    font-size: 11.5px;
+    font-weight: 600;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
 .rnc-trash-item-actions {
     display: flex;
     align-items: center;
