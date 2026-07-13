@@ -3017,14 +3017,17 @@ window.renderPubQualityChart = function(item) {
         }
     });
 
-    _renderPubNcTrend(item, groups);
+    _renderPubNcTrend(item, groups, activeFilter);
 };
 
 // Agrega as N/C de todas as conclusões visíveis no gráfico e monta o donut
 // (proporção por nível) e a barra empilhada (principais itens N/C por nível).
-function _renderPubNcTrend(item, groups) {
+function _renderPubNcTrend(item, groups, geralFilter) {
     const host = document.getElementById('pubNcTrendWrap');
     if (!host) return;
+    // Filtro por checklist geral: quando ativo, os painéis de N/C consideram
+    // apenas os itens do checklist geral selecionado.
+    const _ncFilter = geralFilter || null;
 
     const totals = { critica: 0, maior: 0, menor: 0 };
     const byItem = new Map(); // texto -> { critica, maior, menor, total, geralLabel }
@@ -3048,6 +3051,7 @@ function _renderPubNcTrend(item, groups) {
             rec.ok += b.ok; rec.total += b.total;
         });
         (sc.ncItems || []).forEach(n => {
+            if (_ncFilter && n.geralLabel !== _ncFilter) return;
             const lvl = totals[n.conformidade] != null ? n.conformidade : null;
             if (!lvl) return;
             totals[lvl]++;
@@ -3127,7 +3131,7 @@ function _renderPubNcTrend(item, groups) {
         ${geralSection}
         ${totalNc ? `<div class="pub-nc-trend-section">
             <div class="pub-nc-trend-title"><i class="fas fa-chart-pie"></i> Tipos de Não Conformidade
-                <span class="pub-nc-trend-sub">${totalNc} N/C em ${groups.length} conclus${groups.length !== 1 ? 'ões' : 'ão'}</span>
+                <span class="pub-nc-trend-sub">${totalNc} N/C em ${groups.length} conclus${groups.length !== 1 ? 'ões' : 'ão'}${_ncFilter ? ' · ' + _pubEsc(_ncFilter) : ''}</span>
             </div>
             <div class="pub-nc-trend-donut-row">
                 <div class="pub-nc-donut-canvas"><canvas id="pubNcTrendDonut"></canvas>
@@ -3138,7 +3142,7 @@ function _renderPubNcTrend(item, groups) {
         </div>` : ''}
         ${totalNc ? `<div class="pub-nc-trend-section">
             <div class="pub-nc-trend-title"><i class="fas fa-ranking-star"></i> Principais Não Conformidades
-                <span class="pub-nc-trend-sub">por item · empilhado por nível</span>
+                <span class="pub-nc-trend-sub">por item · empilhado por nível${_ncFilter ? ' · ' + _pubEsc(_ncFilter) : ''}</span>
             </div>
             <div class="pub-nc-trend-bar-wrap" style="height:${Math.max(120, topItems.length * 34 + 30)}px">
                 <canvas id="pubNcTrendBar"></canvas>
