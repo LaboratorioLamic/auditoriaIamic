@@ -2153,7 +2153,7 @@ function _updateItemDatesAfterPublicacao(item, tab, newDate) {
         // Recalcular dataPrevisao se rotina configurada
         _calcAuditNextDate(item);
     } else if (tab === 'atividades') {
-        item.dataInicio = newDate;
+        // Publicação NÃO deve alterar dataInicio da atividade
     } else if (tab === 'treinamentos') {
         item.dataPublicacao = newDate;
         _calcRotinaNextDate(item, item.dataPublicacao, 'dataPrevisao');
