@@ -112,11 +112,14 @@
             }
 
             const _trainIsConcluido = typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status);
+            const _trainWasConcluido = typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(originalItem.status) : /conclu/i.test(originalItem.status);
             if (_trainIsConcluido && typeof isItemOverdue === 'function' && isItemOverdue(newItem, 'train')) {
                 showOverdueConcluiModal();
                 return;
             }
-            if (_trainIsConcluido && !canSetConcluido(newItem.checklist, newItem)) {
+            // Só bloqueia se está ALTERANDO para concluído, não se já era concluído
+            const _trainIsConcluindo = _trainIsConcluido && !_trainWasConcluido;
+            if (_trainIsConcluindo && !canSetConcluido(newItem.checklist, newItem)) {
                 if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist de publicação antes de marcar como Concluído.', 'error');
                 return;
             }

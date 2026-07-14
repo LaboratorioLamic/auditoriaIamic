@@ -956,7 +956,10 @@ function resetModal(prefix) {
         if (!item || item.status === newStatus) return;
 
         var isConcluido = _kbStatusIsConcluido(newStatus, { statusKey: cfg.statusKey });
-        if (isConcluido && !canSetConcluido(item.checklist, item)) {
+        var _prevIsConcluido = _kbStatusIsConcluido(item.status, { statusKey: cfg.statusKey });
+        // Só bloqueia se está ALTERANDO para concluído, não se já estava concluído
+        var _isConcluindo = isConcluido && !_prevIsConcluido;
+        if (_isConcluindo && !canSetConcluido(item.checklist, item)) {
             if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist de publicação antes de marcar como Concluído.', 'error');
             return;
         }

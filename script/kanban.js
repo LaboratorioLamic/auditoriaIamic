@@ -556,6 +556,13 @@ function kbDrop(event, targetStatus) {
     const _dropIsConcluido = _kbStatusIsConcluido(targetStatus);
     const _prevIsConcluido = _kbStatusIsConcluido(item.status);
 
+    // Só bloqueia se está ALTERANDO para concluído, não se já era concluído
+    const _isConcluindo = _dropIsConcluido && !_prevIsConcluido;
+    if (_isConcluindo && !canSetConcluido(item.checklist, item)) {
+        if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist de publicação antes de mover para Concluído.', 'error');
+        return;
+    }
+
     // Saindo de Concluído → incrementa ciclo (e, apenas em Rotinas, pergunta sobre checklist)
     if (_prevIsConcluido && !_dropIsConcluido) {
         const _hasChecklist = (item.checklist || []).length > 0 || (item.checklistPublicacao || []).length > 0;
@@ -1430,7 +1437,9 @@ function _kbTouchDrop(cx, cy) {
         showOverdueConcluiModal();
         return;
     }
-    if (_moveIsConcluido && !canSetConcluido(item.checklist, item)) {
+    // Só bloqueia se está ALTERANDO para concluído, não se já era concluído
+    const _isConcluindo = _moveIsConcluido && !_kbStatusIsConcluido(item.status);
+    if (_isConcluindo && !canSetConcluido(item.checklist, item)) {
         if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist de publicação antes de mover para Concluído.', 'error');
         return;
     }

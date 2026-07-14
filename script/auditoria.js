@@ -92,7 +92,11 @@
             return;
         }
 
-        if ((typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status)) && !canSetConcluido(newItem.checklist, newItem)) {
+        // Só bloqueia se está ALTERANDO para concluído, não se já era concluído
+        const _auditIsConcluido = (typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status));
+        const _auditWasConcluido = (typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(originalItem.status) : /conclu/i.test(originalItem.status));
+        const _auditIsConcluindo = _auditIsConcluido && !_auditWasConcluido;
+        if (_auditIsConcluindo && !canSetConcluido(newItem.checklist, newItem)) {
             if (typeof showToast === 'function') showToast('Conclua todos os itens do checklist de publicação antes de marcar como Concluído.', 'error');
             return;
         }
