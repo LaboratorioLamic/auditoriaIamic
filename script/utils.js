@@ -467,6 +467,12 @@ window._safeSnapshot = function(item) {
     // Resolve um campo responsavel/revisor (JSON array de IDs) para array de nomes lowercase
     window._parseUserField = function(raw) {
         if (!raw) return [];
+        if (Array.isArray(raw)) {
+            return raw.map(v => {
+                const name = typeof resolveUserId === 'function' ? resolveUserId(String(v)) : null;
+                return (name || String(v)).trim().toLowerCase();
+            }).filter(Boolean);
+        }
         try {
             const p = JSON.parse(String(raw));
             const arr = Array.isArray(p) ? p : (p ? [String(p)] : []);
