@@ -865,12 +865,18 @@ function _markChecklistPending(item, tab) {
     }
 }
 
-// Aplica (salva) as marcações pendentes do checklist e fecha o viewModal
-window.applyViewChecklistChanges = function() {
+// Aplica (salva) as marcações pendentes do checklist e fecha o viewModal.
+// Só limpa a pendência/fecha o modal DEPOIS da gravação confirmar — saveAll()
+// nunca rejeita (erro vira toast internamente), então checamos window._lastSaveOk
+// pra saber se persistiu de fato. Em falha, mantém _checklistPendingDirty=true
+// (o guard do listener continua protegendo a marcação) e o modal aberto, pra o
+// usuário poder tentar "Aplicar" de novo em vez de perder a marcação silenciosamente.
+window.applyViewChecklistChanges = async function() {
     if (!window._checklistPendingDirty) { closeModal('viewModal'); return; }
+    await saveAll();
+    if (window._lastSaveOk === false) return;
     window._checklistPendingDirty = false;
     window._checklistPendingSnapshot = null;
-    saveAll();
     closeModal('viewModal');
 };
 
@@ -891,10 +897,11 @@ window._discardChecklistPendingChanges = function() {
 window._checklistGuardedClose = function(doClose) {
     if (window._checklistPendingDirty) {
         _showChecklistUnsavedWarning(
-            () => { // Aplicar e fechar
+            async () => { // Aplicar e fechar — só fecha se a gravação realmente confirmar
+                await saveAll();
+                if (window._lastSaveOk === false) return;
                 window._checklistPendingDirty = false;
                 window._checklistPendingSnapshot = null;
-                saveAll();
                 doClose();
             },
             () => { // Descartar

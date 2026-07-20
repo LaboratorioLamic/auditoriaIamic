@@ -612,6 +612,7 @@
             const dbRef = getFirebaseRef();
             const update = getFirebaseUpdate();
             const dbGet = getFirebaseGet();
+            const runTransaction = getFirebaseRunTransaction();
 
             cleanInvalidResponsaveis();
             cleanMalformedItems();
@@ -647,8 +648,8 @@
             // (#3) Lê SOMENTE as coleções de dados para o merge 3-vias — não baixa
             // /imgBlobs (imagens Base64) nem /passwords. Esta é a leitura mais frequente
             // do sistema (roda a cada gravação), então excluir as imagens daqui é o maior
-            // corte de banda. Usa update() em caminhos específicos em vez de
-            // runTransaction(/), que falha com internal_error em bancos grandes.
+            // corte de banda. A escrita usa runTransaction por coleção (abaixo) — nunca
+            // runTransaction(/) na raiz, que falha com internal_error em bancos grandes.
             const _mergePaths = ['audits','trainings','activities','maintenances','documents','ocorrencias','rncItems','masterLists','kanbanOrder'];
             const _remoteSnaps = await Promise.all(_mergePaths.map(p => dbGet(dbRef(database, p))));
             const remoteState = {};
@@ -664,61 +665,140 @@
             // masterLists também é reconciliado por merge (antes: objeto inteiro = last-write-wins).
             const mergedMasterLists  = _mergeMasterLists(mlSnapshot, remoteState.masterLists, base.masterLists);
 
-            // (#2) Grava SOMENTE as coleções que realmente mudaram em relação ao remoto.
-            // Coleções inalteradas não são reescritas — evita reenviá-las (e o reenvio
-            // do listener) aos demais clientes conectados.
+            // (#2) Decide SOMENTE quais coleções mudaram em relação a este dbGet — heurística
+            // barata que decide O QUÊ gravar. A gravação em si (abaixo) roda via runTransaction
+            // por coleção, que relê o valor no servidor no momento do commit; não depende deste
+            // snapshot estar perfeitamente fresco.
             const _changed = (a, b) => JSON.stringify(a) !== JSON.stringify(b);
-            const writePayload = {};
-            if (_changed(mergedAudits,       _toArray(remoteState.audits)))       writePayload.audits       = mergedAudits;
-            if (_changed(mergedTrainings,    _toArray(remoteState.trainings)))    writePayload.trainings    = mergedTrainings;
-            if (_changed(mergedActivities,   _toArray(remoteState.activities)))   writePayload.activities   = mergedActivities;
-            if (_changed(mergedMaintenances, _toArray(remoteState.maintenances))) writePayload.maintenances = mergedMaintenances;
-            if (_changed(mergedDocuments,    _toArray(remoteState.documents)))    writePayload.documents    = mergedDocuments;
-            if (_changed(mergedOcorrencias,  _toArray(remoteState.ocorrencias)))  writePayload.ocorrencias  = mergedOcorrencias;
-            if (_changed(mergedRncItems,     _toArray(remoteState.rncItems)))     writePayload.rncItems     = mergedRncItems;
-            if (_changed(mergedMasterLists, remoteState.masterLists || {})) writePayload.masterLists = mergedMasterLists;
-            if (_changed(koSnapshot, remoteState.kanbanOrder || {})) writePayload.kanbanOrder = koSnapshot;
+            const _dirty = {
+                audits:       _changed(mergedAudits,       _toArray(remoteState.audits)),
+                trainings:    _changed(mergedTrainings,    _toArray(remoteState.trainings)),
+                activities:   _changed(mergedActivities,   _toArray(remoteState.activities)),
+                maintenances: _changed(mergedMaintenances, _toArray(remoteState.maintenances)),
+                documents:    _changed(mergedDocuments,    _toArray(remoteState.documents)),
+                ocorrencias:  _changed(mergedOcorrencias,  _toArray(remoteState.ocorrencias)),
+                rncItems:     _changed(mergedRncItems,     _toArray(remoteState.rncItems)),
+                masterLists:  _changed(mergedMasterLists, remoteState.masterLists || {}),
+                kanbanOrder:  _changed(koSnapshot, remoteState.kanbanOrder || {})
+            };
 
-            if (Object.keys(writePayload).length > 0) {
-                writePayload.lastUpdate = new Date().toISOString();
-                await update(dbRef(database, "/"), writePayload);
+            // Cada coleção suja grava com runTransaction NO PRÓPRIO CAMINHO (nunca na raiz —
+            // é isso que causava internal_error em bancos grandes, por arrastar todo o resto).
+            // A callback da transação roda de novo com o dado ATUAL do servidor a cada
+            // tentativa/conflito, recalculando o merge 3-vias contra ele em vez do snapshot do
+            // dbGet acima — fecha a janela de corrida entre a leitura e a escrita que permitia
+            // uma gravação concorrente sumir sob um update() baseado em dado já desatualizado.
+            const _txArrayMerge = (localArr, baseArr) => (currentData) =>
+                _mergeCollection(localArr, _toArray(currentData), baseArr);
+            const _txSpecs = [];
+            if (_dirty.audits)       _txSpecs.push(['audits',       _txArrayMerge(local.audits,       base.audits)]);
+            if (_dirty.trainings)    _txSpecs.push(['trainings',    _txArrayMerge(local.trainings,    base.trainings)]);
+            if (_dirty.activities)   _txSpecs.push(['activities',   _txArrayMerge(local.activities,   base.activities)]);
+            if (_dirty.maintenances) _txSpecs.push(['maintenances', _txArrayMerge(local.maintenances, base.maintenances)]);
+            if (_dirty.documents)    _txSpecs.push(['documents',    _txArrayMerge(local.documents,    base.documents)]);
+            if (_dirty.ocorrencias)  _txSpecs.push(['ocorrencias',  _txArrayMerge(local.ocorrencias,  base.ocorrencias)]);
+            if (_dirty.rncItems)     _txSpecs.push(['rncItems',     _txArrayMerge(local.rncItems,     base.rncItems)]);
+            if (_dirty.masterLists)  _txSpecs.push(['masterLists',  (currentData) => _mergeMasterLists(mlSnapshot, currentData, base.masterLists)]);
+            if (_dirty.kanbanOrder)  _txSpecs.push(['kanbanOrder',  () => koSnapshot]);
+
+            const _txSettled = await Promise.allSettled(
+                _txSpecs.map(([path, mergeFn]) => runTransaction(dbRef(database, path), mergeFn))
+            );
+
+            // Mapa dos valores REALMENTE gravados (transação confirmada pelo servidor) e lista
+            // de caminhos cuja gravação falhou (rejeitada ou abortada pelo servidor).
+            const committed = {};
+            const failedPaths = [];
+            _txSettled.forEach((r, i) => {
+                const path = _txSpecs[i][0];
+                if (r.status === 'fulfilled' && r.value.committed) {
+                    committed[path] = r.value.snapshot.val();
+                } else {
+                    failedPaths.push(path);
+                    console.error(`Erro ao gravar "${path}" no Firebase:`, r.status === 'rejected' ? r.reason : 'transação abortada');
+                }
+            });
+            if (Object.keys(committed).length > 0) {
+                await update(dbRef(database, "/"), { lastUpdate: new Date().toISOString() });
             }
+
+            // SÓ AGORA (por coleção, cada uma confirmada pelo commit da SUA PRÓPRIA transação)
+            // adota o resultado reconciliado como novo estado local + baseline. Coleção sem
+            // alteração local usa o merge já calculado acima (só "puxa" o que outras sessões
+            // gravaram, nada foi escrito por esta sessão). Coleção suja cuja transação falhou
+            // mantém o array local intacto (edição do usuário preservada) e o baseline INTOCADO
+            // — sem isso, capturar baseline a partir do valor local não-confirmado faria a
+            // próxima gravação achar "nada mudou" e nunca reenviar a edição perdida.
+            const _adopt = (key, mergedFallback) => {
+                if (key in committed) return _toArray(committed[key]);
+                if (_dirty[key]) return undefined; // falhou: não adota, não atualiza baseline
+                return mergedFallback; // sem alteração local: comportamento igual ao anterior
+            };
+            const _newAudits       = _adopt('audits',       mergedAudits);
+            const _newTrainings    = _adopt('trainings',    mergedTrainings);
+            const _newActivities   = _adopt('activities',   mergedActivities);
+            const _newMaintenances = _adopt('maintenances', mergedMaintenances);
+            const _newDocuments    = _adopt('documents',    mergedDocuments);
+            const _newOcorrencias  = _adopt('ocorrencias',  mergedOcorrencias);
+            const _newRncItems     = _adopt('rncItems',     mergedRncItems);
 
             // O merge incorporou novidades de outras sessões? (para re-render)
             const pulledRemoteChanges =
-                JSON.stringify(mergedAudits)       !== JSON.stringify(audits) ||
-                JSON.stringify(mergedTrainings)    !== JSON.stringify(trainings) ||
-                JSON.stringify(mergedActivities)   !== JSON.stringify(activities) ||
-                JSON.stringify(mergedMaintenances) !== JSON.stringify(maintenances) ||
-                JSON.stringify(mergedDocuments)    !== JSON.stringify(documents) ||
-                JSON.stringify(mergedOcorrencias)  !== JSON.stringify(ocorrencias) ||
-                JSON.stringify(mergedRncItems)     !== JSON.stringify(rncItems) ||
-                JSON.stringify(mergedMasterLists)  !== JSON.stringify(mlSnapshot);
+                (_newAudits       !== undefined && JSON.stringify(_newAudits)       !== JSON.stringify(audits)) ||
+                (_newTrainings    !== undefined && JSON.stringify(_newTrainings)    !== JSON.stringify(trainings)) ||
+                (_newActivities   !== undefined && JSON.stringify(_newActivities)   !== JSON.stringify(activities)) ||
+                (_newMaintenances !== undefined && JSON.stringify(_newMaintenances) !== JSON.stringify(maintenances)) ||
+                (_newDocuments    !== undefined && JSON.stringify(_newDocuments)    !== JSON.stringify(documents)) ||
+                (_newOcorrencias  !== undefined && JSON.stringify(_newOcorrencias)  !== JSON.stringify(ocorrencias)) ||
+                (_newRncItems     !== undefined && JSON.stringify(_newRncItems)     !== JSON.stringify(rncItems));
 
-            // SÓ AGORA (gravação CONFIRMADA pelo servidor) adota o resultado
-            // reconciliado como novo estado local + baseline. Se a gravação
-            // tivesse falhado, a edição permaneceria em memória para nova tentativa
-            // — e o baseline não seria "envenenado" com algo que não foi salvo.
-            audits = mergedAudits;
-            trainings = mergedTrainings;
-            activities = mergedActivities;
-            maintenances = mergedMaintenances;
-            documents = mergedDocuments;
-            ocorrencias = mergedOcorrencias;
-            rncItems = mergedRncItems;
+            if (_newAudits       !== undefined) audits       = _newAudits;
+            if (_newTrainings    !== undefined) trainings    = _newTrainings;
+            if (_newActivities   !== undefined) activities   = _newActivities;
+            if (_newMaintenances !== undefined) maintenances = _newMaintenances;
+            if (_newDocuments    !== undefined) documents    = _newDocuments;
+            if (_newOcorrencias  !== undefined) ocorrencias  = _newOcorrencias;
+            if (_newRncItems     !== undefined) rncItems     = _newRncItems;
             if (typeof window.rncItems !== 'undefined') window.rncItems = rncItems;
 
-            // masterLists: adota o estado gravado preservando edições feitas DURANTE o await
-            // (ex.: usuário adicionou outro marcador em rajada → saveAll coalescido). Reaplica
-            // os deltas da masterLists viva atual (vs. o snapshot do início do save) sobre o
-            // resultado gravado, para que o follow-up do coalescing os persista — sem perder
-            // o que outras sessões trouxeram (já incorporado em mergedMasterLists).
-            masterLists = _mergeMasterLists(masterLists, mergedMasterLists, mlSnapshot);
-            captureSyncBaseline();
-            // O baseline de masterLists deve ser o ESTADO GRAVADO (mergedMasterLists), não a
-            // masterLists viva — assim qualquer edição concorrente continua sendo um delta
-            // pendente para a próxima gravação, em vez de virar "sem alteração".
-            _syncBaseline.masterLists = _deepClone(mergedMasterLists);
+            // masterLists: se a transação gravou, adota o estado CONFIRMADO preservando edições
+            // feitas DURANTE o await (ex.: usuário adicionou outro marcador em rajada → saveAll
+            // coalescido) — reaplica os deltas da masterLists viva atual (vs. snapshot do início
+            // do save) sobre o resultado gravado, para que o follow-up do coalescing os persista
+            // sem perder o que outras sessões trouxeram. Se não havia alteração local, usa o
+            // merge já calculado (só pull). Se a transação falhou, mantém tudo intocado.
+            const _committedMasterLists = 'masterLists' in committed ? committed.masterLists : ( !_dirty.masterLists ? mergedMasterLists : undefined );
+            if (_committedMasterLists !== undefined) {
+                masterLists = _mergeMasterLists(masterLists, _committedMasterLists, mlSnapshot);
+            }
+
+            const _newBaseline = _syncBaseline ? { ..._syncBaseline } : {
+                audits: [], trainings: [], activities: [], maintenances: [], documents: [], ocorrencias: [], rncItems: [], masterLists: {}
+            };
+            if (_newAudits       !== undefined) _newBaseline.audits       = _deepClone(_newAudits);
+            if (_newTrainings    !== undefined) _newBaseline.trainings    = _deepClone(_newTrainings);
+            if (_newActivities   !== undefined) _newBaseline.activities   = _deepClone(_newActivities);
+            if (_newMaintenances !== undefined) _newBaseline.maintenances = _deepClone(_newMaintenances);
+            if (_newDocuments    !== undefined) _newBaseline.documents    = _deepClone(_newDocuments);
+            if (_newOcorrencias  !== undefined) _newBaseline.ocorrencias  = _deepClone(_newOcorrencias);
+            if (_newRncItems     !== undefined) _newBaseline.rncItems     = _deepClone(_newRncItems);
+            // O baseline de masterLists deve ser o ESTADO GRAVADO (não a masterLists viva) —
+            // assim qualquer edição concorrente continua sendo um delta pendente para a próxima
+            // gravação, em vez de virar "sem alteração".
+            if (_committedMasterLists !== undefined) _newBaseline.masterLists = _deepClone(_committedMasterLists);
+            _syncBaseline = _newBaseline;
+
+            if (failedPaths.length > 0) {
+                const msg = 'Erro ao salvar no banco de dados. Verifique a conexão e tente novamente.';
+                if (typeof showToast === 'function') showToast(msg, 'error');
+                else if (showAlert) alert(msg);
+            }
+            // Flag consultável por fluxos que precisam saber se ESTA gravação persistiu de
+            // fato antes de descartar estado local pendente (ex.: checklist do viewModal) —
+            // saveAll() nunca rejeita (erros já viram toast aqui dentro), então quem chama
+            // não tem como saber pelo retorno da Promise se a gravação realmente aconteceu.
+            window._lastSaveOk = (failedPaths.length === 0);
+
             _saveLocalCache(); // (#5) atualiza o cache visual após gravação confirmada
 
             // Se incorporamos mudanças de outras sessões, atualiza a UI.
@@ -739,7 +819,7 @@
                 if (typeof window.updateRncNotificationBell === 'function') window.updateRncNotificationBell();
             }
 
-            if (showAlert) alert("Dados sincronizados com sucesso!");
+            if (showAlert && failedPaths.length === 0) alert("Dados sincronizados com sucesso!");
 
         } catch (err) {
             console.error("Erro ao sincronizar com Firebase:", err);
@@ -749,6 +829,7 @@
             // Mesmo em saves silenciosos (showAlert=false), avisa o usuário — do
             // contrário uma falha de permissão/rede no BD passa despercebida e a
             // alteração local parece "salva" quando na verdade não foi persistida.
+            window._lastSaveOk = false;
             if (showAlert) {
                 if (typeof showToast === 'function') showToast('Erro ao salvar. Verifique a conexão — suas alterações não foram perdidas.', 'error');
                 else alert("Erro ao sincronizar dados. Verifique a conexão.");

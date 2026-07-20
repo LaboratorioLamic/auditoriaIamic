@@ -37,6 +37,13 @@
         return window.firebaseUpdate;
     }
 
+    function getFirebaseRunTransaction() {
+        if (!window.firebaseRunTransaction) {
+            throw new Error('Firebase ainda não foi carregado. Aguarde alguns instantes e tente novamente.');
+        }
+        return window.firebaseRunTransaction;
+    }
+
     function getFirebaseOnValue() {
         if (!window.firebaseOnValue) {
             throw new Error('Firebase ainda não foi carregado. Aguarde alguns instantes e tente novamente.');

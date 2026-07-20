@@ -100,7 +100,9 @@ const _SAVE_BTN_IDS = {
   'audit':      'btn-save-audit',
   'ativ':       'btn-save-ativ',
   'train':      'btn-save-train',
-  'doc':        'btn-save-doc'
+  'doc':        'btn-save-doc',
+  'oc':         'btn-save-oc',
+  'rnc':        'btn-save-rnc'
 };
 
 let _uploadsInProgress = { 'pub': false, 'edit-pub': false };
