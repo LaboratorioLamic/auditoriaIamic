@@ -553,15 +553,18 @@ function resetModal(prefix) {
                 detalhes: [`Item restaurado pelo usuário ${item.restoredBy}`]
             });
 
-            if (typeof showToast === 'function') showToast('Item restaurado com sucesso!', 'success');
-            saveAll();
-            renderCards();
+            if (typeof window.showGlobalLoading === 'function') window.showGlobalLoading('Restaurando item...');
+            saveAll().finally(() => {
+                if (typeof window.hideGlobalLoading === 'function') window.hideGlobalLoading();
+                if (typeof showToast === 'function') showToast('Item restaurado com sucesso!', 'success');
+                renderCards();
 
-            // Atualizar a lixeira se estiver aberta
-            if (document.getElementById('modalTrashBin').style.display === 'flex') {
-                openTrashBin();
-            }
-            updateTrashBadge();
+                // Atualizar a lixeira se estiver aberta
+                if (document.getElementById('modalTrashBin').style.display === 'flex') {
+                    openTrashBin();
+                }
+                updateTrashBadge();
+            });
         }
     }
 
@@ -798,10 +801,15 @@ function resetModal(prefix) {
                         permanentlyDeletedBy: (currentuser && (currentuser.email || currentuser.name)) || 'desconhecido',
                         permanentReason: reason || ''
                     });
-                    saveAll();
-                    openTrashBin();
-                    updateTrashBadge();
-                    if (typeof showToast === 'function') showToast('Item deletado permanentemente.', 'error');
+                    // Ação irreversível: bloqueia a tela até a gravação confirmar, pra
+                    // evitar clique duplo ou navegação no meio de uma exclusão permanente.
+                    if (typeof window.showGlobalLoading === 'function') window.showGlobalLoading('Excluindo permanentemente...');
+                    saveAll().finally(() => {
+                        if (typeof window.hideGlobalLoading === 'function') window.hideGlobalLoading();
+                        openTrashBin();
+                        updateTrashBadge();
+                        if (typeof showToast === 'function') showToast('Item deletado permanentemente.', 'error');
+                    });
                 }
             }
         });

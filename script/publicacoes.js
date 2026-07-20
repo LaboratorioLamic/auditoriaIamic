@@ -2105,21 +2105,36 @@ window.confirmarPublicacao = function() {
     }
 
     window._editingPubIndex = null;
-    saveAll();
-    closeModal('modalPublicacao');
 
-    if (finalTab === 'rnc') {
-        if (typeof window.rncRefreshViewPubs === 'function') window.rncRefreshViewPubs();
-        if (typeof showToast === 'function') showToast(isEditing ? 'Publicação atualizada com sucesso!' : 'Publicação registrada com sucesso!', 'success');
-        return;
+    const _btnPub = document.getElementById('btn-confirmar-publicacao');
+    let _btnPubOriginalHtml;
+    if (_btnPub) {
+        _btnPubOriginalHtml = _btnPub.innerHTML;
+        _btnPub.disabled = true;
+        _btnPub.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
     }
-    if (typeof renderViewContent === 'function') renderViewContent(id, finalTab);
-    const pubTab = document.querySelector('.view-modal-tab:last-child');
-    if (pubTab) switchViewTab('publicacoes', pubTab);
-    renderViewPublicacoes(item);
-    _updatePubTabBadge(item);
-    renderCards();
-    if (typeof showToast === 'function') showToast(isEditing ? 'Publicação atualizada com sucesso!' : 'Publicação registrada com sucesso!', 'success');
+    if (typeof window.showGlobalLoading === 'function') window.showGlobalLoading('Salvando publicação...');
+    saveAll().finally(() => {
+        if (typeof window.hideGlobalLoading === 'function') window.hideGlobalLoading();
+        if (_btnPub) { _btnPub.disabled = false; _btnPub.innerHTML = _btnPubOriginalHtml; }
+
+        if (window._lastSaveOk === false) return; // mantém modal aberto pro usuário tentar de novo
+
+        closeModal('modalPublicacao');
+
+        if (finalTab === 'rnc') {
+            if (typeof window.rncRefreshViewPubs === 'function') window.rncRefreshViewPubs();
+            if (typeof showToast === 'function') showToast(isEditing ? 'Publicação atualizada com sucesso!' : 'Publicação registrada com sucesso!', 'success');
+            return;
+        }
+        if (typeof renderViewContent === 'function') renderViewContent(id, finalTab);
+        const pubTab = document.querySelector('.view-modal-tab:last-child');
+        if (pubTab) switchViewTab('publicacoes', pubTab);
+        renderViewPublicacoes(item);
+        _updatePubTabBadge(item);
+        renderCards();
+        if (typeof showToast === 'function') showToast(isEditing ? 'Publicação atualizada com sucesso!' : 'Publicação registrada com sucesso!', 'success');
+    });
 };
 
 // Marca automaticamente itens do checklist geral cujos itens de publicação
