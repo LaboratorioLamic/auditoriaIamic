@@ -2885,6 +2885,42 @@ button.pub-geral-tier-btn:active { transform: translateY(0) scale(0.99); }
     padding: 20px;
     backdrop-filter: blur(3px);
 }
+
+/* Overlay global de carregamento: bloqueia toda a tela durante uma gravação
+   em andamento no banco, para o usuário nunca ficar sem feedback nem
+   interagir com algo que está prestes a ser sobrescrito pelo save. */
+.global-loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,0.6);
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    backdrop-filter: blur(2px);
+    animation: globalLoadingFade 0.15s ease;
+    cursor: wait;
+}
+.global-loading-spinner {
+    width: 54px;
+    height: 54px;
+    border: 4px solid rgba(255,255,255,0.25);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: globalLoadingSpin 0.8s linear infinite;
+}
+.global-loading-text {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    text-align: center;
+    padding: 0 20px;
+}
+@keyframes globalLoadingSpin { to { transform: rotate(360deg); } }
+@keyframes globalLoadingFade { from { opacity: 0; } to { opacity: 1; } }
 .cl-reset-card {
     background: #fff;
     border-radius: 18px;

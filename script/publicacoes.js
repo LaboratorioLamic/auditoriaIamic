@@ -873,8 +873,25 @@ function _markChecklistPending(item, tab) {
 // usuário poder tentar "Aplicar" de novo em vez de perder a marcação silenciosamente.
 window.applyViewChecklistChanges = async function() {
     if (!window._checklistPendingDirty) { closeModal('viewModal'); return; }
-    await saveAll();
-    if (window._lastSaveOk === false) return;
+    const btn = document.querySelector('.view-checklist-apply-btn');
+    let originalHtml;
+    if (btn) {
+        originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    }
+    window._checklistSaveInProgress = true;
+    if (typeof window.showGlobalLoading === 'function') window.showGlobalLoading('Salvando alterações do checklist...');
+    try {
+        await saveAll();
+    } finally {
+        window._checklistSaveInProgress = false;
+        if (typeof window.hideGlobalLoading === 'function') window.hideGlobalLoading();
+    }
+    if (window._lastSaveOk === false) {
+        if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+        return;
+    }
     window._checklistPendingDirty = false;
     window._checklistPendingSnapshot = null;
     closeModal('viewModal');
@@ -895,6 +912,13 @@ window._discardChecklistPendingChanges = function() {
 // Chamado por closeModal/ESC antes de fechar o viewModal: se há marcações
 // pendentes, exibe aviso em vez de fechar direto.
 window._checklistGuardedClose = function(doClose) {
+    // Já existe uma gravação do checklist em andamento (usuário clicou "Aplicar"
+    // e tentou fechar antes dela confirmar): não abre o aviso de "descartar",
+    // só avisa pra aguardar — fechar/descartar agora colidiria com o save em voo.
+    if (window._checklistSaveInProgress) {
+        if (typeof showToast === 'function') showToast('Aguarde o salvamento das alterações...', 'warning');
+        return;
+    }
     if (window._checklistPendingDirty) {
         _showChecklistUnsavedWarning(
             async () => { // Aplicar e fechar — só fecha se a gravação realmente confirmar
@@ -946,7 +970,20 @@ function _showChecklistUnsavedWarning(onApplyAndClose, onDiscardAndClose) {
     const close = () => overlay.remove();
     overlay.querySelector('#clUnsavedBtnCancelar').onclick = close;
     overlay.querySelector('#clUnsavedBtnDescartar').onclick = () => { close(); if (onDiscardAndClose) onDiscardAndClose(); };
-    overlay.querySelector('#clUnsavedBtnAplicar').onclick = () => { close(); if (onApplyAndClose) onApplyAndClose(); };
+    overlay.querySelector('#clUnsavedBtnAplicar').onclick = (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+        overlay.querySelector('#clUnsavedBtnCancelar').disabled = true;
+        overlay.querySelector('#clUnsavedBtnDescartar').disabled = true;
+        window._checklistSaveInProgress = true;
+        if (typeof window.showGlobalLoading === 'function') window.showGlobalLoading('Salvando alterações do checklist...');
+        if (onApplyAndClose) Promise.resolve(onApplyAndClose()).finally(() => {
+            window._checklistSaveInProgress = false;
+            if (typeof window.hideGlobalLoading === 'function') window.hideGlobalLoading();
+            close();
+        });
+    };
     overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
 }
 

@@ -1,5 +1,26 @@
 // === UTILITÁRIOS GERAIS ===
 
+// ── Overlay global de carregamento ───────────────────────────────────────
+// Usado por qualquer fluxo que precisa bloquear a tela inteira enquanto uma
+// gravação no Firebase está em andamento (ex.: aplicar checklist), pra o
+// usuário nunca ficar com a sensação de sistema travado sem feedback.
+window.showGlobalLoading = function(message) {
+    let overlay = document.getElementById('globalLoadingOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'globalLoadingOverlay';
+        overlay.className = 'global-loading-overlay';
+        overlay.innerHTML = '<div class="global-loading-spinner"></div><div class="global-loading-text"></div>';
+        document.body.appendChild(overlay);
+    }
+    overlay.querySelector('.global-loading-text').textContent = message || 'Salvando alterações...';
+    overlay.style.display = 'flex';
+};
+window.hideGlobalLoading = function() {
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) overlay.style.display = 'none';
+};
+
 // ── Lixeira: expiração automática (30 dias) ──────────────────────────────
 // Cards na lixeira (deleted=true) são temporários e apagados permanentemente
 // 30 dias após deletedAt. Helpers abaixo calculam prazo/data e fazem o purge.
@@ -803,19 +824,25 @@ function canSetConcluido(checklist, item) {
         const required = checklist.filter(function(c) { return !!c.requiredForPub; });
         if (required.length > 0 && !required.every(function(c) { return !!c.checked; })) return false;
     }
-    // Bloqueia se checklistPublicacao não estiver 100% concluído no ciclo atual
+    // Bloqueia se checklistPublicacao tiver itens obrigatórios (requiredForPub) não
+    // concluídos no ciclo atual. Itens opcionais não bloqueiam — o próprio formulário
+    // de registro de publicação só exige os obrigatórios para salvar (ver
+    // salvarPublicacao em publicacoes.js), então exigir 100% aqui (incluindo
+    // opcionais) travava a conclusão mesmo com a publicação corretamente registrada.
     if (item && Array.isArray(item.checklistPublicacao) && item.checklistPublicacao.length > 0) {
-        var pubCL = item.checklistPublicacao;
-        var currentCycle = item.pubCycleId || 1;
-        var currentDateRef = item.dataPublicacao || item.dataConclusao || null;
-        var _key = function(c) { return c.id || ('t:' + (c.texto || '').trim()); };
-        var doneKeys = new Set();
-        (item.publicacoes || []).forEach(function(pub) {
-            var isCurr = pub.pubCycleId ? pub.pubCycleId === currentCycle : pub.dataConclusaoRef === currentDateRef;
-            if (!isCurr) return;
-            (pub.checklistSnapshot || []).forEach(function(snap) { if (snap.checked) doneKeys.add(_key(snap)); });
-        });
-        if (!pubCL.every(function(c) { return doneKeys.has(_key(c)); })) return false;
+        var pubCLRequired = item.checklistPublicacao.filter(function(c) { return !!c.requiredForPub; });
+        if (pubCLRequired.length > 0) {
+            var currentCycle = item.pubCycleId || 1;
+            var currentDateRef = item.dataPublicacao || item.dataConclusao || null;
+            var _key = function(c) { return c.id || ('t:' + (c.texto || '').trim()); };
+            var doneKeys = new Set();
+            (item.publicacoes || []).forEach(function(pub) {
+                var isCurr = pub.pubCycleId ? pub.pubCycleId === currentCycle : pub.dataConclusaoRef === currentDateRef;
+                if (!isCurr) return;
+                (pub.checklistSnapshot || []).forEach(function(snap) { if (snap.checked) doneKeys.add(_key(snap)); });
+            });
+            if (!pubCLRequired.every(function(c) { return doneKeys.has(_key(c)); })) return false;
+        }
     }
     return true;
 }
