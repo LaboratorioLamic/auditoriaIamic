@@ -999,6 +999,16 @@ function resetModal(prefix) {
             return;
         }
 
+        // Saindo de Concluído → inicia novo ciclo de publicação (em Rotinas, pergunta
+        // antes se o checklist deve ser resetado para a nova competência).
+        if (_prevIsConcluido && !isConcluido && typeof window.handleSaindoDeConcluido === 'function') {
+            window.handleSaindoDeConcluido(item, {
+                askUser: tab === 'auditoria',
+                onContinue: function() { _apply(null); }
+            });
+            return;
+        }
+
         _apply(null);
     }
 

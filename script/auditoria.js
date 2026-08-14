@@ -162,20 +162,14 @@
         const _prevWasConcluido = _prevStatusAudit && (typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(_prevStatusAudit) : /conclu/i.test(_prevStatusAudit));
         const _newIsNotConcluido = !(typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(newItem.status) : /conclu/i.test(newItem.status));
         const _hasChecklistAudit = (newItem.checklist || []).length > 0 || (newItem.checklistPublicacao || []).length > 0;
-        if (_prevWasConcluido && _newIsNotConcluido) {
-            if (_hasChecklistAudit && typeof showChecklistResetModal === 'function') {
-                showChecklistResetModal(
-                    // Manter Checklist: preserva o ciclo atual, para que publicações antigas
-                    // continuem contando os itens já marcados como concluídos.
-                    (novaData) => { if (novaData) newItem.dataPrevisao = novaData; _commitAudit(newItem); },
-                    // Resetar Checklist: inicia um novo ciclo de publicação.
-                    (novaData) => { if (novaData) newItem.dataPrevisao = novaData; newItem.pubCycleId = (newItem.pubCycleId || 1) + 1; resetChecklistItems(newItem); _commitAudit(newItem); },
-                    null,
-                    { dataPrevisao: newItem.dataPrevisao || '' }
-                );
-                return;
-            }
-            newItem.pubCycleId = (newItem.pubCycleId || 1) + 1;
+        if (_prevWasConcluido && _newIsNotConcluido && typeof window.handleSaindoDeConcluido === 'function') {
+            // O helper faz o commit no callback (com ou sem modal de reset de checklist)
+            window.handleSaindoDeConcluido(newItem, {
+                askUser: _hasChecklistAudit,
+                getDateField: () => 'dataPrevisao',
+                onContinue: (it) => _commitAudit(it)
+            });
+            return;
         }
 
         _commitAudit(newItem);

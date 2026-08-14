@@ -403,8 +403,17 @@ window.applyOverdueStatuses = function() {
 
     function _applyChange(item, newStatus, acao) {
         const prev  = item.status;
+        const _wasConcluido = typeof _kbStatusIsConcluido === 'function'
+            ? _kbStatusIsConcluido(prev) : /conclu/i.test(prev || '');
+        const _isConcluido = typeof _kbStatusIsConcluido === 'function'
+            ? _kbStatusIsConcluido(newStatus) : /conclu/i.test(newStatus || '');
         item.status = newStatus;
-        if (item.resetChecklistOnAutoStatus && typeof resetChecklistItems === 'function') {
+        // Saindo de Concluído por programação automática: inicia um novo ciclo de
+        // publicação para que a próxima publicação abra um novo grupo de conclusão
+        // com o checklist zerado (quando a programação pedir reset).
+        if (_wasConcluido && !_isConcluido && typeof window.startNewPubCycle === 'function') {
+            window.startNewPubCycle(item, { resetChecklist: !!item.resetChecklistOnAutoStatus });
+        } else if (item.resetChecklistOnAutoStatus && typeof resetChecklistItems === 'function') {
             resetChecklistItems(item);
         }
         (item.historico = item.historico || []).push({

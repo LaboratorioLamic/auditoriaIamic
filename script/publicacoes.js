@@ -592,6 +592,209 @@ window.resetChecklistItems = function(item) {
         item.checklistPublicacao.forEach(c => { c.checked = false; c.comment = ''; });
 };
 
+// Inicia um novo ciclo de publicação: incrementa pubCycleId e desmarca os checklists,
+// para que as próximas publicações formem um novo grupo de "Conclusão" com todos os
+// itens pendentes, em vez de se juntarem ao grupo já encerrado.
+// opts.resetChecklist = false mantém as marcações (opção "Manter Checklist").
+window.startNewPubCycle = function(item, opts) {
+    if (!item) return;
+    // A data de conclusão vigente pertence ao ciclo que está sendo encerrado. Guardamos
+    // qual data já foi encerrada para não rotular o novo grupo com ela (item.dataPublicacao
+    // continua intacta, pois é campo de negócio exibido em cards, filtros e calendário).
+    const _ref = item.dataPublicacao || item.dataConclusao || null;
+    if (_ref) item.dataConclusaoEncerrada = _ref;
+    // Qualquer novo ciclo invalida o ponto de restauração da competência anterior;
+    // fecharCompetenciaPub grava o seu logo em seguida.
+    item.pubCycleReabrir = null;
+    item.pubCycleId = (item.pubCycleId || 1) + 1;
+    if (!opts || opts.resetChecklist !== false) resetChecklistItems(item);
+};
+
+// Data de conclusão de referência para uma nova publicação: nula enquanto a competência
+// vigente ainda não tem conclusão própria (logo após fechar/reabrir um ciclo).
+window._pubDataConclusaoRef = function(item) {
+    const ref = item.dataPublicacao || item.dataConclusao || null;
+    if (ref && item.dataConclusaoEncerrada === ref) return null;
+    return ref;
+};
+
+// Trata a saída do status Concluído em qualquer fluxo (kanban drag, kanban touch,
+// dropdown do card, edição do formulário, programação automática de status).
+// Retorna true quando um modal assíncrono foi aberto — nesse caso o chamador deve
+// interromper seu fluxo, pois a continuação acontece nos callbacks.
+// cb: { onContinue(item), getDateField(item), askUser: bool }
+window.handleSaindoDeConcluido = function(item, cb) {
+    cb = cb || {};
+    const _continue = () => { if (cb.onContinue) cb.onContinue(item); };
+    const hasChecklist = (item.checklist || []).length > 0 || (item.checklistPublicacao || []).length > 0;
+
+    if (cb.askUser && hasChecklist && typeof showChecklistResetModal === 'function') {
+        const dateField = (cb.getDateField && cb.getDateField(item))
+            || (item.dataPrevisao !== undefined ? 'dataPrevisao' : 'dataConclusao');
+        showChecklistResetModal(
+            // Manter Checklist: preserva o ciclo atual, para que publicações antigas
+            // continuem contando os itens já marcados como concluídos.
+            (novaData) => { if (novaData) item[dateField] = novaData; _continue(); },
+            // Resetar Checklist: inicia um novo ciclo de publicação.
+            (novaData) => { if (novaData) item[dateField] = novaData; startNewPubCycle(item); _continue(); },
+            cb.onCancelar || null,
+            { dataPrevisao: item.dataPrevisao || item.dataConclusao || '' }
+        );
+        return true;
+    }
+
+    // Sem pergunta ao usuário (fluxos automáticos ou item sem checklist):
+    // sempre inicia novo ciclo; reseta as marcações quando solicitado.
+    startNewPubCycle(item, { resetChecklist: !!cb.resetChecklist });
+    if (cb.onContinue) cb.onContinue(item);
+    return false;
+};
+
+// Fecha manualmente a competência (grupo de conclusão) em aberto de um item.
+// As publicações já registradas permanecem no grupo encerrado; as próximas passam a
+// formar o próximo grupo, com o checklist geral e o de publicação zerados.
+window.fecharCompetenciaPub = function(itemId) {
+    const item = _findItemForCompetencia(itemId);
+    if (!item) return;
+    if (typeof userCanChecklist === 'function' && !userCanChecklist(item)) {
+        if (typeof showToast === 'function') showToast('Você não tem permissão para fechar a competência deste card.', 'error');
+        return;
+    }
+
+    const _cycle = item.pubCycleId || 1;
+    const _dateRef = item.dataPublicacao || item.dataConclusao || null;
+    const _pubsNoCiclo = _pubsDoCicloAtual(item);
+    if (_pubsNoCiclo === 0) {
+        if (typeof showToast === 'function') showToast('Não há publicações nesta competência para fechar.', 'error');
+        return;
+    }
+
+    _showFecharCompetenciaModal(item, _dateRef, _pubsNoCiclo, function() {
+        // Estado a restaurar caso a competência tenha sido fechada por engano
+        const _restore = {
+            cycleId: _cycle,
+            dataConclusaoEncerrada: item.dataConclusaoEncerrada || null,
+            checklist: (item.checklist || []).map(c => ({ checked: !!c.checked, comment: c.comment || '' })),
+            checklistPublicacao: (item.checklistPublicacao || []).map(c => ({ checked: !!c.checked, comment: c.comment || '' }))
+        };
+        startNewPubCycle(item); // incrementa o ciclo e zera os checklists
+        item.pubCycleReabrir = _restore;
+        _persistCompetencia(item, 'Fechando competência...', 'Competência fechada. As próximas publicações iniciam uma nova conclusão.');
+    });
+};
+
+// Reabre a competência fechada por engano — só é possível enquanto a nova competência
+// não tiver nenhuma publicação registrada. Restaura o ciclo anterior e as marcações do
+// checklist como estavam no momento do fechamento.
+window.reabrirCompetenciaPub = function(itemId) {
+    const item = _findItemForCompetencia(itemId);
+    if (!item) return;
+    if (typeof userCanChecklist === 'function' && !userCanChecklist(item)) {
+        if (typeof showToast === 'function') showToast('Você não tem permissão para reabrir a competência deste card.', 'error');
+        return;
+    }
+    const snap = item.pubCycleReabrir;
+    if (!snap) return;
+    if (_pubsDoCicloAtual(item) > 0) {
+        if (typeof showToast === 'function') showToast('A nova competência já tem publicações — não é possível reabrir a anterior.', 'error');
+        item.pubCycleReabrir = null;
+        return;
+    }
+
+    item.pubCycleId = snap.cycleId;
+    item.dataConclusaoEncerrada = snap.dataConclusaoEncerrada || null;
+    (item.checklist || []).forEach((c, i) => {
+        const s = snap.checklist && snap.checklist[i];
+        if (!s) return;
+        c.checked = !!s.checked;
+        c.comment = s.comment || '';
+    });
+    (item.checklistPublicacao || []).forEach((c, i) => {
+        const s = snap.checklistPublicacao && snap.checklistPublicacao[i];
+        if (!s) return;
+        c.checked = !!s.checked;
+        c.comment = s.comment || '';
+    });
+    item.pubCycleReabrir = null;
+
+    _persistCompetencia(item, 'Reabrindo competência...', 'Competência reaberta. As publicações voltam para esta conclusão.');
+};
+
+function _findItemForCompetencia(itemId) {
+    const allItems = [...(typeof audits !== 'undefined' ? audits : []),
+                      ...(typeof trainings !== 'undefined' ? trainings : []),
+                      ...(typeof activities !== 'undefined' ? activities : []),
+                      ...(typeof documents !== 'undefined' ? documents : []),
+                      ...(typeof maintenances !== 'undefined' ? maintenances : [])];
+    return allItems.find(i => i.id === itemId);
+}
+
+// Quantidade de publicações registradas no ciclo vigente do item
+function _pubsDoCicloAtual(item) {
+    const cycle = item.pubCycleId || 1;
+    const dateRef = item.dataPublicacao || item.dataConclusao || null;
+    return (item.publicacoes || []).filter(p => p.pubCycleId
+        ? p.pubCycleId === cycle
+        : p.dataConclusaoRef === dateRef).length;
+}
+
+function _persistCompetencia(item, loadingMsg, successMsg) {
+    if (typeof window.showGlobalLoading === 'function') window.showGlobalLoading(loadingMsg);
+    saveAll().finally(() => {
+        if (typeof window.hideGlobalLoading === 'function') window.hideGlobalLoading();
+        if (window._lastSaveOk === false) return;
+        const _tab = typeof _normalizeTab === 'function' ? _normalizeTab(window._currentViewTab) : window._currentViewTab;
+        if (typeof renderViewContent === 'function') renderViewContent(item.id, _tab);
+        renderViewPublicacoes(item);
+        if (typeof _updatePubTabBadge === 'function') _updatePubTabBadge(item);
+        if (typeof renderCards === 'function') renderCards();
+        if (typeof showToast === 'function') showToast(successMsg, 'success');
+    });
+}
+
+function _showFecharCompetenciaModal(item, dateRef, qtdPubs, onConfirm) {
+    const existing = document.getElementById('fecharCompModal');
+    if (existing) existing.remove();
+
+    const _label = dateRef && typeof _formatDateBR === 'function' ? _formatDateBR(dateRef) : '—';
+    const _totalCL = (item.checklist || []).length + (item.checklistPublicacao || []).length;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'fecharCompModal';
+    overlay.className = 'cl-reset-overlay';
+    overlay.innerHTML = `
+        <div class="cl-reset-card">
+            <div class="cl-reset-header">
+                <div class="cl-reset-header-icon"><i class="fas fa-lock"></i></div>
+                <div>
+                    <div class="cl-reset-title">Fechar competência</div>
+                    <div class="cl-reset-subtitle">Conclusão: ${_label}</div>
+                </div>
+            </div>
+            <div class="cl-reset-body">
+                <p class="cl-reset-text">
+                    Esta competência será encerrada com <strong>${qtdPubs} publicaç${qtdPubs !== 1 ? 'ões' : 'ão'}</strong>.
+                    As próximas publicações formarão uma <strong>nova conclusão</strong>${_totalCL > 0 ? ', com todo o checklist zerado' : ''}.
+                </p>
+                <p class="cl-reset-text" style="font-size:12.5px;color:#64748b;">
+                    As publicações já registradas permanecem no histórico desta competência.
+                </p>
+                <div class="cl-reset-actions">
+                    <button id="fecharCompCancelar" class="cl-reset-btn cl-reset-btn--cancel">Cancelar</button>
+                    <button id="fecharCompConfirmar" class="cl-reset-btn cl-reset-btn--resetar">Fechar competência</button>
+                </div>
+            </div>
+        </div>
+        <style>@keyframes clResetIn{from{opacity:0;transform:scale(0.94)}to{opacity:1;transform:scale(1)}}</style>
+    `;
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.remove();
+    overlay.querySelector('#fecharCompCancelar').onclick = close;
+    overlay.querySelector('#fecharCompConfirmar').onclick = () => { close(); onConfirm(); };
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+}
+
 // Modal de confirmação: manter ou resetar checklist ao sair de Concluído
 // options: { dataPrevisao: 'YYYY-MM-DD', dataField: 'dataPrevisao'|'dataConclusao' }
 window.showChecklistResetModal = function(onManter, onResetar, onCancelar, options) {
@@ -2050,7 +2253,7 @@ window.confirmarPublicacao = function() {
         usuario: isEditing ? (item.publicacoes[editIndex]?.usuario || '') : (window.currentuser ? (window.currentuser.name || window.currentuser.user || '') : ''),
         anexos: anexos,
         pubCycleId: isEditing ? (item.publicacoes[editIndex]?.pubCycleId || item.pubCycleId) : item.pubCycleId,
-        dataConclusaoRef: item.dataPublicacao || item.dataConclusao || null
+        dataConclusaoRef: _pubDataConclusaoRef(item)
     };
 
     // Salva snapshot do checklist de publicação (com id e geralIndex para rastreabilidade)
@@ -2097,6 +2300,8 @@ window.confirmarPublicacao = function() {
         _autoUnmarkGeralFromPub(item);
     } else {
         item.publicacoes.unshift(pub);
+        // A nova competência passou a ter publicação: a anterior não pode mais ser reaberta
+        if (item.pubCycleReabrir) item.pubCycleReabrir = null;
         _updateItemDatesAfterPublicacao(item, finalTab, dataVal);
         // Auto-marca itens do checklist geral quando todos os associados estiverem concluídos
         _autoMarkGeralFromPub(item);
@@ -3465,7 +3670,10 @@ window.renderViewPublicacoes = function(item) {
             } else {
                 key = _SEM_GRUPO;
             }
-            if (!_groups[key]) _groups[key] = { pubs: [], dateRef: p.dataConclusaoRef || null };
+            if (!_groups[key]) _groups[key] = { pubs: [], dateRef: null };
+            // A conclusão de referência do grupo pode só aparecer em publicações
+            // posteriores (a primeira do ciclo é registrada antes da nova conclusão)
+            if (!_groups[key].dateRef && p.dataConclusaoRef) _groups[key].dateRef = p.dataConclusaoRef;
             _groups[key].pubs.push(p);
         });
 
@@ -3513,8 +3721,16 @@ window.renderViewPublicacoes = function(item) {
         _sortedKeys.forEach((key, gi) => {
             const grp = _groups[key];
             const groupPubs = grp.pubs;
-            const labelDate = (key === _CURRENT_KEY) ? _currentDateRef : grp.dateRef;
-            const groupLabel = key === _SEM_GRUPO ? 'Sem data de conclusão' : `Conclusão: ${labelDate ? _formatDateBR(labelDate) : '—'}`;
+            // Rotula pela data de conclusão gravada nas publicações do próprio grupo
+            // (dataConclusaoRef); sem ela, o grupo é a competência ainda em aberto.
+            // O fallback para item.dataPublicacao vale só no ciclo atual e nunca reaproveita
+            // uma conclusão já encerrada por "Fechar competência".
+            const _fallbackDate = (key === _CURRENT_KEY && _currentDateRef !== item.dataConclusaoEncerrada)
+                ? _currentDateRef : null;
+            const labelDate = grp.dateRef || _fallbackDate;
+            const groupLabel = key === _SEM_GRUPO
+                ? 'Sem data de conclusão'
+                : (labelDate ? `Conclusão: ${_formatDateBR(labelDate)}` : 'Competência em aberto');
             const groupId = `pubGroup_${gi}`;
             const _gcKey = `pub_group_collapsed_${item.id}_${key}`;
             const _gcOpen = localStorage.getItem(_gcKey) !== '0';
@@ -3552,6 +3768,31 @@ window.renderViewPublicacoes = function(item) {
                     <i class="fas fa-chart-column"></i>
                 </button>` : '';
 
+            // Competência em aberto (ciclo atual): permite encerrá-la manualmente.
+            // Novas publicações passam a formar o próximo grupo de conclusão, com o
+            // checklist zerado.
+            const _canFechar = key === _CURRENT_KEY
+                && groupPubs.length > 0
+                && (typeof userCanChecklist === 'function' ? userCanChecklist(item) : true);
+            const fecharHtml = _canFechar ? `
+                <button type="button" class="pub-group-close-btn" title="Fechar esta competência — as próximas publicações iniciam uma nova conclusão com o checklist zerado"
+                    onclick="event.stopPropagation();fecharCompetenciaPub(${item.id})">
+                    <i class="fas fa-lock"></i><span>Fechar</span>
+                </button>` : '';
+
+            // Competência fechada por engano: enquanto a nova não tiver nenhuma publicação,
+            // permite reabri-la, restaurando o ciclo e as marcações do checklist.
+            const _reab = item.pubCycleReabrir;
+            const _canReabrir = !!_reab
+                && key === `cycle_${_reab.cycleId}`
+                && _pubsDoCicloAtual(item) === 0
+                && (typeof userCanChecklist === 'function' ? userCanChecklist(item) : true);
+            const reabrirHtml = _canReabrir ? `
+                <button type="button" class="pub-group-reopen-btn" title="Reabrir esta competência — restaura o checklist como estava e as próximas publicações voltam para ela"
+                    onclick="event.stopPropagation();reabrirCompetenciaPub(${item.id})">
+                    <i class="fas fa-lock-open"></i><span>Reabrir</span>
+                </button>` : '';
+
             groupsHtml += `
                 <div class="pub-conclusao-group${_gcOpen ? ' open' : ''}" id="${groupId}">
                     <div class="pub-conclusao-group-header" onclick="(function(el){el.classList.toggle('open');localStorage.setItem('${_gcKey}',el.classList.contains('open')?'1':'0');})(document.getElementById('${groupId}'))">
@@ -3560,7 +3801,9 @@ window.renderViewPublicacoes = function(item) {
                         <span class="pub-conclusao-group-label">${groupLabel}</span>
                         ${pctHtml}
                         ${qualityHtml}
-                        <span class="pub-conclusao-group-count">${groupPubs.length} publicaç${groupPubs.length !== 1 ? 'ões' : 'ão'}</span>
+                        ${fecharHtml}
+                        ${reabrirHtml}
+                        <span class="pub-conclusao-group-count">${groupPubs.length} pub${groupPubs.length !== 1 ? 's' : ''}.</span>
                     </div>
                     <div class="pub-conclusao-group-body" style="display:${_gcOpen ? '' : 'none'};">
                         <div class="pub-table-wrap">

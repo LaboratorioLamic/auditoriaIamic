@@ -564,22 +564,14 @@ function kbDrop(event, targetStatus) {
     }
 
     // Saindo de Concluído → incrementa ciclo (e, apenas em Rotinas, pergunta sobre checklist)
-    if (_prevIsConcluido && !_dropIsConcluido) {
-        const _hasChecklist = (item.checklist || []).length > 0 || (item.checklistPublicacao || []).length > 0;
-        if (currentTab === 'auditoria' && _hasChecklist && typeof showChecklistResetModal === 'function') {
-            const _kbDateField = item.dataPrevisao !== undefined ? 'dataPrevisao' : 'dataConclusao';
-            showChecklistResetModal(
-                // Manter Checklist: preserva o ciclo atual, para que publicações antigas
-                // continuem contando os itens já marcados como concluídos.
-                (novaData) => { if (novaData) item[_kbDateField] = novaData; _kbApplyDrop(item, targetStatus); },
-                // Resetar Checklist: inicia um novo ciclo de publicação.
-                (novaData) => { if (novaData) item[_kbDateField] = novaData; item.pubCycleId = (item.pubCycleId || 1) + 1; resetChecklistItems(item); _kbApplyDrop(item, targetStatus); },
-                null,
-                { dataPrevisao: item.dataPrevisao || item.dataConclusao || '' }
-            );
-            return;
-        }
-        item.pubCycleId = (item.pubCycleId || 1) + 1;
+    if (_prevIsConcluido && !_dropIsConcluido && typeof window.handleSaindoDeConcluido === 'function') {
+        // O helper aplica o drop no callback (com ou sem modal de reset)
+        window.handleSaindoDeConcluido(item, {
+            askUser: currentTab === 'auditoria',
+            getDateField: it => (it.dataPrevisao !== undefined ? 'dataPrevisao' : 'dataConclusao'),
+            onContinue: () => _kbApplyDrop(item, targetStatus)
+        });
+        return;
     }
 
     if (_dropIsConcluido && typeof isItemOverdue === 'function' && (currentTab === 'treinamentos' || currentTab === 'documentos') && isItemOverdue(item, currentTab)) {
@@ -1447,6 +1439,17 @@ function _kbTouchDrop(cx, cy) {
         checkSchedWarnBeforeConcluido(item, currentTab).then(ok => { if (ok) _kbApplyDrop(item, targetStatus); });
         return;
     }
+
+    // Saindo de Concluído → novo ciclo de publicação (em Rotinas, pergunta sobre o checklist)
+    if (_kbStatusIsConcluido(item.status) && !_moveIsConcluido && typeof window.handleSaindoDeConcluido === 'function') {
+        window.handleSaindoDeConcluido(item, {
+            askUser: currentTab === 'auditoria',
+            getDateField: it => (it.dataPrevisao !== undefined ? 'dataPrevisao' : 'dataConclusao'),
+            onContinue: () => _kbApplyDrop(item, targetStatus)
+        });
+        return;
+    }
+
     _kbApplyDrop(item, targetStatus);
 }
 
