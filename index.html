@@ -55,6 +55,7 @@
 <link rel="stylesheet" href="css/messages.css">
 <link rel="stylesheet" href="css/perf-base.css">
 <link rel="stylesheet" href="css/perfmode.css">
+<link rel="stylesheet" href="css/imgviewer.css">
 </head>
 <body>
 
@@ -3074,12 +3075,21 @@
 </div>
 
 <!-- LIGHTBOX DE IMAGEM ANEXO -->
-<div id="imgLightbox" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)closeImgLightbox()">
-    <button onclick="closeImgLightbox()" style="position:absolute;top:12px;right:120px;background:none;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1;z-index:1;"><i class="fas fa-xmark"></i></button>
-    <div style="max-width:min(90vw,1000px);max-height:90vh;display:flex;flex-direction:column;align-items:center;gap:8px;">
-        <img id="imgLightboxImg" src="" alt="" style="max-width:100%;max-height:calc(90vh - 40px);object-fit:contain;border-radius:6px;box-shadow:0 4px 32px rgba(0,0,0,0.5);">
-        <span id="imgLightboxLabel" style="color:#e5e7eb;font-size:13px;text-align:center;"></span>
+<div id="imgLightbox" onclick="if(event.target===this)closeImgLightbox()">
+    <div class="imgv-toolbar">
+        <button class="imgv-btn" onclick="imgvZoom(-1)" title="Reduzir (-)"><i class="fas fa-magnifying-glass-minus"></i></button>
+        <span class="imgv-zoom" id="imgvZoomLabel">100%</span>
+        <button class="imgv-btn" onclick="imgvZoom(1)" title="Ampliar (+)"><i class="fas fa-magnifying-glass-plus"></i></button>
+        <span class="imgv-sep"></span>
+        <button class="imgv-btn" onclick="imgvRotate(-90)" title="Girar à esquerda"><i class="fas fa-rotate-left"></i></button>
+        <button class="imgv-btn" onclick="imgvRotate(90)" title="Girar à direita"><i class="fas fa-rotate-right"></i></button>
+        <span class="imgv-sep"></span>
+        <button class="imgv-btn imgv-close" onclick="closeImgLightbox()" title="Fechar (Esc)"><i class="fas fa-xmark"></i></button>
     </div>
+    <div class="imgv-stage" id="imgvStage" onclick="if(event.target===this)closeImgLightbox()">
+        <img id="imgLightboxImg" src="" alt="">
+    </div>
+    <span class="imgv-label" id="imgLightboxLabel"></span>
 </div>
 
 <!-- DRAWER HISTÓRICO -->

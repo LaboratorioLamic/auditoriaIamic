@@ -707,12 +707,21 @@ function _areaLabel(area) { return _areaMeta(area).label; }
 // ---------------------------------------------------------------------------
 // Lightbox
 // ---------------------------------------------------------------------------
-function msgOpenLightbox(url) {
+function msgOpenLightbox(url, label) {
+    // Usa o visualizador global (zoom / rotação); fallback ao lightbox simples
+    if (typeof window.openImgLightbox === 'function' && document.getElementById('imgLightbox')) {
+        window.openImgLightbox(url, label || '');
+        return;
+    }
     const lb = document.getElementById('msgLightbox');
     document.getElementById('msgLightboxImg').src = url;
     lb.style.display = 'flex';
 }
-function msgCloseLightbox() { document.getElementById('msgLightbox').style.display = 'none'; }
+function msgCloseLightbox() {
+    const lb = document.getElementById('msgLightbox');
+    if (lb) lb.style.display = 'none';
+    if (typeof window.closeImgLightbox === 'function') window.closeImgLightbox();
+}
 
 // ---------------------------------------------------------------------------
 // Responder

@@ -4257,47 +4257,149 @@ function _formatDateBR(dateStr) {
 // e restoreChecklist(prefix, item.checklist) ao editar.
 // O patch abaixo não é necessário pois as chamadas estarão no modal.js atualizado.
 
-// ─── Lightbox de imagem ──────────────────────────────────────
-window.openImgLightbox = function(url, label) {
-    const lb  = document.getElementById('imgLightbox');
-    const img = document.getElementById('imgLightboxImg');
-    const lbl = document.getElementById('imgLightboxLabel');
-    if (!lb || !img) return;
-    img.src = url;
+// ─── Lightbox de imagem (zoom / rotação / arraste) ───────────
+const IMGV_STEPS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8];
+let _imgvScale = 1, _imgvRot = 0, _imgvX = 0, _imgvY = 0;
+let _imgvDrag = null;
+
+function _imgvEl()   { return document.getElementById('imgLightbox'); }
+function _imgvImg()  { return document.getElementById('imgLightboxImg'); }
+
+function _imgvApply() {
+    const img = _imgvImg();
+    if (!img) return;
+    if (_imgvScale <= 1) { _imgvX = 0; _imgvY = 0; }
+    img.style.transform = `translate(${_imgvX}px, ${_imgvY}px) scale(${_imgvScale}) rotate(${_imgvRot}deg)`;
+    img.classList.toggle('imgv-zoomed', _imgvScale > 1);
+    const lbl = document.getElementById('imgvZoomLabel');
+    if (lbl) lbl.textContent = Math.round(_imgvScale * 100) + '%';
+}
+
+function _imgvReset() {
+    _imgvScale = 1; _imgvRot = 0; _imgvX = 0; _imgvY = 0;
+    const img = _imgvImg();
+    if (img) { img.classList.remove('imgv-dragging'); img.style.transform = ''; }
+    _imgvApply();
+}
+
+window.imgvSetScale = function(value) {
+    _imgvScale = Math.min(8, Math.max(0.25, value));
+    _imgvApply();
+};
+
+// dir: 1 = ampliar, -1 = reduzir (passo da escala padrão)
+window.imgvZoom = function(dir) {
+    if (dir > 0) {
+        const next = IMGV_STEPS.find(v => v > _imgvScale + 0.001);
+        window.imgvSetScale(next || 8);
+    } else {
+        const prev = [...IMGV_STEPS].reverse().find(v => v < _imgvScale - 0.001);
+        window.imgvSetScale(prev || 0.25);
+    }
+};
+
+window.imgvRotate = function(deg) {
+    _imgvRot = (_imgvRot + deg) % 360;
+    _imgvApply();
+};
+
+// Clique na imagem: aproxima; ao chegar no máximo, volta a 100%
+function _imgvClickZoom(e) {
+    e.stopPropagation();
+    if (_imgvDrag && _imgvDrag.moved) return;
+    if (_imgvScale >= 8) window.imgvSetScale(1);
+    else window.imgvZoom(1);
+}
+
+function _imgvWheel(e) {
+    e.preventDefault();
+    window.imgvZoom(e.deltaY < 0 ? 1 : -1);
+}
+
+function _imgvPointerDown(e) {
+    if (_imgvScale <= 1) return;
+    const img = _imgvImg();
+    _imgvDrag = { x: e.clientX, y: e.clientY, ox: _imgvX, oy: _imgvY, moved: false };
+    img.classList.add('imgv-dragging');
+    img.setPointerCapture && img.setPointerCapture(e.pointerId);
+}
+
+function _imgvPointerMove(e) {
+    if (!_imgvDrag) return;
+    const dx = e.clientX - _imgvDrag.x, dy = e.clientY - _imgvDrag.y;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) _imgvDrag.moved = true;
+    _imgvX = _imgvDrag.ox + dx;
+    _imgvY = _imgvDrag.oy + dy;
+    _imgvApply();
+}
+
+function _imgvPointerUp() {
+    const img = _imgvImg();
+    if (img) img.classList.remove('imgv-dragging');
+    setTimeout(() => { _imgvDrag = null; }, 0);
+}
+
+function _imgvBind() {
+    const img = _imgvImg(), lb = _imgvEl();
+    if (!img || !lb || img.dataset.imgvBound) return;
+    img.dataset.imgvBound = '1';
+    img.addEventListener('click', _imgvClickZoom);
+    img.addEventListener('dblclick', e => { e.preventDefault(); _imgvReset(); });
+    img.addEventListener('pointerdown', _imgvPointerDown);
+    img.addEventListener('pointermove', _imgvPointerMove);
+    img.addEventListener('pointerup', _imgvPointerUp);
+    img.addEventListener('pointercancel', _imgvPointerUp);
+    img.addEventListener('dragstart', e => e.preventDefault());
+    lb.addEventListener('wheel', _imgvWheel, { passive: false });
+}
+
+function _imgvOpen(label) {
+    const lb = _imgvEl(), lbl = document.getElementById('imgLightboxLabel');
+    if (!lb) return false;
+    _imgvBind();
+    _imgvReset();
     if (lbl) lbl.textContent = label || '';
+    lb.classList.add('is-open');
     lb.style.display = 'flex';
     document.addEventListener('keydown', _lightboxKeyHandler);
+    return true;
+}
+
+window.openImgLightbox = function(url, label) {
+    const img = _imgvImg();
+    if (!img || !_imgvOpen(label)) return;
+    img.style.opacity = '';
+    img.src = url;
 };
 
 window.openImgLightboxBlob = async function(blobId, label) {
-    const lb  = document.getElementById('imgLightbox');
-    const img = document.getElementById('imgLightboxImg');
-    const lbl = document.getElementById('imgLightboxLabel');
-    if (!lb || !img) return;
+    const img = _imgvImg();
+    if (!img || !_imgvOpen(label)) return;
     // Mostra lightbox com spinner enquanto carrega
     img.src = '';
     img.style.opacity = '0.3';
-    if (lbl) lbl.textContent = label || '';
-    lb.style.display = 'flex';
-    document.addEventListener('keydown', _lightboxKeyHandler);
     try {
         const dataUrl = await window._loadImgBlob(blobId);
         img.src = dataUrl;
         img.style.opacity = '';
     } catch (err) {
-        lb.style.display = 'none';
+        window.closeImgLightbox();
         if (typeof showToast === 'function') showToast('Erro ao carregar imagem: ' + err.message, 'error');
     }
 };
 
 window.closeImgLightbox = function() {
-    const lb  = document.getElementById('imgLightbox');
-    const img = document.getElementById('imgLightboxImg');
-    if (lb) lb.style.display = 'none';
-    if (img) img.src = '';
+    const lb = _imgvEl(), img = _imgvImg();
+    if (lb) { lb.classList.remove('is-open'); lb.style.display = 'none'; }
+    if (img) { img.src = ''; img.style.opacity = ''; }
+    _imgvReset();
     document.removeEventListener('keydown', _lightboxKeyHandler);
 };
 
 function _lightboxKeyHandler(e) {
-    if (e.key === 'Escape') window.closeImgLightbox();
+    if (e.key === 'Escape') { window.closeImgLightbox(); return; }
+    if (e.key === '+' || e.key === '=') { window.imgvZoom(1); return; }
+    if (e.key === '-' || e.key === '_') { window.imgvZoom(-1); return; }
+    if (e.key === '0') { _imgvReset(); return; }
+    if (e.key.toLowerCase() === 'r') { window.imgvRotate(e.shiftKey ? -90 : 90); }
 }
