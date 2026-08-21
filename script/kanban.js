@@ -610,7 +610,14 @@ function _kbApplyDrop(item, targetStatus) {
             snapshot: _safeSnapshot(item)
         });
 
-        saveAll();
+        // Bloqueia a tela enquanto a mudança de status vai pro banco, pra o card
+        // não parecer "movido" antes da gravação confirmar (e pra ninguém arrastar
+        // outro card em cima de um save em andamento).
+        if (typeof window._saveAllWithLoading === 'function') {
+            window._saveAllWithLoading('Movendo card para "' + targetStatus + '"...');
+        } else {
+            saveAll();
+        }
         renderKanban();
     };
 

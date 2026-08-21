@@ -988,7 +988,12 @@ function resetModal(prefix) {
                 snapshot: _safeSnapshot(item)
             });
 
-            saveAll();
+            // Mesmo feedback do kanban: overlay enquanto o novo status vai pro banco
+            if (typeof window._saveAllWithLoading === 'function') {
+                window._saveAllWithLoading('Movendo card para "' + newStatus + '"...');
+            } else {
+                saveAll();
+            }
             renderViewContent(item.id, tab);
             if (typeof renderCards === 'function') renderCards();
             if (typeof isKanbanActive === 'function' && isKanbanActive(tab) && typeof renderKanban === 'function') renderKanban();
@@ -2628,9 +2633,36 @@ function viewHistoryItem(id, tab, historyIndex) {
 
         // Sincroniza os inputs de autocomplete com os valores atuais dos selects
         if (typeof window.acSyncAll === 'function') window.acSyncAll();
+
+        // Começa a rastrear alterações não salvas deste drawer
+        if (typeof window._armDrawerDirty === 'function') window._armDrawerDirty(id);
     }
 
+    // Drawers que pedem confirmação antes de descartar o que foi digitado.
+    const GUARDED_DRAWER_IDS = ['modalAtividades', 'modalRnc'];
+
+    // Fechamento vindo da UI (X, Cancelar, backdrop, ESC): se o drawer aberto
+    // estiver na lista guardada e tiver alterações, confirma antes de descartar.
+    // Os fluxos de salvar continuam chamando closeFormDrawer() direto.
+    window.closeFormDrawerGuarded = function() {
+        const openId = [...FORM_DRAWER_IDS, 'modalRnc', 'modalOcorrencia']
+            .find(did => { const el = document.getElementById(did); return el && el.classList.contains('open'); });
+
+        // A RNC tem seu próprio fechamento (dropdowns, blobs) — delega pra ele.
+        if (openId === 'modalRnc') {
+            if (typeof window.rncCloseDrawerGuarded === 'function') window.rncCloseDrawerGuarded();
+            else closeFormDrawer();
+            return;
+        }
+        if (openId && GUARDED_DRAWER_IDS.includes(openId) && typeof window._confirmDiscardDrawer === 'function') {
+            window._confirmDiscardDrawer(openId, closeFormDrawer);
+            return;
+        }
+        closeFormDrawer();
+    };
+
     function closeFormDrawer() {
+        if (typeof window._resetDrawerDirty === 'function') window._resetDrawerDirty();
         // Cancelar/fechar um drawer descarta imagens enviadas mas não salvas.
         // Se o item foi salvo, o blob já está referenciado e é preservado.
         if (typeof window._discardSessionImgBlobs === 'function') {

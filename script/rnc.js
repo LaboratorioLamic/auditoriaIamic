@@ -1282,7 +1282,12 @@
         if (!canEdit(r)) { toast('Sem permissão para mover este card.', 'error'); return; }
         r.status = newStatus;
         r.updatedAt = new Date().toISOString();
-        persist();
+        // Overlay de carregamento enquanto o novo status vai pro banco
+        if (typeof window._saveAllWithLoading === 'function') {
+            window._saveAllWithLoading('Movendo card para "' + newStatus + '"...');
+        } else {
+            persist();
+        }
         renderRncKanban();
     }
 
@@ -2229,9 +2234,23 @@
         // Mostra botão Duplicar apenas ao editar (não ao criar novo)
         var dupBtn = document.getElementById('btnDuplicateRnc');
         if (dupBtn) dupBtn.style.display = rncEditingId ? '' : 'none';
+
+        // Começa a rastrear alterações não salvas deste drawer
+        if (typeof window._armDrawerDirty === 'function') window._armDrawerDirty('modalRnc');
     }
 
+    // Fechamento vindo da UI (X, Cancelar, backdrop, ESC): confirma antes de
+    // descartar o que já foi digitado. Salvar/duplicar chamam rncCloseDrawer direto.
+    window.rncCloseDrawerGuarded = function() {
+        if (typeof window._confirmDiscardDrawer === 'function') {
+            window._confirmDiscardDrawer('modalRnc', window.rncCloseDrawer);
+        } else {
+            window.rncCloseDrawer();
+        }
+    };
+
     window.rncCloseDrawer = function() {
+        if (typeof window._resetDrawerDirty === 'function') window._resetDrawerDirty('modalRnc');
         var d = document.getElementById('modalRnc');
         var bk = document.getElementById('formDrawerBackdrop');
         if (d) d.classList.remove('open');

@@ -1436,7 +1436,7 @@
                 <div class="form-drawer-subtitle" id="rncDrawerSubtitle">Preencha os dados abaixo</div>
             </div>
         </div>
-        <button class="history-drawer-close" onclick="rncCloseDrawer()" title="Fechar"><i class="fas fa-times"></i></button>
+        <button class="history-drawer-close" onclick="rncCloseDrawerGuarded()" title="Fechar"><i class="fas fa-times"></i></button>
     </div>
     <div class="drawer-tabs">
         <button class="drawer-tab active" onclick="switchDrawerTab('rnc','info',this)">
@@ -1616,7 +1616,7 @@
     </div>
     <div class="form-drawer-footer">
         <button id="btnDuplicateRnc" class="btn-duplicate" style="display:none;" onclick="rncDuplicate()">Duplicar</button>
-        <button class="btn-cancel" onclick="rncCloseDrawer()">Cancelar</button>
+        <button class="btn-cancel" onclick="rncCloseDrawerGuarded()">Cancelar</button>
         <button class="btn-save" id="btn-save-rnc" onclick="rncSaveForm()"><i class="fas fa-save"></i> Salvar RNC</button>
     </div>
 </div>
@@ -1848,7 +1848,7 @@
 <button class="fab-add" id="addBtn" title="Novo Registro" style="display:none;">
     <i class="fas fa-plus"></i>
 </button>
-<div class="form-drawer-backdrop" id="formDrawerBackdrop" onclick="closeFormDrawer()"></div>
+<div class="form-drawer-backdrop" id="formDrawerBackdrop" onclick="closeFormDrawerGuarded()"></div>
 <div id="toastContainer"></div>
 
 <!-- ═══ DRAWER OCORRÊNCIA ═══ -->
@@ -2539,7 +2539,7 @@
                 <div class="form-drawer-subtitle" id="drawerSubtitleAtividades">Preencha os dados abaixo</div>
             </div>
         </div>
-        <button class="history-drawer-close" onclick="closeFormDrawer()" title="Fechar"><i class="fas fa-times"></i></button>
+        <button class="history-drawer-close" onclick="closeFormDrawerGuarded()" title="Fechar"><i class="fas fa-times"></i></button>
     </div>
     <!-- Drawer tabs -->
     <div class="drawer-tabs">
@@ -2673,7 +2673,7 @@
     </div><!-- /form-drawer-body -->
     <div class="form-drawer-footer">
         <button id="btnDuplicateAtiv" class="btn-duplicate" onclick="duplicateAtividade()">Duplicar</button>
-        <button class="btn-cancel" onclick="closeFormDrawer()">Cancelar</button>
+        <button class="btn-cancel" onclick="closeFormDrawerGuarded()">Cancelar</button>
         <button class="btn-save" id="btn-save-ativ" onclick="saveAtividade()"><i class="fas fa-floppy-disk"></i> Salvar Registro</button>
     </div>
 </div>

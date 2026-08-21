@@ -1589,6 +1589,13 @@ function _checkTriPerm(permVal, item) {
 
         // ESC: fecha qualquer aba/janela aberta
         if (event.key === 'Escape') {
+            // Diálogo de confirmação em cima de tudo: ESC = cancelar (volta a editar)
+            const _confirmDlg = document.getElementById('_confirmDlgOverlay');
+            if (_confirmDlg) {
+                const _cancelBtn = _confirmDlg.querySelector('#_confirmDlgCancel');
+                if (_cancelBtn) _cancelBtn.click(); else _confirmDlg.remove();
+                return;
+            }
             // Modais com display flex/block (IDs conhecidos)
             const modalIds = [
                 'viewModal', 'historyViewModal', 'modalTrashBin',
@@ -1630,11 +1637,13 @@ function _checkTriPerm(permVal, item) {
             }
             if (!closed) {
                 // Form drawers (novo/editar card)
-                const formDrawerIds = ['modalAuditoria', 'modalTreinamentos', 'modalAtividades', 'modalDocumentos', 'modalManutencao'];
+                const formDrawerIds = ['modalAuditoria', 'modalTreinamentos', 'modalAtividades', 'modalDocumentos', 'modalManutencao', 'modalRnc'];
                 for (const id of formDrawerIds) {
                     const el = document.getElementById(id);
                     if (el && el.classList.contains('open')) {
-                        if (typeof closeFormDrawer === 'function') closeFormDrawer();
+                        // Guarded: pede confirmação se houver preenchimento não salvo
+                        if (typeof window.closeFormDrawerGuarded === 'function') window.closeFormDrawerGuarded();
+                        else if (typeof closeFormDrawer === 'function') closeFormDrawer();
                         else el.classList.remove('open');
                         closed = true;
                         break;

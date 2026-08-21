@@ -21,6 +21,31 @@ window.hideGlobalLoading = function() {
     if (overlay) overlay.style.display = 'none';
 };
 
+// Executa saveAll() com o overlay global de carregamento por cima, escondendo-o
+// quando a gravação no Firebase termina. Usado em ações onde a UI já mostra o
+// resultado antes da confirmação do banco (ex.: mover card de status no kanban),
+// pra o usuário não achar que já acabou enquanto o save ainda está no ar.
+// Teto de 15s: rede lenta/offline nunca deixa o overlay preso na tela.
+window._saveAllWithLoading = function(message) {
+    if (typeof saveAll !== 'function') return Promise.resolve();
+    if (typeof window.showGlobalLoading === 'function') window.showGlobalLoading(message || 'Salvando alterações...');
+
+    var finished = false;
+    var maxWait = setTimeout(done, 15000);
+    function done() {
+        if (finished) return;
+        finished = true;
+        clearTimeout(maxWait);
+        if (typeof window.hideGlobalLoading === 'function') window.hideGlobalLoading();
+    }
+
+    var p;
+    try { p = saveAll(); } catch (e) { done(); throw e; }
+    if (p && typeof p.then === 'function') { p.then(done, done); return p; }
+    done();
+    return Promise.resolve();
+};
+
 // ── Lixeira: expiração automática (30 dias) ──────────────────────────────
 // Cards na lixeira (deleted=true) são temporários e apagados permanentemente
 // 30 dias após deletedAt. Helpers abaixo calculam prazo/data e fazem o purge.
@@ -99,6 +124,76 @@ window._validateRequiredFields = function(fields) {
         return false;
     }
     return true;
+};
+
+// ── Guarda de alterações não salvas em drawers de registro ───────────────
+// Marca um drawer como "sujo" assim que o usuário digita/altera qualquer campo
+// dentro dele, para que fechar (X, Cancelar, backdrop, ESC) peça confirmação
+// antes de descartar. Preenchimentos programáticos da abertura (editar card,
+// msSetValue, acSyncAll, renderMarkerChips) NÃO contam: o rastreio só é armado
+// _DRAWER_DIRTY_ARM_MS depois de abrir.
+const _DRAWER_DIRTY_ARM_MS = 450;
+window._drawerDirty = Object.create(null);
+window._drawerDirtyArmedAt = Infinity;
+
+// Chamado ao abrir um drawer: zera o estado e agenda o início do rastreio.
+// Só um drawer fica aberto por vez, então zera o mapa inteiro: evita herdar o
+// "sujo" de um drawer que foi trocado por outro sem passar por closeFormDrawer().
+window._armDrawerDirty = function(drawerId) {
+    window._resetDrawerDirty();
+    window._drawerDirtyArmedAt = Date.now() + _DRAWER_DIRTY_ARM_MS;
+};
+
+// Chamado ao fechar/salvar: o drawer deixa de ter alterações pendentes.
+window._resetDrawerDirty = function(drawerId) {
+    if (drawerId) delete window._drawerDirty[drawerId];
+    else window._drawerDirty = Object.create(null);
+};
+
+window._isDrawerDirty = function(drawerId) { return !!window._drawerDirty[drawerId]; };
+
+window._markDrawerDirty = function(el) {
+    if (Date.now() < window._drawerDirtyArmedAt) return;
+    const drawer = el && el.closest && el.closest('.form-drawer.open');
+    if (drawer && drawer.id) window._drawerDirty[drawer.id] = true;
+};
+
+// Digitação em input/textarea/select dentro de um drawer aberto.
+['input', 'change'].forEach(function(evt) {
+    document.addEventListener(evt, function(e) { window._markDrawerDirty(e.target); }, true);
+});
+
+// Interações que alteram dados sem disparar input/change (chips, multi-select,
+// checklist e anexos). Lista explícita para não marcar sujo em cliques neutros
+// como trocar de aba do drawer ou apenas abrir um dropdown.
+const _DRAWER_DIRTY_CLICK_SEL = [
+    '.ms-option',            // escolher responsável/revisor no multi-select
+    '.ms-tags button',       // remover um responsável/revisor já escolhido
+    '.rnc-class-chip',       // classificação da RNC (crítica/maior/menor)
+    '.rnc-ac-option',        // marcador e autocompletes da RNC
+    '.checklist-add-btn',    // adicionar item de checklist
+    '.checklist-editor button',
+    '[data-dirty-on-click]'
+].join(',');
+document.addEventListener('click', function(e) {
+    const hit = e.target && e.target.closest && e.target.closest(_DRAWER_DIRTY_CLICK_SEL);
+    if (hit) window._markDrawerDirty(hit);
+}, true);
+
+// Diálogo padrão de descarte. onDiscard só roda se o usuário confirmar.
+// Se o drawer não estiver sujo, fecha direto (sem perguntar nada).
+window._confirmDiscardDrawer = function(drawerId, onDiscard) {
+    if (!window._isDrawerDirty(drawerId)) { onDiscard(); return; }
+    window._showConfirmDialog({
+        title: 'Descartar alterações?',
+        message: 'Você começou a preencher este registro. Se sair agora, <strong>tudo o que foi digitado será perdido</strong>.',
+        confirmLabel: 'Descartar',
+        confirmClass: 'confirm-dlg-btn--danger',
+        cancelLabel: 'Continuar editando',
+        icon: 'fa-triangle-exclamation',
+        iconClass: 'confirm-dlg-icon--warn',
+        onConfirm: function() { window._resetDrawerDirty(drawerId); onDiscard(); }
+    });
 };
 
 // Toast notifications
