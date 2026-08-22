@@ -2125,8 +2125,21 @@ window.openPublicacaoModal = function(editIndex) {
     const clItems = document.getElementById('pubChecklistItems');
     if (clWrap && clItems) {
         if (isEditing && existingPub && existingPub.checklistSnapshot && existingPub.checklistSnapshot.length > 0) {
-            // Edição: restaura snapshot da publicação específica
-            window._pubChecklistState = existingPub.checklistSnapshot.map(c => ({ ...c }));
+            // Edição: restaura snapshot da publicação específica.
+            // Rehidrata a configuração atual do item (ncEnabled / requiredForPub / geralIndex),
+            // pois snapshots antigos podem não tê-la gravado — sem isso os botões de
+            // conformidade somem ao reeditar a publicação.
+            const _defKey = c => c.id || ('t:' + (c.texto || '').trim());
+            const _defMap = new Map((pubCL || []).map(c => [_defKey(c), c]));
+            window._pubChecklistState = existingPub.checklistSnapshot.map(c => {
+                const def = _defMap.get(_defKey(c));
+                return {
+                    ...c,
+                    ncEnabled: def ? !!def.ncEnabled : !!c.ncEnabled,
+                    requiredForPub: def ? !!def.requiredForPub : !!c.requiredForPub,
+                    geralIndex: c.geralIndex != null ? c.geralIndex : (def && def.geralIndex != null ? def.geralIndex : null)
+                };
+            });
             window._pubChecklistGeralItems = item.checklist || [];
             clItems.innerHTML = _renderPubChecklistItems();
             clWrap.style.display = '';
@@ -2264,7 +2277,7 @@ window.confirmarPublicacao = function() {
             checked: c.checked,
             requiredForPub: !!c.requiredForPub,
             geralIndex: c.geralIndex != null ? c.geralIndex : null,
-            ...(c.ncEnabled && c.conformidade ? { ncEnabled: true, conformidade: c.conformidade } : {}),
+            ...(c.ncEnabled ? { ncEnabled: true, conformidade: c.conformidade || null } : {}),
             ...(c.comentario && c.comentario.trim() ? { comentario: c.comentario.trim() } : {})
         }));
     } else if (isEditing && item.publicacoes[editIndex]?.checklistSnapshot) {
