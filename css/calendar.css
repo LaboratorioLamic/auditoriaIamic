@@ -128,7 +128,14 @@
     transition: background 0.1s;
 }
 .cal-day-cell:hover { background: var(--surface-muted); }
-.cal-day-cell.cal-day-other-month { background: var(--surface-muted); opacity: 0.5; }
+/* Dias do mês anterior/posterior: visíveis e interativos, porém esmaecidos */
+.cal-day-cell.cal-day-other-month { background: var(--surface-muted); }
+.cal-day-cell.cal-day-other-month .cal-day-num { opacity: 0.45; }
+.cal-day-cell.cal-day-other-month .cal-event-chip,
+.cal-day-cell.cal-day-other-month .cal-more-btn { opacity: 0.55; }
+.cal-day-cell.cal-day-other-month:hover .cal-event-chip,
+.cal-day-cell.cal-day-other-month:hover .cal-more-btn,
+.cal-day-cell.cal-day-other-month.cal-drag-over .cal-event-chip { opacity: 0.9; }
 .cal-day-cell.cal-day-today { background: rgba(37,99,235,0.04); }
 .cal-day-cell.cal-day-today .cal-day-num {
     background: var(--primary);
@@ -482,3 +489,41 @@
     .cal-nav-title { font-size: 14px; min-width: 120px; }
     .cal-ctrl-area { gap: 6px; }
 }
+
+
+/* ── Overlay de carregamento ao mover card ───────────────────────────────── */
+.cal-move-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(1px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease;
+}
+.cal-move-loading.is-visible { opacity: 1; visibility: visible; }
+.cal-move-loading-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    background: var(--surface, #fff);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.15);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted, #555);
+}
+.cal-move-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(37,99,235,0.25);
+    border-top-color: var(--primary, #2563eb);
+    border-radius: 50%;
+    animation: calMoveSpin 0.7s linear infinite;
+}
+@keyframes calMoveSpin { to { transform: rotate(360deg); } }

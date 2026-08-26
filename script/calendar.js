@@ -473,8 +473,19 @@ function _calGoToday() {
 
 // ── Renderização Mensal ──────────────────────────────────────
 function _calRenderMonthly(container) {
-    const rangeStart = new Date(calViewYear, calViewMonth, 1);
-    const rangeEnd   = new Date(calViewYear, calViewMonth + 1, 0);
+    const monthStart = new Date(calViewYear, calViewMonth, 1);
+    const monthEnd   = new Date(calViewYear, calViewMonth + 1, 0);
+
+    let startDow = monthStart.getDay();
+    startDow = (startDow === 0) ? 6 : startDow - 1;
+
+    const daysInMonth = monthEnd.getDate();
+    const totalCells  = startDow + daysInMonth;
+    const trailing    = (totalCells % 7 === 0) ? 0 : 7 - (totalCells % 7);
+
+    // Grade completa: inclui dias do mês anterior/posterior que preenchem as semanas
+    const rangeStart = new Date(calViewYear, calViewMonth, 1 - startDow);
+    const rangeEnd   = new Date(calViewYear, calViewMonth, daysInMonth + trailing);
 
     const map = _calBuildDayMap(rangeStart, rangeEnd);
     const today = _calToday();
@@ -491,24 +502,18 @@ function _calRenderMonthly(container) {
         grid.appendChild(th);
     });
 
-    let startDow = rangeStart.getDay();
-    startDow = (startDow === 0) ? 6 : startDow - 1;
-
-    for (let i = 0; i < startDow; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'cal-day-cell cal-day-other-month';
-        grid.appendChild(cell);
-    }
-
-    const daysInMonth = rangeEnd.getDate();
-    for (let d = 1; d <= daysInMonth; d++) {
-        const dateObj = new Date(calViewYear, calViewMonth, d);
+    const totalGridCells = startDow + daysInMonth + trailing;
+    for (let i = 0; i < totalGridCells; i++) {
+        const dateObj = new Date(calViewYear, calViewMonth, 1 - startDow + i);
         const dateStr = _calDateStr(dateObj);
         const isToday = (dateObj.getTime() === today.getTime());
+        const isOther = (dateObj.getMonth() !== calViewMonth || dateObj.getFullYear() !== calViewYear);
         const entries = _calSortEntriesByStatus(map[dateStr] || []);
 
         const cell = document.createElement('div');
-        cell.className = 'cal-day-cell' + (isToday ? ' cal-day-today' : '');
+        cell.className = 'cal-day-cell'
+            + (isToday ? ' cal-day-today' : '')
+            + (isOther ? ' cal-day-other-month' : '');
         cell.dataset.date = dateStr;
 
         // Drag-over para tarefas
@@ -524,7 +529,7 @@ function _calRenderMonthly(container) {
 
         const dayNum = document.createElement('span');
         dayNum.className = 'cal-day-num';
-        dayNum.textContent = d;
+        dayNum.textContent = dateObj.getDate();
         cell.appendChild(dayNum);
 
         if (entries.length > 0) {
@@ -550,16 +555,6 @@ function _calRenderMonthly(container) {
         }
 
         grid.appendChild(cell);
-    }
-
-    const totalCells = startDow + daysInMonth;
-    const remainder = totalCells % 7;
-    if (remainder !== 0) {
-        for (let i = 0; i < 7 - remainder; i++) {
-            const cell = document.createElement('div');
-            cell.className = 'cal-day-cell cal-day-other-month';
-            grid.appendChild(cell);
-        }
     }
 
     container.innerHTML = '';
@@ -813,6 +808,55 @@ function _calOpenPubEntry(item, pub, pubIdx) {
     }
 }
 
+// ── Overlay de carregamento (mover card) ─────────────────────
+function _calShowMoveLoading() {
+    const board = document.getElementById('calendarBoard');
+    if (!board) return;
+    if (getComputedStyle(board).position === 'static') board.style.position = 'relative';
+    let ov = document.getElementById('calMoveLoading');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'calMoveLoading';
+        ov.className = 'cal-move-loading';
+        ov.innerHTML = '<div class="cal-move-loading-box"><span class="cal-move-spinner"></span><span>Salvando...</span></div>';
+        board.appendChild(ov);
+    }
+    ov.classList.add('is-visible');
+}
+
+function _calHideMoveLoading() {
+    const ov = document.getElementById('calMoveLoading');
+    if (ov) ov.classList.remove('is-visible');
+}
+
+// Aplica a nova data e aguarda a gravação no banco antes de re-renderizar
+function _calApplyMove(item, cfg, targetDateStr) {
+    const prev = item[cfg.dateField];
+    item[cfg.dateField] = targetDateStr;
+
+    _calShowMoveLoading();
+    _calRenderGrade();
+    if (typeof renderCards === 'function') renderCards();
+
+    let p;
+    try {
+        p = (typeof saveAll === 'function') ? saveAll() : null;
+    } catch (err) {
+        p = Promise.reject(err);
+    }
+    if (!p || typeof p.then !== 'function') p = Promise.resolve();
+
+    return p.catch(err => {
+        console.error('[calendar] falha ao mover card:', err);
+        item[cfg.dateField] = prev;
+        if (typeof showToast === 'function') showToast('Erro ao salvar a nova data', 'error');
+    }).finally(() => {
+        _calHideMoveLoading();
+        _calRenderGrade();
+        if (typeof renderCards === 'function') renderCards();
+    });
+}
+
 // ── Drag & Drop ──────────────────────────────────────────────
 function _calHandleDrop(e, targetDateStr) {
     let data;
@@ -831,11 +875,8 @@ function _calHandleDrop(e, targetDateStr) {
     if (typeof userCanEditCards === 'function' && !userCanEditCards(item)) return;
 
     // Atualiza a data do campo correto
-    item[cfg.dateField] = targetDateStr;
-
-    if (typeof saveAll === 'function') saveAll();
-    _calRenderGrade();
-    if (typeof renderCards === 'function') renderCards();
+    if (item[cfg.dateField] === targetDateStr) return;
+    _calApplyMove(item, cfg, targetDateStr);
 }
 
 // ── Modal do dia ─────────────────────────────────────────────
@@ -1280,10 +1321,7 @@ function _calTouchDrop() {
 
     if (item[cfg.dateField] === targetDateStr) return;
 
-    item[cfg.dateField] = targetDateStr;
-    if (typeof saveAll === 'function') saveAll();
-    _calRenderGrade();
-    if (typeof renderCards === 'function') renderCards();
+    _calApplyMove(item, cfg, targetDateStr);
 }
 
 function _calCancelTouchDrag() {
