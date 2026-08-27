@@ -2116,7 +2116,7 @@
 
         var formData = {
             titulo: getVal('rncFTitulo'),
-            setor: getVal('rncFSetor'),
+            setor: (typeof smsGetValue === 'function') ? JSON.stringify(smsGetValue('rnc')) : getVal('rncFSetor'),
             origem: getVal('rncFOrigem'),
             detalhamento: getVal('rncFDetalhamento'),
             descricao: getVal('rncFDescricao'),
@@ -2143,7 +2143,7 @@
             document.getElementById('rncDrawerSubtitle').textContent = 'Preencha os dados abaixo';
 
             setVal('rncFTitulo', formData.titulo);
-            setVal('rncFSetor', formData.setor);
+            if (typeof smsSetValue === 'function') smsSetValue('rnc', formData.setor || '');
             setVal('rncFOrigem', formData.origem);
             setVal('rncFDetalhamento', formData.detalhamento);
             setVal('rncFDescricao', formData.descricao);
@@ -2175,7 +2175,7 @@
     function clearRncForm() {
         var todayVal = typeof today === 'function' ? today() : new Date().toISOString().split('T')[0];
         setVal('rncFTitulo', '');
-        setVal('rncFSetor', '');
+        if (typeof smsReset === 'function') smsReset('rnc');
         setVal('rncFOrigem', '');
         setVal('rncFDetalhamento', '');
         setVal('rncFDescricao', '');
@@ -2200,7 +2200,7 @@
 
     function fillRncForm(r) {
         setVal('rncFTitulo', r.titulo);
-        setVal('rncFSetor', r.setor);
+        if (typeof smsSetValue === 'function') smsSetValue('rnc', r.setor || '');
         setVal('rncFOrigem', r.origem);
         setVal('rncFDetalhamento', r.detalhamento);
         setVal('rncFDescricao', r.descricao);
@@ -2268,7 +2268,8 @@
 
     window.rncSaveForm = function() {
         var titulo       = getVal('rncFTitulo').trim();
-        var setor        = getVal('rncFSetor').trim();
+        var setorArrRnc  = (typeof smsGetValue === 'function') ? smsGetValue('rnc') : [];
+        var setor        = JSON.stringify(setorArrRnc);
         var origem       = getVal('rncFOrigem').trim();
         var detalhamento = getVal('rncFDetalhamento').trim();
         var descricao    = getVal('rncFDescricao').trim();
@@ -2286,7 +2287,7 @@
 
         // Validações
         if (!titulo)       { toast('Informe o título.', 'error');                 focusEl('rncFTitulo');       return; }
-        if (!setor)        { toast('Informe o setor.', 'error');                  focusEl('rncFSetor');        return; }
+        if (!setorArrRnc.length) { toast('Informe o setor.', 'error'); document.getElementById('sms-rnc')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
         if (!classificacao){ toast('Selecione a classificação.', 'error');                                     return; }
         if (!origem)       { toast('Informe a origem.', 'error');                 focusEl('rncFOrigem');       return; }
         if (!detalhamento) { toast('Informe o detalhamento.', 'error');           focusEl('rncFDetalhamento'); return; }
@@ -2471,30 +2472,13 @@
 
     // ── Autocomplete dos campos ──
     function rncCloseAllDropdowns() {
-        ['rncSetorDropdown','rncOrigemDropdown','rncDetalhamentoDropdown','rncStatusDropdown',
+        ['rncOrigemDropdown','rncDetalhamentoDropdown','rncStatusDropdown',
          'rncMarkerDropdown'].forEach(function(id){
             var el = document.getElementById(id); if (el) el.classList.remove('open');
         });
     }
     window.rncCloseAllDropdowns = rncCloseAllDropdowns;
 
-    window.rncSetorInput = function() {
-        var input = document.getElementById('rncFSetor');
-        var dd = document.getElementById('rncSetorDropdown');
-        if (!input || !dd) return;
-        var val = (input.value || '').toLowerCase();
-        var setores = getSetores();
-        var filtered = val ? setores.filter(function(x){ return String(x).toLowerCase().indexOf(val) !== -1; }) : setores;
-        if (!filtered.length) { dd.classList.remove('open'); return; }
-        dd.innerHTML = filtered.map(function(x){
-            return '<button class="rnc-ac-option" onclick="rncSelectSetor(\'' + esc(x) + '\')">' + esc(x) + '</button>';
-        }).join('');
-        dd.classList.add('open');
-    };
-    window.rncSelectSetor = function(v) {
-        setVal('rncFSetor', v);
-        var dd = document.getElementById('rncSetorDropdown'); if (dd) dd.classList.remove('open');
-    };
     function buildRncAcFull(inputId, dropId, items, selectFn) {
         var input = document.getElementById(inputId), dd = document.getElementById(dropId);
         if (!input || !dd) return;

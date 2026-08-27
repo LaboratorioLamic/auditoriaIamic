@@ -3,7 +3,6 @@
     function forceFirebaseSync() {
         try {
             audits = [];
-            trainings = [];
             activities = [];
             maintenances = [];
             documents = [];
@@ -39,7 +38,6 @@
 
             {
                 audits = _toArray(record.audits);
-                trainings = _toArray(record.trainings);
                 activities = _toArray(record.activities);
                 maintenances = _toArray(record.maintenances);
                 documents = _toArray(record.documents);
@@ -57,7 +55,7 @@
                 kanbanOrder = record.kanbanOrder || {};
             }
 
-            [audits, trainings, activities, maintenances, documents].forEach(arr => {
+            [audits, activities, maintenances, documents].forEach(arr => {
                 arr.forEach(item => item.historico = item.historico || []);
             });
 
@@ -76,7 +74,6 @@
                 let _purgedTotal = 0;
                 const _taskCols = [
                     { arr: audits,       tab: 'auditoria',    tipo: 'Rotina' },
-                    { arr: trainings,    tab: 'treinamentos', tipo: 'Treinamento' },
                     { arr: activities,   tab: 'atividades',   tipo: 'Atividade' },
                     { arr: maintenances, tab: 'manutencao',   tipo: 'Manutenção' },
                     { arr: documents,    tab: 'documentos',   tipo: 'Documento' }
@@ -145,7 +142,7 @@
     }
 
     function isEditingCardOpen() {
-        const drawerIds = ['modalAuditoria', 'modalTreinamentos', 'modalAtividades', 'modalManutencao', 'modalDocumentos', 'modalOcorrencia', 'modalRnc'];
+        const drawerIds = ['modalAuditoria', 'modalAtividades', 'modalManutencao', 'modalDocumentos', 'modalOcorrencia', 'modalRnc'];
         if (drawerIds.some(id => {
             const el = document.getElementById(id);
             return el && el.classList.contains('open');
@@ -164,7 +161,7 @@
     function _saveLocalCache() {
         try {
             localStorage.setItem(_LOCAL_CACHE_KEY, JSON.stringify({
-                audits, trainings, activities, maintenances, documents,
+                audits, activities, maintenances, documents,
                 ocorrencias, rncItems, masterLists, kanbanOrder, ts: Date.now()
             }));
         } catch (_) { /* quota cheia ou indisponível — cache é opcional */ }
@@ -173,7 +170,7 @@
     function _paintFromLocalCache() {
         try {
             // Só pinta se ainda não há dados em memória (evita sobrepor sessão viva).
-            const empty = !audits.length && !trainings.length && !activities.length &&
+            const empty = !audits.length && !activities.length &&
                           !maintenances.length && !documents.length && !ocorrencias.length && !rncItems.length;
             if (!empty) return false;
             const raw = localStorage.getItem(_LOCAL_CACHE_KEY);
@@ -181,7 +178,6 @@
             const c = JSON.parse(raw);
             if (!c) return false;
             audits       = _toArray(c.audits);
-            trainings    = _toArray(c.trainings);
             activities   = _toArray(c.activities);
             maintenances = _toArray(c.maintenances);
             documents    = _toArray(c.documents);
@@ -201,7 +197,7 @@
     // === LISTENER ESCOPADO POR COLEÇÃO (#1) ===
     // Caminhos de dados lidos/ouvidos. NUNCA inclui imgBlobs (imagens Base64) nem
     // passwords — assim o Firebase jamais reenvia esses nós pesados nas sincronizações.
-    var _DATA_LISTEN_PATHS = ['audits','trainings','activities','maintenances','documents','ocorrencias','rncItems','masterLists','kanbanOrder'];
+    var _DATA_LISTEN_PATHS = ['audits','activities','maintenances','documents','ocorrencias','rncItems','masterLists','kanbanOrder'];
 
     var dataListeners = [];          // um listener por coleção (substitui o único em "/")
     var _remoteCache = {};           // último valor remoto de cada caminho ouvido
@@ -246,7 +242,6 @@
         try {
             const record = {
                 audits:       _remoteCache.audits,
-                trainings:    _remoteCache.trainings,
                 activities:   _remoteCache.activities,
                 maintenances: _remoteCache.maintenances,
                 documents:    _remoteCache.documents,
@@ -272,7 +267,6 @@
                 // pendente: evita sobrescrever alterações locais ainda não salvas.
                 const dataChanged = !editingCard && _pendingSaves === 0 && (
                     JSON.stringify(record.audits) !== JSON.stringify(audits) ||
-                    JSON.stringify(record.trainings) !== JSON.stringify(trainings) ||
                     JSON.stringify(record.activities) !== JSON.stringify(activities) ||
                     JSON.stringify(record.maintenances) !== JSON.stringify(maintenances) ||
                     JSON.stringify(record.documents) !== JSON.stringify(documents) ||
@@ -295,7 +289,6 @@
 
                 if (dataChanged) {
                     audits = record.audits || [];
-                    trainings = record.trainings || [];
                     activities = record.activities || [];
                     maintenances = record.maintenances || [];
                     documents = record.documents || [];
@@ -398,7 +391,6 @@
     function captureSyncBaseline() {
         _syncBaseline = {
             audits: _deepClone(audits),
-            trainings: _deepClone(trainings),
             activities: _deepClone(activities),
             maintenances: _deepClone(maintenances),
             documents: _deepClone(documents),
@@ -618,7 +610,7 @@
             cleanMalformedItems();
 
             const maxHistoryItems = 150;
-            [audits, trainings, activities, maintenances, documents].forEach(arr => {
+            [audits, activities, maintenances, documents].forEach(arr => {
                 arr.forEach(item => {
                     if (item.historico && item.historico.length > maxHistoryItems) {
                         item.historico = item.historico.slice(-maxHistoryItems);
@@ -629,13 +621,12 @@
             // Baseline ausente: trata como vazio para que todo item local vire
             // "novo" (upsert) sem excluir nada — evita apagar dados com estado parcial.
             const base = _syncBaseline || {
-                audits: [], trainings: [], activities: [], maintenances: [], documents: [], ocorrencias: [], rncItems: [], masterLists: {}
+                audits: [], activities: [], maintenances: [], documents: [], ocorrencias: [], rncItems: [], masterLists: {}
             };
 
             // Snapshots locais estáveis capturados antes da leitura remota.
             const local = {
                 audits: _deepClone(audits),
-                trainings: _deepClone(trainings),
                 activities: _deepClone(activities),
                 maintenances: _deepClone(maintenances),
                 documents: _deepClone(documents),
@@ -650,13 +641,12 @@
             // do sistema (roda a cada gravação), então excluir as imagens daqui é o maior
             // corte de banda. A escrita usa runTransaction por coleção (abaixo) — nunca
             // runTransaction(/) na raiz, que falha com internal_error em bancos grandes.
-            const _mergePaths = ['audits','trainings','activities','maintenances','documents','ocorrencias','rncItems','masterLists','kanbanOrder'];
+            const _mergePaths = ['audits','activities','maintenances','documents','ocorrencias','rncItems','masterLists','kanbanOrder'];
             const _remoteSnaps = await Promise.all(_mergePaths.map(p => dbGet(dbRef(database, p))));
             const remoteState = {};
             _mergePaths.forEach((p, i) => { remoteState[p] = _remoteSnaps[i].exists() ? _remoteSnaps[i].val() : undefined; });
 
             const mergedAudits       = _mergeCollection(local.audits,       remoteState.audits,       base.audits);
-            const mergedTrainings    = _mergeCollection(local.trainings,    remoteState.trainings,    base.trainings);
             const mergedActivities   = _mergeCollection(local.activities,   remoteState.activities,   base.activities);
             const mergedMaintenances = _mergeCollection(local.maintenances, remoteState.maintenances, base.maintenances);
             const mergedDocuments    = _mergeCollection(local.documents,    remoteState.documents,    base.documents);
@@ -672,7 +662,6 @@
             const _changed = (a, b) => JSON.stringify(a) !== JSON.stringify(b);
             const _dirty = {
                 audits:       _changed(mergedAudits,       _toArray(remoteState.audits)),
-                trainings:    _changed(mergedTrainings,    _toArray(remoteState.trainings)),
                 activities:   _changed(mergedActivities,   _toArray(remoteState.activities)),
                 maintenances: _changed(mergedMaintenances, _toArray(remoteState.maintenances)),
                 documents:    _changed(mergedDocuments,    _toArray(remoteState.documents)),
@@ -692,7 +681,6 @@
                 _mergeCollection(localArr, _toArray(currentData), baseArr);
             const _txSpecs = [];
             if (_dirty.audits)       _txSpecs.push(['audits',       _txArrayMerge(local.audits,       base.audits)]);
-            if (_dirty.trainings)    _txSpecs.push(['trainings',    _txArrayMerge(local.trainings,    base.trainings)]);
             if (_dirty.activities)   _txSpecs.push(['activities',   _txArrayMerge(local.activities,   base.activities)]);
             if (_dirty.maintenances) _txSpecs.push(['maintenances', _txArrayMerge(local.maintenances, base.maintenances)]);
             if (_dirty.documents)    _txSpecs.push(['documents',    _txArrayMerge(local.documents,    base.documents)]);
@@ -735,7 +723,6 @@
                 return mergedFallback; // sem alteração local: comportamento igual ao anterior
             };
             const _newAudits       = _adopt('audits',       mergedAudits);
-            const _newTrainings    = _adopt('trainings',    mergedTrainings);
             const _newActivities   = _adopt('activities',   mergedActivities);
             const _newMaintenances = _adopt('maintenances', mergedMaintenances);
             const _newDocuments    = _adopt('documents',    mergedDocuments);
@@ -745,7 +732,6 @@
             // O merge incorporou novidades de outras sessões? (para re-render)
             const pulledRemoteChanges =
                 (_newAudits       !== undefined && JSON.stringify(_newAudits)       !== JSON.stringify(audits)) ||
-                (_newTrainings    !== undefined && JSON.stringify(_newTrainings)    !== JSON.stringify(trainings)) ||
                 (_newActivities   !== undefined && JSON.stringify(_newActivities)   !== JSON.stringify(activities)) ||
                 (_newMaintenances !== undefined && JSON.stringify(_newMaintenances) !== JSON.stringify(maintenances)) ||
                 (_newDocuments    !== undefined && JSON.stringify(_newDocuments)    !== JSON.stringify(documents)) ||
@@ -753,7 +739,6 @@
                 (_newRncItems     !== undefined && JSON.stringify(_newRncItems)     !== JSON.stringify(rncItems));
 
             if (_newAudits       !== undefined) audits       = _newAudits;
-            if (_newTrainings    !== undefined) trainings    = _newTrainings;
             if (_newActivities   !== undefined) activities   = _newActivities;
             if (_newMaintenances !== undefined) maintenances = _newMaintenances;
             if (_newDocuments    !== undefined) documents    = _newDocuments;
@@ -773,10 +758,9 @@
             }
 
             const _newBaseline = _syncBaseline ? { ..._syncBaseline } : {
-                audits: [], trainings: [], activities: [], maintenances: [], documents: [], ocorrencias: [], rncItems: [], masterLists: {}
+                audits: [], activities: [], maintenances: [], documents: [], ocorrencias: [], rncItems: [], masterLists: {}
             };
             if (_newAudits       !== undefined) _newBaseline.audits       = _deepClone(_newAudits);
-            if (_newTrainings    !== undefined) _newBaseline.trainings    = _deepClone(_newTrainings);
             if (_newActivities   !== undefined) _newBaseline.activities   = _deepClone(_newActivities);
             if (_newMaintenances !== undefined) _newBaseline.maintenances = _deepClone(_newMaintenances);
             if (_newDocuments    !== undefined) _newBaseline.documents    = _deepClone(_newDocuments);
@@ -846,7 +830,6 @@
         else if (category === 'ativ') list = masterLists.ativStatus;
         else if (category === 'mant') list = masterLists.mantStatus;
         else if (category === 'doc') list = masterLists.docStatus;
-        else if (category === 'tren') list = masterLists.trainStatus;
         const statusObj = (list || []).find(s => s.name === statusname);
         if (statusObj) {
             if (statusObj.isConcluido) return 'finalizado';
@@ -880,7 +863,6 @@
         else if (category === 'ativ') list = masterLists.ativStatus;
         else if (category === 'mant') list = masterLists.mantStatus;
         else if (category === 'doc') list = masterLists.docStatus;
-        else if (category === 'train') list = masterLists.trainStatus;
 
         const statusObj = (list || []).find(s => s.name === statusname);
         return statusObj ? statusObj.color : 'default';

@@ -9,7 +9,6 @@
 
     // --- DADOS E ESTADO (Iniciam vazios) ---
     var audits = [];
-    var trainings = [];
     var activities = [];
     var maintenances = [];
     var documents = [];
@@ -26,14 +25,12 @@
         // Listas Principais (Limpas)
         setores: [],
         auditCategorias: [],
-        trainCategorias: [],
         ativCategorias: [],
         mantCategorias: [],
         docCategorias: [],
 
         // Listas de Subcategorias/Itens (Limpas)
         auditSubcats: {},
-        trainSubcats: {},
         ativSubcats: {},
         mantItens: {},
         docSubcats: {},
@@ -41,14 +38,12 @@
         // Listas de Status: ZERADAS (Serão preenchidas via interface/API)
         // Se estiverem vazias, o usuário deve criá-las via modal.
         auditStatus: [],
-        trainStatus: [],
         ativStatus: [],
         mantStatus: [],
         docStatus: [],
 
         // Listas de Marcadores (objetos { name, color })
         auditMarcadores: [],
-        trainMarcadores: [],
         ativMarcadores: [],
         mantMarcadores: [],
         docMarcadores: [],
@@ -81,7 +76,6 @@
 
     var currentTab = 'dashboard';
     var editingAuditId = null;
-    var editingTrainId = null;
     var editingAtivId = null;
     var editingMantId = null;
     var editingDocId = null;

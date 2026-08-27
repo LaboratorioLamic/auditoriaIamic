@@ -722,7 +722,6 @@ window.reabrirCompetenciaPub = function(itemId) {
 
 function _findItemForCompetencia(itemId) {
     const allItems = [...(typeof audits !== 'undefined' ? audits : []),
-                      ...(typeof trainings !== 'undefined' ? trainings : []),
                       ...(typeof activities !== 'undefined' ? activities : []),
                       ...(typeof documents !== 'undefined' ? documents : []),
                       ...(typeof maintenances !== 'undefined' ? maintenances : [])];
@@ -999,7 +998,6 @@ window.saveViewChecklistComment = function(id, tab, index, value) {
     let found;
     if (finalTab === 'auditoria') found = audits.find(i => i.id === id);
     else if (finalTab === 'atividades') found = activities.find(i => i.id === id);
-    else if (finalTab === 'treinamentos') found = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') found = documents.find(i => i.id === id);
     else if (finalTab === 'rnc') found = (window.rncItems || []).find(i => i.id === id);
     if (!found || !found.checklist || !found.checklist[index]) return;
@@ -1055,7 +1053,6 @@ window._checklistPendingSnapshot = null;
 function _clFindItemByTab(id, tab) {
     if (tab === 'auditoria') return audits.find(i => i.id === id);
     if (tab === 'atividades') return activities.find(i => i.id === id);
-    if (tab === 'treinamentos') return trainings.find(i => i.id === id);
     if (tab === 'documentos') return documents.find(i => i.id === id);
     if (tab === 'rnc') return (window.rncItems || []).find(i => i.id === id);
     return null;
@@ -1195,7 +1192,6 @@ window.selectAllViewChecklist = function(id, tab) {
     let found;
     if (finalTab === 'auditoria') found = audits.find(i => i.id === id);
     else if (finalTab === 'atividades') found = activities.find(i => i.id === id);
-    else if (finalTab === 'treinamentos') found = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') found = documents.find(i => i.id === id);
     else if (finalTab === 'rnc') found = (window.rncItems || []).find(i => i.id === id);
     if (!found || !found.checklist) return;
@@ -1239,7 +1235,6 @@ window.toggleViewChecklistItem = function(id, tab, index) {
     let found;
     if (finalTab === 'auditoria') found = audits.find(i => i.id === id);
     else if (finalTab === 'atividades') found = activities.find(i => i.id === id);
-    else if (finalTab === 'treinamentos') found = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') found = documents.find(i => i.id === id);
     else if (finalTab === 'rnc') found = (window.rncItems || []).find(i => i.id === id);
     if (!found) return;
@@ -1307,7 +1302,6 @@ window._clViewPubProgress = function(btn, itemId, tab, geralIndex) {
     let found;
     if (finalTab === 'auditoria') found = audits.find(i => i.id === itemId);
     else if (finalTab === 'atividades') found = activities.find(i => i.id === itemId);
-    else if (finalTab === 'treinamentos') found = trainings.find(i => i.id === itemId);
     else if (finalTab === 'documentos') found = documents.find(i => i.id === itemId);
     else if (finalTab === 'rnc') found = (window.rncItems || []).find(i => i.id === itemId);
     if (!found) return;
@@ -1980,7 +1974,6 @@ window.openPublicacaoModal = function(editIndex) {
     let item;
     if (finalTab === 'auditoria') item = audits.find(i => i.id === id);
     else if (finalTab === 'atividades') item = activities.find(i => i.id === id);
-    else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
     else if (finalTab === 'rnc') item = (window.rncItems || []).find(i => i.id === id);
     if (!item) return;
@@ -2007,7 +2000,7 @@ window.openPublicacaoModal = function(editIndex) {
     // Registro de conformidade (N/C) — exclusivo para rotinas
     window._pubNcUiEnabled = (finalTab === 'auditoria');
     window._pubRncSelected = existingPub ? [...(existingPub.rncIds || [])] : [];
-    window._pubCurrentItemSetor = item.setor || '';
+    window._pubCurrentItemSetor = (typeof setorText === 'function' ? setorText(item.setor) : item.setor) || '';
 
     // Carrega anexos existentes ou limpa
     if (typeof restoreAnexosUpload === 'function') {
@@ -2033,44 +2026,7 @@ window.openPublicacaoModal = function(editIndex) {
     const descVal = existingPub ? (existingPub.descricao || '') : '';
 
     let fieldsHtml = '';
-    if (finalTab === 'treinamentos') {
-        const chParts = existingPub && existingPub.cargaHoraria ? existingPub.cargaHoraria.split(':') : ['00','00'];
-        fieldsHtml = `
-        <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;">
-            <div class="field-group">
-                <label>Data <span class="req-star">*</span></label>
-                <input type="date" id="pubData" value="${dateVal}">
-            </div>
-            <div class="field-group">
-                <label>Hora <span class="req-star">*</span></label>
-                <input type="time" id="pubHora" value="${timeVal}">
-            </div>
-            <div class="field-group">
-                <label>Instrutor</label>
-                <input type="text" id="pubInstrutor" placeholder="Nome do instrutor" value="${existingPub ? (existingPub.instrutor || '') : ''}">
-            </div>
-            <div class="field-group">
-                <label>Carga Horária (HH:MM)</label>
-                <div style="display:flex;gap:6px;align-items:center;">
-                    <input type="number" id="pubCHoras" min="0" max="23" placeholder="00" style="width:60px;text-align:center;" value="${chParts[0] || '00'}">
-                    <span>:</span>
-                    <input type="number" id="pubCMinutos" min="0" max="59" placeholder="00" style="width:60px;text-align:center;" value="${chParts[1] || '00'}">
-                </div>
-            </div>
-            <div class="field-group full-width">
-                <label>Participantes</label>
-                <textarea id="pubParticipantes" rows="2" placeholder="Nomes dos participantes...">${existingPub ? (existingPub.participantes || '') : ''}</textarea>
-            </div>
-            <div class="field-group full-width">
-                <label>Local do Evento</label>
-                <input type="text" id="pubLocal" placeholder="Ex: Sala de Treinamento A" value="${existingPub ? (existingPub.localEvento || '') : ''}">
-            </div>
-            <div class="field-group full-width">
-                <label>Descrição <span class="req-star">*</span></label>
-                <textarea id="pubDescricao" rows="3" placeholder="Descreva o treinamento realizado...">${descVal}</textarea>
-            </div>
-        </div>`;
-    } else if (finalTab === 'documentos') {
+    if (finalTab === 'documentos') {
         fieldsHtml = `
         <div class="form-grid" style="grid-template-columns:2fr 1fr;gap:12px;">
             <div class="field-group">
@@ -2197,7 +2153,6 @@ window.confirmarPublicacao = function() {
     let item;
     if (finalTab === 'auditoria') item = audits.find(i => i.id === id);
     else if (finalTab === 'atividades') item = activities.find(i => i.id === id);
-    else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
     else if (finalTab === 'rnc') item = (window.rncItems || []).find(i => i.id === id);
     if (!item) return;
@@ -2291,15 +2246,7 @@ window.confirmarPublicacao = function() {
     }
     window._pubRncSelected = [];
 
-    if (finalTab === 'treinamentos') {
-        const horas = parseInt(document.getElementById('pubCHoras')?.value) || 0;
-        const minutos = parseInt(document.getElementById('pubCMinutos')?.value) || 0;
-        pub.tipo = 'Treinamento';
-        pub.instrutor = document.getElementById('pubInstrutor')?.value || '';
-        pub.participantes = document.getElementById('pubParticipantes')?.value || '';
-        pub.localEvento = document.getElementById('pubLocal')?.value || '';
-        pub.cargaHoraria = `${String(horas).padStart(2,'0')}:${String(minutos).padStart(2,'0')}`;
-    } else if (finalTab === 'documentos') {
+    if (finalTab === 'documentos') {
         pub.tipo = 'Documento';
         pub.titulo = document.getElementById('pubTitulo')?.value || '';
     } else {
@@ -2431,9 +2378,6 @@ function _updateItemDatesAfterPublicacao(item, tab, newDate) {
         _calcAuditNextDate(item);
     } else if (tab === 'atividades') {
         // Publicação NÃO deve alterar dataInicio da atividade
-    } else if (tab === 'treinamentos') {
-        item.dataPublicacao = newDate;
-        _calcRotinaNextDate(item, item.dataPublicacao, 'dataPrevisao');
     } else if (tab === 'documentos') {
         item.dataCriacao = newDate;
         _calcRotinaNextDate(item, item.dataCriacao, 'dataProximaRevisao');
@@ -2506,7 +2450,7 @@ window.switchPubSubtab = function(tipo, btn) {
     _vpPubPage = 1;
     document.querySelectorAll('.pub-subtab').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
-    const allItems = [...(audits||[]),...(trainings||[]),...(activities||[]),...(documents||[]),...(maintenances||[])];
+    const allItems = [...(audits||[]),...(activities||[]),...(documents||[]),...(maintenances||[])];
     const item = allItems.find(i => i.id === currentViewItemId);
     if (item) renderViewPublicacoes(item);
 };
@@ -2525,13 +2469,13 @@ window._vpSortPublicacoes = function(col) {
         _vpPubSortDir = col === 'data' ? 'desc' : 'asc';
     }
     _vpPubPage = 1;
-    const allItems = [...(audits||[]),...(trainings||[]),...(activities||[]),...(documents||[]),...(maintenances||[])];
+    const allItems = [...(audits||[]),...(activities||[]),...(documents||[]),...(maintenances||[])];
     const item = allItems.find(i => i.id === currentViewItemId);
     if (item) renderViewPublicacoes(item);
 };
 window._vpGoPage = function(page) {
     _vpPubPage = page;
-    const allItems = [...(audits||[]),...(trainings||[]),...(activities||[]),...(documents||[]),...(maintenances||[])];
+    const allItems = [...(audits||[]),...(activities||[]),...(documents||[]),...(maintenances||[])];
     const item = allItems.find(i => i.id === currentViewItemId);
     if (item) renderViewPublicacoes(item);
 };
@@ -2853,7 +2797,6 @@ window.openPubGeralChart = function(groupKey) {
     let item;
     if (finalTab === 'auditoria') item = audits.find(i => i.id === itemId);
     else if (finalTab === 'atividades') item = activities.find(i => i.id === itemId);
-    else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === itemId);
     else if (finalTab === 'documentos') item = documents.find(i => i.id === itemId);
     else if (finalTab === 'rnc') item = (window.rncItems || []).find(i => i.id === itemId);
     if (!item) return;
@@ -3630,7 +3573,7 @@ window.renderViewPublicacoes = function(item) {
         const i = allPubs.indexOf(p);
         const typeClass = {
             'Evidência': 'evidencia', 'Atualização': 'atualizacao',
-            'Comentário': 'comentario', 'Treinamento': 'evidencia', 'Documento': 'documento'
+            'Comentário': 'comentario', 'Documento': 'documento'
         }[p.tipo] || '';
         const dateStr = p.data ? _formatDateBR(p.data) : '–';
         const descPreview = (p.descricao || '').slice(0, 60) + ((p.descricao || '').length > 60 ? '…' : '');
@@ -3877,7 +3820,6 @@ const _VER_PUB_TYPE_CONFIG = {
     'Comentário':  { icon: 'fas fa-comment-dots', color: '#6366f1', bg: '#eef2ff' },
     'Atualização': { icon: 'fas fa-rotate',        color: '#0891b2', bg: '#e0f2fe' },
     'Evidência':   { icon: 'fas fa-file-circle-check', color: '#16a34a', bg: '#dcfce7' },
-    'Treinamento': { icon: 'fas fa-chalkboard-user', color: '#d97706', bg: '#fef3c7' },
     'Documento':   { icon: 'fas fa-file-alt',       color: '#7c3aed', bg: '#f5f3ff' },
 };
 
@@ -3886,7 +3828,6 @@ window.verPublicacao = function(id, tab, index) {
     let item;
     if (finalTab === 'auditoria') item = audits.find(i => i.id === id);
     else if (finalTab === 'atividades') item = activities.find(i => i.id === id);
-    else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
     else if (finalTab === 'rnc') item = (window.rncItems || []).find(i => i.id === id);
     if (!item) return;
@@ -4171,7 +4112,6 @@ window.verPublicacao = function(id, tab, index) {
     let _vpItem = null;
     if (_vpTab === 'auditoria') _vpItem = audits.find(i => i.id === id);
     else if (_vpTab === 'atividades') _vpItem = activities.find(i => i.id === id);
-    else if (_vpTab === 'treinamentos') _vpItem = trainings.find(i => i.id === id);
     else if (_vpTab === 'documentos') _vpItem = documents.find(i => i.id === id);
     else if (_vpTab === 'rnc') _vpItem = (window.rncItems || []).find(i => i.id === id);
     const _canMgPubs = typeof userCanManagePubs === 'function' ? userCanManagePubs(_vpItem) : true;
@@ -4191,7 +4131,6 @@ window.excluirPublicacao = function(id, tab, index) {
     let item;
     if (finalTab === 'auditoria') item = audits.find(i => i.id === id);
     else if (finalTab === 'atividades') item = activities.find(i => i.id === id);
-    else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
     else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
     else if (finalTab === 'rnc') item = (window.rncItems || []).find(i => i.id === id);
     if (!item || !item.publicacoes) return;
@@ -4244,7 +4183,6 @@ function _updatePubTabBadge(item) {
 
 function _drawerIdFromPrefix(prefix) {
     if (prefix === 'audit') return 'modalAuditoria';
-    if (prefix === 'train') return 'modalTreinamentos';
     if (prefix === 'ativ') return 'modalAtividades';
     if (prefix === 'doc') return 'modalDocumentos';
     return '';
@@ -4252,7 +4190,6 @@ function _drawerIdFromPrefix(prefix) {
 
 function _normalizeTab(tab) {
     if (tab === 'audit') return 'auditoria';
-    if (tab === 'train') return 'treinamentos';
     if (tab === 'ativ') return 'atividades';
     if (tab === 'doc' || tab === 'mant') return tab === 'doc' ? 'documentos' : 'manutencao';
     return tab;

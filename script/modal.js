@@ -32,7 +32,7 @@ function resetModal(prefix) {
     if (typeof clearAnexosUpload === 'function') clearAnexosUpload(prefix);
 
     // Lida com Responsáveis e Revisores (multi-select)
-    var _msPrefix = prefix === 'train' ? 'tren' : prefix;
+    var _msPrefix = prefix;
     if (typeof msResetPrefix === 'function') msResetPrefix(_msPrefix);
     if (typeof msSetDisabled === 'function') msSetDisabled(_msPrefix + '-resp', false);
     // Garante também o hidden input limpo (fallback)
@@ -52,7 +52,11 @@ function resetModal(prefix) {
     setTimeout(() => { if (typeof updateSchedStatusVisibility === 'function') updateSchedStatusVisibility(prefix); }, 0);
 
     // Define o Setor
-    document.getElementById(`${prefix}Setor`).value = '';
+    if ((prefix === 'ativ' || prefix === 'audit' || prefix === 'doc') && typeof smsReset === 'function') {
+        smsReset(prefix);
+    } else {
+        document.getElementById(`${prefix}Setor`).value = '';
+    }
 
     // Define o Status (seleciona o primeiro, se houver)
     if (document.getElementById(`${prefix}Status`).options.length > 0) {
@@ -72,17 +76,6 @@ function resetModal(prefix) {
         document.getElementById('auditDataPrevisao').readOnly = false;
         document.querySelectorAll('#auditWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('auditCategoria').value = '';
-    } else if (prefix === 'train') {
-        document.getElementById('trainDataPublicacao').value = today();
-        document.getElementById('trainDataPrevisao').value = today();
-        document.getElementById('trainRotina').value = 'pontual';
-        document.getElementById('trainFrequencia').value = 1;
-        document.getElementById('trainFrequenciaWrap').style.display = 'none';
-        document.getElementById('trainDiaSemanaWrap').style.display = 'none';
-        document.getElementById('trainDataPrevisao').readOnly = false;
-        document.querySelectorAll('#trainWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('trainFlagDias').value = '';
-        document.getElementById('trainCategoria').value = '';
     } else if (prefix === 'ativ') {
         document.getElementById('ativDataInicio').value = today();
         document.getElementById('ativDataConclusao').value = today();
@@ -119,7 +112,7 @@ function resetModal(prefix) {
     if (typeof clearChecklist === 'function') clearChecklist(prefix);
 
     // 5. Resetar drawer para primeira aba
-    const _drawerIds = { audit: 'modalAuditoria', train: 'modalTreinamentos', ativ: 'modalAtividades', doc: 'modalDocumentos', mant: 'modalManutencao' };
+    const _drawerIds = { audit: 'modalAuditoria', ativ: 'modalAtividades', doc: 'modalDocumentos', mant: 'modalManutencao' };
     const drawer = document.getElementById(_drawerIds[prefix]);
     if (drawer) {
         drawer.querySelectorAll('.drawer-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
@@ -147,11 +140,6 @@ function resetModal(prefix) {
             resetModal('audit');
             if (_currentUserName && typeof msSetValue === 'function') msSetValue('audit-resp', [_currentUserName]);
             openFormDrawer('modalAuditoria');
-        } else if (currentTab === 'treinamentos') {
-            editingTrainId = null;
-            resetModal('train');
-            if (_currentUserName && typeof msSetValue === 'function') msSetValue('tren-resp', [_currentUserName]);
-            openFormDrawer('modalTreinamentos');
         } else if (currentTab === 'atividades') {
             editingAtivId = null;
             resetModal('ativ');
@@ -203,10 +191,9 @@ function resetModal(prefix) {
         // Resolve item primeiro para checar permissão parcial
         let _itemForPerm = null;
         if (tab === 'audit' || tab === 'auditoria') _itemForPerm = audits.find(a => a.id === id);
-        else if (tab === 'treinamentos') _itemForPerm = trainings.find(a => a.id === id);
         else if (tab === 'atividades')   _itemForPerm = activities.find(a => a.id === id);
         else if (tab === 'documentos')   _itemForPerm = documents.find(a => a.id === id);
-        if (!_itemForPerm) _itemForPerm = [...(audits||[]),...(trainings||[]),...(activities||[]),...(documents||[])].find(a => a.id === id);
+        if (!_itemForPerm) _itemForPerm = [...(audits||[]),...(activities||[]),...(documents||[])].find(a => a.id === id);
         if (!userCanEditCards(_itemForPerm)) {
             alert('Você não tem permissão para editar este registro.');
             return;
@@ -219,9 +206,6 @@ function resetModal(prefix) {
         if (tab === 'audit' || tab === 'auditoria') {
             item = audits.find(a => a.id === id);
             finalTab = 'auditoria';
-        } else if (tab === 'train' || tab === 'treinamentos') {
-            item = trainings.find(t => t.id === id);
-            finalTab = 'treinamentos';
         } else if (tab === 'ativ' || tab === 'atividades') {
             item = activities.find(a => a.id === id);
             finalTab = 'atividades';
@@ -238,9 +222,6 @@ function resetModal(prefix) {
             item = audits.find(a => a.id === id);
             if (item) finalTab = 'auditoria';
             else {
-                item = trainings.find(t => t.id === id);
-                if (item) finalTab = 'treinamentos';
-            else {
                 item = activities.find(a => a.id === id);
                 if (item) finalTab = 'atividades';
                 else {
@@ -249,7 +230,6 @@ function resetModal(prefix) {
                     else {
                         item = documents.find(d => d.id === id);
                         if (item) finalTab = 'documentos';
-                        }
                     }
                 }
             }
@@ -264,7 +244,7 @@ function resetModal(prefix) {
             editingAuditId = id;
             document.getElementById('auditTitulo').value = item.titulo;
             document.getElementById('auditDescricao').value = item.descricao;
-            document.getElementById('auditSetor').value = item.setor || '';
+            if (typeof smsSetValue === 'function') smsSetValue('audit', item.setor || '');
             document.getElementById('auditCategoria').value = item.categoria;
             onCategoryChange('audit');
             var auditSubEl = document.getElementById('auditSub');
@@ -301,7 +281,7 @@ function resetModal(prefix) {
             editingAtivId = id;
             document.getElementById('ativTitulo').value = item.titulo;
             document.getElementById('ativDescricao').value = item.descricao;
-            document.getElementById('ativSetor').value = item.setor || '';
+            if (typeof smsSetValue === 'function') smsSetValue('ativ', item.setor || '');
             document.getElementById('ativCategoria').value = item.categoria;
             onCategoryChange('ativ');
             var ativSubEl = document.getElementById('ativSub');
@@ -319,45 +299,6 @@ function resetModal(prefix) {
             restoreAnexos('ativ', item.anexos);
             if (typeof restoreChecklist === 'function') restoreChecklist('ativ', item.checklist, item.checklistPublicacao);
             openFormDrawer('modalAtividades');
-        } else if (finalTab === 'treinamentos') {
-            editingTrainId = id;
-            document.getElementById('trainTitulo').value = item.titulo;
-            document.getElementById('trainDescricao').value = item.descricao;
-            document.getElementById('trainSetor').value = item.setor || '';
-            document.getElementById('trainCategoria').value = item.categoria;
-            onCategoryChange('train');
-            var trainSubEl = document.getElementById('trainSub');
-            if (trainSubEl) trainSubEl.value = item.subcategoria || '';
-            document.getElementById('trainStatus').value = item.status;
-            document.getElementById('trainDataPublicacao').value = item.dataPublicacao;
-            document.getElementById('trainDataPrevisao').value = item.dataPrevisao || '';
-            // Rotina
-            const trainRotina = item.rotina || 'pontual';
-            document.getElementById('trainRotina').value = trainRotina;
-            document.getElementById('trainFrequencia').value = item.frequencia || 1;
-            document.querySelectorAll('#trainWeekdays .wd-btn').forEach(b => b.classList.remove('active'));
-            if (trainRotina === 'diasemana' && Array.isArray(item.diasSemana)) {
-                item.diasSemana.forEach(d => {
-                    const btn = document.querySelector(`#trainWeekdays .wd-btn[data-day="${d}"]`);
-                    if (btn) btn.classList.add('active');
-                });
-            }
-            if (typeof onTrainRotinaChange === 'function') onTrainRotinaChange(true);
-            if (typeof msSetValue === 'function') {
-                msSetValue('tren-resp', item.responsavel || '');
-                msSetValue('tren-rev',  item.revisor     || '');
-            }
-            _applyRespFieldLock('tren-resp', item);
-            document.getElementById('trainFlagDias').value = item.flagDias;
-            document.getElementById('trainMarcador').value = item.marcador || '';
-            if (typeof setSchedStatusValues === 'function') setSchedStatusValues('train', item.overdueStatus || '', item.alertStatus || '', item.resetChecklistOnAutoStatus || false);
-            setTimeout(() => { if (typeof updateSchedStatusVisibility === 'function') updateSchedStatusVisibility('train'); }, 0);
-            restoreAnexos('train', item.anexos);
-            if (typeof restoreChecklist === 'function') restoreChecklist('train', item.checklist, item.checklistPublicacao);
-            openFormDrawer('modalTreinamentos');
-
-            // Armazena o item original no estado atual para calcular as diferenças ao salvar
-            originalItem = JSON.parse(JSON.stringify(item));
         } else if (finalTab === 'manutencao') {
             editingMantId = id;
             document.getElementById('mantTitulo').value = item.titulo;
@@ -387,7 +328,7 @@ function resetModal(prefix) {
             editingDocId = id;
             document.getElementById('docTitulo').value = item.titulo;
             document.getElementById('docDescricao').value = item.descricao;
-            document.getElementById('docSetor').value = item.setor || '';
+            if (typeof smsSetValue === 'function') smsSetValue('doc', item.setor || '');
             document.getElementById('docCategoria').value = item.categoria;
             onCategoryChange('doc');
             var docSubEl = document.getElementById('docSub');
@@ -429,7 +370,7 @@ function resetModal(prefix) {
             return;
         }
         // Resolve item para checar permissão parcial
-        let _itemForDelPerm = [...(audits||[]),...(trainings||[]),...(activities||[]),...(documents||[]),...(maintenances||[])].find(a => a.id === id);
+        let _itemForDelPerm = [...(audits||[]),...(activities||[]),...(documents||[]),...(maintenances||[])].find(a => a.id === id);
         if (!userCanDeleteCards(_itemForDelPerm)) {
             alert('Você não tem permissão para excluir este registro.');
             return;
@@ -452,15 +393,6 @@ function resetModal(prefix) {
         let item = null;
         if (tab === 'auditoria' || tab === 'audit') {
             item = audits.find(a => String(a.id) === String(id));
-            if (item) {
-                item.deleted = true;
-                item.deletedAt = now;
-                item.deletedBy = deletedBy;
-                item.deletedReason = reason || '';
-            }
-        }
-        else if (tab === 'treinamentos' || tab === 'train') {
-            item = trainings.find(t => String(t.id) === String(id));
             if (item) {
                 item.deleted = true;
                 item.deletedAt = now;
@@ -526,9 +458,6 @@ function resetModal(prefix) {
         if (tab === 'auditoria' || tab === 'audit') {
             item = audits.find(a => String(a.id) === String(id));
         }
-        else if (tab === 'treinamentos' || tab === 'train') {
-            item = trainings.find(t => String(t.id) === String(id));
-        }
         else if (tab === 'atividades' || tab === 'ativ') {
             item = activities.find(a => String(a.id) === String(id));
         }
@@ -571,9 +500,6 @@ function resetModal(prefix) {
     function getTrashCount() {
         if (currentTab === 'auditoria') {
             return audits.filter(item => item && item.deleted).length;
-        }
-        if (currentTab === 'treinamentos') {
-            return trainings.filter(item => item && item.deleted).length;
         }
         if (currentTab === 'atividades') {
             return activities.filter(item => item && item.deleted).length;
@@ -620,21 +546,6 @@ function resetModal(prefix) {
                         deletedAt: a.deletedAt,
                         deletedBy: a.deletedBy,
                         deletedReason: a.deletedReason
-                    });
-                }
-            });
-        } else if (currentTab === 'treinamentos') {
-            trainings.forEach(t => {
-                if (t.deleted) {
-                    deletedItems.push({
-                        id: t.id,
-                        tab: 'treinamentos',
-                        titulo: t.titulo,
-                        tipo: 'Treinamento',
-                        setor: t.setor,
-                        deletedAt: t.deletedAt,
-                        deletedBy: t.deletedBy,
-                        deletedReason: t.deletedReason
                     });
                 }
             });
@@ -719,7 +630,7 @@ function resetModal(prefix) {
                 html += `<tr style="border-bottom:1px solid var(--border); transition:background 0.2s;" onmouseover="this.style.background='rgba(37,99,235,0.05)'" onmouseout="this.style.background='transparent'">
                     <td style="padding:12px; font-weight:500;">${item.titulo}</td>
                     <td style="padding:12px;"><span style="background:var(--accent); color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:500;">${item.tipo}</span></td>
-                    <td style="padding:12px;">${item.setor || 'ND'}</td>
+                    <td style="padding:12px;">${(typeof setorText === 'function' ? setorText(item.setor) : item.setor) || 'ND'}</td>
                     <td style="padding:12px;">${item.deletedBy || 'desconhecido'}</td>
                     <td style="padding:12px; font-size:12px; color:#6b7280;">${deletedDate}</td>
                     <td style="padding:12px;">${expCell}</td>
@@ -766,10 +677,6 @@ function resetModal(prefix) {
                 if (tab === 'auditoria' || tab === 'audit') {
                     const index = audits.findIndex(a => String(a.id) === String(id));
                     if (index > -1) { deletedItem = audits[index]; tipoLabel = 'Rotina'; audits.splice(index, 1); }
-                }
-                else if (tab === 'treinamentos' || tab === 'train') {
-                    const index = trainings.findIndex(t => String(t.id) === String(id));
-                    if (index > -1) { deletedItem = trainings[index]; tipoLabel = 'Treinamento'; trainings.splice(index, 1); }
                 }
                 else if (tab === 'atividades' || tab === 'ativ') {
                     const index = activities.findIndex(a => String(a.id) === String(id));
@@ -894,7 +801,6 @@ function resetModal(prefix) {
     var _STATUS_TAB_MAP = {
         auditoria:    { statusKey: 'auditStatus',  colOrderKey: 'kanban_audit_col_order', dateField: 'dataPublicacao', getItems: () => audits,       setItems: v => audits = v },
         atividades:   { statusKey: 'ativStatus',   colOrderKey: 'kanban_ativ_col_order',  dateField: 'dataConclusao',  getItems: () => activities,   setItems: v => activities = v },
-        treinamentos: { statusKey: 'trainStatus',  colOrderKey: 'kanban_train_col_order', dateField: null,             getItems: () => trainings,    setItems: v => trainings = v },
         documentos:   { statusKey: 'docStatus',    colOrderKey: 'kanban_doc_col_order',   dateField: null,             getItems: () => documents,    setItems: v => documents = v },
         manutencao:   { statusKey: 'mantStatus',   colOrderKey: 'kanban_mant_col_order',  dateField: null,             getItems: () => maintenances, setItems: v => maintenances = v }
     };
@@ -1037,7 +943,6 @@ function resetModal(prefix) {
         // Normaliza o tab para garantir consistência
         let normalizedTab = tab;
         if (tab === 'audit') normalizedTab = 'auditoria';
-        else if (tab === 'train') normalizedTab = 'treinamentos';
         else if (tab === 'ativ') normalizedTab = 'atividades';
         else if (tab === 'mant' || tab === 'manutencao') normalizedTab = 'manutencao';
         else if (tab === 'doc' || tab === 'documentos') normalizedTab = 'documentos';
@@ -1054,7 +959,6 @@ var _MARKER_COLOR_MAP = {
 var _MARKER_TAB_MAP = {
     auditoria:    { listKey: 'auditMarcadores', getItems: () => audits,       setItems: v => audits = v },
     atividades:   { listKey: 'ativMarcadores',  getItems: () => activities,   setItems: v => activities = v },
-    treinamentos: { listKey: 'trainMarcadores', getItems: () => trainings,    setItems: v => trainings = v },
     documentos:   { listKey: 'docMarcadores',   getItems: () => documents,    setItems: v => documents = v },
     manutencao:   { listKey: 'mantMarcadores',  getItems: () => maintenances, setItems: v => maintenances = v }
 };
@@ -1172,7 +1076,6 @@ function renderViewContent(id, tab) {
 
     // Normaliza o tab para os valores esperados
     if (tab === 'audit') finalTab = 'auditoria';
-    else if (tab === 'train') finalTab = 'treinamentos';
     else if (tab === 'ativ') finalTab = 'atividades';
     else if (tab === 'mant' || tab === 'manutencao') finalTab = 'manutencao';
     else if (tab === 'doc' || tab === 'documentos') finalTab = 'documentos';
@@ -1181,9 +1084,6 @@ function renderViewContent(id, tab) {
     if (finalTab === 'auditoria') {
         item = audits.find(i => i.id === id);
         statusList = masterLists.auditStatus;
-    } else if (finalTab === 'treinamentos') {
-        item = trainings.find(i => i.id === id);
-        statusList = masterLists.trainStatus;
     } else if (finalTab === 'atividades') {
         item = activities.find(i => i.id === id);
         statusList = masterLists.ativStatus;
@@ -1208,10 +1108,6 @@ function renderViewContent(id, tab) {
                 else {
                     item = documents.find(i => i.id === id);
                     if (item) { finalTab = 'documentos'; statusList = masterLists.docStatus; }
-                    else {
-                        item = trainings.find(i => i.id === id);
-                        if (item) { finalTab = 'treinamentos'; statusList = masterLists.trainStatus; }
-                    }
                 }
             }
         }
@@ -1230,14 +1126,12 @@ function renderViewContent(id, tab) {
     const iconMap = {
         auditoria: 'fa-clipboard-check',
         atividades: 'fa-tasks',
-        treinamentos: 'fa-graduation-cap',
         documentos: 'fa-file-alt',
         manutencao: 'fa-wrench'
     };
     const tabLabelMap = {
         auditoria: 'Rotinas',
         atividades: 'Atividade',
-        treinamentos: 'Treinamento',
         documentos: 'Documento',
         manutencao: 'Manutenção'
     };
@@ -1249,7 +1143,7 @@ function renderViewContent(id, tab) {
     const statusEl = document.getElementById('viewModalStatus');
     const statusTextEl = document.getElementById('viewModalStatusText');
     if (titleEl) titleEl.textContent = item.titulo + (item.deleted ? ' [DELETADO]' : '');
-    if (metaEl) metaEl.textContent = `${tabLabelMap[finalTab] || ''} · ${item.setor || ''} · ${item.categoria || ''}`;
+    if (metaEl) metaEl.textContent = `${tabLabelMap[finalTab] || ''} · ${(typeof setorText === 'function' ? setorText(item.setor) : item.setor) || ''} · ${item.categoria || ''}`;
     if (iconWrap) iconWrap.innerHTML = `<i class="fas ${iconMap[finalTab] || 'fa-file'}"></i>`;
     if (statusTextEl) statusTextEl.textContent = item.status;
     if (statusEl) statusEl.style.background = statusColorVar;
@@ -1310,22 +1204,6 @@ function renderViewContent(id, tab) {
             ['Marcador', _markerFieldHtml(item)],
             ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes']
         ]);
-    } else if (finalTab === 'treinamentos') {
-        const rotinaLabelTrain = { pontual: 'Pontual', anual: 'Anual', mensal: 'Mensal', semanal: 'Semanal', diasemana: 'Dia da semana' }[item.rotina || 'pontual'] || 'Pontual';
-        const freqUnitTrain = { anual: 'ano(s)', mensal: 'mês(es)', semanal: 'semana(s)' }[item.rotina];
-        const freqLabelTrain = freqUnitTrain && item.frequencia ? `A cada ${item.frequencia} ${freqUnitTrain}` : (item.rotina === 'diasemana' ? 'Semanal (dia fixo)' : null);
-        detailsCards = _viewCards([
-            ['Setor', item.setor], ['Categoria', item.categoria],
-            ['Responsável', item.responsavel], ['Revisor', item.revisor],
-            ['Rotina', rotinaLabelTrain],
-            ['Frequência', freqLabelTrain],
-            ['Data Publicação', formatBR(item.dataPublicacao)],
-            ['Data Previsão', item.dataPrevisao ? formatBR(item.dataPrevisao) : 'N/A'],
-            ['Marcador', _markerFieldHtml(item)],
-            ['Alerta', item.flagDias === 0 ? 'N/A' : item.flagDias + ' dias antes'],
-            ['Ao Alertar →', item.alertStatus || null],
-            ['Ao Vencer →', item.overdueStatus || null]
-        ]);
     } else if (finalTab === 'documentos') {
         const rotinaLabelDoc = { pontual: 'Pontual', anual: 'Anual', mensal: 'Mensal', semanal: 'Semanal', diasemana: 'Dia da semana' }[item.rotina || 'pontual'] || 'Pontual';
         const freqUnitDoc = { anual: 'ano(s)', mensal: 'mês(es)', semanal: 'semana(s)' }[item.rotina];
@@ -1344,8 +1222,8 @@ function renderViewContent(id, tab) {
         ]);
     }
 
-    // Aba checklist: ocultar para treinamentos e documentos
-    const _noChecklistTab = finalTab === 'treinamentos' || finalTab === 'documentos';
+    // Aba checklist: ocultar para documentos
+    const _noChecklistTab = finalTab === 'documentos';
     document.querySelectorAll('.view-modal-tab').forEach(t => {
         const match = t.getAttribute('onclick')?.match(/switchViewTab\('(\w+)'/);
         if (match && match[1] === 'checklist') t.style.display = _noChecklistTab ? 'none' : '';
@@ -1450,8 +1328,13 @@ function _viewCards(pairs) {
         } catch (_) {}
         return _esc(val) || '<span class="view-info-nd">ND</span>';
     };
+    const _renderSetor = (val) => {
+        const arr = (typeof setorArr === 'function') ? setorArr(val) : (val ? [val] : []);
+        if (!arr.length) return '<span class="view-info-nd">ND</span>';
+        return `<div class="view-info-chips">${arr.map(s => `<span class="view-info-chip"><i class="fas fa-building"></i>${_esc(s)}</span>`).join('')}</div>`;
+    };
     return pairs.filter(([, val]) => val !== null && val !== undefined).map(([label, val]) =>
-        `<div class="view-info-card${label === 'Marcador' ? ' view-info-card-marker' : ''}"><label>${label}</label><div>${_renderVal(val)}</div></div>`
+        `<div class="view-info-card${label === 'Marcador' ? ' view-info-card-marker' : ''}"><label>${label}</label><div>${label === 'Setor' ? _renderSetor(val) : _renderVal(val)}</div></div>`
     ).join('');
 }
 
@@ -1558,7 +1441,6 @@ window.renderHistoryDrawer = function() {
     else if (finalTab === 'atividades') item = activities.find(i => i.id === id);
     else if (finalTab === 'manutencao') item = maintenances.find(i => i.id === id);
     else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
-    else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
     if (!item) return;
 
     var allHistory = (item.historico || []).slice().reverse().map((entry, revIndex) => ({
@@ -1709,7 +1591,6 @@ window.toggleHdItem = function(el) {
 function viewHistoryItem(id, tab, historyIndex) {
     var finalTab = tab;
     if (tab === 'audit') finalTab = 'auditoria';
-    else if (tab === 'train') finalTab = 'treinamentos';
     else if (tab === 'ativ') finalTab = 'atividades';
     else if (tab === 'mant' || tab === 'manutencao') finalTab = 'manutencao';
     else if (tab === 'doc' || tab === 'documentos') finalTab = 'documentos';
@@ -1719,7 +1600,6 @@ function viewHistoryItem(id, tab, historyIndex) {
     else if (finalTab === 'atividades') item = activities.find(i => i.id === id);
     else if (finalTab === 'manutencao') item = maintenances.find(i => i.id === id);
     else if (finalTab === 'documentos') item = documents.find(i => i.id === id);
-    else if (finalTab === 'treinamentos') item = trainings.find(i => i.id === id);
     if (!item) return;
 
     var history = item.historico || [];
@@ -1786,15 +1666,6 @@ function viewHistoryItem(id, tab, historyIndex) {
             ['Periodicidade', isNA ? 'N/A' : `${snap.intervalo} dias`],
             ['Última Manutenção', _date(snap.ultima)], ['Próxima Manutenção', isNA ? 'N/A' : _date(snap.proxima)],
             ['Resp. Técnico', _valUser(snap.responsavelTecnico)], ['Empresa', _val(snap.empresaResponsavel)]
-        ];
-    } else if (finalTab === 'treinamentos') {
-        const rotinaLabelSnTrain = { pontual: 'Pontual', anual: 'Anual', mensal: 'Mensal', semanal: 'Semanal', diasemana: 'Dia da semana' }[snap.rotina || 'pontual'] || 'Pontual';
-        pairs = [
-            ['Setor', _val(snap.setor)], ['Categoria', _val(snap.categoria)],
-            ['Responsável', _valUser(snap.responsavel)], ['Revisor', _valUser(snap.revisor)],
-            ['Rotina', rotinaLabelSnTrain], ['Status', _val(snap.status)],
-            ['Data Publicação', _date(snap.dataPublicacao)],
-            ['Data Previsão', snap.dataPrevisao ? _date(snap.dataPrevisao) : 'N/A']
         ];
     } else if (finalTab === 'documentos') {
         const rotinaLabelSnDoc = { pontual: 'Pontual', anual: 'Anual', mensal: 'Mensal', semanal: 'Semanal', diasemana: 'Dia da semana' }[snap.rotina || 'pontual'] || 'Pontual';
@@ -1912,7 +1783,6 @@ function viewHistoryItem(id, tab, historyIndex) {
 
         // Normaliza o tab
         if (tab === 'audit') finalTab = 'auditoria';
-        else if (tab === 'train') finalTab = 'treinamentos';
         else if (tab === 'ativ') finalTab = 'atividades';
         else if (tab === 'mant' || tab === 'manutencao') finalTab = 'manutencao';
         else if (tab === 'doc' || tab === 'documentos') finalTab = 'documentos';
@@ -1921,7 +1791,6 @@ function viewHistoryItem(id, tab, historyIndex) {
         else if (finalTab === 'atividades') { item = activities.find(i => i.id === id); }
         else if (finalTab === 'manutencao') { item = maintenances.find(i => i.id === id); }
         else if (finalTab === 'documentos') { item = documents.find(i => i.id === id); }
-        else if (finalTab === 'treinamentos') { item = trainings.find(i => i.id === id); }
 
         // Se não encontrou, tenta procurar em todos os arrays
         if (!item) {
@@ -1936,10 +1805,6 @@ function viewHistoryItem(id, tab, historyIndex) {
                     else {
                         item = documents.find(i => i.id === id);
                         if (item) finalTab = 'documentos';
-                        else {
-                            item = trainings.find(i => i.id === id);
-                            if (item) finalTab = 'treinamentos';
-                        }
                     }
                 }
             }
@@ -1964,7 +1829,7 @@ function viewHistoryItem(id, tab, historyIndex) {
 
     window.editCurrentViewItem = function editCurrentViewItem() {
         if (!currentViewItemId || !currentViewTab) return;
-        const _vItem = [...(audits||[]),...(trainings||[]),...(activities||[]),...(documents||[])].find(a => a.id === currentViewItemId);
+        const _vItem = [...(audits||[]),...(activities||[]),...(documents||[])].find(a => a.id === currentViewItemId);
         if (!userCanEditCards(_vItem)) {
             alert('Você não tem permissão para editar este registro.');
             return;
@@ -1994,7 +1859,6 @@ function viewHistoryItem(id, tab, historyIndex) {
             listname = 'SETORES';
         } else if (genericKey === 'categorias') {
             if(currentTab === 'auditoria') currentListKey = 'auditCategorias';
-            else if(currentTab === 'treinamentos') currentListKey = 'trainCategorias';
             else if(currentTab === 'atividades') currentListKey = 'ativCategorias';
             else if(currentTab === 'manutencao') currentListKey = 'mantCategorias';
             else currentListKey = 'docCategorias';
@@ -2015,7 +1879,6 @@ function viewHistoryItem(id, tab, historyIndex) {
 
             let subcatMapKey;
             if(currentTab === 'auditoria') subcatMapKey = 'auditSubcats';
-            else if(currentTab === 'treinamentos') subcatMapKey = 'trainSubcats';
             else if(currentTab === 'atividades') subcatMapKey = 'ativSubcats';
             else if(currentTab === 'manutencao') subcatMapKey = 'mantItens';
             else subcatMapKey = 'docSubcats';
@@ -2025,7 +1888,6 @@ function viewHistoryItem(id, tab, historyIndex) {
 
         } else if (genericKey === 'status') {
             if(currentTab === 'auditoria') currentListKey = 'auditStatus';
-            else if(currentTab === 'treinamentos') currentListKey = 'trainStatus';
             else if(currentTab === 'atividades') currentListKey = 'ativStatus';
             else if(currentTab === 'manutencao') currentListKey = 'mantStatus';
             else currentListKey = 'docStatus';
@@ -2034,7 +1896,6 @@ function viewHistoryItem(id, tab, historyIndex) {
         } else if (genericKey === 'marcadores') {
             const markerTab = window._currentViewTab || currentTab;
             if(markerTab === 'auditoria') currentListKey = 'auditMarcadores';
-            else if(markerTab === 'treinamentos') currentListKey = 'trainMarcadores';
             else if(markerTab === 'atividades') currentListKey = 'ativMarcadores';
             else if(markerTab === 'manutencao') currentListKey = 'mantMarcadores';
             else currentListKey = 'docMarcadores';
@@ -2350,7 +2211,6 @@ function viewHistoryItem(id, tab, historyIndex) {
         // Identifica qual campo atualizar baseado na chave da lista
         if (key === 'setores') {
             updateCards(audits, 'setor');
-            updateCards(trainings, 'setor');
             updateCards(activities, 'setor');
             updateCards(maintenances, 'setor');
             updateCards(documents, 'setor');
@@ -2603,7 +2463,7 @@ function viewHistoryItem(id, tab, historyIndex) {
         _doCloseModal();
     }
 
-    const FORM_DRAWER_IDS = ['modalAuditoria', 'modalTreinamentos', 'modalAtividades', 'modalDocumentos', 'modalManutencao'];
+    const FORM_DRAWER_IDS = ['modalAuditoria', 'modalAtividades', 'modalDocumentos', 'modalManutencao'];
 
     function openFormDrawer(id) {
         closeHistoryDrawer();
@@ -2621,7 +2481,6 @@ function viewHistoryItem(id, tab, historyIndex) {
         // Mostra botão Duplicar apenas ao editar (não ao criar novo)
         const _dupMap = {
             'modalAuditoria':   { btn: 'btnDuplicateAudit',    id: editingAuditId },
-            'modalTreinamentos':{ btn: 'btnDuplicateTraining',  id: editingTrainId },
             'modalAtividades':  { btn: 'btnDuplicateAtiv',      id: editingAtivId  },
             'modalDocumentos':  { btn: 'btnDuplicateDoc',       id: editingDocId   },
         };
@@ -2666,7 +2525,7 @@ function viewHistoryItem(id, tab, historyIndex) {
         // Cancelar/fechar um drawer descarta imagens enviadas mas não salvas.
         // Se o item foi salvo, o blob já está referenciado e é preservado.
         if (typeof window._discardSessionImgBlobs === 'function') {
-            ['audit', 'ativ', 'train', 'doc', 'mant', 'oc', 'rnc'].forEach(ctx => window._discardSessionImgBlobs(ctx));
+            ['audit', 'ativ', 'doc', 'mant', 'oc', 'rnc'].forEach(ctx => window._discardSessionImgBlobs(ctx));
         }
         FORM_DRAWER_IDS.forEach(did => {
             const el = document.getElementById(did);

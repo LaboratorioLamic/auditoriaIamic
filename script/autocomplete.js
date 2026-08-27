@@ -9,7 +9,7 @@
 (function () {
 
 // Prefixos dos drawers que possuem setor + categoria
-var AC_PREFIXES = ['audit', 'train', 'ativ', 'doc', 'mant'];
+var AC_PREFIXES = ['audit', 'ativ', 'doc', 'mant'];
 
 // ── Inicializa o autocomplete para um <select> existente ──────
 function initAcField(selectEl, opts) {
@@ -290,18 +290,13 @@ function initAcFieldDirect(selectEl, opts) {
     selectEl._acSync = syncFromSelect;
 }
 
-// ── Inicializa todos os campos de setor e categoria ───────────
+// ── Inicializa todos os campos de categoria ───────────────────
+// Setor é um popover multi-select (ver setor-multiselect.js) em todos os
+// drawers; o "<prefix>Setor" é apenas o hidden que guarda o JSON do array.
 function initAllAcFields() {
     AC_PREFIXES.forEach(function (prefix) {
-        var setorSel = document.getElementById(prefix + 'Setor');
         var catSel   = document.getElementById(prefix + 'Categoria');
 
-        if (setorSel) {
-            initAcField(setorSel, {
-                placeholder: 'Setor...',
-                onChange: function () {}
-            });
-        }
         if (catSel) {
             initAcField(catSel, {
                 placeholder: 'Categoria...',
@@ -324,14 +319,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Após qualquer mudança nas options do select (populate), re-sincroniza
     AC_PREFIXES.forEach(function (prefix) {
-        ['Setor', 'Categoria'].forEach(function (field) {
-            var sel = document.getElementById(prefix + field);
-            if (!sel) return;
-            var observer = new MutationObserver(function () {
-                if (sel._acSync) sel._acSync();
-            });
-            observer.observe(sel, { childList: true });
+        var sel = document.getElementById(prefix + 'Categoria');
+        if (!sel) return;
+        var observer = new MutationObserver(function () {
+            if (sel._acSync) sel._acSync();
         });
+        observer.observe(sel, { childList: true });
     });
 
     // Responsável e Revisor gerenciados pelo ms-field — sem autocomplete aqui.
@@ -340,10 +333,8 @@ document.addEventListener('DOMContentLoaded', function () {
 // Expõe para chamada manual se necessário
 window.acSyncAll = function () {
     AC_PREFIXES.forEach(function (prefix) {
-        ['Setor', 'Categoria'].forEach(function (field) {
-            var sel = document.getElementById(prefix + field);
-            if (sel && sel._acSync) sel._acSync();
-        });
+        var sel = document.getElementById(prefix + 'Categoria');
+        if (sel && sel._acSync) sel._acSync();
     });
     // Responsável e Revisor: gerenciados pelo ms-field.
 };

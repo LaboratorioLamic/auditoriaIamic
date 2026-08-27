@@ -15,13 +15,13 @@ var fbarDateMonth     = new Date().getMonth(); // 0-11
 
 // ── HELPERS ─────────────────────────────────────────────────────────────────
 function _tabPrefix() {
-    const map = { auditoria:'Audit', treinamentos:'Train', atividades:'Ativ', manutencao:'Mant', documentos:'Doc' };
+    const map = { auditoria:'Audit', atividades:'Ativ', manutencao:'Mant', documentos:'Doc' };
     return map[currentTab] || 'Audit';
 }
 
 function _hasRevisor() {
     const p = _tabPrefix();
-    return p !== 'Mant' && p !== 'Train';
+    return p !== 'Mant';
 }
 
 // ── MINHAS TAREFAS ──────────────────────────────────────────────────────────
@@ -144,7 +144,6 @@ function renderPeopleFilterList() {
     const prefix = _tabPrefix();
     let items = [];
     if (prefix === 'Audit')      items = audits || [];
-    else if (prefix === 'Train') items = trainings || [];
     else if (prefix === 'Ativ')  items = activities || [];
     else if (prefix === 'Mant')  items = maintenances || [];
     else if (prefix === 'Doc')   items = documents || [];

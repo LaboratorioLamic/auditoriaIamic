@@ -928,7 +928,8 @@
 /* Error state */
 .field-group.field-error input,
 .field-group.field-error select,
-.field-group.field-error .ms-field {
+.field-group.field-error .ms-field,
+.field-group.field-error .sms-field {
     border-color: #ef4444 !important;
     box-shadow: 0 0 0 3px rgba(239,68,68,0.10) !important;
 }
@@ -942,6 +943,7 @@
 
 .select-wrapper { display: flex; gap: 8px; position: relative; }
 .select-wrapper select { flex: 1; }
+.select-wrapper .sms-field { flex: 1; min-width: 0; }
 
 /* Autocomplete — input digitável sobre o select */
 .ac-input {
@@ -3225,7 +3227,6 @@ button.pub-geral-tier-btn:active { transform: translateY(0) scale(0.99); }
 .ver-pub-modal-header[data-tipo="Comentário"]  { background: linear-gradient(135deg, #4338ca 0%, #6366f1 55%, #818cf8 100%); }
 .ver-pub-modal-header[data-tipo="Atualização"] { background: linear-gradient(135deg, #0c4a6e 0%, #0891b2 55%, #22d3ee 100%); }
 .ver-pub-modal-header[data-tipo="Evidência"]   { background: linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%); }
-.ver-pub-modal-header[data-tipo="Treinamento"] { background: linear-gradient(135deg, #78350f 0%, #d97706 55%, #fbbf24 100%); }
 .ver-pub-modal-header[data-tipo="Documento"]   { background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 55%, #a78bfa 100%); }
 
 /* Círculos decorativos de fundo */

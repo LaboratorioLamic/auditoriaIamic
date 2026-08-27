@@ -1231,7 +1231,6 @@ function msgRemoveMention(id) {
 const _AREA_SOURCES = [
     { key: 'ativ',  label: 'Atividades',   icon: 'fa-list-check',           color: '#16a34a', get: () => (typeof activities !== 'undefined' ? activities : []) },
     { key: 'audit', label: 'Rotinas',       icon: 'fa-clipboard-check',      color: '#2563eb', get: () => (typeof audits !== 'undefined' ? audits : []) },
-    { key: 'train', label: 'Treinamentos', icon: 'fa-graduation-cap',       color: '#9333ea', get: () => (typeof trainings !== 'undefined' ? trainings : []) },
     { key: 'doc',   label: 'Documentos',   icon: 'fa-file-lines',           color: '#ea580c', get: () => (typeof documents !== 'undefined' ? documents : []) },
     { key: 'rnc',   label: 'RNC',          icon: 'fa-triangle-exclamation', color: '#dc2626', get: () => (typeof window.rncItems !== 'undefined' ? window.rncItems : []) }
 ];

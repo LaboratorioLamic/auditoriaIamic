@@ -2,7 +2,7 @@
 // CALENDAR — Visualização de calendário (mensal/semanal)
 // ============================================================
 
-/* global masterLists, activities, audits, trainings, documents,
+/* global masterLists, activities, audits, documents,
           currentuser, currentTab, openView, openPublicacaoModal,
           passesFilters, passesFbarMyTasks, normalizeText,
           getAllowedSetores, formatBR, saveAll, renderCards,
@@ -11,7 +11,6 @@
 // ── Estado ──────────────────────────────────────────────────
 var calendarActiveByTab = {
     auditoria: false,
-    treinamentos: false,
     atividades: false,
     documentos: false
 };
@@ -26,7 +25,6 @@ var calViewFilter = 'tarefas';  // 'tarefas' | 'publicacoes' | 'ambos'
 // ── Módulos ─────────────────────────────────────────────────
 var _CAL_MODULES = {
     auditoria:    { prefix: 'Audit', statusKey: 'auditStatus',  dateField: 'dataPrevisao',       getItems: () => (typeof audits     !== 'undefined' ? audits     : []) },
-    treinamentos: { prefix: 'Train', statusKey: 'trainStatus',  dateField: 'dataPrevisao',       getItems: () => (typeof trainings  !== 'undefined' ? trainings  : []) },
     atividades:   { prefix: 'Ativ',  statusKey: 'ativStatus',   dateField: 'dataConclusao',      getItems: () => (typeof activities !== 'undefined' ? activities : []) },
     documentos:   { prefix: 'Doc',   statusKey: 'docStatus',    dateField: 'dataProximaRevisao', getItems: () => (typeof documents  !== 'undefined' ? documents  : []) }
 };
@@ -236,7 +234,7 @@ function _calBuildDayMap(rangeStart, rangeEnd) {
     let data = (cfg.getItems() || []).filter(i => !i.deleted);
 
     const allowedSetores = (typeof getAllowedSetores === 'function') ? getAllowedSetores() : null;
-    if (allowedSetores !== null) data = data.filter(i => allowedSetores.includes(i.setor));
+    if (allowedSetores !== null) data = data.filter(i => setorMatchesAny(i.setor, allowedSetores));
 
     const showFinalized = document.getElementById('showFinalizedCheckbox')?.checked !== false;
 
@@ -707,7 +705,7 @@ function _calRenderEventCard(entry, canEdit) {
         card.onclick = () => _calOpenPubEntry(item, pub, pubIdx);
     } else {
         card.classList.add('cal-evt-tarefa');
-        const setor = item.setor ? `<div class="cal-ecard-resp"><i class="fas fa-building" style="font-size:10px;"></i> ${_calEsc(item.setor)}</div>` : '';
+        const setor = item.setor ? `<div class="cal-ecard-resp"><i class="fas fa-building" style="font-size:10px;"></i> ${_calEsc((typeof setorText === 'function' ? setorText(item.setor) : item.setor))}</div>` : '';
         card.innerHTML = `
             <div class="cal-ecard-top">
                 <span class="cal-evt-dot" style="background:${statusColor}; flex-shrink:0;"></span>
@@ -829,18 +827,24 @@ function _calHideMoveLoading() {
     if (ov) ov.classList.remove('is-visible');
 }
 
-// Aplica a nova data e aguarda a gravação no banco antes de re-renderizar
+// Aplica a nova data e aguarda a gravação no banco antes de re-renderizar.
+// Bloqueia a tela inteira enquanto salva (overlay global), pra ninguém
+// interagir com o site enquanto a mudança de data ainda não foi confirmada.
 function _calApplyMove(item, cfg, targetDateStr) {
     const prev = item[cfg.dateField];
     item[cfg.dateField] = targetDateStr;
 
-    _calShowMoveLoading();
     _calRenderGrade();
     if (typeof renderCards === 'function') renderCards();
 
     let p;
     try {
-        p = (typeof saveAll === 'function') ? saveAll() : null;
+        if (typeof window._saveAllWithLoading === 'function') {
+            p = window._saveAllWithLoading('Salvando nova data...');
+        } else {
+            _calShowMoveLoading();
+            p = (typeof saveAll === 'function') ? saveAll() : null;
+        }
     } catch (err) {
         p = Promise.reject(err);
     }

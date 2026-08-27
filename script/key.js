@@ -357,7 +357,7 @@ function _checkTriPerm(permVal, item) {
         if (!currentuser) return null;
         // Admin tem acesso a todas as abas
         if (userIsAdmin()) {
-            return ['dashboard', 'auditoria', 'treinamentos', 'documentos', 'atividades', 'manutencao', 'ocorrencias', 'rnc', 'backup', 'configuracoes'];
+            return ['dashboard', 'auditoria', 'documentos', 'atividades', 'manutencao', 'ocorrencias', 'rnc', 'backup', 'configuracoes'];
         }
         // Se não houver configuração de abas, por segurança libera apenas Dashboard e Auditoria
         if (!Array.isArray(currentuser.tabs) || currentuser.tabs.length === 0) {
@@ -374,7 +374,6 @@ function _checkTriPerm(permVal, item) {
         const tabMap = {
             dashboard: 'tabDashboard',
             auditoria: 'tabAuditoria',
-            treinamentos: 'tabTreinamentos',
             documentos: 'tabDocumentos',
             atividades: 'tabAtividades',
             manutencao: 'tabManutencao',
@@ -632,7 +631,7 @@ function _checkTriPerm(permVal, item) {
         report.style.display = 'none';
 
         try {
-            const collections = [audits, trainings, activities, maintenances, documents, ocorrencias, rncItems];
+            const collections = [audits, activities, maintenances, documents, ocorrencias, rncItems];
             let totalLogs = 0;
             let removedLogs = 0;
             let affectedItems = 0;
@@ -685,7 +684,7 @@ function _checkTriPerm(permVal, item) {
 
         try {
             const result = await window.purgeOrphanImgBlobs([
-                audits, trainings, activities, maintenances, documents, rncItems
+                audits, activities, maintenances, documents, rncItems
             ]);
 
             const { total, orphans } = result;
@@ -1035,7 +1034,6 @@ function _checkTriPerm(permVal, item) {
     const ALL_TABS = [
         { value: 'dashboard',    label: 'Dashboard',    icon: 'fa-chart-pie' },
         { value: 'auditoria',    label: 'Rotinas',      icon: 'fa-clipboard-list' },
-        { value: 'treinamentos', label: 'Treinamentos', icon: 'fa-graduation-cap' },
         { value: 'documentos',   label: 'Documentos',   icon: 'fa-file-lines' },
         { value: 'atividades',   label: 'Atividades',   icon: 'fa-list-check' },
         { value: 'ocorrencias',  label: 'Ocorrências',  icon: 'fa-triangle-exclamation' },
@@ -1415,7 +1413,6 @@ function _checkTriPerm(permVal, item) {
         });
 
         patchArr(audits      || [], ['responsavel', 'revisor']);
-        patchArr(trainings   || [], ['responsavel', 'revisor']);
         patchArr(activities  || [], ['responsavel', 'revisor']);
         patchArr(documents   || [], ['responsavel', 'revisor']);
         patchArr(maintenances || [], ['responsavelTecnico', 'responsavelManutencao']);
@@ -1637,7 +1634,7 @@ function _checkTriPerm(permVal, item) {
             }
             if (!closed) {
                 // Form drawers (novo/editar card)
-                const formDrawerIds = ['modalAuditoria', 'modalTreinamentos', 'modalAtividades', 'modalDocumentos', 'modalManutencao', 'modalRnc'];
+                const formDrawerIds = ['modalAuditoria', 'modalAtividades', 'modalDocumentos', 'modalManutencao', 'modalRnc'];
                 for (const id of formDrawerIds) {
                     const el = document.getElementById(id);
                     if (el && el.classList.contains('open')) {

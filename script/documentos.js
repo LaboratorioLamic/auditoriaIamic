@@ -34,10 +34,18 @@
         responsavel = JSON.stringify(responsavel);
         revisor     = JSON.stringify(revisor);
 
+        const _setorArrDoc = (typeof smsGetValue === 'function') ? smsGetValue('doc') : [];
+        const _setorFieldGroupDoc = document.getElementById('sms-doc')?.closest('.field-group');
+        if (_setorFieldGroupDoc) _setorFieldGroupDoc.classList.toggle('field-error', !_setorArrDoc.length);
+        if (!_setorArrDoc.length) {
+            if (typeof showToast === 'function') showToast('É necessário selecionar ao menos um Setor para salvar o registro.', 'error');
+            document.getElementById('sms-doc')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
         if (typeof _validateRequiredFields === 'function') {
             if (!_validateRequiredFields([
                 { id: 'docTitulo',    label: 'Título' },
-                { id: 'docSetor',     label: 'Setor' },
                 { id: 'docCategoria', label: 'Categoria' },
             ])) return;
         }
@@ -56,7 +64,7 @@
             ...item,
             titulo: document.getElementById('docTitulo').value,
             descricao: document.getElementById('docDescricao').value,
-            setor: document.getElementById('docSetor').value,
+            setor: JSON.stringify(_setorArrDoc),
             categoria: document.getElementById('docCategoria').value,
             subcategoria: '',
             status: document.getElementById('docStatus').value,
@@ -151,7 +159,7 @@
         const formData = {
             title: document.getElementById('docTitulo').value,
             categoria: document.getElementById('docCategoria').value,
-            setor: document.getElementById('docSetor').value,
+            setor: (typeof smsGetValue === 'function') ? JSON.stringify(smsGetValue('doc')) : document.getElementById('docSetor').value,
             status: document.getElementById('docStatus').value,
             dataCriacao: document.getElementById('docDataCriacao').value,
             dataProximaRevisao: document.getElementById('docDataProximaRevisao').value,
@@ -178,7 +186,7 @@
 
             document.getElementById('docTitulo').value = formData.title;
             document.getElementById('docCategoria').value = formData.categoria;
-            document.getElementById('docSetor').value = formData.setor;
+            if (typeof smsSetValue === 'function') smsSetValue('doc', formData.setor || '');
             document.getElementById('docStatus').value = formData.status;
             document.getElementById('docDataCriacao').value = formData.dataCriacao;
             document.getElementById('docDataProximaRevisao').value = formData.dataProximaRevisao;

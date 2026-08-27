@@ -14,7 +14,7 @@
     }
 
     function populateFiltersDropdown() {
-        const map = { 'auditoria':'Audit', 'treinamentos':'Train', 'atividades':'Ativ', 'manutencao':'Mant', 'documentos':'Doc' };
+        const map = { 'auditoria':'Audit', 'atividades':'Ativ', 'manutencao':'Mant', 'documentos':'Doc' };
         const prefix = map[currentTab] || 'Audit';
 
         const ids = {
@@ -40,7 +40,7 @@
     }
 
     function onDropdownFilterChange(type) {
-        const map = { 'auditoria':'Audit', 'treinamentos':'Train', 'atividades':'Ativ', 'manutencao':'Mant', 'documentos':'Doc' };
+        const map = { 'auditoria':'Audit', 'atividades':'Ativ', 'manutencao':'Mant', 'documentos':'Doc' };
         const prefix = map[currentTab] || 'Audit';
 
         const realIds = {
@@ -73,7 +73,7 @@
     }
 
     // ── Dropdown de Área do Dashboard ────────────────────────────────────
-    var _dashAreaTabMap = { ativ: 'atividades', audit: 'auditoria', tren: 'treinamentos', doc: 'documentos' };
+    var _dashAreaTabMap = { ativ: 'atividades', audit: 'auditoria', doc: 'documentos' };
 
     window.applyDashAreaPermissions = function() {
         const allowed = (typeof userAllowedTabs === 'function') ? userAllowedTabs() : null;
@@ -116,7 +116,6 @@
     var _dashAreaIconMap = {
         ativ:  'fa-tasks',
         audit: 'fa-clipboard-check',
-        tren:  'fa-graduation-cap',
         doc:   'fa-file-lines'
     };
 
@@ -160,7 +159,7 @@
     window.syncDashAreaBtn = function() {
         const areaEl = document.getElementById('fDashArea');
         const val = areaEl ? areaEl.value : 'ativ';
-        const labelMap = { ativ: 'Gestão de Atividades', audit: 'Rotinas', tren: 'Treinamentos', doc: 'Documentos', '': 'Gestão de Atividades' };
+        const labelMap = { ativ: 'Gestão de Atividades', audit: 'Rotinas', doc: 'Documentos', '': 'Gestão de Atividades' };
         const lbl = labelMap[val] || 'Gestão de Atividades';
         const effectiveVal = val || 'ativ';
 

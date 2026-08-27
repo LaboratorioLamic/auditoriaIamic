@@ -1126,7 +1126,7 @@
 
 /* Input com botão "+" ao lado (setor / categoria / motivo) */
 .oc-field-inline { display: flex; gap: 8px; align-items: stretch; }
-.oc-field-inline .oc-ac-wrap { flex: 1; }
+.oc-field-inline .oc-ac-wrap, .oc-field-inline .sms-field { flex: 1; }
 .oc-field-plus {
     width: 42px;
     flex-shrink: 0;

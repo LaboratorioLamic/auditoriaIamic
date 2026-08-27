@@ -36,7 +36,7 @@
         // Aplicar filtro de permissões de setores
         const allowedSetores = getAllowedSetores();
         if (allowedSetores !== null) {
-            rawItems = rawItems.filter(item => allowedSetores.includes(item.setor));
+            rawItems = rawItems.filter(item => setorMatchesAny(item.setor, allowedSetores));
         }
 
         // Obtém valores atuais dos filtros (exceto o que estamos atualizando)
@@ -61,8 +61,7 @@
 
             // Filtro por Setor (exceto se estiver sendo atualizado)
             if (excludeFilter !== 'setor') {
-                const itemSetor = item.setor || 'Setor Não Definido';
-                if (fSetor && itemSetor !== fSetor) return false;
+                if (fSetor && !setorMatchesAny(item.setor, fSetor)) return false;
             }
 
             // Filtro por Categoria (exceto se estiver sendo atualizado)
@@ -123,8 +122,8 @@
             const availableSetores = new Set();
             rawItems.forEach(item => {
                 if (passesOtherFilters(item, 'setor')) {
-                    const setor = item.setor || 'Setor Não Definido';
-                    availableSetores.add(setor);
+                    const itemSetores = (typeof setorArr === 'function' ? setorArr(item.setor) : [item.setor]).filter(Boolean);
+                    (itemSetores.length ? itemSetores : ['Setor Não Definido']).forEach(s => availableSetores.add(s));
                 }
             });
             // Exposto globalmente para o filtro de header (setor-filter.js) só listar setores com dados
@@ -299,7 +298,6 @@
         // Mapeia a aba atual para o prefixo dos filtros
         const tabPrefix = {
             'auditoria': 'Audit',
-            'treinamentos': 'Train',
             'atividades': 'Ativ',
             'manutencao': 'Mant',
             'documentos': 'Doc'
@@ -356,7 +354,6 @@
     var currentValues = {
         // MODAIS
         audit: { setor: document.getElementById('auditSetor')?.value, cat: document.getElementById('auditCategoria')?.value, status: document.getElementById('auditStatus')?.value, mark: document.getElementById('auditMarcador')?.value },
-        train: { setor: document.getElementById('trainSetor')?.value, cat: document.getElementById('trainCategoria')?.value, status: document.getElementById('trainStatus')?.value, mark: document.getElementById('trainMarcador')?.value },
         ativ: { setor: document.getElementById('ativSetor')?.value, cat: document.getElementById('ativCategoria')?.value, status: document.getElementById('ativStatus')?.value, mark: document.getElementById('ativMarcador')?.value },
         mant: { setor: document.getElementById('mantSetor')?.value, cat: document.getElementById('mantCategoria')?.value, status: document.getElementById('mantStatus')?.value, mark: document.getElementById('mantMarcador')?.value, tipo: document.getElementById('mantTipo')?.value },
         doc: { setor: document.getElementById('docSetor')?.value, cat: document.getElementById('docCategoria')?.value, status: document.getElementById('docStatus')?.value, mark: document.getElementById('docMarcador')?.value },
@@ -384,13 +381,6 @@
             status: document.getElementById('fAuditStatus')?.value,
             marcador: document.getElementById('fAuditMarcador')?.value || ''
         },
-        Train: {
-            setor: document.getElementById('fTrainSetor')?.value,
-            cat: document.getElementById('fTrainCat')?.value,
-            sub: document.getElementById('fTrainSub')?.value,
-            status: document.getElementById('fTrainStatus')?.value,
-            marcador: document.getElementById('fTrainMarcador')?.value || ''
-        },
         Ativ: {
             setor: document.getElementById('fAtivSetor')?.value,
             cat: document.getElementById('fAtivCat')?.value,
@@ -417,7 +407,7 @@
 
     // Coleta TODOS os status para o Dashboard
     var allStatusnames = [];
-    ['auditStatus', 'trainStatus', 'ativStatus', 'mantStatus', 'docStatus'].forEach(key => {
+    ['auditStatus', 'ativStatus', 'mantStatus', 'docStatus'].forEach(key => {
         (masterLists[key] || []).forEach(s => { if (s.name) allStatusnames.push(s.name); });
     });
     var unifiedStatusnames = [...new Set(allStatusnames)].sort();
@@ -511,16 +501,18 @@
     // --- POPULAR MODAIS (Setores e Categorias) ---
     var _prefixToKbCfg = {
         audit: { statusKey: 'auditStatus', colOrderKey: 'kanban_audit_col_order' },
-        train: { statusKey: 'trainStatus', colOrderKey: 'kanban_train_col_order' },
         ativ:  { statusKey: 'ativStatus',  colOrderKey: 'kanban_ativ_col_order' },
         doc:   { statusKey: 'docStatus',   colOrderKey: 'kanban_doc_col_order' }
     };
-    ['audit', 'train', 'ativ', 'doc'].forEach(p => {
-        const setorEl = document.getElementById(`${p}Setor`);
+    ['audit', 'ativ', 'doc'].forEach(p => {
+        // Setor destes módulos é um popover multi-select (ver setor-multiselect.js),
+        // não um <select> — nada a repopular aqui, o estado já vive no próprio módulo.
+        const isSetorMulti = true;
+        const setorEl = isSetorMulti ? null : document.getElementById(`${p}Setor`);
         const catEl = document.getElementById(`${p}Categoria`);
         const statusEl = document.getElementById(`${p}Status`);
-        if (!setorEl || !catEl || !statusEl) return;
-        setorEl.innerHTML = '<option value=""></option>' + makeOpts(modalSetores);
+        if ((!isSetorMulti && !setorEl) || !catEl || !statusEl) return;
+        if (setorEl) setorEl.innerHTML = '<option value=""></option>' + makeOpts(modalSetores);
         catEl.innerHTML = '<option value=""></option>' + makeOpts(masterLists[`${p}Categorias`] || []);
         // Mesma ordem exibida no Kanban (respeita reordenação por arrasto das colunas)
         const statusList = typeof _kbGetSortedStatuses === 'function'
@@ -531,7 +523,7 @@
         const markerSelect = document.getElementById(`${p}Marcador`);
         if (markerSelect) markerSelect.innerHTML = `<option value="">Selecionar marcador</option>` + makeStatusOpts(masterLists[`${p}Marcadores`] || []);
 
-        if (currentValues[p] && currentValues[p].setor) setorEl.value = currentValues[p].setor;
+        if (setorEl && currentValues[p] && currentValues[p].setor) setorEl.value = currentValues[p].setor;
         if (currentValues[p] && currentValues[p].cat) catEl.value = currentValues[p].cat;
         if (currentValues[p] && currentValues[p].status) statusEl.value = currentValues[p].status;
         if (markerSelect && currentValues[p] && currentValues[p].mark) markerSelect.value = currentValues[p].mark;
@@ -539,7 +531,6 @@
 
     // Atualiza Subcategorias/Itens baseado na categoria restaurada
     onCategoryChange('audit');
-    onCategoryChange('train');
     onCategoryChange('ativ');
     onCategoryChange('doc');
 
@@ -587,14 +578,11 @@
 
     // --- FILTROS DAS ABAS ---
     document.getElementById('fAuditSetor').innerHTML = makeFilterOpts(filteredSetores, "Setor: Todos");
-    document.getElementById('fTrainSetor').innerHTML = makeFilterOpts(filteredSetores, "Setor: Todos");
     document.getElementById('fAtivSetor').innerHTML = makeFilterOpts(filteredSetores, "Setor: Todos");
     document.getElementById('fDocSetor').innerHTML = makeFilterOpts(filteredSetores, "Setor: Todos");
 
     document.getElementById('fAuditCat').innerHTML = makeFilterOpts(masterLists.auditCategorias, "Categoria: Todas");
     document.getElementById('fAuditStatus').innerHTML = makeStatusFilterOpts(masterLists.auditStatus, "Status: Todos");
-    document.getElementById('fTrainCat').innerHTML = makeFilterOpts(masterLists.trainCategorias, "Categoria: Todas");
-    document.getElementById('fTrainStatus').innerHTML = makeStatusFilterOpts(masterLists.trainStatus, "Status: Todos");
     document.getElementById('fAtivCat').innerHTML = makeFilterOpts(masterLists.ativCategorias, "Categoria: Todas");
     document.getElementById('fAtivStatus').innerHTML = makeStatusFilterOpts(masterLists.ativStatus, "Status: Todos");
     document.getElementById('fDocCat').innerHTML = makeFilterOpts(masterLists.docCategorias, "Categoria: Todas");
@@ -602,34 +590,29 @@
 
     // Popula selects ocultos de Marcador
     document.getElementById('fAuditMarcador').innerHTML = makeStatusOpts(masterLists.auditMarcadores || []);
-    document.getElementById('fTrainMarcador').innerHTML = makeStatusOpts(masterLists.trainMarcadores || []);
     document.getElementById('fAtivMarcador').innerHTML = makeStatusOpts(masterLists.ativMarcadores || []);
     document.getElementById('fDocMarcador').innerHTML = makeStatusOpts(masterLists.docMarcadores || []);
 
     // Restaura valores de filtros para evitar voltar ao primeiro item após editar listas
     if (currentValues.Audit?.setor != null) document.getElementById('fAuditSetor').value = currentValues.Audit.setor;
-    if (currentValues.Train?.setor != null) document.getElementById('fTrainSetor').value = currentValues.Train.setor;
     if (currentValues.Ativ?.setor != null) document.getElementById('fAtivSetor').value = currentValues.Ativ.setor;
     if (currentValues.Doc?.setor != null) document.getElementById('fDocSetor').value = currentValues.Doc.setor;
 
     if (currentValues.Audit?.cat != null) document.getElementById('fAuditCat').value = currentValues.Audit.cat;
-    if (currentValues.Train?.cat != null) document.getElementById('fTrainCat').value = currentValues.Train.cat;
     if (currentValues.Ativ?.cat != null) document.getElementById('fAtivCat').value = currentValues.Ativ.cat;
     if (currentValues.Doc?.cat != null) document.getElementById('fDocCat').value = currentValues.Doc.cat;
 
     if (currentValues.Audit?.status != null) document.getElementById('fAuditStatus').value = currentValues.Audit.status;
-    if (currentValues.Train?.status != null) document.getElementById('fTrainStatus').value = currentValues.Train.status;
     if (currentValues.Ativ?.status != null) document.getElementById('fAtivStatus').value = currentValues.Ativ.status;
     if (currentValues.Doc?.status != null) document.getElementById('fDocStatus').value = currentValues.Doc.status;
 
     if (currentValues.Audit?.marcador != null) document.getElementById('fAuditMarcador').value = currentValues.Audit.marcador;
-    if (currentValues.Train?.marcador != null) document.getElementById('fTrainMarcador').value = currentValues.Train.marcador;
     if (currentValues.Ativ?.marcador != null) document.getElementById('fAtivMarcador').value = currentValues.Ativ.marcador;
     if (currentValues.Doc?.marcador != null) document.getElementById('fDocMarcador').value = currentValues.Doc.marcador;
 
     // Subcategoria/Item são facetados dinamicamente; tenta restaurar seleção e, em seguida, recalcula opções visíveis
     if (typeof updateFilterFacetOptions === 'function') {
-        ['Audit', 'Train', 'Ativ', 'Mant', 'Doc'].forEach(p => updateFilterFacetOptions(p));
+        ['Audit', 'Ativ', 'Mant', 'Doc'].forEach(p => updateFilterFacetOptions(p));
         // restaura sub/itens após recálculo (se ainda existirem)
         const aSub = document.getElementById('fAuditSub'); if (aSub && currentValues.Audit.sub != null) aSub.value = currentValues.Audit.sub;
         const tSub = document.getElementById('fAtivSub'); if (tSub && currentValues.Ativ.sub != null) tSub.value = currentValues.Ativ.sub;
@@ -655,7 +638,6 @@
     // Funções auxiliares para obter prefixos de ID corretos
     function getTabPrefix(tab) {
         if (tab === 'auditoria') return 'audit';
-        if (tab === 'treinamentos') return 'train';
         if (tab === 'atividades') return 'ativ';
         if (tab === 'manutencao') return 'mant';
         if (tab === 'documentos') return 'doc';
@@ -761,7 +743,6 @@
     function getItemsForFilterPrefix(prefix) {
         let items = [];
         if (prefix === 'Audit') items = audits || [];
-        else if (prefix === 'Train') items = trainings || [];
         else if (prefix === 'Ativ') items = activities || [];
         else if (prefix === 'Mant') items = maintenances || [];
         else if (prefix === 'Doc') items = documents || [];
@@ -772,7 +753,7 @@
         // Aplicar filtro de permissões de setores
         const allowedSetores = getAllowedSetores();
         if (allowedSetores !== null) {
-            items = items.filter(item => allowedSetores.includes(item.setor));
+            items = items.filter(item => setorMatchesAny(item.setor, allowedSetores));
         }
 
         // Aplica filtro de finalizados se o checkbox estiver desmarcado
@@ -789,7 +770,6 @@
 
     function getDateStrForFilterPrefix(prefix, item) {
         if (prefix === 'Audit') return item?.dataPrevisao;
-        if (prefix === 'Train') return item?.dataPrevisao;
         if (prefix === 'Ativ') return item?.dataConclusao;
         if (prefix === 'Mant') return getMaintenanceCardDate(item); // Data (publicação)
         if (prefix === 'Doc') return getDocumentCardDate(item);      // Data (publicação)
@@ -831,7 +811,7 @@
     // 1. Setor
         if (!excluded.setor) {
             const setor = document.getElementById(`f${prefix}Setor`)?.value || '';
-            if (setor && (item.setor || '') !== setor) return false;
+            if (setor && !setorMatchesAny(item.setor, setor)) return false;
         }
 
     // 2. Categoria
@@ -866,15 +846,6 @@
             // Filtro manual: resolve IDs para nomes e compara
             const normResp = typeof normalizeResponsavel === 'function' ? normalizeResponsavel(itemRespRaw) : itemRespRaw.toLowerCase();
             if (!normResp || !normResp.includes(filterResp)) return false;
-        }
-    }
-
-    // 6. Instrutor (Apenas para Treinamentos)
-    if (prefix === 'Train' && !excluded.instrutor) {
-        const filterInstr = document.getElementById('fTrainAuditor')?.value || '';
-        if (filterInstr) {
-            const itemInstr = (item.instrutor || '');
-            if (itemInstr !== filterInstr) return false;
         }
     }
 
@@ -931,7 +902,6 @@
     }
     function getMasterCategorias(prefix) {
         if (prefix === 'Audit') return (masterLists?.auditCategorias || []).slice();
-        if (prefix === 'Train') return (masterLists?.trainCategorias || []).slice();
         if (prefix === 'Ativ') return (masterLists?.ativCategorias || []).slice();
         if (prefix === 'Mant') return (masterLists?.mantCategorias || []).slice();
         if (prefix === 'Doc') return (masterLists?.docCategorias || []).slice();
@@ -939,7 +909,6 @@
     }
     function getMasterStatus(prefix) {
         if (prefix === 'Audit') return (masterLists?.auditStatus || []).slice();
-        if (prefix === 'Train') return (masterLists?.trainStatus || []).slice();
         if (prefix === 'Ativ') return (masterLists?.ativStatus || []).slice();
         if (prefix === 'Mant') return (masterLists?.mantStatus || []).slice();
         if (prefix === 'Doc') return (masterLists?.docStatus || []).slice();
@@ -947,7 +916,6 @@
     }
     function getMasterMarcadores(prefix) {
         if (prefix === 'Audit') return (masterLists?.auditMarcadores || []).slice();
-        if (prefix === 'Train') return (masterLists?.trainMarcadores || []).slice();
         if (prefix === 'Ativ') return (masterLists?.ativMarcadores || []).slice();
         if (prefix === 'Mant') return (masterLists?.mantMarcadores || []).slice();
         if (prefix === 'Doc') return (masterLists?.docMarcadores || []).slice();

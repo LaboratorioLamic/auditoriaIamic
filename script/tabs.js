@@ -24,7 +24,6 @@
     var titles = {
         dashboard: 'Dashboard',
         auditoria: 'Rotinas',
-        treinamentos: 'Treinamentos',
         atividades: 'Gestão de Atividades',
         manutencao: 'Manutenção',
         documentos: 'Documentos',
@@ -35,7 +34,6 @@
     var subtitles = {
         dashboard: 'Visão geral e indicadores de desempenho',
         auditoria: 'Planejamento e execução de rotinas',
-        treinamentos: 'Planejamento e execução de treinamentos',
         atividades: 'Controle de tarefas, reuniões e projetos',
         manutencao: 'Controle preventivo de equipamentos',
         documentos: 'Gerenciamento e controle de revisões',
@@ -164,7 +162,6 @@
 
     // 5. Ativação dos grupos de filtros específicos
     document.getElementById('filtersAuditoria').style.display = tab === 'auditoria' ? 'flex' : 'none';
-    document.getElementById('filtersTreinamentos').style.display = tab === 'treinamentos' ? 'flex' : 'none';
     document.getElementById('filtersAtividades').style.display = tab === 'atividades' ? 'flex' : 'none';
     document.getElementById('filtersDocumentos').style.display = tab === 'documentos' ? 'flex' : 'none';
 
@@ -198,7 +195,6 @@
 
     document.getElementById('tabDashboard').onclick = () => switchTab('dashboard');
     document.getElementById('tabAuditoria').onclick = () => switchTab('auditoria');
-    document.getElementById('tabTreinamentos').onclick = () => switchTab('treinamentos');
     document.getElementById('tabAtividades').onclick = () => switchTab('atividades');
     document.getElementById('tabDocumentos').onclick = () => switchTab('documentos');
     document.getElementById('tabOcorrencias').onclick = () => switchTab('ocorrencias');

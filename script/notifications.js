@@ -18,9 +18,6 @@
         } else if (currentTab === 'documentos') {
             data = documents;
             tabType = 'doc';
-        } else if (currentTab === 'treinamentos') {
-            data = trainings;
-            tabType = 'train';
         } else if (currentTab === 'dashboard') {
             // Dashboard mostra notificações de todos, respeitando filtros
             const dashboardFilters = getDashboardFilters();
@@ -30,15 +27,14 @@
                 { items: audits, type: 'audit', tabName: 'auditoria' },
                 { items: activities, type: 'ativ', tabName: 'atividades' },
                 { items: maintenances, type: 'mant', tabName: 'manutencao' },
-                { items: documents, type: 'doc', tabName: 'documentos' },
-                { items: trainings, type: 'train', tabName: 'treinamentos' }
+                { items: documents, type: 'doc', tabName: 'documentos' }
             ];
 
             // Aplicar filtro de permissões de setores
             const allowedSetores = getAllowedSetores();
             if (allowedSetores !== null) {
                 allData.forEach(d => {
-                    d.items = d.items.filter(item => allowedSetores.includes(item.setor));
+                    d.items = d.items.filter(item => setorMatchesAny(item.setor, allowedSetores));
                 });
             }
 
@@ -79,7 +75,7 @@
         // Aplicar filtro de permissões de setores para abas específicas
         const allowedSetores = getAllowedSetores();
         if (allowedSetores !== null) {
-            data = data.filter(item => allowedSetores.includes(item.setor));
+            data = data.filter(item => setorMatchesAny(item.setor, allowedSetores));
         }
 
         // Para abas específicas, aplica filtros
@@ -114,8 +110,7 @@
         return data.filter(item => {
             // Filtro por Setor
             if (filters.setor) {
-                const itemSetor = item.setor || 'Setor Não Definido';
-                if (itemSetor !== filters.setor) return false;
+                if (!setorMatchesAny(item.setor, filters.setor)) return false;
             }
 
             // Filtro por Categoria
@@ -193,7 +188,6 @@
         if (tab === 'atividades') return 'Ativ';
         if (tab === 'manutencao') return 'Mant';
         if (tab === 'documentos') return 'Doc';
-        if (tab === 'treinamentos') return 'Train';
         return '';
     }
 
@@ -201,7 +195,7 @@
         const notifications = [];
 
         data.forEach(item => {
-        // 1. Excluir itens finalizados — exceto recorrentes (train/doc com periodicidade)
+        // 1. Excluir itens finalizados — exceto recorrentes (doc com periodicidade)
             if (item.status === 'Concluído' || item.status === 'Cancelado') {
                 if (!isConcludedRecurring(item, tabType)) return;
             }
@@ -261,7 +255,6 @@
         if (tabType === 'audit') return item.dataPrevisao;
         if (tabType === 'ativ') return item.dataConclusao;
         if (tabType === 'mant') return isBlankPeriodicity(item.intervalo) ? null : item.proxima;
-        if (tabType === 'train') return item.dataPrevisao || null;
         if (tabType === 'doc') return (item.rotina && item.rotina !== 'pontual') || item.dataProximaRevisao ? item.dataProximaRevisao : null;
         return null;
     }
@@ -342,7 +335,7 @@
                     <div class="notification-item-details">
                         <div class="notification-item-details-row">
                             <i class="fas fa-building"></i>
-                            <span>${notif.setor || 'ND'}</span>
+                            <span>${(typeof setorText === 'function' ? setorText(notif.setor) : notif.setor) || 'ND'}</span>
                         </div>
                         <div class="notification-item-details-row">
                             <i class="fas fa-folder"></i>
@@ -379,10 +372,9 @@
     var _tabToTypes = {
         auditoria:    ['audit'],
         atividades:   ['ativ'],
-        treinamentos: ['train'],
         documentos:   ['doc'],
         manutencao:   ['mant'],
-        dashboard:    ['audit', 'ativ', 'train', 'doc', 'mant']
+        dashboard:    ['audit', 'ativ', 'doc', 'mant']
     };
 
     function _getNewCardsForMe() {
@@ -396,7 +388,6 @@
         const allSources = [
             { items: typeof audits       !== 'undefined' ? audits       : [], type: 'audit' },
             { items: typeof activities   !== 'undefined' ? activities   : [], type: 'ativ'  },
-            { items: typeof trainings    !== 'undefined' ? trainings    : [], type: 'train' },
             { items: typeof documents    !== 'undefined' ? documents    : [], type: 'doc'   },
             { items: typeof maintenances !== 'undefined' ? maintenances : [], type: 'mant'  }
         ];
@@ -458,7 +449,7 @@
             return;
         }
         const _e = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        const typeLabel = { audit: 'Auditoria', ativ: 'Atividade', train: 'Treinamento', doc: 'Documento' };
+        const typeLabel = { audit: 'Auditoria', ativ: 'Atividade', doc: 'Documento' };
         content.innerHTML = cards.map(card => {
             const age = Math.floor((Date.now() - new Date(card.createdAt).getTime()) / 86400000);
             const ageStr = age === 0 ? 'Hoje' : `${age} dia${age > 1 ? 's' : ''} atrás`;
@@ -487,7 +478,7 @@
                         <span class="notification-item-status" style="background:var(--c-yellow);color:#fff">${_e(typeLabel[card._type] || card._type)}</span>
                     </div>
                     <div class="notification-item-details">
-                        ${card.setor ? `<div class="notification-item-details-row"><i class="fas fa-building"></i><span>${_e(card.setor)}</span></div>` : ''}
+                        ${card.setor ? `<div class="notification-item-details-row"><i class="fas fa-building"></i><span>${_e((typeof setorText === 'function' ? setorText(card.setor) : card.setor))}</span></div>` : ''}
                         <div class="notification-item-details-row"><i class="fas fa-clock"></i><span>${ageStr}</span></div>
                         ${prazoHtml}
                     </div>

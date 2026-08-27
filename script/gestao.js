@@ -28,10 +28,18 @@
         responsavel = JSON.stringify(responsavel);
         revisor     = JSON.stringify(revisor);
 
+        const _setorArrAtiv = (typeof smsGetValue === 'function') ? smsGetValue('ativ') : [];
+        const _setorFieldGroupAtiv = document.getElementById('sms-ativ')?.closest('.field-group');
+        if (_setorFieldGroupAtiv) _setorFieldGroupAtiv.classList.toggle('field-error', !_setorArrAtiv.length);
+        if (!_setorArrAtiv.length) {
+            if (typeof showToast === 'function') showToast('É necessário selecionar ao menos um Setor para salvar o registro.', 'error');
+            document.getElementById('sms-ativ')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
         if (typeof _validateRequiredFields === 'function') {
             if (!_validateRequiredFields([
                 { id: 'ativTitulo',    label: 'Título' },
-                { id: 'ativSetor',     label: 'Setor' },
                 { id: 'ativCategoria', label: 'Categoria' },
             ])) return;
         }
@@ -50,7 +58,7 @@
             ...item,
             titulo: document.getElementById('ativTitulo').value,
             descricao: document.getElementById('ativDescricao').value,
-            setor: document.getElementById('ativSetor').value,
+            setor: JSON.stringify(_setorArrAtiv),
             categoria: document.getElementById('ativCategoria').value,
             subcategoria: '',
             status: document.getElementById('ativStatus').value,
@@ -147,7 +155,7 @@
         const formData = {
             titulo: document.getElementById('ativTitulo').value,
             descricao: document.getElementById('ativDescricao').value,
-            setor: document.getElementById('ativSetor').value,
+            setor: (typeof smsGetValue === 'function') ? JSON.stringify(smsGetValue('ativ')) : '',
             categoria: document.getElementById('ativCategoria').value,
             subcategoria: '',
             status: document.getElementById('ativStatus').value,
@@ -169,7 +177,7 @@
 
             document.getElementById('ativTitulo').value = formData.titulo;
             document.getElementById('ativDescricao').value = formData.descricao;
-            document.getElementById('ativSetor').value = formData.setor;
+            if (typeof smsSetValue === 'function') smsSetValue('ativ', formData.setor);
             document.getElementById('ativCategoria').value = formData.categoria;
             document.getElementById('ativStatus').value = formData.status;
             document.getElementById('ativDataInicio').value = formData.dataInicio;

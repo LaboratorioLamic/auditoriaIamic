@@ -2,17 +2,16 @@
 // KANBAN — Módulos com visualização em colunas
 // ============================================================
 
-/* global masterLists, activities, audits, trainings, documents,
+/* global masterLists, activities, audits, documents,
           currentuser, currentTab, currentHistoryPage,
           saveAll, renderCards, openView, editItem,
           getAllowedSetores, userCanEditCards, formatBR,
           passesFilters, passesFbarMyTasks, normalizeText */
 
-var KANBAN_TABS = ['auditoria', 'treinamentos', 'atividades', 'documentos'];
+var KANBAN_TABS = ['auditoria', 'atividades', 'documentos'];
 
 var kanbanActiveByTab = {
     auditoria: true,
-    treinamentos: true,
     atividades: true,
     documentos: true
 };
@@ -26,7 +25,6 @@ var KB_CARDS_PER_PAGE = 10;
 
 var _KB_MODULES = {
     auditoria:    { prefix: 'Audit', statusKey: 'auditStatus',  colOrderKey: 'kanban_audit_col_order',  sortDateField: 'dataPrevisao',       getItems: () => audits },
-    treinamentos: { prefix: 'Train', statusKey: 'trainStatus',  colOrderKey: 'kanban_train_col_order',  sortDateField: 'dataPrevisao',       getItems: () => trainings },
     atividades:   { prefix: 'Ativ',  statusKey: 'ativStatus',   colOrderKey: 'kanban_ativ_col_order',   sortDateField: 'dataConclusao',      getItems: () => activities },
     documentos:   { prefix: 'Doc',   statusKey: 'docStatus',    colOrderKey: 'kanban_doc_col_order',    sortDateField: 'dataProximaRevisao', getItems: () => documents }
 };
@@ -252,7 +250,7 @@ function _kbGetFilteredItems() {
     let data = (cfg.getItems() || []).filter(item => !item.deleted);
 
     const allowedSetores = (typeof getAllowedSetores === 'function') ? getAllowedSetores() : null;
-    if (allowedSetores !== null) data = data.filter(i => allowedSetores.includes(i.setor));
+    if (allowedSetores !== null) data = data.filter(i => setorMatchesAny(i.setor, allowedSetores));
 
     const titleRaw = (document.getElementById('titleSearchInput') || {}).value || '';
     const titleQ = typeof normalizeText === 'function' ? normalizeText(titleRaw) : titleRaw.toLowerCase().trim();
@@ -421,7 +419,7 @@ function _kbRenderCard(item) {
                 <div class="kanban-card-metas">
                     ${item.responsavel ? `<span class="kanban-card-meta"><i class="fas fa-user"></i>${(() => { try { const p = JSON.parse(item.responsavel); if (Array.isArray(p) && p.length > 0) { const n = typeof resolveUserId === 'function' ? resolveUserId(p[0]) : null; const extra = p.length - 1; return `<span class="kb-meta-name">${_kbHtml(n || p[0] || '')}</span>` + (extra > 0 ? `<span class="card-resp-extra">+${extra}</span>` : ''); } } catch(_){} return `<span class="kb-meta-name">${_kbHtml(item.responsavel)}</span>`; })()}</span>` : ''}
                     ${dateVal ? `<span class="kanban-card-meta"><i class="fas fa-calendar-alt"></i>${_kbFormatBR(dateVal)}</span>` : ''}
-                    ${item.setor ? `<span class="kanban-card-meta"><i class="fas fa-building"></i>${_kbHtml(item.setor)}</span>` : ''}
+                    ${item.setor ? `<span class="kanban-card-meta"><i class="fas fa-building"></i>${(() => { const { first, extra } = (typeof setorDisplay === 'function') ? setorDisplay(item.setor) : { first: item.setor, extra: 0 }; return `<span class="kb-meta-name">${_kbHtml(first)}</span>` + (extra > 0 ? `<span class="card-resp-extra">+${extra}</span>` : ''); })()}</span>` : ''}
                 </div>
                 <div class="kanban-card-foot">
                     <div class="kanban-card-foot-left">
@@ -439,7 +437,7 @@ function _kbRenderCard(item) {
 }
 
 function _kbDeadlineColor(dateStr, flagDays, status, item) {
-    // Concluído recorrente (train/doc com periodicidade) continua monitorando prazo
+    // Concluído recorrente (doc com periodicidade) continua monitorando prazo
     const skipFlag = _kbStatusIsFinal(status) &&
         !(typeof isConcludedRecurring === 'function' && item && isConcludedRecurring(item, currentTab));
     if (skipFlag) return 'var(--ind-green)';
@@ -574,7 +572,7 @@ function kbDrop(event, targetStatus) {
         return;
     }
 
-    if (_dropIsConcluido && typeof isItemOverdue === 'function' && (currentTab === 'treinamentos' || currentTab === 'documentos') && isItemOverdue(item, currentTab)) {
+    if (_dropIsConcluido && typeof isItemOverdue === 'function' && currentTab === 'documentos' && isItemOverdue(item, currentTab)) {
         showOverdueConcluiModal();
         return;
     }
@@ -1432,7 +1430,7 @@ function _kbTouchDrop(cx, cy) {
     // Reutiliza a lógica de validação e persistência do kbDrop
     const _moveIsConcluido = _kbStatusIsConcluido(targetStatus);
     if (_moveIsConcluido && typeof isItemOverdue === 'function' &&
-        (currentTab === 'treinamentos' || currentTab === 'documentos') && isItemOverdue(item, currentTab)) {
+        currentTab === 'documentos' && isItemOverdue(item, currentTab)) {
         showOverdueConcluiModal();
         return;
     }

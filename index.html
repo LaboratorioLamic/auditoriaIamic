@@ -108,7 +108,6 @@
         <div class="sidebar-group-label">Módulos</div>
         <button id="tabAtividades"><i class="fa-solid fa-list-check"></i> Atividades</button>
         <button id="tabAuditoria" class="active"><i class="fa-solid fa-clipboard-check"></i> Rotinas</button>
-        <button id="tabTreinamentos"><i class="fa-solid fa-graduation-cap"></i> Treinamentos</button>
         <button id="tabDocumentos"><i class="fa-solid fa-file-alt"></i> Documentos</button>
         <div class="sidebar-divider"></div>
         <div class="sidebar-group-label">Gestão de N/C</div>
@@ -511,7 +510,6 @@
                 <option value="">Área: Todas</option>
                 <option value="ativ" selected>Gestão de Atividades</option>
                 <option value="audit">Rotinas</option>
-                <option value="tren">Treinamentos</option>
                 <option value="doc">Documentos</option>
             </select>
             <select id="fDashResponsavel" style="display:none;" onchange="onFilterDashboardChange()"><option value="">Responsável: Todos</option></select>
@@ -530,7 +528,6 @@
             <select id="dropDashArea" style="display:none;" onchange="onDropdownFilterChangeDashboard('area')">
                 <option value="ativ" selected>Gestão de Atividades</option>
                 <option value="audit">Rotinas</option>
-                <option value="tren">Treinamentos</option>
                 <option value="doc">Documentos</option>
             </select>
 
@@ -545,7 +542,6 @@
                     <div class="fbar-area-dropdown" id="fbarAreaDropdown" style="display:none;">
                         <button class="fbar-area-chip fbar-area-chip--active" data-value="ativ" onclick="selectDashArea('ativ','Gestão de Atividades')"><i class="fas fa-tasks"></i> Gestão de Atividades</button>
                         <button class="fbar-area-chip" data-value="audit" onclick="selectDashArea('audit','Rotinas')"><i class="fas fa-clipboard-check"></i> Rotinas</button>
-                        <button class="fbar-area-chip" data-value="tren" onclick="selectDashArea('tren','Treinamentos')"><i class="fas fa-graduation-cap"></i> Treinamentos</button>
                         <button class="fbar-area-chip" data-value="doc" onclick="selectDashArea('doc','Documentos')"><i class="fas fa-file-lines"></i> Documentos</button>
                     </div>
                 </div>
@@ -767,7 +763,6 @@
                                         <button class="dpt-tab dpt-tab--ativ" data-type="Comentário" onclick="onDashPubTypeTab(this,'Comentário')"><i class="fas fa-comment"></i></button>
                                         <button class="dpt-tab dpt-tab--ativ" data-type="Atualização" onclick="onDashPubTypeTab(this,'Atualização')"><i class="fas fa-rotate"></i></button>
                                         <button class="dpt-tab dpt-tab--ativ" data-type="Evidência" onclick="onDashPubTypeTab(this,'Evidência')"><i class="fas fa-paperclip"></i></button>
-                                        <button class="dpt-tab dpt-tab--tren" data-type="Treinamento" onclick="onDashPubTypeTab(this,'Treinamento')"><i class="fas fa-graduation-cap"></i></button>
                                         <button class="dpt-tab dpt-tab--doc" data-type="Documento" onclick="onDashPubTypeTab(this,'Documento')"><i class="fas fa-file-lines"></i></button>
                                         <button class="dpt-tab dpt-tab--audit" data-type="Auditoria" onclick="onDashPubTypeTab(this,'Auditoria')"><i class="fas fa-clipboard-check"></i></button>
                                     </div>
@@ -978,16 +973,6 @@
             <select id="fAuditYearOnly" onchange="renderCards()"></select>
             <div id="fAuditGroupCustom"><input type="date" id="fAuditDataIni" onchange="renderCards()"><input type="date" id="fAuditDataFim" onchange="renderCards()"></div>
 
-            <select id="fTrainSetor" onchange="onFilterSetorChange('Train')"><option value="">Setor: Todos</option></select>
-            <select id="fTrainCat" onchange="onFilterCategoryChange('Train')"><option value="">Categoria: Todas</option></select>
-            <select id="fTrainResponsavel" onchange="renderCards()"><option value="">Responsável: Todos</option></select>
-            <select id="fTrainStatus" onchange="renderCards()"><option value="">Status: Todos</option></select>
-            <select id="fTrainMarcador" onchange="renderCards()"><option value="">Marcador: Todos</option></select>
-            <select id="fTrainDateType" onchange="updateDateInputs('Train')"><option value="all" selected>Período: Data</option><option value="month">Mês</option><option value="year">Ano</option><option value="custom">Personalizado</option></select>
-            <div id="fTrainGroupMonth"><select id="fTrainMonth" onchange="renderCards()"><option value="0">Jan</option><option value="1">Fev</option><option value="2">Mar</option><option value="3">Abr</option><option value="4">Mai</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Ago</option><option value="8">Set</option><option value="9">Out</option><option value="10">Nov</option><option value="11">Dez</option></select><select id="fTrainYearForMonth" onchange="renderCards()"></select></div>
-            <select id="fTrainYearOnly" onchange="renderCards()"></select>
-            <div id="fTrainGroupCustom"><input type="date" id="fTrainDataIni" onchange="renderCards()"><input type="date" id="fTrainDataFim" onchange="renderCards()"></div>
-
             <select id="fAtivSetor" onchange="onFilterSetorChange('Ativ')"><option value="">Setor: Todos</option></select>
             <select id="fAtivCat" onchange="onFilterCategoryChange('Ativ')"><option value="">Categoria: Todas</option></select>
             <select id="fAtivResponsavel" onchange="renderCards()"><option value="">Responsável: Todos</option></select>
@@ -1012,7 +997,6 @@
 
             <!-- grupos de aba (usados pelo tabs.js para mostrar/ocultar) -->
             <div id="filtersAuditoria"></div>
-            <div id="filtersTreinamentos"></div>
             <div id="filtersAtividades"></div>
             <div id="filtersDocumentos"></div>
 
@@ -1458,9 +1442,15 @@
         <div class="field-group">
             <label class="field-label">Setor <span class="req-star">*</span></label>
             <div class="rnc-ac-wrap">
-                <input type="text" id="rncFSetor" class="form-input" placeholder="Digite ou selecione o setor..." oninput="rncSetorInput()" onclick="rncSetorInput()" autocomplete="off">
-                <i class="fas fa-chevron-down rnc-ac-caret"></i>
-                <div class="rnc-ac-dropdown" id="rncSetorDropdown"></div>
+                <div class="sms-field" id="sms-rnc" onclick="smsToggleOpen('rnc', event)">
+                    <div class="sms-tags" id="sms-rnc-tags"><span class="sms-placeholder">Selecionar setor...</span></div>
+                    <i class="fas fa-chevron-down sms-caret"></i>
+                    <div class="sms-dropdown" id="sms-rnc-drop" onclick="event.stopPropagation()">
+                        <div class="sms-search"><i class="fas fa-search"></i><input type="text" id="sms-rnc-input" placeholder="Buscar setor..." oninput="smsFilter('rnc')"></div>
+                        <div class="sms-options" id="sms-rnc-options"></div>
+                    </div>
+                </div>
+                <input type="hidden" id="rncFSetor">
             </div>
         </div>
         <div class="form-section-divider full-width rnc-divider-blank"></div>
@@ -1892,14 +1882,17 @@
             <div class="form-section-divider full-width"><span>Classificação</span></div>
 
             <div class="field-group">
-                <label>Setor</label>
+                <label>Setor <span class="req-star">*</span></label>
                 <div class="oc-field-inline">
-                    <div class="oc-ac-wrap oc-ac-wrap--icon">
-                        <input type="text" id="ocFSetor" placeholder="Digite ou selecione..." autocomplete="off"
-                               oninput="ocSetorInput()" onfocus="ocSetorInput()">
-                        <i class="fas fa-chevron-down oc-ac-caret"></i>
-                        <div class="oc-ac-dropdown" id="ocSetorDropdown"></div>
+                    <div class="sms-field" id="sms-oc" onclick="smsToggleOpen('oc', event)">
+                        <div class="sms-tags" id="sms-oc-tags"><span class="sms-placeholder">Selecionar setor...</span></div>
+                        <i class="fas fa-chevron-down sms-caret"></i>
+                        <div class="sms-dropdown" id="sms-oc-drop" onclick="event.stopPropagation()">
+                            <div class="sms-search"><i class="fas fa-search"></i><input type="text" id="sms-oc-input" placeholder="Buscar setor..." oninput="smsFilter('oc')"></div>
+                            <div class="sms-options" id="sms-oc-options"></div>
+                        </div>
                     </div>
+                    <input type="hidden" id="ocFSetor">
                     <button type="button" class="oc-field-plus" onclick="ocOpenManager('setores')" title="Gerenciar setores"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
@@ -2113,9 +2106,17 @@
             </div>
             <div class="form-section-divider full-width"><span>Classificação</span></div>
             <div class="field-group">
-                <label>Setor</label>
+                <label>Setor <span class="req-star">*</span></label>
                 <div class="select-wrapper">
-                    <select id="auditSetor" onchange="onCategoryChange('audit')"></select>
+                    <div class="sms-field" id="sms-audit" onclick="smsToggleOpen('audit', event)">
+                        <div class="sms-tags" id="sms-audit-tags"><span class="sms-placeholder">Selecionar setor...</span></div>
+                        <i class="fas fa-chevron-down sms-caret"></i>
+                        <div class="sms-dropdown" id="sms-audit-drop" onclick="event.stopPropagation()">
+                            <div class="sms-search"><i class="fas fa-search"></i><input type="text" id="sms-audit-input" placeholder="Buscar setor..." oninput="smsFilter('audit')"></div>
+                            <div class="sms-options" id="sms-audit-options"></div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="auditSetor">
                     <button onclick="openListManager('setores')"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
@@ -2317,219 +2318,6 @@
     </div>
 </div>
 
-<!-- DRAWER TREINAMENTOS -->
-<div class="form-drawer" id="modalTreinamentos">
-    <div class="form-drawer-header">
-        <div class="form-drawer-header-left">
-            <div class="form-drawer-icon"><i class="fas fa-chalkboard-teacher"></i></div>
-            <div>
-                <div class="form-drawer-title">Novo Treinamento</div>
-                <div class="form-drawer-subtitle" id="drawerSubtitleTreinamentos">Preencha os dados abaixo</div>
-            </div>
-        </div>
-        <button class="history-drawer-close" onclick="closeFormDrawer()" title="Fechar"><i class="fas fa-times"></i></button>
-    </div>
-    <!-- Drawer tabs -->
-    <div class="drawer-tabs">
-        <button class="drawer-tab active" onclick="switchDrawerTab('train','info',this)"><i class="fas fa-info-circle"></i> Informações</button>
-        <button class="drawer-tab" onclick="switchDrawerTab('train','anexos',this)"><i class="fas fa-paperclip"></i> Anexos</button>
-    </div>
-    <div class="form-drawer-body">
-        <!-- Aba Informações -->
-        <div class="drawer-tab-panel active" id="train-panel-info">
-        <div class="form-grid">
-            <div class="field-group full-width">
-                <label>Título</label>
-                <input id="trainTitulo" placeholder="Ex: Treinamento de Segurança do Trabalho">
-            </div>
-            <div class="field-group full-width">
-                <label>Descrição</label>
-                <textarea id="trainDescricao" rows="2" placeholder="Descrição opcional..."></textarea>
-            </div>
-            <div class="form-section-divider full-width"><span>Classificação</span></div>
-            <div class="field-group">
-                <label>Setor</label>
-                <div class="select-wrapper">
-                    <select id="trainSetor" onchange="onCategoryChange('train')"></select>
-                    <button onclick="openListManager('setores')"><i class="fas fa-plus"></i></button>
-                </div>
-            </div>
-            <div class="field-group">
-                <label>Categoria</label>
-                <div class="select-wrapper">
-                    <select id="trainCategoria" onchange="onCategoryChange('train')"></select>
-                    <button onclick="openListManager('categorias')"><i class="fas fa-plus"></i></button>
-                </div>
-            </div>
-            <div class="field-group">
-                <label>Status</label>
-                <div class="select-wrapper">
-                    <select id="trainStatus"></select>
-                    <button onclick="openListManager('status')"><i class="fas fa-plus"></i></button>
-                </div>
-            </div>
-            <div class="field-group">
-                <label>Marcador</label>
-                <div class="select-wrapper">
-                    <select id="trainMarcador"></select>
-                    <button onclick="openListManager('marcadores')"><i class="fas fa-plus"></i></button>
-                </div>
-            </div>
-            <div class="form-section-divider full-width"><span>Datas &amp; Prazo</span></div>
-            <div class="field-group">
-                <label>Data Publicação</label>
-                <input type="date" id="trainDataPublicacao" onchange="onTrainRotinaChange()">
-            </div>
-            <div class="field-group">
-                <label>Data Previsão</label>
-                <input type="date" id="trainDataPrevisao">
-            </div>
-            <div class="field-group">
-                <label>Alerta (Dias antes)</label>
-                <input type="number" id="trainFlagDias" value="7">
-            </div>
-            <div class="field-group">
-                <label>Rotina</label>
-                <select id="trainRotina" onchange="onTrainRotinaChange()">
-                    <option value="pontual">Pontual</option>
-                    <option value="anual">Anual</option>
-                    <option value="mensal">Mensal</option>
-                    <option value="semanal">Semanal</option>
-                    <option value="diario">Diário</option>
-                    <option value="diasemana">Dia da semana</option>
-                </select>
-            </div>
-            <div class="field-group" id="trainFrequenciaWrap" style="display:none;">
-                <label>Frequência <span style="font-size:11px;color:#6b7280;">(intervalo)</span></label>
-                <input type="number" id="trainFrequencia" min="1" value="1" oninput="calcTrainDataPrevisao()">
-            </div>
-            <div class="field-group full-width" id="trainDiaSemanaWrap" style="display:none;">
-                <label>Dias da semana</label>
-                <div class="audit-weekdays" id="trainWeekdays">
-                    <button type="button" class="wd-btn" data-day="0" onclick="toggleTrainWeekday(this)">Dom</button>
-                    <button type="button" class="wd-btn" data-day="1" onclick="toggleTrainWeekday(this)">Seg</button>
-                    <button type="button" class="wd-btn" data-day="2" onclick="toggleTrainWeekday(this)">Ter</button>
-                    <button type="button" class="wd-btn" data-day="3" onclick="toggleTrainWeekday(this)">Qua</button>
-                    <button type="button" class="wd-btn" data-day="4" onclick="toggleTrainWeekday(this)">Qui</button>
-                    <button type="button" class="wd-btn" data-day="5" onclick="toggleTrainWeekday(this)">Sex</button>
-                    <button type="button" class="wd-btn" data-day="6" onclick="toggleTrainWeekday(this)">Sáb</button>
-                </div>
-            </div>
-            <div class="form-section-divider full-width"><span>Responsabilidade</span></div>
-            <div class="field-group full-width">
-                <label>Responsáveis <span class="req-star">*</span></label>
-                <div class="ms-field" id="ms-tren-resp">
-                    <input class="ms-input" id="ms-tren-resp-input" type="text" placeholder="Buscar e adicionar responsável..." autocomplete="off">
-                    <div class="ms-tags" id="ms-tren-resp-tags"></div>
-                    <div class="ms-dropdown" id="ms-tren-resp-drop"></div>
-                </div>
-                <input type="hidden" id="trainResponsavel">
-            </div>
-            <div class="field-group full-width">
-                <label>Revisores</label>
-                <div class="ms-field" id="ms-tren-rev">
-                    <input class="ms-input" id="ms-tren-rev-input" type="text" placeholder="Buscar e adicionar revisor..." autocomplete="off">
-                    <div class="ms-tags" id="ms-tren-rev-tags"></div>
-                    <div class="ms-dropdown" id="ms-tren-rev-drop"></div>
-                </div>
-                <input type="hidden" id="trainRevisor">
-            </div>
-            <div class="field-group full-width sched-status-wrap" id="trainSchedStatusWrap">
-                <div class="sched-box">
-                    <div class="sched-box-header">
-                        <div class="sched-box-icon"><i class="fas fa-calendar-check"></i></div>
-                        <div class="sched-box-title-wrap">
-                            <span class="sched-box-title">Programação de Status Concluído</span>
-                            <span class="sched-box-desc">Ao atingir a condição configurada, o status do card será alterado automaticamente</span>
-                        </div>
-                        <button type="button" class="sched-toggle-btn" id="trainSchedToggle" onclick="schedToggleEnabled('train')" title="Ativar/desativar programação">
-                            <span class="sched-toggle-track"><span class="sched-toggle-thumb"></span></span>
-                        </button>
-                    </div>
-                    <div class="sched-box-body" id="trainSchedBoxBody" style="display:none;">
-                        <div class="sched-row">
-                            <div class="sched-dropdown-wrap" id="trainSchedTypeWrap">
-                                <button type="button" class="sched-dropdown-btn" id="trainSchedTypeBtn" onclick="schedToggleDropdown('train','type')">
-                                    <span class="sched-btn-icon sched-btn-icon--type" id="trainSchedTypeIcon"><i class="fas fa-calendar-alt"></i></span>
-                                    <span class="sched-btn-text" id="trainSchedTypeText">Selecionar tipo</span>
-                                    <i class="fas fa-chevron-down sched-btn-chevron" id="trainSchedTypeChevron"></i>
-                                </button>
-                                <div class="sched-dropdown-panel" id="trainSchedTypePanel" style="display:none;">
-                                    <div class="sched-dropdown-item" onclick="schedPickType('train','overdue')">
-                                        <span class="sched-item-icon sched-item-icon--overdue"><i class="fas fa-hourglass-end"></i></span>
-                                        <div class="sched-item-info">
-                                            <span class="sched-item-title">Ao Vencer</span>
-                                            <span class="sched-item-desc">Ao atingir a data prevista</span>
-                                        </div>
-                                        <i class="fas fa-check sched-item-check" id="trainTypeCheckOverdue" style="display:none;"></i>
-                                    </div>
-                                    <div class="sched-dropdown-item" onclick="schedPickType('train','alert')">
-                                        <span class="sched-item-icon sched-item-icon--alert"><i class="fas fa-bell"></i></span>
-                                        <div class="sched-item-info">
-                                            <span class="sched-item-title">Ao Alertar</span>
-                                            <span class="sched-item-desc">Ao entrar no período de alerta</span>
-                                        </div>
-                                        <i class="fas fa-check sched-item-check" id="trainTypeCheckAlert" style="display:none;"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="sched-row-arrow"><i class="fas fa-arrow-right"></i></div>
-                            <div class="sched-dropdown-wrap sched-dropdown-wrap--status" id="trainSchedStatusWrapInner">
-                                <button type="button" class="sched-dropdown-btn sched-dropdown-btn--status" id="trainSchedStatusBtn" onclick="schedToggleDropdown('train','status')" disabled>
-                                    <span class="sched-btn-icon sched-btn-icon--status"><i class="fas fa-tag"></i></span>
-                                    <span class="sched-btn-text" id="trainSchedStatusText">Selecionar status</span>
-                                    <i class="fas fa-chevron-down sched-btn-chevron" id="trainSchedStatusChevron"></i>
-                                </button>
-                                <div class="sched-dropdown-panel sched-dropdown-panel--right" id="trainSchedStatusPanel" style="display:none;">
-                                    <div class="sched-status-options" id="trainSchedStatusOptions"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <label class="sched-reset-row">
-                            <input type="checkbox" id="trainResetChecklistOnAuto">
-                            <i class="fas fa-rotate-left sched-reset-icon"></i>
-                            <span class="sched-reset-label">Resetar checklist ao alterar status</span>
-                        </label>
-                    </div>
-                </div>
-                <input type="hidden" id="trainOverdueStatus" value="">
-                <input type="hidden" id="trainAlertStatus" value="">
-            </div>
-        </div>
-        </div><!-- /train-panel-info -->
-        <!-- Aba Anexos -->
-        <div class="drawer-tab-panel" id="train-panel-anexos">
-            <div id="train-anexos-list"></div>
-            <div class="upload-widget">
-                <select id="train-upload-tipo" class="upload-tipo-select" onchange="_onUploadTipoChange('train')">
-                    <option value="arquivo">Arquivo</option>
-                    <option value="link">Link</option>
-                </select>
-                <input type="text" id="train-upload-title" class="upload-title-input" placeholder="Nome do arquivo">
-                <button type="button" class="upload-send-btn" id="train-upload-btn" onclick="submitAnexoUpload('train')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    Enviar
-                </button>
-            </div>
-            <div id="train-file-preview" style="display:none;"></div>
-            <div id="train-upload-zone" class="upload-drop-zone">
-                <input type="file" id="train-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.doc,.docx,.odt,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px;color:#9ca3af;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                <span class="upload-drop-label">Clique ou arraste o arquivo</span>
-                <span class="upload-drop-hint">PDF, imagem, Word, planilha ou slides (máx. 30 MB)</span>
-            </div>
-            <div id="train-link-wrap" style="display:none;">
-                <input type="url" id="train-link-input" class="upload-title-input" placeholder="https://..." style="width:100%;">
-            </div>
-        </div>
-    </div><!-- /form-drawer-body -->
-    <div class="form-drawer-footer">
-        <button id="btnDuplicateTraining" class="btn-duplicate" onclick="duplicateTraining()">Duplicar</button>
-        <button class="btn-cancel" onclick="closeFormDrawer()">Cancelar</button>
-        <button class="btn-save" id="btn-save-train" onclick="saveTraining()"><i class="fas fa-floppy-disk"></i> Salvar Registro</button>
-    </div>
-</div>
-
 <!-- DRAWER ATIVIDADES -->
 <div class="form-drawer" id="modalAtividades">
     <div class="form-drawer-header">
@@ -2562,9 +2350,17 @@
             </div>
             <div class="form-section-divider full-width"><span>Classificação</span></div>
             <div class="field-group">
-                <label>Setor</label>
+                <label>Setor <span class="req-star">*</span></label>
                 <div class="select-wrapper">
-                    <select id="ativSetor" onchange="onCategoryChange('ativ')"></select>
+                    <div class="sms-field" id="sms-ativ" onclick="smsToggleOpen('ativ', event)">
+                        <div class="sms-tags" id="sms-ativ-tags"><span class="sms-placeholder">Selecionar setor...</span></div>
+                        <i class="fas fa-chevron-down sms-caret"></i>
+                        <div class="sms-dropdown" id="sms-ativ-drop" onclick="event.stopPropagation()">
+                            <div class="sms-search"><i class="fas fa-search"></i><input type="text" id="sms-ativ-input" placeholder="Buscar setor..." oninput="smsFilter('ativ')"></div>
+                            <div class="sms-options" id="sms-ativ-options"></div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="ativSetor">
                     <button onclick="openListManager('setores')"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
@@ -2710,9 +2506,17 @@
             </div>
             <div class="form-section-divider full-width"><span>Classificação</span></div>
             <div class="field-group">
-                <label>Setor</label>
+                <label>Setor <span class="req-star">*</span></label>
                 <div class="select-wrapper">
-                    <select id="docSetor" onchange="onCategoryChange('doc')"></select>
+                    <div class="sms-field" id="sms-doc" onclick="smsToggleOpen('doc', event)">
+                        <div class="sms-tags" id="sms-doc-tags"><span class="sms-placeholder">Selecionar setor...</span></div>
+                        <i class="fas fa-chevron-down sms-caret"></i>
+                        <div class="sms-dropdown" id="sms-doc-drop" onclick="event.stopPropagation()">
+                            <div class="sms-search"><i class="fas fa-search"></i><input type="text" id="sms-doc-input" placeholder="Buscar setor..." oninput="smsFilter('doc')"></div>
+                            <div class="sms-options" id="sms-doc-options"></div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="docSetor">
                     <button onclick="openListManager('setores')"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
@@ -3656,9 +3460,9 @@
 <script src="script/notifications.js"></script>
 <script src="script/init.js"></script>
 <script src="script/multi-select.js"></script>
+<script src="script/setor-multiselect.js"></script>
 <script src="script/auditoria.js"></script>
 <script src="script/gestao.js"></script>
-<script src="script/treinamentos.js"></script>
 <script src="script/documentos.js"></script>
 <script src="script/key.js"></script>
 <script src="script/setor-filter.js"></script>

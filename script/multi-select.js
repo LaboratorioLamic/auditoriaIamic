@@ -8,8 +8,6 @@
         { key: 'audit-rev',  hidden: 'auditRevisor',     field: 'ms-audit-rev',  tags: 'ms-audit-rev-tags',  input: 'ms-audit-rev-input',  drop: 'ms-audit-rev-drop' },
         { key: 'ativ-resp',  hidden: 'ativResponsavel',  field: 'ms-ativ-resp',  tags: 'ms-ativ-resp-tags',  input: 'ms-ativ-resp-input',  drop: 'ms-ativ-resp-drop' },
         { key: 'ativ-rev',   hidden: 'ativRevisor',      field: 'ms-ativ-rev',   tags: 'ms-ativ-rev-tags',   input: 'ms-ativ-rev-input',   drop: 'ms-ativ-rev-drop' },
-        { key: 'tren-resp',  hidden: 'trainResponsavel', field: 'ms-tren-resp',  tags: 'ms-tren-resp-tags',  input: 'ms-tren-resp-input',  drop: 'ms-tren-resp-drop' },
-        { key: 'tren-rev',   hidden: 'trainRevisor',     field: 'ms-tren-rev',   tags: 'ms-tren-rev-tags',   input: 'ms-tren-rev-input',   drop: 'ms-tren-rev-drop' },
         { key: 'doc-resp',   hidden: 'docResponsavel',   field: 'ms-doc-resp',   tags: 'ms-doc-resp-tags',   input: 'ms-doc-resp-input',   drop: 'ms-doc-resp-drop' },
         { key: 'doc-rev',    hidden: 'docRevisor',       field: 'ms-doc-rev',    tags: 'ms-doc-rev-tags',    input: 'ms-doc-rev-input',    drop: 'ms-doc-rev-drop' },
         { key: 'rnc-resp',   hidden: 'rncFResponsavel',  field: 'ms-rnc-resp',   tags: 'ms-rnc-resp-tags',   input: 'ms-rnc-resp-input',   drop: 'ms-rnc-resp-drop' },

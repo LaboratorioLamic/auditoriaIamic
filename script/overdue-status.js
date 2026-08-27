@@ -2,19 +2,18 @@
 
 var _SCHED_CFG = {
     audit: { statusKey: 'auditStatus' },
-    train: { statusKey: 'trainStatus' },
     doc:   { statusKey: 'docStatus'   }
 };
 
 // Tipo ativo por prefixo: null | 'overdue' | 'alert'
-var _schedType = { audit: null, train: null, doc: null };
+var _schedType = { audit: null, doc: null };
 
 // Toggle habilitado por prefixo
-var _schedEnabled = { audit: false, train: false, doc: false };
+var _schedEnabled = { audit: false, doc: false };
 
 // Fecha todos os painéis abertos (inclusive de outros prefixos)
 function _schedCloseAll(exceptPanel) {
-    ['audit','train','doc'].forEach(p => {
+    ['audit','doc'].forEach(p => {
         ['Type','Status'].forEach(k => {
             const panel = document.getElementById(`${p}Sched${k}Panel`);
             if (panel && panel !== exceptPanel && panel.style.display !== 'none') {
@@ -425,7 +424,6 @@ window.applyOverdueStatuses = function() {
     }
 
     checkArray(audits,    i => i.dataPrevisao,       i => i.flagDias);
-    checkArray(trainings, i => i.dataPrevisao,       i => i.flagDias);
     checkArray(documents, i => i.dataProximaRevisao, i => i.flagDias);
 
     if (changed) saveAll();

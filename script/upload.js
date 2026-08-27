@@ -81,7 +81,6 @@ const _uploadQueues = {
   'edit-pub': { file: null, dataUrl: null },
   audit:      { file: null, dataUrl: null },
   ativ:       { file: null, dataUrl: null },
-  train:      { file: null, dataUrl: null },
   doc:        { file: null, dataUrl: null },
   mant:       { file: null, dataUrl: null },
   oc:         { file: null, dataUrl: null },
@@ -92,14 +91,13 @@ const _uploadQueues = {
 const _activeUploadTasks = {};
 
 // Botões de salvar/confirmar bloqueados durante upload (arquivo pendente ou enviando).
-// Inclui os drawers de cards (audit/ativ/train/doc) para impedir salvar o card ANTES de
+// Inclui os drawers de cards (audit/ativ/doc) para impedir salvar o card ANTES de
 // o anexo terminar de subir — o que gravaria o card sem o vínculo do arquivo.
 const _SAVE_BTN_IDS = {
   'pub':        'btn-confirmar-publicacao',
   'edit-pub':   'btn-salvar-edicao-pub',
   'audit':      'btn-save-audit',
   'ativ':       'btn-save-ativ',
-  'train':      'btn-save-train',
   'doc':        'btn-save-doc',
   'oc':         'btn-save-oc',
   'rnc':        'btn-save-rnc'
@@ -418,7 +416,7 @@ function _setImgProgress(ctx, pct) {
 
 // ── Limpeza de imgBlobs órfãos ───────────────────────────────
 // Analisa /imgBlobs vs publicações e apaga os não-referenciados.
-// collections: array de arrays (audits, trainings, activities, maintenances, documents, rncItems)
+// collections: array de arrays (audits, activities, maintenances, documents, rncItems)
 // Retorna { total, orphans, removed } para exibir no relatório.
 window.purgeOrphanImgBlobs = async function(collections) {
   const db    = getFirebaseDatabase();
@@ -513,7 +511,6 @@ function _collectReferencedBlobIds() {
   const refs = new Set();
   const collections = [
     (typeof audits        !== 'undefined' && audits)        || [],
-    (typeof trainings     !== 'undefined' && trainings)     || [],
     (typeof activities    !== 'undefined' && activities)    || [],
     (typeof maintenances  !== 'undefined' && maintenances)  || [],
     (typeof documents     !== 'undefined' && documents)     || [],
@@ -729,7 +726,7 @@ function resetUploadZone(ctx) {
   _renderUploadPreview(ctx);
 }
 
-// ── Sistema de anexos para drawers (audit, ativ, train, doc, mant) ──
+// ── Sistema de anexos para drawers (audit, ativ, doc, mant) ──
 
 // Renderiza a lista de anexos já salvos no container
 function _renderAnexosList(ctx) {
@@ -919,7 +916,6 @@ document.addEventListener('DOMContentLoaded', function () {
   initUploadZone('edit-pub');
   initUploadZone('audit');
   initUploadZone('ativ');
-  initUploadZone('train');
   initUploadZone('doc');
   initUploadZone('mant');
   initUploadZone('oc');

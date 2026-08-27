@@ -317,7 +317,6 @@ body.dark-mode .dpg-btn.active { border-color: #2563eb; background: #2563eb; col
 body.dark-mode .pub-type-chip--comment  { background: rgba(37,99,235,0.18); color: #93c5fd; }
 body.dark-mode .pub-type-chip--update   { background: rgba(22,163,74,0.15); color: #4ade80; }
 body.dark-mode .pub-type-chip--evidence { background: rgba(147,51,234,0.15); color: #c084fc; }
-body.dark-mode .pub-type-chip--training { background: rgba(234,88,12,0.15); color: #fb923c; }
 body.dark-mode .pub-type-chip--document { background: rgba(3,105,161,0.18); color: #38bdf8; }
 body.dark-mode .dash-pub-attach-badge   { background: rgba(37,99,235,0.18); color: #93c5fd; }
 body.dark-mode .dash-pub-module-chip    { background: #253348; color: #94a3b8; }
@@ -564,6 +563,17 @@ body.dark-mode .ms-input { color: #e2e8f0; }
 body.dark-mode .ms-option { color: #e2e8f0; border-bottom-color: #253348; }
 body.dark-mode .ms-option:hover { background: #253348; }
 body.dark-mode .ms-option--sel { background: rgba(37,99,235,0.15); color: #93c5fd; }
+
+/* Multi-select de Setor (popover) */
+body.dark-mode .sms-field { background: #0f172a; border-color: #334155; }
+body.dark-mode .sms-field--open { border-color: #3b82f6; background: #0f172a; }
+body.dark-mode .sms-placeholder { color: #64748b; }
+body.dark-mode .sms-dropdown { background: #1e293b; border-color: #334155; }
+body.dark-mode .sms-search { border-bottom-color: #253348; color: #64748b; }
+body.dark-mode .sms-search input { color: #e2e8f0; }
+body.dark-mode .sms-option { color: #e2e8f0; border-bottom-color: #253348; }
+body.dark-mode .sms-option:hover { background: #253348; }
+body.dark-mode .sms-option--sel { background: rgba(37,99,235,0.15); color: #93c5fd; }
 
 /* ── Filtros (data dropdown / calendário) ───────────────────────────────── */
 body.dark-mode .fbar-date-dropdown {
@@ -2204,9 +2214,6 @@ body.dark-mode .ver-pub-modal-header[data-tipo="Atualização"] {
 }
 body.dark-mode .ver-pub-modal-header[data-tipo="Evidência"] {
     background: linear-gradient(135deg, #052e16 0%, #166534 50%, #16a34a 100%) !important;
-}
-body.dark-mode .ver-pub-modal-header[data-tipo="Treinamento"] {
-    background: linear-gradient(135deg, #431407 0%, #92400e 50%, #b45309 100%) !important;
 }
 body.dark-mode .ver-pub-modal-header[data-tipo="Documento"] {
     background: linear-gradient(135deg, #2e1065 0%, #5b21b6 50%, #7c3aed 100%) !important;

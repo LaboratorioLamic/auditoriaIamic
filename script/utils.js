@@ -1,5 +1,43 @@
 // === UTILITÁRIOS GERAIS ===
 
+// ── Setor multi-valor (Atividades) ───────────────────────────────────────
+// item.setor pode ser: string única (legado / demais módulos) ou um JSON
+// stringificado de array (Atividades, multi-setor). Estas funções normalizam
+// os dois formatos pra todo código compartilhado (permissão, filtro,
+// agrupamento, ordenação, cards) continuar funcionando sem duplicar lógica.
+window.setorArr = function (raw) {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.filter(Boolean);
+    if (typeof raw === 'string' && raw.trim().startsWith('[')) {
+        try {
+            const p = JSON.parse(raw);
+            if (Array.isArray(p)) return p.filter(Boolean);
+        } catch (_) {}
+    }
+    return [String(raw)];
+};
+// Texto pra exibição simples (ex.: título de view, filtros de agrupamento) —
+// junta todos os setores com vírgula.
+window.setorText = function (raw) {
+    return setorArr(raw).join(', ');
+};
+// Retorna { first, extra } pra exibição em cards: primeiro setor + contagem
+// dos demais, no mesmo padrão usado para Responsáveis (card-resp-extra).
+window.setorDisplay = function (raw) {
+    const arr = setorArr(raw);
+    if (!arr.length) return { first: '', extra: 0 };
+    return { first: arr[0], extra: arr.length - 1 };
+};
+// Usado nos filtros de permissão (allowedSetores) e no filtro de setor da UI:
+// true se QUALQUER setor do item bater com a lista/valor informado.
+window.setorMatchesAny = function (raw, allowedOrValue) {
+    const itemSetores = setorArr(raw);
+    if (Array.isArray(allowedOrValue)) {
+        return itemSetores.some(s => allowedOrValue.includes(s));
+    }
+    return itemSetores.includes(allowedOrValue);
+};
+
 // ── Overlay global de carregamento ───────────────────────────────────────
 // Usado por qualquer fluxo que precisa bloquear a tela inteira enquanto uma
 // gravação no Firebase está em andamento (ex.: aplicar checklist), pra o
@@ -169,6 +207,8 @@ window._markDrawerDirty = function(el) {
 const _DRAWER_DIRTY_CLICK_SEL = [
     '.ms-option',            // escolher responsável/revisor no multi-select
     '.ms-tags button',       // remover um responsável/revisor já escolhido
+    '.sms-option',           // escolher setor no multi-select de Atividades
+    '.sms-tags button',      // remover um setor já escolhido
     '.rnc-class-chip',       // classificação da RNC (crítica/maior/menor)
     '.rnc-ac-option',        // marcador e autocompletes da RNC
     '.checklist-add-btn',    // adicionar item de checklist
@@ -399,7 +439,7 @@ window.showConfirmDanger = function({ title, message, confirmLabel, icon, onConf
     }
 };
 
-// Modal de aviso: não é possível concluir item atrasado (treinamentos/documentos)
+// Modal de aviso: não é possível concluir item atrasado (documentos)
 window.showOverdueConcluiModal = function() {
     const existing = document.getElementById('overdueConcluiModal');
     if (existing) existing.remove();
@@ -471,8 +511,7 @@ window._safeSnapshot = function(item) {
     // Retorna true se o item está atrasado (data de previsão/revisão no passado)
     window.isItemOverdue = function(item, tab) {
         let dateStr = null;
-        if (tab === 'treinamentos' || tab === 'train') dateStr = item.dataPrevisao;
-        else if (tab === 'documentos' || tab === 'doc') dateStr = item.dataProximaRevisao;
+        if (tab === 'documentos' || tab === 'doc') dateStr = item.dataProximaRevisao;
         if (!dateStr) return false;
         return daysDiff(dateStr) < 0;
     };
@@ -503,7 +542,7 @@ window._safeSnapshot = function(item) {
             return s;
         };
 
-        [audits, trainings, activities, documents].forEach(arr => {
+        [audits, activities, documents].forEach(arr => {
             arr.forEach(item => {
                 item.responsavel = sanitizeField(item.responsavel);
                 item.revisor     = sanitizeField(item.revisor);
@@ -894,15 +933,12 @@ window._safeSnapshot = function(item) {
 }
 
 
-// Retorna true se o item é recorrente e concluído — trein/doc com periodicidade > 0.
+// Retorna true se o item é recorrente e concluído — doc com periodicidade > 0.
 // Esses itens continuam sendo monitorados pelo prazo mesmo após conclusão.
 function isConcludedRecurring(item, tabType) {
     if (typeof _kbStatusIsConcluido === 'function' ? !_kbStatusIsConcluido(item.status || '') : !/conclu/i.test(item.status || '')) return false;
     if (tabType === 'auditoria' || tabType === 'audit') {
         // Rotina não-pontual continua monitorando prazo mesmo concluída
-        return item.rotina && item.rotina !== 'pontual';
-    }
-    if (tabType === 'treinamentos' || tabType === 'train') {
         return item.rotina && item.rotina !== 'pontual';
     }
     if (tabType === 'documentos' || tabType === 'doc') {

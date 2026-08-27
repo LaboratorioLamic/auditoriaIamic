@@ -112,12 +112,12 @@ window._openCardQualityChart = function(id, tab, groupKey) {
         }
         const options = years.map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('');
 
-        ['fAuditYearForMonth', 'fAuditYearOnly', 'fAtivYearForMonth', 'fAtivYearOnly', 'fMantYearForMonth', 'fMantYearOnly', 'fDocYearForMonth', 'fDocYearOnly', 'fTrainYearForMonth', 'fTrainYearOnly', 'fDashYearForMonth', 'fDashYearOnly'].forEach(id => {
+        ['fAuditYearForMonth', 'fAuditYearOnly', 'fAtivYearForMonth', 'fAtivYearOnly', 'fMantYearForMonth', 'fMantYearOnly', 'fDocYearForMonth', 'fDocYearOnly', 'fDashYearForMonth', 'fDashYearOnly'].forEach(id => {
             const el = document.getElementById(id);
             if(el) el.innerHTML = options;
         });
 
-        ['fAuditMonth', 'fAtivMonth', 'fMantMonth', 'fDocMonth', 'fTrainMonth', 'fDashMonth'].forEach(id => {
+        ['fAuditMonth', 'fAtivMonth', 'fMantMonth', 'fDocMonth', 'fDashMonth'].forEach(id => {
             const el = document.getElementById(id);
             if(el) el.value = currentMonth;
         });
@@ -160,7 +160,6 @@ window._openCardQualityChart = function(id, tab, groupKey) {
         // que possuem ao menos 1 card possível com os filtros atuais
         const tabToFilterPrefix = (tab) => {
             if (tab === 'auditoria') return 'Audit';
-            if (tab === 'treinamentos') return 'Train';
             if (tab === 'atividades') return 'Ativ';
             if (tab === 'manutencao') return 'Mant';
             if (tab === 'documentos') return 'Doc';
@@ -208,11 +207,11 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             // Aplicar filtro de permissões de setores
             const allowedSetores = getAllowedSetores();
             if (allowedSetores !== null) {
-                data = data.filter(item => allowedSetores.includes(item.setor));
+                data = data.filter(item => setorMatchesAny(item.setor, allowedSetores));
             }
 
             data = data.filter(item => {
-                if (setor && item.setor !== setor) return false;
+                if (setor && !setorMatchesAny(item.setor, setor)) return false;
                 if (cat && item.categoria !== cat) return false;
                 if (sub && item.subcategoria !== sub) return false;
                 if (stat && item.status !== stat) return false;
@@ -235,62 +234,6 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                     } else if (dateType === 'custom') {
                         const ini = document.getElementById('fAuditDataIni').value;
                         const fim = document.getElementById('fAuditDataFim').value;
-                        if (ini && item[dateField] < ini) return false;
-                        if (fim && item[dateField] > fim) return false;
-                    }
-                }
-                if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
-                return true;
-            });
-
-        } else if (currentTab === 'treinamentos') {
-            statusList = masterLists.trainStatus || [];
-            dateField = 'dataPrevisao';
-            getSortDate = (it) => it.dataPrevisao;
-            getDeadlineDate = (it) => it.dataPrevisao;
-            filterSetorId = 'fTrainSetor';
-            filterCatId = 'fTrainCat';
-
-            const setor = document.getElementById(filterSetorId)?.value || '';
-            const cat = document.getElementById(filterCatId)?.value || '';
-            const stat = document.getElementById('fTrainStatus')?.value || '';
-            const marcador = document.getElementById('fTrainMarcador')?.value || '';
-            const responsavel = document.getElementById('fTrainResponsavel')?.value || '';
-            const dateType = document.getElementById('fTrainDateType')?.value || 'all';
-
-            data = trainings;
-
-            // SOFT DELETE: Filtrar itens deletados
-            data = data.filter(item => !item.deleted);
-
-            // Aplicar filtro de permissões de setores
-            const allowedSetores = getAllowedSetores();
-            if (allowedSetores !== null) {
-                data = data.filter(item => allowedSetores.includes(item.setor));
-            }
-
-            data = data.filter(item => {
-                if (setor && item.setor !== setor) return false;
-                if (cat && item.categoria !== cat) return false;
-                if (stat && item.status !== stat) return false;
-                if (marcador && item.marcador !== marcador) return false;
-
-                if (responsavel) {
-                    const itemResponsavel = normalizeResponsavel(item.responsavel || '');
-                    const filterLower = responsavel.toLowerCase();
-                    if (!itemResponsavel || !itemResponsavel.includes(filterLower)) return false;
-                }
-
-                if (dateType !== 'all') {
-                    const itemDate = new Date(item[dateField]);
-                    if (dateType === 'month') {
-                        if (itemDate.getMonth() !== parseInt(document.getElementById('fTrainMonth').value) ||
-                            itemDate.getFullYear() !== parseInt(document.getElementById('fTrainYearForMonth').value)) return false;
-                    } else if (dateType === 'year') {
-                        if (itemDate.getFullYear() !== parseInt(document.getElementById('fTrainYearOnly').value)) return false;
-                    } else if (dateType === 'custom') {
-                        const ini = document.getElementById('fTrainDataIni').value;
-                        const fim = document.getElementById('fTrainDataFim').value;
                         if (ini && item[dateField] < ini) return false;
                         if (fim && item[dateField] > fim) return false;
                     }
@@ -323,11 +266,11 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             // Aplicar filtro de permissões de setores
             const allowedSetores = getAllowedSetores();
             if (allowedSetores !== null) {
-                data = data.filter(item => allowedSetores.includes(item.setor));
+                data = data.filter(item => setorMatchesAny(item.setor, allowedSetores));
             }
 
             data = data.filter(item => {
-                if (setor && item.setor !== setor) return false;
+                if (setor && !setorMatchesAny(item.setor, setor)) return false;
                 if (cat && item.categoria !== cat) return false;
                 if (stat && item.status !== stat) return false;
                 if (marcador && item.marcador !== marcador) return false;
@@ -384,11 +327,11 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             // Aplicar filtro de permissões de setores
             const allowedSetores = getAllowedSetores();
             if (allowedSetores !== null) {
-                data = data.filter(item => allowedSetores.includes(item.setor));
+                data = data.filter(item => setorMatchesAny(item.setor, allowedSetores));
             }
 
             data = data.filter(item => {
-                if (setor && item.setor !== setor) return false;
+                if (setor && !setorMatchesAny(item.setor, setor)) return false;
                 if (cat && item.categoria !== cat) return false;
                 if (itemVal && item.item !== itemVal) return false;
                 if (tipo && item.tipo !== tipo) return false;
@@ -443,11 +386,11 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             // Aplicar filtro de permissões de setores
             const allowedSetores = getAllowedSetores();
             if (allowedSetores !== null) {
-                data = data.filter(item => allowedSetores.includes(item.setor));
+                data = data.filter(item => setorMatchesAny(item.setor, allowedSetores));
             }
 
             data = data.filter(item => {
-                if (setor && item.setor !== setor) return false;
+                if (setor && !setorMatchesAny(item.setor, setor)) return false;
                 if (cat && item.categoria !== cat) return false;
                 if (stat && item.status !== stat) return false;
                 if (marcador && item.marcador !== marcador) return false;
@@ -553,7 +496,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             const d = daysDiff(targetDate);
 
             let indicatorClass = 'ind-green';
-            // Concluído recorrente (train/doc com periodicidade) continua monitorando prazo
+            // Concluído recorrente (doc com periodicidade) continua monitorando prazo
             const _skipFlag = (typeof _kbStatusIsConcluido === 'function' ? _kbStatusIsConcluido(item.status) : item.status === 'Concluído') && !isConcludedRecurring(item, currentTab);
             if (!_skipFlag && d !== Infinity) {
                 if (d < 0) indicatorClass = 'ind-red';
@@ -598,6 +541,13 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                     if (!name) return '';
                     return `<div class="card-info-row"><i class="fas fa-user"></i><span class="card-resp-wrap"><span class="card-resp-name">${name}</span>${badge}</span></div>`;
                 };
+                // Setor multi-valor (Atividades): primeiro setor + badge "+N", mesmo padrão do Responsável
+                const _setorRow = (raw) => {
+                    const { first, extra } = (typeof setorDisplay === 'function') ? setorDisplay(raw) : { first: raw || '', extra: 0 };
+                    if (!first) return `<div class="card-info-row"><i class="fas fa-building"></i> <span>ND</span></div>`;
+                    const badge = extra > 0 ? `<span class="card-resp-extra">+${extra}</span>` : '';
+                    return `<div class="card-info-row"><i class="fas fa-building"></i><span class="card-resp-wrap"><span class="card-resp-name">${_fmtEsc(first)}</span>${badge}</span></div>`;
+                };
 
             if (currentTab === 'auditoria') {
                 specificContent = `
@@ -607,18 +557,9 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                     <div class="card-info-row"><i class="far fa-calendar"></i> <span>Pub: <strong>${formatBR(item.dataPublicacao)}</strong></span></div>
                     <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>
                 `;
-            } else if (currentTab === 'treinamentos') {
-                const isNA = isBlankPeriodicity(item.periodicidade);
-                specificContent = `
-                    <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
-                    <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
-                    ${_respRow(item.responsavel)}
-                    <div class="card-info-row"><i class="far fa-calendar"></i> <span>Pub: ${formatBR(item.dataPublicacao)}</span></div>
-                    ${!isNA ? `<div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: ${formatBR(item.dataPrevisao)}</span></div>` : ''}
-                `;
             } else if (currentTab === 'atividades') {
                 specificContent = `
-                    <div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor || 'ND'}</span></div>
+                    ${_setorRow(item.setor)}
                     <div class="card-info-row"><i class="far fa-folder"></i> <span>${item.categoria || '-'}</span></div>
                     ${_respRow(item.responsavel)}
                     <div class="card-info-row"><i class="far fa-calendar"></i> <span>Inicio: <strong>${formatBR(item.dataInicio)}</strong></span></div>
@@ -660,7 +601,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             const clTotal = checklist.length;
             const clDone = checklist.filter(c => c.checked).length;
             const clPct = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0;
-            const _noChecklist = currentTab === 'treinamentos' || currentTab === 'documentos';
+            const _noChecklist = currentTab === 'documentos';
             const donutHtml = (!_noChecklist && clTotal > 0) ? _clDonutHtml(clDone, clTotal, clPct, 40, true) : '';
             // Nota da qualidade só aparece com o checklist 100% concluído.
             const qualityBadgeHtml = (currentTab === 'auditoria' && clTotal > 0 && clPct === 100)
@@ -741,31 +682,13 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             data = audits.filter(item => {
                 if (item.deleted) return false;
                 const allowedSetores = getAllowedSetores();
-                if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return false;
-                if (setor && item.setor !== setor) return false;
+                if (allowedSetores !== null && !setorMatchesAny(item.setor, allowedSetores)) return false;
+                if (setor && !setorMatchesAny(item.setor, setor)) return false;
                 if (cat && item.categoria !== cat) return false;
                 if (stat && item.status !== stat) return false;
                 if (marcador && item.marcador !== marcador) return false;
                 if (revisor) { const _rv = normalizeResponsavel(item.revisor); if (!_rv || !_rv.includes(revisor.toLowerCase())) return false; }
                 if (responsavel) { const r = normalizeResponsavel(item.responsavel); if (!r || !r.includes(responsavel.toLowerCase())) return false; }
-                if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
-                return true;
-            });
-        } else if (currentTab === 'treinamentos') {
-            statusList = masterLists.trainStatus || [];
-            getDeadlineDate = it => it.dataPrevisao;
-            const setor = document.getElementById('fTrainSetor')?.value || '';
-            const cat = document.getElementById('fTrainCat')?.value || '';
-            const stat = document.getElementById('fTrainStatus')?.value || '';
-            const responsavel = document.getElementById('fTrainResponsavel')?.value || '';
-            data = trainings.filter(item => {
-                if (item.deleted) return false;
-                const allowedSetores = getAllowedSetores();
-                if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return false;
-                if (setor && item.setor !== setor) return false;
-                if (cat && item.categoria !== cat) return false;
-                if (stat && item.status !== stat) return false;
-                if (responsavel) { const r = normalizeResponsavel(item.responsavel || ''); if (!r || !r.includes(responsavel.toLowerCase())) return false; }
                 if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
                 return true;
             });
@@ -780,8 +703,8 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             data = activities.filter(item => {
                 if (item.deleted) return false;
                 const allowedSetores = getAllowedSetores();
-                if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return false;
-                if (setor && item.setor !== setor) return false;
+                if (allowedSetores !== null && !setorMatchesAny(item.setor, allowedSetores)) return false;
+                if (setor && !setorMatchesAny(item.setor, setor)) return false;
                 if (cat && item.categoria !== cat) return false;
                 if (stat && item.status !== stat) return false;
                 if (revisor) { const _rv = normalizeResponsavel(item.revisor); if (!_rv || !_rv.includes(revisor.toLowerCase())) return false; }
@@ -799,8 +722,8 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             data = documents.filter(item => {
                 if (item.deleted) return false;
                 const allowedSetores = getAllowedSetores();
-                if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return false;
-                if (setor && item.setor !== setor) return false;
+                if (allowedSetores !== null && !setorMatchesAny(item.setor, allowedSetores)) return false;
+                if (setor && !setorMatchesAny(item.setor, setor)) return false;
                 if (cat && item.categoria !== cat) return false;
                 if (stat && item.status !== stat) return false;
                 if (responsavel) { const r = normalizeResponsavel(item.responsavel); if (!r || !r.includes(responsavel.toLowerCase())) return false; }
@@ -816,8 +739,8 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             data = maintenances.filter(item => {
                 if (item.deleted) return false;
                 const allowedSetores = getAllowedSetores();
-                if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return false;
-                if (setor && item.setor !== setor) return false;
+                if (allowedSetores !== null && !setorMatchesAny(item.setor, allowedSetores)) return false;
+                if (setor && !setorMatchesAny(item.setor, setor)) return false;
                 if (cat && item.categoria !== cat) return false;
                 if (stat && item.status !== stat) return false;
                 if (typeof passesFbarMyTasks === 'function' && !passesFbarMyTasks(item)) return false;
@@ -853,7 +776,6 @@ window._openCardQualityChart = function(id, tab, groupKey) {
 
     function _getDateDisplay(item) {
         if (currentTab === 'auditoria') return formatBR(item.dataPrevisao);
-        if (currentTab === 'treinamentos') return formatBR(item.dataPrevisao);
         if (currentTab === 'atividades') return formatBR(item.dataConclusao);
         if (currentTab === 'manutencao') {
             const isNA = isBlankPeriodicity(item.intervalo);
@@ -872,7 +794,6 @@ window._openCardQualityChart = function(id, tab, groupKey) {
     // Seta a coluna de ordenação padrão por módulo (coluna de data de conclusão/previsão)
     function _tableDefaultSortCol() {
         if (currentTab === 'auditoria')    return 'dataPrevisao';
-        if (currentTab === 'treinamentos') return 'dataPrevisao';
         if (currentTab === 'atividades')   return 'dataConclusao';
         if (currentTab === 'manutencao')   return 'proxima';
         if (currentTab === 'documentos')   return 'dataProximaRevisao';
@@ -884,7 +805,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
         switch (col) {
             case 'titulo':       return (item.titulo || '').toLowerCase();
             case 'status':       return (item.status || '').toLowerCase();
-            case 'setor':        return (item.setor || '').toLowerCase();
+            case 'setor':        return ((typeof setorText === 'function' ? setorText(item.setor) : item.setor) || '').toLowerCase();
             case 'categoria':    return (item.categoria || '').toLowerCase();
             case 'responsavel':  return (item.responsavel || '').toLowerCase();
             case 'revisor':      return (item.revisor || '').toLowerCase();
@@ -975,8 +896,6 @@ window._openCardQualityChart = function(id, tab, groupKey) {
         let colHeaders = '';
         if (currentTab === 'auditoria') {
             colHeaders = _th('Setor','setor')+_th('Categoria','categoria')+_th('Responsável','responsavel')+_th('Pub.','dataPublicacao')+_th('Previsão','dataPrevisao');
-        } else if (currentTab === 'treinamentos') {
-            colHeaders = _th('Setor','setor')+_th('Categoria','categoria')+_th('Responsável','responsavel')+_th('Pub.','dataPublicacao')+_th('Previsão','dataPrevisao');
         } else if (currentTab === 'atividades') {
             colHeaders = _th('Setor','setor')+_th('Categoria','categoria')+_th('Responsável','responsavel')+_th('Início','dataInicio')+_th('Conclusão','dataConclusao');
         } else if (currentTab === 'manutencao') {
@@ -1000,6 +919,14 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             return _e(String(raw));
         };
 
+        const _fmtSetorTd = (raw) => {
+            const { first, extra } = (typeof setorDisplay === 'function') ? setorDisplay(raw) : { first: raw || '', extra: 0 };
+            if (!first) return 'ND';
+            const _e = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            const badge = extra > 0 ? `<span class="card-resp-extra" style="margin-left:5px">+${extra}</span>` : '';
+            return `<span style="display:inline-flex;align-items:center;gap:0">${_e(first)}${badge}</span>`;
+        };
+
         let rows = '';
         const indColors = { green: 'lt-ind-green', yellow: 'lt-ind-yellow', red: 'lt-ind-red' };
         data.forEach(item => {
@@ -1012,10 +939,8 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             let specificCols = '';
             if (currentTab === 'auditoria') {
                 specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${_fmtRespTd(item.responsavel)}</td><td>${formatBR(item.dataPublicacao)}</td><td>${formatBR(item.dataPrevisao)}</td>`;
-            } else if (currentTab === 'treinamentos') {
-                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${_fmtRespTd(item.responsavel)}</td><td>${formatBR(item.dataPublicacao)}</td><td>${formatBR(item.dataPrevisao)||'N/A'}</td>`;
             } else if (currentTab === 'atividades') {
-                specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${_fmtRespTd(item.responsavel)}</td><td>${formatBR(item.dataInicio)}</td><td>${formatBR(item.dataConclusao)}</td>`;
+                specificCols = `<td>${_fmtSetorTd(item.setor)}</td><td>${item.categoria||'-'}</td><td>${_fmtRespTd(item.responsavel)}</td><td>${formatBR(item.dataInicio)}</td><td>${formatBR(item.dataConclusao)}</td>`;
             } else if (currentTab === 'manutencao') {
                 const isNA = isBlankPeriodicity(item.intervalo);
                 specificCols = `<td>${item.setor||'ND'}</td><td>${item.categoria||'-'}</td><td>${item.tipo||'-'}</td><td>${_fmtRespTd(item.responsavelTecnico)}</td><td>${isNA?'N/A':formatBR(item.proxima)}</td>`;
@@ -1111,16 +1036,18 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                     } catch (_) {}
                     return `<div class="card-info-row"><i class="fas fa-user"></i><span class="card-resp-wrap"><span class="card-resp-name">${_fmtEsc2(String(raw))}</span></span></div>`;
                 };
+                const _setorRow2 = (raw) => {
+                    const { first, extra } = (typeof setorDisplay === 'function') ? setorDisplay(raw) : { first: raw || '', extra: 0 };
+                    if (!first) return `<div class="card-info-row"><i class="fas fa-building"></i> <span>ND</span></div>`;
+                    const badge = extra > 0 ? `<span class="card-resp-extra">+${extra}</span>` : '';
+                    return `<div class="card-info-row"><i class="fas fa-building"></i><span class="card-resp-wrap"><span class="card-resp-name">${_fmtEsc2(first)}</span>${badge}</span></div>`;
+                };
                 if (currentTab === 'auditoria') {
                     specificContent = `<div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor||'ND'}</span></div>
                         ${_respRow2(item.responsavel)}
                         <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>`;
-                } else if (currentTab === 'treinamentos') {
-                    specificContent = `<div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor||'ND'}</span></div>
-                        ${_respRow2(item.responsavel)}
-                        <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: ${formatBR(item.dataPrevisao)||'N/A'}</span></div>`;
                 } else if (currentTab === 'atividades') {
-                    specificContent = `<div class="card-info-row"><i class="fas fa-building"></i> <span>${item.setor||'ND'}</span></div>
+                    specificContent = `${_setorRow2(item.setor)}
                         ${_respRow2(item.responsavel)}
                         <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Fim: <strong>${formatBR(item.dataConclusao)}</strong></span></div>`;
                 } else if (currentTab === 'manutencao') {
@@ -1190,12 +1117,15 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             return;
         }
 
-        // Agrupa por setor
+        // Agrupa por setor (um item com múltiplos setores aparece em cada grupo)
         const groups = {};
         data.forEach(item => {
-            const setor = item.setor || 'Sem Setor';
-            if (!groups[setor]) groups[setor] = [];
-            groups[setor].push(item);
+            const itemSetores = (typeof setorArr === 'function' ? setorArr(item.setor) : [item.setor]).filter(Boolean);
+            const list = itemSetores.length ? itemSetores : ['Sem Setor'];
+            list.forEach(setor => {
+                if (!groups[setor]) groups[setor] = [];
+                groups[setor].push(item);
+            });
         });
 
         let html = '';
@@ -1242,10 +1172,6 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                     specificContent = `<div class="card-info-row"><i class="fas fa-layer-group"></i> <span>${item.categoria||'ND'}</span></div>
                         ${_respRow3(item.responsavel)}
                         <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: <strong>${formatBR(item.dataPrevisao)}</strong></span></div>`;
-                } else if (currentTab === 'treinamentos') {
-                    specificContent = `<div class="card-info-row"><i class="fas fa-layer-group"></i> <span>${item.categoria||'ND'}</span></div>
-                        ${_respRow3(item.responsavel)}
-                        <div class="card-info-row"><i class="far fa-calendar-check"></i> <span>Prev: ${formatBR(item.dataPrevisao)||'N/A'}</span></div>`;
                 } else if (currentTab === 'atividades') {
                     specificContent = `<div class="card-info-row"><i class="fas fa-layer-group"></i> <span>${item.categoria||'ND'}</span></div>
                         ${_respRow3(item.responsavel)}
@@ -1323,7 +1249,6 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             'audit': 'auditoria',
             'ativ': 'atividades',
             'mant': 'manutencao',
-            'tren': 'treinamentos',
             'doc': 'documentos'
         };
 
@@ -1341,12 +1266,6 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                 activities.map(a => ({ ...a, type: 'ativ', statusType: getStatusType(a.status, 'ativ'), dateField: a.dataInicio, deadlineField: a.dataConclusao, color: getStatusColor(a.status, 'ativ') }))
             );
         }
-        if (!allowedTabs || allowedTabs.includes('treinamentos')) {
-            const _trainings = typeof trainings !== 'undefined' ? trainings : [];
-            rawItems = rawItems.concat(
-                _trainings.map(t => ({ ...t, type: 'tren', statusType: getStatusType(t.status, 'tren'), dateField: t.dataPublicacao || t.dataInicio || t.data || null, deadlineField: t.dataPrevisao || null, color: getStatusColor(t.status, 'tren') }))
-            );
-        }
         if (!allowedTabs || allowedTabs.includes('documentos')) {
             rawItems = rawItems.concat(
                 documents.map(d => ({ ...d, type: 'doc', statusType: getStatusType(d.status, 'doc'), dateField: d.dataCriacao, deadlineField: d.dataProximaRevisao || null, color: getStatusColor(d.status, 'doc') }))
@@ -1359,7 +1278,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
         // Aplicar filtro de permissões de setores
         const allowedSetores = getAllowedSetores();
         if (allowedSetores !== null) {
-            rawItems = rawItems.filter(item => allowedSetores.includes(item.setor));
+            rawItems = rawItems.filter(item => setorMatchesAny(item.setor, allowedSetores));
         }
 
         // --- FILTRAGEM ---
@@ -1369,8 +1288,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             if (fArea && item.type !== fArea) return false;
 
             // 2. Filtro por Setor
-            const itemSetor = item.setor || 'Setor Não Definido';
-            if (fSetor && itemSetor !== fSetor) return false;
+            if (fSetor && !setorMatchesAny(item.setor, fSetor)) return false;
 
             // 2.1. Filtro por Categoria
             if (fCat && item.categoria !== fCat) return false;
@@ -1461,11 +1379,12 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             statusCounts[key].count++;
         });
 
-        // G2: Distribuição por Setor
+        // G2: Distribuição por Setor (item com múltiplos setores conta em cada um)
         const setorCounts = {};
         activeItems.forEach(item => {
-            const setor = item.setor || 'Setor Não Definido';
-            setorCounts[setor] = (setorCounts[setor] || 0) + 1;
+            const itemSetores = (typeof setorArr === 'function' ? setorArr(item.setor) : [item.setor]).filter(Boolean);
+            const list = itemSetores.length ? itemSetores : ['Setor Não Definido'];
+            list.forEach(setor => { setorCounts[setor] = (setorCounts[setor] || 0) + 1; });
         });
 
         // G_CAT: Por Categoria (todos filteredItems)
@@ -1538,7 +1457,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
         const activeEntries = allStatusEntries.filter(([k]) => !_isFinal(k));
 
         // Determina a statusKey do módulo a partir do filtro de área
-        const _areaToStatusKey = { audit: 'auditStatus', ativ: 'ativStatus', tren: 'trainStatus', doc: 'docStatus', mant: 'mantStatus' };
+        const _areaToStatusKey = { audit: 'auditStatus', ativ: 'ativStatus', doc: 'docStatus', mant: 'mantStatus' };
         const _fAreaChart = document.getElementById('fDashArea')?.value || '';
         const _statusKey = _areaToStatusKey[_fAreaChart] || null;
 
@@ -1558,7 +1477,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             });
         } else if (!_statusKey && typeof _kbGetSortedStatuses === 'function') {
             // Sem filtro de área: ordena por posição média entre todos os módulos
-            const _allKeys = ['auditStatus', 'ativStatus', 'trainStatus', 'docStatus'];
+            const _allKeys = ['auditStatus', 'ativStatus', 'docStatus'];
             const _posMap = {};
             _allKeys.forEach(key => {
                 const _cfg = { statusKey: key, colOrderKey: '' };
@@ -1760,7 +1679,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             ? currentuser.name.toLowerCase().trim() : '';
         let items = rawItems.filter(item => {
             if (item.deleted) return false;
-            if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return false;
+            if (allowedSetores !== null && !setorMatchesAny(item.setor, allowedSetores)) return false;
             if (_fArea && item.type !== _fArea) return false;
             if (_fCat  && item.categoria !== _fCat) return false;
             if (_fResp) {
@@ -2192,7 +2111,6 @@ window._openCardQualityChart = function(id, tab, groupKey) {
         const sources = [
             { arr: typeof audits      !== 'undefined' ? audits      : [], tab: 'auditoria',   typeKey: 'audit', label: 'Rotinas', icon: 'fas fa-clipboard-check', color: '#2563eb' },
             { arr: typeof activities  !== 'undefined' ? activities  : [], tab: 'atividades',  typeKey: 'ativ',  label: 'Atividades',        icon: 'fas fa-tasks',           color: '#16a34a' },
-            { arr: typeof trainings   !== 'undefined' ? trainings   : [], tab: 'treinamentos',typeKey: 'tren',  label: 'Treinamentos',      icon: 'fas fa-graduation-cap',  color: '#7c3aed' },
             { arr: typeof documents   !== 'undefined' ? documents   : [], tab: 'documentos',  typeKey: 'doc',   label: 'Documentos',        icon: 'fas fa-file-lines',      color: '#9333ea' }
         ];
 
@@ -2200,7 +2118,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             if (allowedTabs && !allowedTabs.includes(tab)) return;
             arr.forEach(item => {
                 if (item.deleted) return;
-                if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return;
+                if (allowedSetores !== null && !setorMatchesAny(item.setor, allowedSetores)) return;
                 (item.publicacoes || []).forEach((pub, idx) => {
                     result.push({ pub, item, tab, typeKey, label, icon, color, idx });
                 });
@@ -2218,13 +2136,11 @@ window._openCardQualityChart = function(id, tab, groupKey) {
     // Mostra/oculta tabs de tipo de publicação conforme a área selecionada
     function _syncPubTypeTabs(area) {
         // ativ: Comentário, Atualização, Evidência
-        // tren: Treinamento
         // doc:  Documento
         // audit: Auditoria (publica como tipo)
         // '' (todas): mostra tudo
         const areaTabMap = {
             'ativ':  ['Comentário','Atualização','Evidência'],
-            'tren':  ['Treinamento'],
             'doc':   ['Documento'],
             'audit': ['Auditoria','Comentário','Atualização','Evidência']
         };
@@ -2284,7 +2200,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             allPubs = allPubs.filter(p => {
                 const haystack = [
                     p.pub.descricao || '', p.pub.titulo || '', p.item.titulo || '',
-                    p.pub.usuario || '', p.pub.tipo || '', p.item.setor || ''
+                    p.pub.usuario || '', p.pub.tipo || '', (typeof setorText === 'function' ? setorText(p.item.setor) : p.item.setor) || ''
                 ].join(' ').toLowerCase();
                 return haystack.includes(_dashPubSearchQuery);
             });
@@ -2304,14 +2220,12 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             'Comentário': 'pub-type-chip--comment',
             'Atualização': 'pub-type-chip--update',
             'Evidência':  'pub-type-chip--evidence',
-            'Treinamento':'pub-type-chip--training',
             'Documento':  'pub-type-chip--document'
         };
         const typeIcon = {
             'Comentário': 'fas fa-comment',
             'Atualização':'fas fa-rotate',
             'Evidência':  'fas fa-paperclip',
-            'Treinamento':'fas fa-graduation-cap',
             'Documento':  'fas fa-file-lines'
         };
 
@@ -2326,7 +2240,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
                 const ico = typeIcon[tipo] || 'fas fa-paper-plane';
                 const itemTitulo = item.titulo || '—';
                 const desc = pub.titulo || pub.descricao || '';
-                const setor = item.setor || '—';
+                const setor = (typeof setorText === 'function' ? setorText(item.setor) : item.setor) || '—';
                 const _rawUsuario = pub.usuario || '';
                 const _resolvedUsuario = (_rawUsuario && typeof resolveUserId === 'function') ? (resolveUserId(_rawUsuario) || _rawUsuario) : _rawUsuario;
                 const usuario = _resolvedUsuario || '—';
@@ -2407,7 +2321,6 @@ window._openCardQualityChart = function(id, tab, groupKey) {
         const sources = [
             { arr: typeof audits     !== 'undefined' ? audits     : [], tab: 'auditoria',   typeKey: 'audit', tabLabel: 'auditoria',    dateField: 'dataPublicacao' },
             { arr: typeof activities !== 'undefined' ? activities : [], tab: 'atividades',  typeKey: 'ativ',  tabLabel: 'atividades',   dateField: 'dataInicio'    },
-            { arr: typeof trainings  !== 'undefined' ? trainings  : [], tab: 'treinamentos',typeKey: 'tren',  tabLabel: 'treinamentos', dateField: 'dataPublicacao'},
             { arr: typeof documents  !== 'undefined' ? documents  : [], tab: 'documentos',  typeKey: 'doc',   tabLabel: 'documentos',   dateField: 'dataCriacao'   }
         ];
 
@@ -2419,7 +2332,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             if (fArea && fArea !== typeKey) return;
             arr.forEach(item => {
                 if (item.deleted) return;
-                if (allowedSetores !== null && !allowedSetores.includes(item.setor)) return;
+                if (allowedSetores !== null && !setorMatchesAny(item.setor, allowedSetores)) return;
                 // Exclui concluídos e cancelados
                 if (canceledTypes.has(item.status)) return;
                 if (!me || !_isMeRevisor(item.revisor || '')) return;
@@ -2442,7 +2355,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
         if (badgeEl) badgeEl.textContent = total + ' ite' + (total !== 1 ? 'ns' : 'm');
         if (countEl) countEl.textContent = total > 0 ? `${start + 1}–${Math.min(start + _MINREV_PER_PAGE, total)} de ${total}` : '';
 
-        const tabLabels = { audit: 'Rotina', ativ: 'Atividade', tren: 'Treinamento', doc: 'Documento' };
+        const tabLabels = { audit: 'Rotina', ativ: 'Atividade', doc: 'Documento' };
 
         if (pageItems.length === 0) {
             listEl.innerHTML = `<div class="chart-empty"><i class="fas fa-user-check"></i><span>${me ? 'Nenhum item pendente de revisão' : 'Usuário não identificado'}</span></div>`;
@@ -2450,7 +2363,7 @@ window._openCardQualityChart = function(id, tab, groupKey) {
             listEl.innerHTML = pageItems.map(({ item, tab, typeKey, dateField }) => {
                 const titulo = _escHtml(item.titulo || item.descricao || '—');
                 const status = _escHtml(item.status || '');
-                const setor  = _escHtml(item.setor || '');
+                const setor  = _escHtml((typeof setorText === 'function' ? setorText(item.setor) : item.setor) || '');
                 const date   = item[dateField] ? item[dateField].substring(0, 10) : '—';
                 const typeL  = tabLabels[typeKey] || typeKey;
                 // Flags de prazo

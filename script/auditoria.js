@@ -48,10 +48,18 @@
         const selectedDays = Array.from(document.querySelectorAll('#auditWeekdays .wd-btn.active')).map(b => Number(b.dataset.day));
         const dataPrevisaoVal = document.getElementById('auditDataPrevisao').value;
 
+        const _setorArrAudit = (typeof smsGetValue === 'function') ? smsGetValue('audit') : [];
+        const _setorFieldGroupAudit = document.getElementById('sms-audit')?.closest('.field-group');
+        if (_setorFieldGroupAudit) _setorFieldGroupAudit.classList.toggle('field-error', !_setorArrAudit.length);
+        if (!_setorArrAudit.length) {
+            if (typeof showToast === 'function') showToast('É necessário selecionar ao menos um Setor para salvar o registro.', 'error');
+            document.getElementById('sms-audit')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
         if (typeof _validateRequiredFields === 'function') {
             if (!_validateRequiredFields([
                 { id: 'auditTitulo',    label: 'Título' },
-                { id: 'auditSetor',     label: 'Setor' },
                 { id: 'auditCategoria', label: 'Categoria' },
             ])) return;
         }
@@ -63,7 +71,7 @@
             ...item,
             titulo: document.getElementById('auditTitulo').value,
             descricao: document.getElementById('auditDescricao').value,
-            setor: document.getElementById('auditSetor').value,
+            setor: JSON.stringify(_setorArrAudit),
             categoria: document.getElementById('auditCategoria').value,
             subcategoria: '',
             status: document.getElementById('auditStatus').value,
@@ -191,7 +199,7 @@
         const formData = {
             titulo: document.getElementById('auditTitulo').value,
             descricao: document.getElementById('auditDescricao').value,
-            setor: document.getElementById('auditSetor').value,
+            setor: (typeof smsGetValue === 'function') ? JSON.stringify(smsGetValue('audit')) : document.getElementById('auditSetor').value,
             categoria: document.getElementById('auditCategoria').value,
             subcategoria: '',
             status: document.getElementById('auditStatus').value,
@@ -219,7 +227,7 @@
 
             document.getElementById('auditTitulo').value = formData.titulo;
             document.getElementById('auditDescricao').value = formData.descricao;
-            document.getElementById('auditSetor').value = formData.setor;
+            if (typeof smsSetValue === 'function') smsSetValue('audit', formData.setor || '');
             document.getElementById('auditCategoria').value = formData.categoria;
             document.getElementById('auditStatus').value = formData.status;
             document.getElementById('auditDataPublicacao').value = formData.dataPublicacao;

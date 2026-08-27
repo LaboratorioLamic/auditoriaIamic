@@ -281,7 +281,7 @@
     };
 
     function ocCloseAllDropdowns() {
-        ['ocTypeDropdown', 'ocMyDropdown', 'ocColabDropdown', 'ocSetorDropdown', 'ocCategoriaDropdown', 'ocMotivoDropdown', 'ocCatFilterDropdown', 'ocResponsavelDropdown']
+        ['ocTypeDropdown', 'ocMyDropdown', 'ocColabDropdown', 'ocCategoriaDropdown', 'ocMotivoDropdown', 'ocCatFilterDropdown', 'ocResponsavelDropdown']
             .forEach(function (id) {
                 var el = document.getElementById(id);
                 if (!el) return;
@@ -540,7 +540,7 @@
         document.getElementById('ocDrawerSubtitle').textContent = 'Preencha os dados abaixo';
         document.getElementById('ocFData').value = (typeof today === 'function') ? today() : new Date().toISOString().split('T')[0];
         document.getElementById('ocFColab').value = '';
-        document.getElementById('ocFSetor').value = '';
+        if (typeof smsReset === 'function') smsReset('oc');
         document.getElementById('ocFCategoria').value = '';
         document.getElementById('ocFMotivo').value = '';
         document.getElementById('ocFComentario').value = '';
@@ -562,7 +562,7 @@
         document.getElementById('ocDrawerSubtitle').textContent = 'Atualize os dados abaixo';
         document.getElementById('ocFData').value = o.data || '';
         document.getElementById('ocFColab').value = o.colaborador || '';
-        document.getElementById('ocFSetor').value = o.setor || '';
+        if (typeof smsSetValue === 'function') smsSetValue('oc', o.setor || '');
         document.getElementById('ocFCategoria').value = o.categoria || '';
         document.getElementById('ocFComentario').value = o.comentario || '';
         document.getElementById('ocFResponsavel').value = o.responsavel || meName();
@@ -603,7 +603,7 @@
     window.ocSaveForm = function () {
         var data = document.getElementById('ocFData').value;
         var colab = document.getElementById('ocFColab').value.trim();
-        var setor = document.getElementById('ocFSetor').value.trim();
+        var setorArrOc = (typeof smsGetValue === 'function') ? smsGetValue('oc') : [];
         var categoria = document.getElementById('ocFCategoria').value.trim();
         var motivo = document.getElementById('ocFMotivo').value.trim();
         var comentario = document.getElementById('ocFComentario').value.trim();
@@ -617,9 +617,11 @@
             var ci = document.getElementById('ocFColab'); if (ci) ci.focus();
             return;
         }
-        if (!setor) { toast('Informe o setor.', 'error'); return; }
-        var setorValido = getSetores().some(function (s) { return String(s).trim().toLowerCase() === setor.toLowerCase(); });
+        if (!setorArrOc.length) { toast('Informe o setor.', 'error'); return; }
+        var _setoresValidosOc = getSetores().map(function (s) { return String(s).trim().toLowerCase(); });
+        var setorValido = setorArrOc.every(function (s) { return _setoresValidosOc.indexOf(String(s).trim().toLowerCase()) > -1; });
         if (!setorValido) { toast('Selecione um setor válido da lista.', 'error'); return; }
+        var setor = JSON.stringify(setorArrOc);
         if (!categoria) { toast('Informe a categoria.', 'error'); return; }
         var cat = catByName(categoria);
         if (!motivo) { toast('Informe o motivo.', 'error'); return; }
@@ -938,19 +940,10 @@
             // Preenche setor automaticamente se for um setor válido no sistema
             if (c.setor) {
                 var valid = getSetores().some(function (s) { return String(s).trim().toLowerCase() === c.setor.trim().toLowerCase(); });
-                if (valid) document.getElementById('ocFSetor').value = c.setor;
+                if (valid && typeof smsSetValue === 'function') smsSetValue('oc', [c.setor]);
             }
             document.getElementById('ocColabDropdown').classList.remove('open');
         }, true, emptyMsg);
-    };
-
-    window.ocSetorInput = function () {
-        var q = (document.getElementById('ocFSetor').value || '').trim().toLowerCase();
-        var list = getSetores().filter(function (s) { return !q || String(s).toLowerCase().indexOf(q) !== -1; }).slice(0, 30);
-        renderAC('ocSetorDropdown', list, function (s) {
-            document.getElementById('ocFSetor').value = s;
-            document.getElementById('ocSetorDropdown').classList.remove('open');
-        }, false);
     };
 
     window.ocCategoriaInput = function () {
