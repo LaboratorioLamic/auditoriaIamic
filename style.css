@@ -1,26 +1,11 @@
 /* =========================================================================
    AUDITORIA LAMIC — Design System v3.0
-   Ponto de entrada — importa todos os módulos CSS
-   ========================================================================= */
 
-@import url('./css/variables.css');
-@import url('./css/base.css');
-@import url('./css/animations.css');
-@import url('./css/layout.css');
-@import url('./css/sidebar.css');
-@import url('./css/header.css');
-@import url('./css/buttons.css');
-@import url('./css/filters.css');
-@import url('./css/notifications.css');
-@import url('./css/card.css');
-@import url('./css/modal.css');
-@import url('./css/dashboard.css');
-@import url('./css/kanban.css');
-@import url('./css/history.css');
-@import url('./css/login.css');
-@import url('./css/backup.css');
-@import url('./css/config.css');
-@import url('./css/ocorrencias.css');
-@import url('./css/offline.css');
-@import url('./css/responsive.css');
-@import url('./css/darkmode.css');
+   Os módulos CSS que este arquivo importava agora são <link> diretos no <head>
+   do index.html, na MESMA ordem (a ordem define a cascata). O encadeamento por
+   @import obrigava o navegador a baixar este arquivo antes de sequer descobrir
+   os outros 21 — uma cascata serial no caminho crítico de renderização.
+
+   Este arquivo não é mais referenciado. Ao adicionar um módulo CSS novo,
+   registre-o no <head> do index.html.
+   ========================================================================= */

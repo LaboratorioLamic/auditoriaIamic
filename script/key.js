@@ -492,6 +492,10 @@ function _checkTriPerm(permVal, item) {
                     applyTaskViewPermission();
                     applyOcorrenciasPermissions();
                     loading.innerHTML = '<i class="fas fa-check"></i> Login realizado. Sincronizando dados...';
+                    // A tela de carregamento sobe ANTES de esconder o login: sem ela,
+                    // o usuário veria o dashboard zerado enquanto loadCloudData (que
+                    // não é aguardado aqui, de propósito) ainda baixa as coleções.
+                    if (typeof window.showBootLoader === 'function') window.showBootLoader('connect');
                     // PROTEÇÃO: Força sincronização completa com Firebase após login
                     forceFirebaseSync();
                     document.getElementById('loginOverlay').style.display = 'none';
@@ -552,12 +556,50 @@ function _checkTriPerm(permVal, item) {
 
     // --- FUNÇÕES DE BACKUP LOCAL (ARQUIVO) ---
     
-    function exportLocalData() {
+    // O backup precisa ser AUTO-CONTIDO: desde que os snapshots do histórico passaram
+    // a viver em /cardSnapshots, os cards carregam só `snapId`. Exportar assim geraria
+    // um arquivo com referências penduradas, inúteis ao restaurar em outro banco. Aqui
+    // os snapshots são re-embutidos, deixando o arquivo idêntico ao formato antigo — o
+    // importLocalData continua funcionando sem mudança, e o saveAll externaliza de novo
+    // na volta.
+    async function exportLocalData() {
+        const cols = { audits, activities, maintenances, documents };
+        const copia = JSON.parse(JSON.stringify(cols));
+
+        try {
+            const refs = [];
+            Object.values(copia).forEach(arr => (arr || []).forEach(item => {
+                (item && Array.isArray(item.historico) ? item.historico : []).forEach(e => {
+                    if (e && e.snapId) refs.push(e);
+                });
+            }));
+            if (refs.length) {
+                const database = getFirebaseDatabase();
+                const dbRef = getFirebaseRef();
+                const dbGet = getFirebaseGet();
+                const path = window._cardSnapshotsPath || 'cardSnapshots';
+                const snap = await dbGet(dbRef(database, path));
+                const store = snap.exists() ? (snap.val() || {}) : {};
+                let ausentes = 0;
+                refs.forEach(e => {
+                    if (store[e.snapId]) { e.snapshot = store[e.snapId]; delete e.snapId; }
+                    else { ausentes++; }
+                });
+                if (ausentes) {
+                    console.warn('Backup: ' + ausentes + ' snapshots não encontrados em /' + path);
+                }
+            }
+        } catch (err) {
+            console.error('Erro ao embutir snapshots no backup:', err);
+            if (!confirm('Não foi possível carregar os snapshots do histórico. ' +
+                         'O backup será gerado sem eles. Continuar mesmo assim?')) return;
+        }
+
         const data = {
-            audits,
-            activities,
-            maintenances,
-            documents, 
+            audits: copia.audits,
+            activities: copia.activities,
+            maintenances: copia.maintenances,
+            documents: copia.documents,
             masterLists,
             exportDate: new Date().toISOString(),
             source: "local_export"

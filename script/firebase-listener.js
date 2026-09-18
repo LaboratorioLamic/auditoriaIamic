@@ -24,17 +24,32 @@
             // (#5) Pinta a UI imediatamente a partir do cache local, se houver,
             // enquanto a rede responde. O cache é apenas visual: NUNCA alimenta o
             // baseline do merge nem é gravado de volta sem confirmação da rede.
-            _paintFromLocalCache();
-
-            const database = getFirebaseDatabase();
-            const dbRef = getFirebaseRef();
-            const dbGet = getFirebaseGet();
+            if (_paintFromLocalCache()) {
+                if (typeof window.setBootLoaderStep === 'function') window.setBootLoaderStep('cache');
+            }
 
             // (#1/#3) Lê SOMENTE as coleções de dados — não baixa /imgBlobs (imagens
             // Base64) nem /passwords, que são os nós mais pesados e desnecessários aqui.
-            const _snaps = await Promise.all(_DATA_LISTEN_PATHS.map(p => dbGet(dbRef(database, p))));
+            // O download é o PRÓPRIO evento inicial dos listeners (ver _primeDataListeners):
+            // um dbGet aqui seria baixado em dobro, porque anexar o onValue logo depois
+            // rebaixa o nó inteiro de novo.
+            if (typeof window.setBootLoaderStep === 'function') window.setBootLoaderStep('download');
             const record = {};
-            _DATA_LISTEN_PATHS.forEach((p, i) => { record[p] = _snaps[i].exists() ? _snaps[i].val() : undefined; });
+            try {
+                await _primeDataListeners();
+                _DATA_LISTEN_PATHS.forEach(p => { record[p] = _remoteCache[p] == null ? undefined : _remoteCache[p]; });
+            } catch (primeErr) {
+                // Rede de segurança: se anexar os listeners falhar, cai no caminho
+                // antigo (dbGet direto). Custa um download a mais, mas é melhor que
+                // deixar o usuário sem dados — o tempo real é restabelecido depois
+                // por startFirebaseListener().
+                console.warn('Priming dos listeners falhou; usando dbGet como alternativa.', primeErr);
+                const database = getFirebaseDatabase();
+                const dbRef = getFirebaseRef();
+                const dbGet = getFirebaseGet();
+                const _snaps = await Promise.all(_DATA_LISTEN_PATHS.map(p => dbGet(dbRef(database, p))));
+                _DATA_LISTEN_PATHS.forEach((p, i) => { record[p] = _snaps[i].exists() ? _snaps[i].val() : undefined; });
+            }
 
             {
                 audits = _toArray(record.audits);
@@ -109,15 +124,25 @@
                 }
             }
 
-            await loadusers();
+            if (typeof window.setBootLoaderStep === 'function') window.setBootLoaderStep('users');
+            // loadusers() e loadUserPrefsFromFirebase() são independentes: o caminho das
+            // preferências vem de currentuser.user, definido no login, e não da lista de
+            // usuários recém-baixada. Em série eram dois round-trips enfileirados; em
+            // paralelo, um só tempo de ida e volta. migrateResponsaveisToIds() continua
+            // depois das duas — ela depende de `users` já carregado.
+            await Promise.all([
+                loadusers(),
+                loadUserPrefsFromFirebase()
+            ]);
             // Atualiza referência do currentuser para o objeto recém-carregado (com id)
             if (typeof currentuser !== 'undefined' && currentuser && currentuser.user) {
                 const _refreshed = users.find(u => String(u.user).toLowerCase() === String(currentuser.user).toLowerCase());
                 if (_refreshed) currentuser = _refreshed;
             }
+            if (typeof window.setBootLoaderStep === 'function') window.setBootLoaderStep('prefs');
             await migrateResponsaveisToIds();
-            await loadUserPrefsFromFirebase();
 
+            if (typeof window.setBootLoaderStep === 'function') window.setBootLoaderStep('render');
             cleanInvalidResponsaveis();
             populateYearSelects();
             populateSelects();
@@ -131,6 +156,7 @@
 
         } catch (err) {
             console.error("Erro ao carregar dados do Firebase:", err);
+            _bootLoadFailed = err || true;   // o motivo vai para a tela de carregamento
 
             cleanInvalidResponsaveis();
             populateYearSelects();
@@ -139,7 +165,13 @@
             if (typeof window.renderDashboard === 'function') window.renderDashboard();
         }
         switchTab('dashboard');
+        // Só agora o painel tem dados de verdade na tela: encerra a tela de
+        // carregamento (em erro, ela avisa que o conteúdo veio do cache local).
+        if (typeof window.hideBootLoader === 'function') window.hideBootLoader(_bootLoadFailed);
+        _bootLoadFailed = false;
     }
+
+    var _bootLoadFailed = false;
 
     function isEditingCardOpen() {
         const drawerIds = ['modalAuditoria', 'modalAtividades', 'modalManutencao', 'modalDocumentos', 'modalOcorrencia', 'modalRnc'];
@@ -202,32 +234,116 @@
     var dataListeners = [];          // um listener por coleção (substitui o único em "/")
     var _remoteCache = {};           // último valor remoto de cada caminho ouvido
     var _remoteApplyScheduled = false;
+    var _dataListenersPrimed = false;  // as 8 coleções já entregaram o 1º snapshot?
+    // Caminhos com evento remoto ainda NÃO conciliado. Só eles são comparados em
+    // _applyRemoteSnapshot — antes, todo evento fazia JSON.stringify das 6 coleções
+    // inteiras (~7 MB) na main thread só para descobrir o que mudou. Um caminho só
+    // sai daqui quando é de fato reconciliado (adotado ou constatado idêntico); se a
+    // adoção estiver bloqueada por edição aberta ou save pendente, ele permanece
+    // sujo e é reavaliado no próximo evento — igual ao comportamento anterior.
+    var _remoteDirtyPaths = {};
 
     // Coalesce as rajadas de eventos das várias coleções num único re-render.
     function _scheduleRemoteApply() {
+        // Enquanto as 8 coleções não entregaram o primeiro snapshot, o _remoteCache
+        // está incompleto: aplicar agora faria _applyRemoteSnapshot ler undefined de
+        // uma coleção ainda não chegada, adotá-la como [] e envenenar o baseline.
+        if (!_dataListenersPrimed) return;
         if (_remoteApplyScheduled) return;
         _remoteApplyScheduled = true;
         setTimeout(() => { _remoteApplyScheduled = false; _applyRemoteSnapshot(); }, 50);
     }
 
+    // Anexa os listeners das coleções e resolve quando TODAS entregaram o primeiro
+    // snapshot — é ele que alimenta a carga inicial. Antes, loadCloudData baixava as
+    // 8 coleções por dbGet e logo depois o onValue as baixava DE NOVO (o evento
+    // inicial de um listener recém-anexado sempre traz o nó inteiro, o get() não
+    // estabelece sincronia): eram ~14 MB por login em vez de ~7 MB. Anexar primeiro
+    // também fecha a janela entre a leitura e a escuta, em que uma alteração de outra
+    // sessão passava despercebida.
+    function _primeDataListeners() {
+        const database = getFirebaseDatabase();
+        const dbRef = getFirebaseRef();
+        const dbOnValue = getFirebaseOnValue();
+
+        // Já anexados (loadCloudData chamado de novo sem logout): cache quente.
+        if (dataListeners.length) {
+            _dataListenersPrimed = true;
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+            let pending = _DATA_LISTEN_PATHS.length;
+            let settled = false;
+            let timer = null;
+
+            const finish = (err) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                if (err) {
+                    // Priming incompleto: desanexa tudo para que uma nova tentativa
+                    // recomece do zero em vez de achar o cache pela metade.
+                    try { stopFirebaseListener(); } catch (_) {}
+                    reject(err);
+                } else {
+                    _dataListenersPrimed = true;
+                    resolve();
+                }
+            };
+
+            // Timeout de ESTAGNAÇÃO, não de duração total: o relógio reinicia a cada
+            // coleção que chega. Um banco grande em link lento pode levar minutos e
+            // isso é legítimo — o que não pode é ficar parado. Um teto de duração
+            // fixo transformaria "lento" em "falhou", que é justamente o problema
+            // que estamos tentando resolver.
+            const STALL_MS = 90000;
+            const armStall = () => {
+                clearTimeout(timer);
+                timer = setTimeout(() => finish(new Error(
+                    'O banco de dados parou de responder durante a sincronização (' +
+                    (_DATA_LISTEN_PATHS.length - pending) + ' de ' + _DATA_LISTEN_PATHS.length +
+                    ' coleções recebidas).'
+                )), STALL_MS);
+            };
+            armStall();
+
+            _DATA_LISTEN_PATHS.forEach(path => {
+                let first = true;
+                const handler = dbOnValue(
+                    dbRef(database, path),
+                    (snapshot) => {
+                        _remoteCache[path] = snapshot.exists() ? snapshot.val() : null;
+                        if (first) {
+                            first = false;
+                            // O primeiro snapshot é consumido por loadCloudData.
+                            if (--pending === 0) { finish(null); return; }
+                            armStall();   // houve progresso: reinicia o relógio
+                            return;
+                        }
+                        _remoteDirtyPaths[path] = true;
+                        _scheduleRemoteApply();
+                    },
+                    (err) => finish(err)
+                );
+                dataListeners.push({ path, handler });
+            });
+        });
+    }
+
     function startFirebaseListener() {
         try {
-            const database = getFirebaseDatabase();
-            const dbRef = getFirebaseRef();
-            const dbOnValue = getFirebaseOnValue();
-
             if (!currentuser) return;
 
-            // Um listener por coleção em vez de um único em "/": o Firebase nunca
-            // reenvia /imgBlobs nem /passwords nas sincronizações. (#1)
+            // Os listeners das coleções já foram anexados por _primeDataListeners(), que
+            // é quem faz a carga inicial. Este ramo é só a rede de segurança para quem
+            // chamar startFirebaseListener() fora do fluxo de loadCloudData — ter dois
+            // pontos anexando handlers diferentes para os mesmos caminhos foi o que se
+            // quis evitar aqui. (#1: um listener por coleção, nunca em "/", para o
+            // Firebase jamais reenviar /imgBlobs nem /passwords.)
             if (dataListeners.length === 0) {
-                _DATA_LISTEN_PATHS.forEach(path => {
-                    const handler = dbOnValue(dbRef(database, path), (snapshot) => {
-                        _remoteCache[path] = snapshot.exists() ? snapshot.val() : null;
-                        _scheduleRemoteApply();
-                    });
-                    dataListeners.push({ path, handler });
-                });
+                _primeDataListeners().catch(err =>
+                    console.error('Erro ao anexar listeners das coleções:', err));
             }
 
             startUsersListener();
@@ -258,25 +374,44 @@
                 // reconcilia masterLists por merge — adotar o remoto aqui reverteria a edição
                 // local ainda não confirmada e o follow-up do coalescing regravaria o estado
                 // revertido (perda de marcador). Por isso o guard _pendingSaves === 0.
-                const listsDiffer =
+                //
+                // Só compara o que teve evento. As guardas (_pendingSaves/editingCard)
+                // vêm ANTES dos stringify, para que uma edição aberta nem chegue a pagar
+                // o custo da comparação.
+                const _DATA_KEYS = ['audits', 'activities', 'maintenances', 'documents', 'ocorrencias', 'rncItems'];
+                const _live = { audits, activities, maintenances, documents, ocorrencias, rncItems };
+                const listsDirty = !!(_remoteDirtyPaths.masterLists || _remoteDirtyPaths.kanbanOrder);
+                const dataDirty  = _DATA_KEYS.some(k => _remoteDirtyPaths[k]);
+
+                const listsChanged = listsDirty && _pendingSaves === 0 && (
                     JSON.stringify(record.masterLists) !== JSON.stringify(masterLists) ||
-                    JSON.stringify(record.kanbanOrder) !== JSON.stringify(kanbanOrder);
-                const listsChanged = listsDiffer && _pendingSaves === 0;
+                    JSON.stringify(record.kanbanOrder) !== JSON.stringify(kanbanOrder)
+                );
 
                 // Não adota o remoto enquanto há edição aberta OU gravação local
                 // pendente: evita sobrescrever alterações locais ainda não salvas.
-                const dataChanged = !editingCard && _pendingSaves === 0 && (
-                    JSON.stringify(record.audits) !== JSON.stringify(audits) ||
-                    JSON.stringify(record.activities) !== JSON.stringify(activities) ||
-                    JSON.stringify(record.maintenances) !== JSON.stringify(maintenances) ||
-                    JSON.stringify(record.documents) !== JSON.stringify(documents) ||
-                    JSON.stringify(record.ocorrencias) !== JSON.stringify(ocorrencias) ||
-                    JSON.stringify(record.rncItems) !== JSON.stringify(rncItems)
+                const dataUnblocked = dataDirty && !editingCard && _pendingSaves === 0;
+                const dataChanged = dataUnblocked && _DATA_KEYS.some(k =>
+                    _remoteDirtyPaths[k] && JSON.stringify(record[k]) !== JSON.stringify(_live[k])
                 );
+
+                // Comparado e idêntico (eco da nossa própria gravação, tipicamente):
+                // reconciliado, sai da lista de sujos. Se a adoção está BLOQUEADA por
+                // edição/save, o caminho continua sujo e volta a ser avaliado no próximo
+                // evento — sem isso a alteração remota se perderia.
+                if (listsDirty && _pendingSaves === 0 && !listsChanged) {
+                    delete _remoteDirtyPaths.masterLists;
+                    delete _remoteDirtyPaths.kanbanOrder;
+                }
+                if (dataUnblocked && !dataChanged) {
+                    _DATA_KEYS.forEach(k => { delete _remoteDirtyPaths[k]; });
+                }
 
                 if (!listsChanged && !dataChanged) return;
 
                 if (listsChanged) {
+                    delete _remoteDirtyPaths.masterLists;
+                    delete _remoteDirtyPaths.kanbanOrder;
                     if (record.masterLists) {
                         masterLists = _normalizeMasterLists(record.masterLists);
                     }
@@ -288,6 +423,7 @@
                 }
 
                 if (dataChanged) {
+                    _DATA_KEYS.forEach(k => { delete _remoteDirtyPaths[k]; });
                     audits = record.audits || [];
                     activities = record.activities || [];
                     maintenances = record.maintenances || [];
@@ -364,6 +500,8 @@
                 });
                 dataListeners = [];
                 _remoteCache = {};
+                _dataListenersPrimed = false;
+                _remoteDirtyPaths = {};
             }
             if (usersListener) {
                 dbOff(dbRef(database, 'passwords'), usersListener);
@@ -617,6 +755,20 @@
                     }
                 });
             });
+
+            // Tira os snapshots de dentro dos cards antes de montar o payload: eles vão
+            // para /cardSnapshots (fora das coleções lidas no boot) e a entrada fica só
+            // com `snapId`. Roda ANTES do _deepClone para que o estado local e o que será
+            // gravado fiquem idênticos — se divergissem, o merge veria todo card como
+            // alterado e regravaria o banco inteiro a cada save. Falha aqui não é fatal:
+            // o snapshot continua inline e tenta de novo no próximo save.
+            if (typeof window._externalizeSnapshots === 'function') {
+                try {
+                    await window._externalizeSnapshots([audits, activities, maintenances, documents]);
+                } catch (snapErr) {
+                    console.warn('Não foi possível externalizar snapshots do histórico:', snapErr);
+                }
+            }
 
             // Baseline ausente: trata como vazio para que todo item local vire
             // "novo" (upsert) sem excluir nada — evita apagar dados com estado parcial.

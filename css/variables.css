@@ -2,7 +2,8 @@
    AUDITORIA LAMIC — Variáveis do Design System
    ========================================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+/* A fonte Inter é carregada por <link> no <head> do index.html (faixa 300..900):
+   como @import aqui ela só começava a baixar depois deste arquivo chegar. */
 
 :root {
     /* ----- Marca / Núcleo ----- */

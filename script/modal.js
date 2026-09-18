@@ -1588,7 +1588,7 @@ window.toggleHdItem = function(el) {
     el.classList.toggle('open');
 };
 
-function viewHistoryItem(id, tab, historyIndex) {
+async function viewHistoryItem(id, tab, historyIndex) {
     var finalTab = tab;
     if (tab === 'audit') finalTab = 'auditoria';
     else if (tab === 'ativ') finalTab = 'atividades';
@@ -1614,7 +1614,9 @@ function viewHistoryItem(id, tab, historyIndex) {
     var dateStr = date.toLocaleDateString('pt-BR');
     var timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-    var snap = h.entry.snapshot ? JSON.parse(JSON.stringify(h.entry.snapshot)) : JSON.parse(JSON.stringify(item));
+    // Resolve nos dois formatos: `snapshot` inline (antigo) ou `snapId` apontando
+    // para /cardSnapshots (atual, carregado sob demanda — só aqui, no clique).
+    var snap = await window._resolveHistorySnapshot(h.entry, item);
 
     // Helper: converte valor para string legível, truncando se necessário
     function _val(v, maxLen) {

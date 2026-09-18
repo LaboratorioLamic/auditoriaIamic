@@ -7,7 +7,7 @@
 
 <script>if(localStorage.getItem('darkMode')==='true')document.documentElement.classList.add('dark-mode-pre');</script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script type="module">
   // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -49,7 +49,57 @@
   window.firebaseDeleteObject = deleteObject;
 </script>
 
-<link rel="stylesheet" href="style.css">
+<!-- Estilo da tela de carregamento: inline de propósito, para pintar no primeiro
+     frame sem esperar a cadeia de @import do style.css. -->
+<style>
+#bootLoader{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:16px;
+  background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f172a 100%);font-family:Inter,system-ui,sans-serif}
+#bootLoader.show{display:flex}
+#bootLoader::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at 20% 20%,rgba(37,99,235,.15) 0%,transparent 50%),
+             radial-gradient(ellipse at 80% 80%,rgba(37,99,235,.10) 0%,transparent 50%)}
+#bootLoader .boot-box{position:relative;width:100%;max-width:380px;text-align:center;color:#e2e8f0}
+#bootLoader .boot-logo{width:64px;height:64px;margin:0 auto 22px;border-radius:20px;display:flex;align-items:center;
+  justify-content:center;font-size:26px;color:#fff;background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);
+  box-shadow:0 8px 24px rgba(37,99,235,.35);animation:bootPulse 1.8s ease-in-out infinite}
+#bootLoader h2{margin:0 0 8px;font-size:20px;font-weight:800;letter-spacing:-.4px;color:#f8fafc}
+#bootLoader p{margin:0 0 22px;font-size:14px;color:#94a3b8;min-height:20px;transition:opacity .2s ease}
+#bootLoader .boot-bar{height:6px;border-radius:9999px;background:rgba(148,163,184,.18);overflow:hidden}
+#bootLoader .boot-bar-fill{height:100%;width:8%;border-radius:9999px;
+  background:linear-gradient(90deg,#3b82f6,#2563eb);transition:width .45s cubic-bezier(.4,0,.2,1)}
+#bootLoader .boot-hint{margin-top:14px;font-size:12px;color:#64748b;letter-spacing:.2px}
+@keyframes bootPulse{0%,100%{transform:scale(1);box-shadow:0 8px 24px rgba(37,99,235,.35)}
+  50%{transform:scale(1.06);box-shadow:0 12px 32px rgba(37,99,235,.5)}}
+@media (prefers-reduced-motion:reduce){
+  #bootLoader .boot-logo{animation:none}
+  #bootLoader .boot-bar-fill{transition:none}}
+</style>
+
+<!-- Antes: style.css encadeava estes 21 arquivos por @import, que o navegador só
+     descobre DEPOIS de baixar e interpretar o style.css — uma cascata serial de
+     requisições. Como <link> eles baixam em paralelo. A ORDEM abaixo é a mesma dos
+     @import originais e não pode mudar: é ela que define a cascata. -->
+<link rel="stylesheet" href="css/variables.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/sidebar.css">
+<link rel="stylesheet" href="css/header.css">
+<link rel="stylesheet" href="css/buttons.css">
+<link rel="stylesheet" href="css/filters.css">
+<link rel="stylesheet" href="css/notifications.css">
+<link rel="stylesheet" href="css/card.css">
+<link rel="stylesheet" href="css/modal.css">
+<link rel="stylesheet" href="css/dashboard.css">
+<link rel="stylesheet" href="css/kanban.css">
+<link rel="stylesheet" href="css/history.css">
+<link rel="stylesheet" href="css/login.css">
+<link rel="stylesheet" href="css/backup.css">
+<link rel="stylesheet" href="css/config.css">
+<link rel="stylesheet" href="css/ocorrencias.css">
+<link rel="stylesheet" href="css/offline.css">
+<link rel="stylesheet" href="css/responsive.css">
+<link rel="stylesheet" href="css/darkmode.css">
 <link rel="stylesheet" href="css/calendar.css">
 <link rel="stylesheet" href="css/rnc.css">
 <link rel="stylesheet" href="css/messages.css">
@@ -92,6 +142,17 @@
         <button class="btn-login" id="btnLogin" onclick="checkLogin()"><i class="fas fa-arrow-right-to-bracket"></i> Entrar</button>
         <div id="timerDisplay"></div>
         <div id="loadingText"><i class="fas fa-spinner fa-spin"></i> Conectando ao servidor...</div>
+    </div>
+</div>
+
+<!-- ===== TELA DE CARREGAMENTO DE DADOS ===== -->
+<div id="bootLoader" aria-live="polite" aria-busy="true" role="status">
+    <div class="boot-box">
+        <div class="boot-logo"><i class="fa-solid fa-layer-group"></i></div>
+        <h2>Auditoria LAMIC</h2>
+        <p id="bootLoaderStep">Conectando ao servidor...</p>
+        <div class="boot-bar"><div class="boot-bar-fill" id="bootLoaderBar"></div></div>
+        <div class="boot-hint" id="bootLoaderHint">Sincronizando com o banco de dados</div>
     </div>
 </div>
 
@@ -3440,40 +3501,42 @@
     </div>
 </div>
 
-<script src="script/offline.js"></script>
-<script src="script/connection-manager.js"></script>
-<script src="script/firebase.js"></script>
-<script src="script/cache.js"></script>
-<script src="script/state.js"></script>
-<script src="script/utils.js"></script>
-<script src="script/filters-dropdown.js"></script>
-<script src="script/firebase-listener.js"></script>
-<script src="script/render.js"></script>
-<script src="script/filters.js"></script>
-<script src="script/kanban.js"></script>
-<script src="script/calendar.js"></script>
-<script src="script/tabs.js"></script>
-<script src="script/upload.js"></script>
-<script src="script/publicacoes.js"></script>
-<script src="script/modal.js"></script>
-<script src="script/autocomplete.js"></script>
-<script src="script/notifications.js"></script>
-<script src="script/init.js"></script>
-<script src="script/multi-select.js"></script>
-<script src="script/setor-multiselect.js"></script>
-<script src="script/auditoria.js"></script>
-<script src="script/gestao.js"></script>
-<script src="script/documentos.js"></script>
-<script src="script/key.js"></script>
-<script src="script/setor-filter.js"></script>
-<script src="script/fbar-filters.js"></script>
-<script src="script/overdue-status.js"></script>
-<script src="script/ocorrencias.js"></script>
-<script src="script/rnc.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="script/ocorrencias-dashboard.js"></script>
-<script src="script/messages.js"></script>
-<script src="script/perf-base.js"></script>
+<script defer src="script/boot-loader.js"></script>
+<script defer src="script/offline.js"></script>
+<script defer src="script/connection-manager.js"></script>
+<script defer src="script/firebase.js"></script>
+<script defer src="script/cache.js"></script>
+<script defer src="script/state.js"></script>
+<script defer src="script/utils.js"></script>
+<script defer src="script/filters-dropdown.js"></script>
+<script defer src="script/card-snapshots.js"></script>
+<script defer src="script/firebase-listener.js"></script>
+<script defer src="script/render.js"></script>
+<script defer src="script/filters.js"></script>
+<script defer src="script/kanban.js"></script>
+<script defer src="script/calendar.js"></script>
+<script defer src="script/tabs.js"></script>
+<script defer src="script/upload.js"></script>
+<script defer src="script/publicacoes.js"></script>
+<script defer src="script/modal.js"></script>
+<script defer src="script/autocomplete.js"></script>
+<script defer src="script/notifications.js"></script>
+<script defer src="script/init.js"></script>
+<script defer src="script/multi-select.js"></script>
+<script defer src="script/setor-multiselect.js"></script>
+<script defer src="script/auditoria.js"></script>
+<script defer src="script/gestao.js"></script>
+<script defer src="script/documentos.js"></script>
+<script defer src="script/key.js"></script>
+<script defer src="script/setor-filter.js"></script>
+<script defer src="script/fbar-filters.js"></script>
+<script defer src="script/overdue-status.js"></script>
+<script defer src="script/ocorrencias.js"></script>
+<script defer src="script/rnc.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script defer src="script/ocorrencias-dashboard.js"></script>
+<script defer src="script/messages.js"></script>
+<script defer src="script/perf-base.js"></script>
 </body>
 </html>
